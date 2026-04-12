@@ -1,0 +1,54 @@
+# ECW (Enterprise Change Workflow) -- CLAUDE.md Snippet
+
+> 将以下内容追加到项目的 CLAUDE.md 中。根据项目实际情况替换占位符。
+
+---
+
+## 域级知识路由
+
+收到业务需求时，根据关键词定位域级入口，再由域入口的 `00-index.md` 引导到具体节点：
+
+| 关键词 | 域 | 入口文档 |
+|--------|-----|---------|
+| {keyword1}/{keyword2}/{keyword3} | {域名1} | `.claude/knowledge/{domain-id-1}/00-index.md` |
+| {keyword4}/{keyword5} | {域名2} | `.claude/knowledge/{domain-id-2}/00-index.md` |
+| 跨域调用/全局规则 | 通用 | `.claude/knowledge/common/cross-domain-rules.md` |
+<!--
+  填写说明：
+  1. 每行列出一组同义/相关关键词，用 / 分隔
+  2. 每个关键词只能归属一个域，不能在多行出现
+  3. 域名与 domain-registry.md 中的 Domain ID 对应
+  4. "通用"行保留，用于跨域规则查询
+
+  示例（电商项目）：
+  | 下单/购物车/结算/订单 | 订单 | `.claude/knowledge/order/00-index.md` |
+  | 支付/退款/对账 | 支付 | `.claude/knowledge/payment/00-index.md` |
+  | 库存/盘点/调拨 | 库存 | `.claude/knowledge/inventory/00-index.md` |
+  | 商品/SKU/分类/定价 | 商品 | `.claude/knowledge/product/00-index.md` |
+-->
+
+> 每个域的 `00-index.md` 包含：链路速查、节点定位、Facade 地图、外部系统交互。按需读取即可。
+
+## 文档同步规则
+
+**代码变更后必须同步对应文档。按变更涉及的层级检查：**
+
+- **项目结构**（Controller/Service/Model/模块/依赖/数据模型）-> 更新 `project/` 下对应文档（`architecture.md`、`domains.md`、`models.md`、`tech-stack.md`）
+- **业务逻辑**（状态流转/业务规则变更）-> 更新 `.claude/knowledge/<域>/business-rules.md`
+- **跨域集成**（调用关系/MQ/共享资源/外部系统/端到端链路）-> 更新 `.claude/knowledge/common/` 下对应文档
+
+## 自动化规则
+
+- **收到变更类需求时**：自动调用 `/risk-classify`，完成风险分级后再决定后续流程（requirements-elicitation / writing-plans / 直接实现）
+- **收到 bug 修复类需求时**：先调用 `/risk-classify` 评估风险，然后路由到 `superpowers:systematic-debugging` 定位和修复
+- **CR 完成后**：调用 `/biz-impact` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围，与代码质量审查报告分段呈现
+- **Skill 检查优先级**：本项目已有 `risk-classifier` 作为变更类任务的统一入口，using-superpowers 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 risk-classifier，不需要额外的 skill 适用性检查
+
+## 影响分析工具区分
+
+| 工具 | 阶段 | 输入 | 用途 |
+|------|------|------|------|
+| `domain-collab` | **需求阶段**（实现前） | 自然语言需求描述 | 分析需求涉及哪些域、各域需要什么变更、跨域依赖和冲突 |
+| `biz-impact-analysis` | **代码阶段**（实现后） | git diff | 分析已完成的代码变更实际影响了哪些业务流程、外部系统、端到端链路 |
+
+**不要混用**：需求分析阶段用 `domain-collab`，代码变更后用 `biz-impact`。前者是前置预判，后者是后置验证。
