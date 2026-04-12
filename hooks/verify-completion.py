@@ -57,11 +57,12 @@ def main():
         issues.extend(stale)
 
     # ── 技术检查 3: Java 编译 ──
-    compile_issues = check_java_compilation(cwd, modified)
+    compile_issues, compile_warnings = check_java_compilation(cwd, modified)
     issues.extend(compile_issues)
 
-    # ── 知识文档同步提醒（非阻止性） ──
-    reminders = check_knowledge_doc_freshness(cwd, modified)
+    # ── 非阻止性提醒 ──
+    reminders = compile_warnings[:]
+    reminders.extend(check_knowledge_doc_freshness(cwd, modified))
 
     # ── 输出结果 ──
     if issues:
@@ -160,13 +161,18 @@ def check_stale_references(cwd, deleted_file):
 
 
 def check_java_compilation(cwd, modified):
-    """如果本次改了 .java 文件，执行 mvn compile 检查编译。失败 → 返回 issues（deny）。"""
+    """如果本次改了 .java 文件，执行 mvn compile 检查编译。
+
+    返回 (issues, warnings)：
+    - issues: 编译失败 → deny
+    - warnings: 超时等非致命情况 → 提醒但不阻止
+    """
     java_files = [f for f in modified if f.endswith(".java")]
     if not java_files:
-        return []
+        return [], []
 
     if not os.path.exists(os.path.join(cwd, "pom.xml")):
-        return []
+        return [], []
 
     try:
         r = subprocess.run(
@@ -176,13 +182,62 @@ def check_java_compilation(cwd, modified):
         if r.returncode != 0:
             errors = [l for l in r.stdout.split("\n") + r.stderr.split("\n")
                       if "[ERROR]" in l][:5]
-            return ["Java 编译失败:\n" + "\n".join(errors)]
+            return ["Java 编译失败:\n" + "\n".join(errors)], []
     except subprocess.TimeoutExpired:
-        return ["Java 编译超时（>120s），请手动执行 `mvn compile` 检查"]
+        return [], ["Java 编译超时（>120s），编译结果未验证，请手动执行 `mvn compile` 检查"]
     except FileNotFoundError:
-        return []  # mvn 不在 PATH 中，跳过
+        return [], []  # mvn 不在 PATH 中，跳过
 
-    return []
+    return [], []
+
+
+def _load_path_mappings(cwd, knowledge_root):
+    """从 ecw-path-mappings.md 加载 代码路径→域 映射表。
+
+    解析 markdown 表格行，格式：| 路径前缀/glob | 域名 |
+    返回 [(path_prefix, domain), ...] 列表。
+    """
+    mappings = []
+    # 尝试从 ecw.yml 获取 path_mappings 路径
+    mappings_path = ".claude/ecw/ecw-path-mappings.md"
+    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
+    if os.path.exists(ecw_yml) and yaml:
+        try:
+            with open(ecw_yml, encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+            mappings_path = cfg.get("paths", {}).get("path_mappings", mappings_path)
+        except Exception:
+            pass
+
+    full_path = os.path.join(cwd, mappings_path)
+    if not os.path.exists(full_path):
+        return mappings
+
+    try:
+        with open(full_path, encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                # 跳过表头和分隔行
+                if not line.startswith("|") or "---" in line:
+                    continue
+                parts = [p.strip() for p in line.split("|") if p.strip()]
+                if len(parts) >= 2:
+                    path_prefix = parts[0].rstrip("*").rstrip("/")
+                    domain = parts[1]
+                    if path_prefix and domain and domain != "域":
+                        mappings.append((path_prefix, domain))
+    except Exception:
+        pass
+
+    return mappings
+
+
+def _match_domain_by_mappings(filepath, mappings):
+    """用 path_mappings 匹配文件路径到域。返回域名或 None。"""
+    for path_prefix, domain in mappings:
+        if filepath.startswith(path_prefix) or ("/" + path_prefix) in filepath:
+            return domain
+    return None
 
 
 def check_knowledge_doc_freshness(cwd, modified):
@@ -212,15 +267,22 @@ def check_knowledge_doc_freshness(cwd, modified):
     biz_domains_changed = set()
     knowledge_domains_changed = set()
 
+    # 尝试读取 ecw-path-mappings 做精确域匹配
+    path_mappings = _load_path_mappings(cwd, knowledge_root)
+
     for f in modified:
-        # 启发式匹配业务代码路径
-        m = re.search(r'/biz/(\w+)/', f)
-        if m:
-            biz_domains_changed.add(m.group(1))
-        # 也匹配 /service/ 路径
-        m = re.search(r'/service/(\w+)/', f)
-        if m:
-            biz_domains_changed.add(m.group(1))
+        # 优先用 path-mappings 精确匹配
+        mapped_domain = _match_domain_by_mappings(f, path_mappings)
+        if mapped_domain:
+            biz_domains_changed.add(mapped_domain)
+        else:
+            # 回退启发式匹配业务代码路径（支持连字符域名）
+            m = re.search(r'/biz/([\w-]+)/', f)
+            if m:
+                biz_domains_changed.add(m.group(1))
+            m = re.search(r'/service/([\w-]+)/', f)
+            if m:
+                biz_domains_changed.add(m.group(1))
 
         # 匹配知识文档路径（使用实际的 knowledge_root）
         kr_pattern = re.escape(knowledge_root) + r'(\w[\w-]*)/'
