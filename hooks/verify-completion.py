@@ -4,14 +4,22 @@
 PreToolUse 拦截 TaskUpdate(status=completed)：
 1. 检查本次修改的文件中是否有断裂引用
 2. 检查被删除的文件是否还被其他文件引用
-技术检查失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒。
+3. Java 编译检查（改了 .java 文件 → mvn compile，失败则阻止）
+4. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
+技术检查 1-3 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒。
 """
 
+import glob as globmod
 import json
 import os
 import re
 import subprocess
 import sys
+
+try:
+    import yaml
+except ImportError:
+    yaml = None
 
 
 def main():
@@ -48,12 +56,19 @@ def main():
         stale = check_stale_references(cwd, filepath)
         issues.extend(stale)
 
+    # ── 技术检查 3: Java 编译 ──
+    compile_issues = check_java_compilation(cwd, modified)
+    issues.extend(compile_issues)
+
+    # ── 知识文档同步提醒（非阻止性） ──
+    reminders = check_knowledge_doc_freshness(cwd, modified)
+
     # ── 输出结果 ──
     if issues:
         output_fail(issues)
         sys.exit(2)
     else:
-        output_pass(len(modified), len(deleted))
+        output_pass(len(modified), len(deleted), reminders)
         sys.exit(0)
 
 
@@ -144,6 +159,97 @@ def check_stale_references(cwd, deleted_file):
     return issues
 
 
+def check_java_compilation(cwd, modified):
+    """如果本次改了 .java 文件，执行 mvn compile 检查编译。失败 → 返回 issues（deny）。"""
+    java_files = [f for f in modified if f.endswith(".java")]
+    if not java_files:
+        return []
+
+    if not os.path.exists(os.path.join(cwd, "pom.xml")):
+        return []
+
+    try:
+        r = subprocess.run(
+            ["mvn", "compile", "-q", "-T", "1C"],
+            capture_output=True, text=True, cwd=cwd, timeout=120
+        )
+        if r.returncode != 0:
+            errors = [l for l in r.stdout.split("\n") + r.stderr.split("\n")
+                      if "[ERROR]" in l][:5]
+            return ["Java 编译失败:\n" + "\n".join(errors)]
+    except subprocess.TimeoutExpired:
+        return ["Java 编译超时（>120s），请手动执行 `mvn compile` 检查"]
+    except FileNotFoundError:
+        return []  # mvn 不在 PATH 中，跳过
+
+    return []
+
+
+def check_knowledge_doc_freshness(cwd, modified):
+    """检查业务代码变更是否需要同步更新知识文档。返回定向提醒列表（不阻止完成）。"""
+    reminders = []
+
+    # 读取 ecw.yml 获取 knowledge_root 路径
+    knowledge_root = ".claude/knowledge/"
+    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
+    if os.path.exists(ecw_yml) and yaml:
+        try:
+            with open(ecw_yml, encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+            knowledge_root = cfg.get("paths", {}).get("knowledge_root", knowledge_root)
+        except Exception:
+            pass
+
+    # 确保 knowledge_root 末尾有 /
+    if not knowledge_root.endswith("/"):
+        knowledge_root += "/"
+
+    knowledge_abs = os.path.join(cwd, knowledge_root)
+    if not os.path.isdir(knowledge_abs):
+        return reminders
+
+    # 扫描受影响的域：从 modified 文件中提取
+    biz_domains_changed = set()
+    knowledge_domains_changed = set()
+
+    for f in modified:
+        # 启发式匹配业务代码路径
+        m = re.search(r'/biz/(\w+)/', f)
+        if m:
+            biz_domains_changed.add(m.group(1))
+        # 也匹配 /service/ 路径
+        m = re.search(r'/service/(\w+)/', f)
+        if m:
+            biz_domains_changed.add(m.group(1))
+
+        # 匹配知识文档路径（使用实际的 knowledge_root）
+        kr_pattern = re.escape(knowledge_root) + r'(\w[\w-]*)/'
+        m = re.search(kr_pattern, f)
+        if m:
+            knowledge_domains_changed.add(m.group(1))
+
+    # 差集：代码改了但文档没动的域
+    for domain in sorted(biz_domains_changed - knowledge_domains_changed):
+        domain_dir = os.path.join(knowledge_abs, domain)
+        if not os.path.isdir(domain_dir):
+            continue
+
+        # 列出该域下所有 .md 文件
+        md_files = sorted(globmod.glob(os.path.join(domain_dir, "*.md")))
+        if not md_files:
+            continue
+
+        file_list = "\n".join(
+            f"  - {os.path.relpath(p, cwd)}" for p in md_files
+        )
+        reminders.append(
+            f"域 `{domain}` 的业务代码有变更，但知识文档未更新。"
+            f"请检查以下文档是否需要同步：\n{file_list}"
+        )
+
+    return reminders
+
+
 def output_fail(issues):
     """技术检查失败 → 阻止完成"""
     msg = "**【ECW 完成验证】实现结果存在技术问题，请修复后重试：**\n\n"
@@ -161,18 +267,22 @@ def output_fail(issues):
     print(json.dumps(result, ensure_ascii=False))
 
 
-def output_pass(modified_count, deleted_count):
-    """技术检查通过 → 放行 + 语义验证提醒"""
-    result = {
-        "systemMessage": (
-            f"**【ECW 完成验证】** 技术检查通过"
-            f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
-            "请确认你已完成语义验证：\n"
-            "1. **需求对标** — 原始需求的每一项是否都已实现？\n"
-            "2. **产出验证** — 改动的代码/文档内容是否正确完整？\n"
-            "3. **残留检查** — 有没有该删未删、该同步未同步的文件？"
-        )
-    }
+def output_pass(modified_count, deleted_count, reminders=None):
+    """技术检查通过 → 放行 + 语义验证提醒 + 知识文档定向提醒"""
+    msg = (
+        f"**【ECW 完成验证】** 技术检查通过"
+        f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
+        "请确认你已完成语义验证：\n"
+        "1. **需求对标** — 原始需求的每一项是否都已实现？\n"
+        "2. **产出验证** — 改动的代码/文档内容是否正确完整？\n"
+        "3. **残留检查** — 有没有该删未删、该同步未同步的文件？"
+    )
+
+    if reminders:
+        msg += "\n\n---\n\n**【知识文档同步提醒】** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n"
+        msg += "\n\n".join(f"- {r}" for r in reminders)
+
+    result = {"systemMessage": msg}
     print(json.dumps(result, ensure_ascii=False))
 
 

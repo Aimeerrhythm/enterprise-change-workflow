@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/verify-completion.py\"",
-            "timeout": 15
+            "timeout": 150
           }
         ]
       }

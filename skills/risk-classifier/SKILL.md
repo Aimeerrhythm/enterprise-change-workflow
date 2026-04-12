@@ -12,7 +12,7 @@ description: >
 
 ## Overview
 
-对任何代码变更进行风险分级（P0~P3），**驱动后续流程的详略程度**。分两个阶段执行：Phase 1（需求描述阶段，快速预判）和 Phase 2（plan 完成后，精确定级）。
+对任何代码变更进行风险分级（P0~P3），**驱动后续流程的详略程度**。分三个阶段执行：Phase 1（需求描述阶段，快速预判）、Phase 2（plan 完成后，精确定级）、Phase 3（实现完成后，基于 biz-impact 反馈校准预测准确度）。
 
 **核心原则：** 改日志和改库存扣减的流程不应该一样重。
 
@@ -25,6 +25,7 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
   → systematic-debugging（定位 + 修复）
   → mvn test
   → ecw:biz-impact（如果 P0/P1）
+  → Phase 3 校准（自动）
 ```
 
 不论风险等级，bug 修复都跳过 ecw:requirements-elicitation（bug 不需要需求澄清，需要的是定位和修复）。
@@ -49,8 +50,8 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → `ecw:spec-challenge` |
-| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` |
+| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
+| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → 实现 → `ecw:biz-impact` → **Phase 3** |
 | P2（中） | → `superpowers:writing-plans`（Phase 1 含轻量 MQ 检查，跳过完整需求澄清）|
 | P3（低） | → 直接实现 |
 
@@ -60,9 +61,9 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` |
-| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` |
-| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` |
+| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
+| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
+| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → 实现 → `ecw:biz-impact`（建议）→ **Phase 3** |
 | P3（低） | → `ecw:domain-collab`（多域协作，简化输出）→ 直接实现 |
 
 > **判定方法：** Step 1 域定位时，对照项目 CLAUDE.md 的域路由部分（关键词→域映射表）统计匹配到的域数量。匹配 2+ 个域 = 跨域需求。
@@ -73,7 +74,7 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| 任何等级 | → invoke `superpowers:systematic-debugging`（定位 + 修复）→ mvn test → ecw:biz-impact（P0/P1） |
+| 任何等级 | → invoke `superpowers:systematic-debugging`（定位 + 修复）→ mvn test → ecw:biz-impact（P0/P1）→ **Phase 3** |
 
 Bug 修复不走 ecw:requirements-elicitation，但风险等级仍然决定事后的 ecw:biz-impact 要求。
 
@@ -292,6 +293,102 @@ Phase 2 等级 = max(影响范围, 变更类型, 业务敏感度)
 
 ---
 
+## Phase 3：反馈校准（实现完成后）
+
+> **一句话**：Phase 1/2 靠规则预测，Phase 3 靠 biz-impact 实际数据校验预测准确度，输出配置校准建议。
+
+### 快速参考
+
+| 项 | 说明 |
+|----|------|
+| **谁执行** | risk-classifier 自身（不派 agent） |
+| **何时** | ecw:biz-impact 报告产出后自动执行 |
+| **适用** | P0/P1（必做）、P2（建议做） |
+| **不适用** | P3、紧急通道（事后补做时执行） |
+| **输入** | Phase 1/Phase 2 的预测数据 + ecw:biz-impact 报告 |
+| **输出** | 校准建议（不自动修改配置） |
+
+### 触发时机
+
+ecw:biz-impact 报告产出后自动执行。仅当当前会话中 Phase 1 或 Phase 2 产出了风险等级时触发。
+
+### 执行步骤
+
+#### Step 1：对比预测 vs 实际
+
+从 biz-impact 报告中提取实际影响指标，与 Phase 1/Phase 2 的预测对比：
+
+| 维度 | Phase 1 预测 | Phase 2 精确 | biz-impact 实际 | 偏差 |
+|------|-------------|-------------|----------------|------|
+| 影响域数 | {predicted} | {refined} | {actual} | {+/-N} |
+| 跨域调用 | {predicted} | {refined} | {actual} | {+/-N} |
+| MQ Topic | {predicted} | {refined} | {actual} | {+/-N} |
+| 外部系统 | {predicted} | {refined} | {actual} | {+/-N} |
+| 端到端链路 | {predicted} | {refined} | {actual} | {+/-N} |
+| 变更文件数 | — | — | {actual} | — |
+
+#### Step 2：判定预测准确性
+
+根据 biz-impact 的实际影响范围，反推"实际应有等级"：
+
+| 场景 | 判定 |
+|------|------|
+| 预测等级 = 实际应有等级 | **准确** |
+| 预测过高（例如 P0 但实际只影响 1 个域、0 MQ） | **过度预警** |
+| 预测过低（例如 P2 但实际影响了 3+ 域、多个 MQ） | **漏报** |
+
+#### Step 3：输出校准建议
+
+**偏差显著时**（等级差 ≥ 2 级，或关键维度偏差 ≥ 50%），输出校准建议：
+
+```markdown
+## 风险预测校准建议（Phase 3）
+
+### 预测 vs 实际
+| 维度 | Phase 1 预测 | Phase 2 精确 | biz-impact 实际 |
+|------|-------------|-------------|----------------|
+| 风险等级 | P{x} | P{y} | 实际应为 P{z} |
+| 影响域数 | {n} | {n} | {n} |
+| 跨域调用 | {n} | {n} | {n} |
+| MQ Topic | {n} | {n} | {n} |
+| 外部系统 | {n} | {n} | {n} |
+
+### 偏差分析
+{原因分析：为什么预测不准？}
+- 关键词匹配遗漏？→ change-risk-classification.md 需补充关键词
+- 共享资源表不全？→ shared-resources.md 需补充使用方域列表
+- 域注册表范围不准？→ domain-registry.md 需调整代码目录
+- 跨域调用矩阵缺失？→ cross-domain-calls.md 需补充调用关系
+
+### 建议调整
+- `change-risk-classification.md`: {具体建议，如"将 XXX 关键词从 P2 提升到 P1"}
+- `shared-resources.md`: {如"补充 XXX 共享资源的使用方域列表"}
+- `domain-registry.md`: {如"XXX 域的代码目录范围需要扩大"}
+- `cross-domain-calls.md`: {如"补充 A→B 的调用关系"}
+
+> 以上为建议，需要用户确认后手动修改配置文件。
+```
+
+**预测准确时**，输出简短确认：
+
+```
+Phase 3 校准完成：预测等级 P{x} 与实际影响一致，无需调整。
+```
+
+**轻微偏差时**（等级差 1 级且关键维度偏差 < 50%），记录但不输出建议：
+
+```
+Phase 3 校准完成：预测等级 P{x}，实际接近 P{y}，轻微偏差在可接受范围内。
+```
+
+### 注意事项
+
+- Phase 3 **不自动修改任何配置文件**，只输出建议
+- 校准建议基于单次变更，建议用户积累多次后批量调整
+- 紧急通道的事后 biz-impact 同样触发 Phase 3
+
+---
+
 ## 手动触发
 
 除自动触发外，支持以下手动场景：
@@ -316,3 +413,5 @@ Phase 2 等级 = max(影响范围, 变更类型, 业务敏感度)
 | 只看关键词不查 §3 | 遗漏共享资源影响 | Phase 1 必须查 §3 |
 | 跨域需求走了 ecw:requirements-elicitation | 缺少各域独立分析和交叉审查 | 2+ 域匹配时必须走 ecw:domain-collab |
 | CR 完成后忘了跑 ecw:biz-impact | 代码变更的业务影响未评估 | P0/P1 变更 CR 完成后必须调用 `/biz-impact` |
+| biz-impact 后跳过 Phase 3 | 预测偏差没有被发现，规则无法改进 | biz-impact 报告产出后必须执行 Phase 3 校准 |
+| Phase 3 建议未经用户确认就修改配置 | 单次变更可能有偶然性，自动修改可能引入偏差 | Phase 3 只输出建议，由用户决定是否采纳 |
