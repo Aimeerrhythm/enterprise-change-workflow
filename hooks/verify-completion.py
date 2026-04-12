@@ -60,16 +60,15 @@ def main():
     compile_issues, compile_warnings = check_java_compilation(cwd, modified)
     issues.extend(compile_issues)
 
-    # ── 非阻止性提醒 ──
-    reminders = compile_warnings[:]
-    reminders.extend(check_knowledge_doc_freshness(cwd, modified))
+    # ── 非阻止性提醒（分类传递，避免混淆标题） ──
+    knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
 
     # ── 输出结果 ──
     if issues:
         output_fail(issues)
         sys.exit(2)
     else:
-        output_pass(len(modified), len(deleted), reminders)
+        output_pass(len(modified), len(deleted), compile_warnings, knowledge_reminders)
         sys.exit(0)
 
 
@@ -191,24 +190,26 @@ def check_java_compilation(cwd, modified):
     return [], []
 
 
-def _load_path_mappings(cwd, knowledge_root):
+def _read_ecw_config(cwd):
+    """读取 .claude/ecw/ecw.yml 配置，返回 dict（文件不存在或解析失败返回空 dict）。"""
+    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
+    if not os.path.exists(ecw_yml) or not yaml:
+        return {}
+    try:
+        with open(ecw_yml, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return {}
+
+
+def _load_path_mappings(cwd, cfg):
     """从 ecw-path-mappings.md 加载 代码路径→域 映射表。
 
     解析 markdown 表格行，格式：| 路径前缀/glob | 域名 |
     返回 [(path_prefix, domain), ...] 列表。
     """
     mappings = []
-    # 尝试从 ecw.yml 获取 path_mappings 路径
-    mappings_path = ".claude/ecw/ecw-path-mappings.md"
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if os.path.exists(ecw_yml) and yaml:
-        try:
-            with open(ecw_yml, encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            mappings_path = cfg.get("paths", {}).get("path_mappings", mappings_path)
-        except Exception:
-            pass
-
+    mappings_path = cfg.get("paths", {}).get("path_mappings", ".claude/ecw/ecw-path-mappings.md")
     full_path = os.path.join(cwd, mappings_path)
     if not os.path.exists(full_path):
         return mappings
@@ -244,16 +245,8 @@ def check_knowledge_doc_freshness(cwd, modified):
     """检查业务代码变更是否需要同步更新知识文档。返回定向提醒列表（不阻止完成）。"""
     reminders = []
 
-    # 读取 ecw.yml 获取 knowledge_root 路径
-    knowledge_root = ".claude/knowledge/"
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if os.path.exists(ecw_yml) and yaml:
-        try:
-            with open(ecw_yml, encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            knowledge_root = cfg.get("paths", {}).get("knowledge_root", knowledge_root)
-        except Exception:
-            pass
+    cfg = _read_ecw_config(cwd)
+    knowledge_root = cfg.get("paths", {}).get("knowledge_root", ".claude/knowledge/")
 
     # 确保 knowledge_root 末尾有 /
     if not knowledge_root.endswith("/"):
@@ -268,7 +261,7 @@ def check_knowledge_doc_freshness(cwd, modified):
     knowledge_domains_changed = set()
 
     # 尝试读取 ecw-path-mappings 做精确域匹配
-    path_mappings = _load_path_mappings(cwd, knowledge_root)
+    path_mappings = _load_path_mappings(cwd, cfg)
 
     for f in modified:
         # 优先用 path-mappings 精确匹配
@@ -329,8 +322,8 @@ def output_fail(issues):
     print(json.dumps(result, ensure_ascii=False))
 
 
-def output_pass(modified_count, deleted_count, reminders=None):
-    """技术检查通过 → 放行 + 语义验证提醒 + 知识文档定向提醒"""
+def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None):
+    """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒"""
     msg = (
         f"**【ECW 完成验证】** 技术检查通过"
         f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
@@ -340,9 +333,13 @@ def output_pass(modified_count, deleted_count, reminders=None):
         "3. **残留检查** — 有没有该删未删、该同步未同步的文件？"
     )
 
-    if reminders:
+    if warnings:
+        msg += "\n\n---\n\n**【注意事项】**\n\n"
+        msg += "\n".join(f"- {w}" for w in warnings)
+
+    if knowledge_reminders:
         msg += "\n\n---\n\n**【知识文档同步提醒】** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n"
-        msg += "\n\n".join(f"- {r}" for r in reminders)
+        msg += "\n\n".join(f"- {r}" for r in knowledge_reminders)
 
     result = {"systemMessage": msg}
     print(json.dumps(result, ensure_ascii=False))

@@ -329,7 +329,7 @@ ecw:biz-impact 报告产出后自动执行。仅当当前会话中 Phase 1 或 P
 
 #### Step 2：判定预测准确性
 
-根据 biz-impact 的实际影响范围，反推"实际应有等级"：
+根据 biz-impact 的实际影响范围，使用 `change-risk-classification.md` 中的三维因子表（影响范围 / 变更类型 / 业务敏感度）反推"实际应有等级"。对比对象为 Phase 2 等级（如果执行了 Phase 2）或 Phase 1 等级：
 
 | 场景 | 判定 |
 |------|------|
