@@ -89,3 +89,4 @@ paths:
   path_mappings: ".claude/ecw/ecw-path-mappings.md"            # 代码路径→域映射
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
   knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识
+  calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史

@@ -41,7 +41,7 @@
 
 - **收到变更类需求时**：自动调用 `ecw:risk-classifier`，完成风险分级后再决定后续流程（ecw:requirements-elicitation / writing-plans / 直接实现）
 - **收到 bug 修复类需求时**：先调用 `ecw:risk-classifier` 评估风险，然后路由到 `superpowers:systematic-debugging` 定位和修复
-- **CR 完成后**：调用 `ecw:biz-impact` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围，与代码质量审查报告分段呈现
+- **CR 完成后**：调用 `ecw:biz-impact` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围，与代码质量审查报告分段呈现。P0/P1 变更在 biz-impact 完成后自动触发 `ecw:risk-classifier` Phase 3 反馈校准
 - **Skill 检查优先级**：本项目已有 `ecw:risk-classifier` 作为变更类任务的统一入口，using-superpowers 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 ecw:risk-classifier，不需要额外的 skill 适用性检查
 
 ## 完成验证规则
@@ -54,7 +54,11 @@
 
 三步全通过才能标记完成。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
 
-> 此规则由 ECW plugin 的 PreToolUse hook 自动执行技术检查。标记完成时 hook 会检查本次变更的文件是否有断裂引用、被删除的文件是否还被引用。技术检查不过会阻止完成。
+> 此规则由 ECW plugin 的 PreToolUse hook 自动执行技术检查。标记完成时 hook 会：
+> - **硬拦截**：断裂引用检查、残留引用检查、Java 编译检查（`mvn compile` 失败 → 阻止完成）
+> - **定向提醒**：知识文档同步提醒（业务代码变更但对应域知识文档未更新 → 列出具体域和文件路径）
+>
+> 技术检查不过会阻止完成。
 
 ## 影响分析工具区分
 

@@ -226,6 +226,10 @@ For `Entry Document`:
 
 Read template from `templates/change-risk-classification.md`. Write as-is to `.claude/ecw/change-risk-classification.md`.
 
+### 4c2: Copy `calibration-log.md`
+
+Read template from `templates/calibration-log.md`. Write as-is to `.claude/ecw/calibration-log.md`. This file accumulates Phase 3 calibration records over time.
+
 ### 4d: Generate `ecw-path-mappings.md`
 
 Read template from `templates/ecw-path-mappings.md`. Auto-discover project directory structure:
@@ -489,6 +493,10 @@ Preserve template header/footer, "Add New Domain Guide" block, keyword matching 
 
 Read and copy `templates/change-risk-classification.md` as-is.
 
+### 3c2: Copy `calibration-log.md`
+
+Read and copy `templates/calibration-log.md` as-is to `.claude/ecw/calibration-log.md`.
+
 ### 3d: Generate `ecw-path-mappings.md`
 
 Read `templates/ecw-path-mappings.md`. Scan project for directory structure, generate mapping tables.
@@ -562,6 +570,7 @@ If run: check `scripts/java/` for scanner scripts, execute them if they exist.
 | `domain-registry.md` | Created |
 | `change-risk-classification.md` | Created |
 | `ecw-path-mappings.md` | Created |
+| `calibration-log.md` | Created |
 
 #### Knowledge — Common (.claude/knowledge/common/)
 | File | Status |
@@ -591,6 +600,7 @@ If run: check `scripts/java/` for scanner scripts, execute them if they exist.
 4. **Fill domain knowledge files**: Each domain's template files contain `{{...}}` placeholders.
 5. **Populate common knowledge files**: Fill cross-domain integration data.
 6. **Refine CLAUDE.md keywords**: Add domain-specific terms.
+7. **Validate**: Run `/ecw-validate-config` to check configuration completeness.
 ```
 
 ---

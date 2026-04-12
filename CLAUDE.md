@@ -19,7 +19,7 @@ ecw:risk-classifier (Phase 1 快速预判)
   ├─ P2 → superpowers:writing-plans
   ├─ P3 → 直接实现
   └─ Bug → superpowers:systematic-debugging
-CR 完成后 → ecw:biz-impact
+CR 完成后 → ecw:biz-impact → [P0/P1: Phase 3 反馈校准]
 ```
 
 ## 依赖
@@ -45,6 +45,7 @@ CR 完成后 → ecw:biz-impact
 
 | 文件 | 用途 |
 |------|------|
+| `.claude/knowledge/common/cross-domain-rules.md` | 跨域调用规则与全局约束 |
 | `.claude/knowledge/common/cross-domain-calls.md` | 域间直接调用矩阵 |
 | `.claude/knowledge/common/mq-topology.md` | MQ Topic 发布/消费关系 |
 | `.claude/knowledge/common/shared-resources.md` | 跨域共享资源表 |
@@ -61,7 +62,11 @@ CR 完成后 → ecw:biz-impact
 
 三步全通过才能标记完成。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
 
-> 此规则由 plugin 的 PreToolUse hook 自动执行技术检查。标记完成时 hook 会检查本次变更的文件是否有断裂引用、被删除的文件是否还被引用。技术检查不过会阻止完成。
+> 此规则由 plugin 的 PreToolUse hook 自动执行技术检查。标记完成时 hook 会：
+> - **硬拦截**：断裂引用检查、残留引用检查、Java 编译检查（`mvn compile` 失败 → 阻止完成）
+> - **定向提醒**：知识文档同步提醒（业务代码变更但对应域知识文档未更新 → 列出具体域和文件路径）
+>
+> 技术检查不过会阻止完成。
 
 ### 项目 CLAUDE.md 集成
 
@@ -80,3 +85,8 @@ CR 完成后 → ecw:biz-impact
 | ecw:requirements-elicitation | risk-classifier 路由（单域 P0/P1） | `/ecw:requirements-elicitation` |
 | ecw:spec-challenge | writing-plans 完成后（P0/P1跨域） | `/ecw:spec-challenge <文件>` |
 | ecw:biz-impact | CR 完成后 | `/ecw:biz-impact [范围]` |
+
+| Command | 说明 |
+|---------|------|
+| `/ecw-init` | 初始化项目 ECW 配置 |
+| `/ecw-validate-config` | 检查配置完整性和正确性 |
