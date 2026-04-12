@@ -40,7 +40,15 @@ description: |
     ┌────┴────┐
     ▼         ▼
  2+ 域      0~1 域
- 继续分析   → 提示：单域走 ecw:requirements-elicitation
+    │       → 提示：单域走 ecw:requirements-elicitation
+    ▼
+ Round 1: 独立分析（并行域 agent）
+    │
+    ▼
+ Round 2: 域间协商（并行域 agent，各域评估其他域变更对自己的影响）
+    │
+    ▼
+ Round 3: Coordinator 合并 + 交叉校验 + 输出报告
 ```
 
 ## Phase 1: 域识别
@@ -56,7 +64,7 @@ description: |
 
 ---
 
-## 多域协作分析（2 轮）
+## 多域协作分析（3 轮）
 
 ### Round 1: 独立分析（并行）
 
@@ -126,24 +134,107 @@ notes: "其他需要注意的事项"
 3. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
 4. 收集所有 Agent 返回的 YAML 结果
 
-### Round 2: Coordinator 交叉校验与汇总
+### Round 2: 域间协商（并行）
+
+Round 1 各域独立分析完成后，Coordinator 把各域的变更计划交叉分发，让每个域评估**其他域的变更**是否影响自己。
+
+**Coordinator 操作步骤：**
+
+1. 收集 Round 1 所有域 agent 的 YAML 输出
+2. 为每个域生成一份"其他域变更摘要"——汇总其他所有域的 `affected_components`、`state_changes`、`cross_domain_risks`
+3. 特别标注：其他域的 `cross_domain_risks` 中 `target` 指向本域的项（"有域专门提到了你可能受影响"）
+4. 并行派发新一轮域 agent
+
+**Round 2 域 Agent 使用统一的 prompt 模板：**
+
+```
+你是 {project_name} {domain_name}域专家 Agent（协商轮）。
+
+Round 1 中你对需求做了独立分析，现在其他域也完成了分析。你的任务是评估其他域的变更计划是否影响你的域。
+
+## 原始需求
+---
+{user_requirement}
+---
+
+## 你在 Round 1 的分析结果
+{round1_yaml_output}
+
+## 其他域的变更计划
+{for each other domain:}
+### {other_domain_name}域
+- 影响等级: {impact_level}
+- 概述: {summary}
+- 变更组件:
+{affected_components formatted list}
+- 状态变更:
+{state_changes formatted list}
+- 指向你的跨域风险:
+{cross_domain_risks where target == current domain, or "无" if none}
+
+## 你的知识文档（需要时读取验证）
+- 入口: {knowledge_root}{index}
+- 业务规则: {knowledge_root}{business_rules}
+
+## 协商任务
+1. 检查其他域的变更是否影响你的域（接口变更、消息体变更、共享资源变更等）
+2. 如果受影响，说明具体影响点和你这边需要的配套变更
+3. 如果 Round 1 你报了 impact_level: none，但其他域的变更确实影响了你，更新你的评估
+4. 如果发现其他域的变更计划与你的域存在冲突（同时改同一接口、状态机不兼容等），指出冲突点
+5. 如果其他域的变更完全不影响你，直接报 revised_impact_level 与 Round 1 一致，其余字段留空
+
+## 输出格式（严格按此 YAML 格式输出，用 ```yaml 代码块包裹）
+domain: {domain_id}
+negotiation_result:
+  revised_impact_level: none | low | medium | high
+  impact_from_others:
+    - source_domain: "哪个域的变更影响了你"
+      impact: "具体影响描述"
+      required_action: "你这边需要做的配套变更"
+  conflicts:
+    - with_domain: "冲突对方域"
+      description: "冲突描述"
+      suggestion: "建议解决方式"
+  revised_components:
+    - type: "组件类型"
+      name: "类名"
+      change: "变更内容"
+      reason: "因为哪个域的什么变更导致需要配套改动"
+```
+
+**Coordinator 操作步骤：**
+1. 用上方模板填充变量，为每个域生成 Round 2 prompt
+2. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
+3. 收集所有 Agent 返回的 YAML 结果
+
+---
+
+### Round 3: Coordinator 交叉校验与汇总
 
 **Coordinator 自己完成以下步骤（不派发 Agent）：**
 
-**2a. 跨域冲突检测**
+**3a. 合并 Round 1 + Round 2 结果**
 
-遍历所有域的 `cross_domain_risks`，检查：
+对每个域：
+- 如果 Round 2 的 `revised_impact_level` 高于 Round 1 的 `impact_level` → 以 Round 2 为准
+- 把 Round 2 的 `revised_components` 追加到 Round 1 的 `affected_components`
+- 把 Round 2 的 `impact_from_others` 加入跨域依赖关系
+- 把 Round 2 的 `conflicts` 汇总到冲突列表
+
+**3b. 跨域冲突检测**
+
+遍历合并后所有域的 `cross_domain_risks` + Round 2 的 `conflicts`，检查：
 - 是否有两个域对同一资源提出了不兼容的变更 → 标记为"域间冲突"
-- 是否有域 A 的 `cross_domain_risks` 指向域 B，但域 B 报了 `impact_level: none` → 标记为"疑似遗漏"
+- 是否有域 A 的 `cross_domain_risks` 指向域 B，但域 B 在 Round 1 和 Round 2 都报了 `none` → 标记为"疑似遗漏"
 
-**2b. 跨域规则校验（遗漏检测）**
+**3c. 跨域规则校验（遗漏检测）**
 
 读取以下文件做最终校验（按需读取，不要一次全部读取）：
 - `cross-domain-calls.md` → 验证各域提到的直接调用关系是否登记
 - `mq-topology.md` → 验证各域提到的 MQ 关系是否登记
 - `shared-resources.md` → 检查是否有被忽略的共享资源影响
 
-**3c. 代码验证**
+**3d. 代码验证**
 
 对每个 `affected_component` 执行 Grep 验证。从 ecw.yml `component_types` 读取组件类型及其对应的验证模式：
 - 服务层组件 → `Grep pattern="class {name}" path=项目根目录`
@@ -158,7 +249,7 @@ notes: "其他需要注意的事项"
 对每个 `cross_domain_risk`：
 - `Grep pattern="{resource}" path=项目根目录` 确认调用关系确实存在
 
-**3d. 输出报告**
+**3e. 输出报告**
 
 ```markdown
 # 多域协作分析报告
@@ -166,10 +257,10 @@ notes: "其他需要注意的事项"
 ## 需求概述
 {user_requirement}
 
-## 涉及域总览
-| 域 | 影响等级 | 变更组件数 | 预估文件数 | 概述 |
-|---|---------|----------|----------|------|
-| {domain_name} | {impact_level} | {count} | {estimated_files} | {summary} |
+## 涉及域总览（合并 Round 1 + Round 2）
+| 域 | Round 1 等级 | 协商后等级 | 变更组件数 | 概述 |
+|---|-------------|----------|----------|------|
+| {domain_name} | {round1_level} | {final_level} | {count} | {summary} |
 
 ## 各域详细分析
 
@@ -190,13 +281,32 @@ notes: "其他需要注意的事项"
 
 ### （下一个域...）
 
-## Coordinator 交叉校验发现
-### 遗漏检测
-- {domain}: 域 A 指出 cross_domain_risk 指向 {domain}，但 {domain} 报了 none — 建议确认
+## 域间协商发现
+
+### 影响等级变更
+（如果 Round 2 协商后有域的影响等级升级，列出变更原因）
+| 域 | Round 1 等级 | 协商后等级 | 原因 |
+|---|-------------|----------|------|
+| {domain} | {round1_level} | {round2_level} | {reason} |
+（如果所有域等级无变化，显示"无等级变更"）
+
+### 协商发现的配套变更
+（Round 2 中各域发现的、因其他域变更而需要的配套改动）
+| 域 | 新增组件 | 变更内容 | 触发方 |
+|---|---------|---------|--------|
+| {domain} | {component} | {change} | {source_domain} 的 {what} 变更 |
+（如果无配套变更，显示"无"）
 
 ### 域间冲突
-- {domain} vs {with_domain}: {description}
-  建议: {suggestion}
+（Round 2 协商 + Coordinator 交叉校验发现的冲突）
+| 域 A | 域 B | 冲突描述 | 建议 |
+|-----|------|---------|------|
+| {domain_a} | {domain_b} | {description} | {suggestion} |
+（如果无冲突，显示"无"）
+
+## Coordinator 交叉校验发现
+### 遗漏检测
+- {domain}: 域 A 指出 cross_domain_risk 指向 {domain}，但 {domain} 在 Round 1 和协商轮都报了 none — 建议确认
 
 ## 跨域依赖与实施顺序
 （根据 cross_domain_risks 的依赖关系，给出建议的实施顺序）
