@@ -80,7 +80,7 @@ List your business domains. For each domain, provide:
 Example format:
 1. order | 订单 | 订单从创建到完成的全生命周期管理 | src/main/java/com/example/biz/order/
 2. payment | 支付 | 支付、退款、对账 | src/main/java/com/example/biz/payment/
-3. inventory | 库存 | 库存管理、盘点、调拨 | src/main/java/com/example/biz/inventory/
+3. logistics | 物流 | 物流调度、配送、运费计算 | src/main/java/com/example/biz/logistics/
 
 Please list all your domains (one per line):
 ```
@@ -224,12 +224,13 @@ Generate `.claude/ecw/ecw-path-mappings.md` using the Write tool. Fill in:
 mkdir -p .claude/knowledge/common
 ```
 
-Read and copy these 5 template files from `templates/knowledge/common/` in the plugin directory:
-1. `cross-domain-calls.md`
-2. `e2e-paths.md`
-3. `external-systems.md`
-4. `mq-topology.md`
-5. `shared-resources.md`
+Read and copy these 6 template files from `templates/knowledge/common/` in the plugin directory:
+1. `cross-domain-rules.md` (索引文件，必须首先创建)
+2. `cross-domain-calls.md`
+3. `e2e-paths.md`
+4. `external-systems.md`
+5. `mq-topology.md`
+6. `shared-resources.md`
 
 For each file: Read the template with the Read tool, then Write it to `.claude/knowledge/common/{filename}`.
 
@@ -347,6 +348,7 @@ After all steps are complete, output a structured summary:
 #### Knowledge -- Common (.claude/knowledge/common/)
 | File | Status |
 |------|--------|
+| `cross-domain-rules.md` (索引) | {Created / Skipped} |
 | `cross-domain-calls.md` | {Created / Skipped} |
 | `e2e-paths.md` | {Created / Skipped} |
 | `external-systems.md` | {Created / Skipped} |

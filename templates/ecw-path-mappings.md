@@ -101,8 +101,8 @@
   示例：
   | Order*          | order              |
   | Payment*        | payment            |
-  | GoodsStock*     | inventory（共享）   |
-  | Task*           | task（共享）        |
+  | Product*        | product（共享）     |
+  | Account*        | account（共享）     |
   | 无法匹配的      | 标记为"共享层"      |
 -->
 
