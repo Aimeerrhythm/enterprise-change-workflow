@@ -24,6 +24,7 @@ bug 修复同样先经过本 skill 进行风险预判，然后串联 `superpower
 bug 报告 → risk-classifier（Phase 1，快速预判）
   → systematic-debugging（定位 + 修复）
   → mvn test
+  → ecw:cross-review
   → ecw:biz-impact（如果 P0/P1）
   → Phase 3 校准（自动）
 ```
@@ -50,9 +51,9 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
-| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → 实现 → `ecw:biz-impact` → **Phase 3** |
-| P2（中） | → `superpowers:writing-plans`（Phase 1 含轻量 MQ 检查，跳过完整需求澄清）|
+| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:cross-review` → `ecw:biz-impact` → **Phase 3** |
+| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → 实现 → `ecw:cross-review` → `ecw:biz-impact` → **Phase 3** |
+| P2（中） | → `superpowers:writing-plans` → 实现 → `ecw:cross-review` |
 | P3（低） | → 直接实现 |
 
 ### 需求类变更 — 跨域（Step 1 匹配到 2+ 个域）
@@ -61,9 +62,9 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
-| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:biz-impact` → **Phase 3** |
-| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → 实现 → `ecw:biz-impact`（建议）→ **Phase 3** |
+| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:cross-review` → `ecw:biz-impact` → **Phase 3** |
+| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:cross-review` → `ecw:biz-impact` → **Phase 3** |
+| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → 实现 → `ecw:cross-review` → `ecw:biz-impact`（建议）→ **Phase 3** |
 | P3（低） | → `ecw:domain-collab`（多域协作，简化输出）→ 直接实现 |
 
 > **判定方法：** Step 1 域定位时，对照项目 CLAUDE.md 的域路由部分（关键词→域映射表）统计匹配到的域数量。匹配 2+ 个域 = 跨域需求。
@@ -74,7 +75,7 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| 任何等级 | → invoke `superpowers:systematic-debugging`（定位 + 修复）→ mvn test → ecw:biz-impact（P0/P1）→ **Phase 3** |
+| 任何等级 | → invoke `superpowers:systematic-debugging`（定位 + 修复）→ mvn test → `ecw:cross-review` → ecw:biz-impact（P0/P1）→ **Phase 3** |
 
 Bug 修复不走 ecw:requirements-elicitation，但风险等级仍然决定事后的 ecw:biz-impact 要求。
 
