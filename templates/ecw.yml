@@ -52,29 +52,34 @@ scan_patterns:
   # 示例: "@Resource|@Autowired|@Inject" 会匹配任意一种注入注解
 
   # -- 依赖注入 --
-  cross_domain_injection: "@Resource|@Autowired|@Inject"   # 跨域类注入标记
+  # 检测跨域类注入。命中说明当前域直接依赖了其他域的服务，修改可能影响调用方/被调用方。
+  cross_domain_injection: "@Resource|@Autowired|@Inject"
   # Go: "wire.Bind|wire.Struct" | Node: "constructor(private" | Python: "@inject"
 
   # -- 外部服务引用 --
-  external_reference: "@DubboReference"        # 外部服务引用标记（RPC 框架）
+  # 检测 RPC/远程服务调用。命中说明依赖外部系统，修改可能影响接口契约、超时、降级策略。
+  external_reference: "@DubboReference"
   # Go: "grpc.Dial|grpc.NewClient" | Node: "axios.create|fetch(" | Python: "httpx.Client|requests.Session"
 
   # -- MQ 消息发送 --
-  mq_send: "mqMsgManager"                     # MQ 发送标识
+  # 检测消息队列发送。命中说明存在异步下游消费者，修改消息体/Topic 会影响所有订阅方。
+  mq_send: "mqMsgManager"
   # Go: "kafka.NewWriter|sarama.NewSyncProducer" | Node: "amqpChannel.publish" | Python: "producer.send"
 
   # -- 事件发布 --
-  event_publish: "applicationEventPublisher"   # 事件发布标识
+  # 检测应用内事件发布。命中说明有事件监听者依赖此事件，修改事件结构会影响所有 @EventListener。
+  event_publish: "applicationEventPublisher"
   # Go: "eventBus.Publish" | Node: "eventEmitter.emit" | Python: "event_bus.publish"
 
   # -- 配置驱动逻辑 --
-  config_driven: "@NacosValue|@Value"          # 配置驱动逻辑标识
+  # 检测运行时配置读取。命中说明逻辑受配置中心控制，修改配置 key 或默认值可能改变线上行为。
+  config_driven: "@NacosValue|@Value"
   # Go: "viper.Get|viper.GetString" | Node: "config.get|process.env" | Python: "settings.|os.environ"
 
   # 自定义模式：根据项目需要添加
-  # db_write: "INSERT|UPDATE|DELETE"           # SQL 写操作
-  # cache_op: "redisTemplate|RedissonClient"   # 缓存操作
-  # scheduled: "@Scheduled|@XxlJob"            # 定时任务
+  # db_write: "INSERT|UPDATE|DELETE"             # SQL 写操作。命中说明直接修改数据，需关注事务边界和数据一致性。
+  # cache_op: "redisTemplate|RedissonClient"     # 缓存操作。命中说明涉及缓存读写，需关注缓存一致性和过期策略。
+  # scheduled: "@Scheduled|@XxlJob"              # 定时任务。命中说明是定时触发逻辑，修改可能影响执行频率和业务时序。
 
 # 路径配置
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。
