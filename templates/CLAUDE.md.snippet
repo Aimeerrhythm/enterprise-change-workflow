@@ -39,16 +39,28 @@
 
 ## 自动化规则
 
-- **收到变更类需求时**：自动调用 `/risk-classify`，完成风险分级后再决定后续流程（requirements-elicitation / writing-plans / 直接实现）
-- **收到 bug 修复类需求时**：先调用 `/risk-classify` 评估风险，然后路由到 `superpowers:systematic-debugging` 定位和修复
-- **CR 完成后**：调用 `/biz-impact` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围，与代码质量审查报告分段呈现
-- **Skill 检查优先级**：本项目已有 `risk-classifier` 作为变更类任务的统一入口，using-superpowers 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 risk-classifier，不需要额外的 skill 适用性检查
+- **收到变更类需求时**：自动调用 `ecw:risk-classifier`，完成风险分级后再决定后续流程（ecw:requirements-elicitation / writing-plans / 直接实现）
+- **收到 bug 修复类需求时**：先调用 `ecw:risk-classifier` 评估风险，然后路由到 `superpowers:systematic-debugging` 定位和修复
+- **CR 完成后**：调用 `ecw:biz-impact` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围，与代码质量审查报告分段呈现
+- **Skill 检查优先级**：本项目已有 `ecw:risk-classifier` 作为变更类任务的统一入口，using-superpowers 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 ecw:risk-classifier，不需要额外的 skill 适用性检查
+
+## 完成验证规则
+
+**声明任何任务/步骤"完成"之前，必须执行结构化自查，不能仅靠自我判断：**
+
+1. **需求对标**：回看原始需求/计划对该任务的描述，逐项确认全部实现，不遗漏、不多做
+2. **产出验证**：对实际产出做技术验证——文件是否存在、引用是否有效、内容是否完整、格式是否正确
+3. **残留检查**：该删未删的旧文件、该更新未更新的引用、该同步未同步的文档
+
+三步全通过才能标记完成。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
+
+> 此规则由 ECW plugin 的 PreToolUse hook 自动执行技术检查。标记完成时 hook 会检查本次变更的文件是否有断裂引用、被删除的文件是否还被引用。技术检查不过会阻止完成。
 
 ## 影响分析工具区分
 
 | 工具 | 阶段 | 输入 | 用途 |
 |------|------|------|------|
-| `domain-collab` | **需求阶段**（实现前） | 自然语言需求描述 | 分析需求涉及哪些域、各域需要什么变更、跨域依赖和冲突 |
-| `biz-impact-analysis` | **代码阶段**（实现后） | git diff | 分析已完成的代码变更实际影响了哪些业务流程、外部系统、端到端链路 |
+| `ecw:domain-collab` | **需求阶段**（实现前） | 自然语言需求描述 | 分析需求涉及哪些域、各域需要什么变更、跨域依赖和冲突 |
+| `ecw:biz-impact` | **代码阶段**（实现后） | git diff | 分析已完成的代码变更实际影响了哪些业务流程、外部系统、端到端链路 |
 
-**不要混用**：需求分析阶段用 `domain-collab`，代码变更后用 `biz-impact`。前者是前置预判，后者是后置验证。
+**不要混用**：需求分析阶段用 `ecw:domain-collab`，代码变更后用 `ecw:biz-impact`。前者是前置预判，后者是后置验证。
