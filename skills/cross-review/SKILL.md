@@ -1,35 +1,34 @@
 ---
 name: cross-review
 description: >
-  Structured multi-round consistency verification. Triggered after implementation
-  is complete, before marking task as done. Runs dimension-based verification
-  rounds until convergence (one clean round with zero findings). Checks both
-  intra-file and cross-file consistency. Also invocable manually via /ecw:cross-review.
+  Structured multi-round consistency verification for cross-file content.
+  Checks intra-file and cross-file structural consistency (tables, lists,
+  terminology, counts). Manual-only tool for document-heavy changes.
+  Invocable via /ecw:cross-review.
 ---
 
 # Cross-Review — 结构化交叉验证
 
-在实现完成后、标记任务完成前，对所有变更文件执行多轮交叉一致性验证，直到一轮零发现才退出。
+对变更文件执行多轮交叉一致性验证，直到一轮零发现才退出。聚焦文件间结构一致性。
 
 ## 为什么需要
 
-单次自查有确认偏差——作者是自己作品最差的审查者。同一概念在同一文件的不同章节或多个文件中的描述容易出现不一致（表格行数不同、列表遗漏、术语混用）。结构化多维度验证 + 收敛循环能系统性消除这类问题。
+同一概念在同一文件的不同章节或多个文件中的描述容易出现不一致（表格行数不同、列表遗漏、术语混用）。在文档密集型变更（多个 markdown 文件互相引用）中尤为常见。结构化多维度验证 + 收敛循环能系统性消除这类问题。
 
 ## 触发方式
 
-- **自动**：实现完成后，标记 task complete 之前。
 - **手动**：`/ecw:cross-review`
+- 适用场景：文档密集型变更（多个 markdown/配置文件互相引用时）
+- 不在开发流程的必经链路中——代码正确性和质量由 `ecw:impl-verify` 负责
 
-## 与其他审查组件的关系
+## 与其他验证组件的关系
 
 | 组件 | 审什么 | 区别 |
 |------|--------|------|
-| **ecw:cross-review（本 skill）** | 文件内/跨文件内容一致性、需求完整性 | 多轮收敛循环，聚焦一致性 |
-| superpowers:code-reviewer | 代码质量、计划对标、架构 | 独立 agent 一次性审查，聚焦质量 |
+| **ecw:cross-review（本 skill）** | 文件内/跨文件结构一致性 | 多轮收敛，聚焦文档一致性，手动可选 |
+| ecw:impl-verify | 代码正确性 + 质量 | 多轮收敛，聚焦代码 vs 需求/规则/Plan/标准，必经步骤 |
 | ecw:spec-challenge | 方案盲点、边界条件 | 方案阶段，非实现阶段 |
 | verify-completion hook | 引用存在性、编译、知识同步 | 机械硬拦截，非语义检查 |
-
-**互补关系**：cross-review 查一致性，code-reviewer 查质量。P0/P1 变更建议两者都做。
 
 ## 执行协议
 
@@ -53,20 +52,9 @@ description: >
    - 数量引用（"4 项检查"）是否匹配实际内容？
 4. 对每个不一致项，记录：`[文件A:行号] vs [文件B:行号] — 描述差异`
 
-### Round 2 — 需求→实现追踪
+### Round 2+（条件触发）— 修复副作用检查
 
-**目标**：原始需求/计划的每一项是否都有对应实现。
-
-**操作**：
-
-1. 回溯原始需求描述（用户消息 / plan 文件 / task 描述）
-2. 逐项列出需求条目
-3. 对每条标注实现位置（文件:行号）或标注"未实现"
-4. 检查是否有需求外的额外变更（如计划外新增了功能、修改了不相关的文件）
-
-### Round 3+（条件触发）— 修复副作用检查
-
-**仅当 Round 1 或 Round 2 发现了问题并修复后才触发。**
+**仅当 Round 1 发现了问题并修复后才触发。**
 
 **操作**：
 
@@ -115,14 +103,17 @@ description: >
 ## Cross-Review 验证通过
 
 经过 {N} 轮验证（修复了 {M} 个问题），所有变更文件的交叉一致性检查通过。
-可以标记任务完成。
 ```
 
 ## 约束
 
 - **循环上限**：最多 5 轮。超过 5 轮仍有发现，输出所有未解决项并建议用户介入。
 - **可跳过场景**：纯格式修改、仅改注释/日志等明显无业务逻辑变更的场景。
-- **不做的事**：不评估代码质量（code-reviewer 的职责）、不分析业务影响（biz-impact-analysis 的职责）、不检查编译/引用（hook 的职责）。
+- **不做的事**：
+  - 不验证代码正确性或质量（ecw:impl-verify 的职责）
+  - 不分析业务影响（ecw:biz-impact-analysis 的职责）
+  - 不检查编译/引用（verify-completion hook 的职责）
+  - 不评审方案设计（ecw:spec-challenge 的职责）
 
 ## 常见交叉不一致模式
 
