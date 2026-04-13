@@ -1,0 +1,347 @@
+# Enterprise Change Workflow (ECW)
+
+[English](README.md)
+
+> 给 AI 在大型项目上"改一行代码，追踪全链路影响"的能力。
+
+## 解决什么问题
+
+AI 编码助手在处理独立变更时表现出色，但在大型多模块项目中，一个组件的修改可能级联影响多个业务域。典型痛点：
+
+- 改了一个 Facade 方法签名，不知道有 5 个其他域在调用它
+- 修了一个 MQ 消息格式，遗漏了 3 个外部系统的消费方
+- 做了一个"简单需求"，实际涉及状态机变更、共享资源、端到端链路
+
+ECW 提供结构化的变更管理工作流，让 AI 在动手之前先评估风险、分析影响、交叉验证，确保没有遗漏。
+
+## 核心概念
+
+### 三阶段风险分级
+
+ECW 的核心是对变更进行 **P0~P3 四级风险分级**，驱动后续流程的详略程度：
+
+| 等级 | 风险 | 流程详略 | 典型场景 |
+|------|------|---------|---------|
+| **P0** | 极高 | 全流程：需求澄清 → 精确定级 → 完整方案 → 对抗审查 → 实现 → 交叉验证 → 影响分析 → 校准 | 多域状态机变更、核心链路改造 |
+| **P1** | 高 | 完整流程但跳过对抗审查（跨域除外） | 共享资源修改、MQ 消息格式变更 |
+| **P2** | 中 | 简化流程：方案 → 实现 → 交叉验证 | 单域新增字段、局部逻辑调整 |
+| **P3** | 低 | 直接实现 | 日志调整、文案修改、配置更新 |
+
+**核心原则：改日志和改库存扣减的流程不应该一样重。**
+
+### 三个阶段
+
+| 阶段 | 时机 | 数据源 | 目的 |
+|------|------|--------|------|
+| **Phase 1** | 用户描述需求后 | 关键词匹配 + 共享资源表 | 快速预判风险等级，确定流程路径 |
+| **Phase 2** | 需求分析完成后 | 完整依赖图（§1~§5） | 精确定级，必要时升降级 |
+| **Phase 3** | 实现 + 影响分析完成后 | biz-impact 报告 | 校准预测准确度，改进分级规则 |
+
+### 知识驱动的影响分析
+
+ECW 依赖项目级知识文件做出精准判断。五类跨域知识构成依赖图：
+
+| 编号 | 知识文件 | 内容 | 谁使用 |
+|------|---------|------|--------|
+| §1 | `cross-domain-calls.md` | 域间直接调用矩阵 | Phase 2, domain-collab, biz-impact |
+| §2 | `mq-topology.md` | MQ Topic 发布/消费关系 | Phase 1(轻量), Phase 2, biz-impact |
+| §3 | `shared-resources.md` | 2+ 域共享的服务/组件 | Phase 1, Phase 2, biz-impact |
+| §4 | `external-systems.md` | 外部系统集成清单 | Phase 2, biz-impact |
+| §5 | `e2e-paths.md` | 端到端关键业务链路 | Phase 2, biz-impact |
+
+## 工作流总览
+
+```
+用户提出需求 / 变更 / Bug
+        |
+        v
+  Risk Classifier — Phase 1（快速预判 P0~P3）
+        |
+   +----+----+----------------+--------+
+   |         |                |        |
+ 单域需求  跨域需求(2+域)    P2/P3   Bug
+   |         |                |        |
+ Requirements  Domain Collab  |   Systematic
+ Elicitation   (并行 agent    |   Debugging
+ (P0/P1)        分析+交叉校验) |   (定位+修复)
+   |         |                |        |
+   +----+----+                |        |
+        |                     |        |
+  Phase 2（精确定级）          |        |
+        |                     |        |
+  Implementation Plan  <------+        |
+        |                              |
+  [P0/P1跨域: Spec Challenge]          |
+        |                              |
+  Implementation  <--------------------+
+        |
+  Cross-Review（多轮交叉验证）
+        |
+  Completion Verification Hook（自动技术检查）
+        |
+  Business Impact Analysis
+        |
+  [P0/P1: Phase 3 反馈校准]
+```
+
+## 组件一览
+
+### Skills（6 个）
+
+| 组件 | 触发条件 | 说明 |
+|------|---------|------|
+| `ecw:risk-classifier` | 任何变更/需求/Bug | P0-P3 风险分级 + 流程路由，三阶段（预判→精确→校准） |
+| `ecw:domain-collab` | 跨域需求（2+ 域） | 并行域 agent 独立分析 → 相互评估 → Coordinator 交叉校验 |
+| `ecw:requirements-elicitation` | 单域 P0/P1 需求 | 9 维度系统性提问，确保完全理解需求 |
+| `ecw:spec-challenge` | Plan 产出后（P0, P1 跨域） | 调度独立 agent 对方案进行对抗性审查，challenge-response 循环 |
+| `ecw:cross-review` | 实现完成后 | 结构化多轮交叉一致性验证，零发现才退出 |
+| `ecw:biz-impact` | CR 完成后 | Git diff → 调度 agent 分析业务影响，输出结构化报告 |
+
+### Agents（2 个）
+
+| 组件 | 调度方 | 说明 |
+|------|--------|------|
+| `biz-impact-analyzer` | `ecw:biz-impact` | 5 步分析：Diff 解析 → 依赖图查询 → 代码扫描 → 外部系统评估 → 报告生成 |
+| `spec-challenger` | `ecw:spec-challenge` | 4 维评审：准确性 / 信息质量 / 边界与盲区 / 健壮性 → 致命缺陷 + 改进建议 |
+
+### Commands（2 个）
+
+| 组件 | 说明 |
+|------|------|
+| `/ecw-init` | 项目初始化向导（3 种模式：Attach/Manual/Scaffold） |
+| `/ecw-validate-config` | 验证 ECW 配置完整性（7 步检查，输出 pass/warn/fail 报告） |
+
+### Hook（1 个）
+
+| 组件 | 触发方式 | 说明 |
+|------|---------|------|
+| `verify-completion` | PreToolUse 自动拦截 TaskUpdate(completed) | 3 项硬拦截 + 1 项定向提醒 |
+
+**硬拦截（失败 → 阻止完成）：**
+1. 断裂引用检查 — 修改的文件引用了不存在的 `.claude/` 路径
+2. 残留引用检查 — 删除的文件仍被其他文件引用
+3. Java 编译检查 — 修改 `.java` 文件时自动执行 `mvn compile`
+
+**定向提醒（不阻止，注入 systemMessage）：**
+4. 知识文档同步提醒 — 业务代码变更但对应域知识文档未更新
+
+## 安装
+
+### 前置依赖
+
+- **Claude Code CLI** — ECW 是 Claude Code plugin，需要 CLI 环境
+- **superpowers plugin** — 提供 `writing-plans`、`executing-plans`、`systematic-debugging` 等基础 skill
+
+### Step 1：注册 Marketplace
+
+在 `~/.claude/settings.json` 的 `extraKnownMarketplaces` 中添加：
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "enterprise-change-workflow": {
+      "source": {
+        "source": "github",
+        "repo": "Aimeerrhythm/enterprise-change-workflow"
+      }
+    }
+  }
+}
+```
+
+### Step 2：安装插件
+
+```bash
+claude plugin install ecw@enterprise-change-workflow
+```
+
+验证安装成功：
+
+```bash
+claude plugin list
+# 应能看到 ecw@enterprise-change-workflow
+```
+
+### Step 3：启用插件
+
+确认 `~/.claude/settings.json` 的 `enabledPlugins` 中包含：
+
+```json
+{
+  "enabledPlugins": {
+    "ecw@enterprise-change-workflow": true
+  }
+}
+```
+
+> `claude plugin install` 通常会自动添加此条目。如果没有，手动添加。
+
+### Step 4：重启 Claude Code
+
+插件在下次会话启动时加载。退出当前会话，重新启动 Claude Code。
+
+### Step 5：初始化项目配置
+
+在目标项目目录下启动 Claude Code，执行：
+
+```
+/ecw-init
+```
+
+初始化向导支持 3 种模式：
+
+| 模式 | 适用场景 | 创建内容 |
+|------|---------|---------|
+| **Attach** | 项目已有文档体系 | 仅 ECW 配置文件（5 个），不动现有文档 |
+| **Manual** | 文档在非标准位置 | 配置文件 + 用户指定路径 |
+| **Scaffold** | 全新项目 | 配置文件 + 完整知识文件模板 |
+
+生成的配置文件：
+
+```
+.claude/ecw/
+├── ecw.yml                      # 项目配置：名称、语言、组件类型、扫描模式
+├── domain-registry.md           # 域注册表：域定义、知识目录、代码目录
+├── change-risk-classification.md # 风险分级校准：因子权重、关键词映射
+├── ecw-path-mappings.md         # 代码路径→域映射（biz-impact 使用）
+└── calibration-log.md           # Phase 3 校准历史（自动追加）
+```
+
+### Step 6：配置项目 CLAUDE.md
+
+在项目的 `CLAUDE.md` 中添加 ECW 集成配置。参考 `templates/CLAUDE.md.snippet`，核心内容：
+
+1. **域级知识路由表** — 关键词→域的映射，供 risk-classifier 和 domain-collab 匹配
+2. **自动化规则** — 收到变更类需求时自动调用 `ecw:risk-classifier`
+3. **完成验证规则** — 标记完成前的结构化自查要求
+4. **影响分析工具区分** — `ecw:domain-collab`（需求阶段）vs `ecw:biz-impact`（代码阶段）
+
+### Step 7：填充知识文件
+
+知识文件质量直接决定影响分析的准确度。Java/Spring 项目可使用内置扫描脚本自动提取：
+
+```bash
+# 在目标项目根目录下执行
+bash <plugin-path>/scripts/java/scan-cross-domain-calls.sh <project_root> <path_mappings_file>
+bash <plugin-path>/scripts/java/scan-shared-resources.sh <project_root> <path_mappings_file>
+bash <plugin-path>/scripts/java/scan-mq-topology.sh <project_root>
+```
+
+扫描结果输出 Markdown 表格到 stdout，可直接填入对应的知识文件。扫描基于 grep 启发式，高召回但可能有误报，建议人工审查后提交。
+
+### 验证安装
+
+```
+/ecw-validate-config
+```
+
+该命令会执行 7 步检查，输出每个配置文件的 pass/warn/fail 状态，帮助你确认配置完整性。
+
+## 知识文件体系
+
+ECW 依赖项目中的知识文件做出准确的域判断和影响分析。知识文件放在 `.claude/knowledge/` 下。
+
+### 跨域公共知识（`common/`）
+
+| 文件 | 说明 | Phase 1 | Phase 2 | biz-impact |
+|------|------|---------|---------|------------|
+| `cross-domain-rules.md` | 索引文件，知识使用指南 | — | 参考 | 参考 |
+| `cross-domain-calls.md` (§1) | 域间直接调用矩阵 | — | 查询 | 查询 |
+| `mq-topology.md` (§2) | MQ Topic 发布/消费关系 | 关键词 | 查询 | 查询 |
+| `shared-resources.md` (§3) | 跨域共享资源表 | 查询 | 查询 | 查询 |
+| `external-systems.md` (§4) | 外部系统集成清单 | — | 查询 | 查询 |
+| `e2e-paths.md` (§5) | 端到端关键业务链路 | — | 查询 | 查询 |
+
+### 域级知识（每域一个目录）
+
+| 文件 | 说明 |
+|------|------|
+| `00-index.md` | 域入口：链路速查、节点定位、Facade 地图、外部系统交互 |
+| `business-rules.md` | 业务规则：并发控制、幂等性、状态机、验证规则、跨域约束 |
+| `data-model.md` | 数据模型：核心表结构、枚举定义、ER 关系、索引 |
+
+## 支持的项目类型
+
+`ecw.yml` 中通过 `component_types` 和 `scan_patterns` 配置适配不同技术栈：
+
+| 技术栈 | 典型组件类型 | 扫描模式 |
+|--------|------------|---------|
+| **Java/Spring** | BizService, Manager, DO, Controller, Mapper | @Resource, @DubboReference, RocketMQ |
+| **Go** | Handler, Repository, Service | import, interface |
+| **Node/TypeScript** | Service, Controller, Middleware | import/require, EventEmitter |
+| **Python** | Service, Repository, Handler | import, Celery |
+
+## 项目结构
+
+```
+enterprise-change-workflow/
+├── .claude-plugin/
+│   ├── plugin.json              # 插件元数据
+│   └── marketplace.json         # Marketplace 描述
+├── skills/                      # 6 个核心 Skill
+│   ├── risk-classifier/         # 风险分级（P0-P3，三阶段）
+│   ├── domain-collab/           # 跨域协作分析（三轮：独立→协商→综合）
+│   ├── requirements-elicitation/# 需求澄清（9 维度系统性提问）
+│   ├── spec-challenge/          # 对抗审查（challenge-response 循环）
+│   ├── cross-review/            # 交叉一致性验证（多轮收敛）
+│   └── biz-impact/              # 业务影响分析（5 步结构化）
+├── agents/
+│   ├── biz-impact-analyzer.md   # 影响分析 Agent
+│   └── spec-challenger.md       # 对抗审查 Agent
+├── commands/
+│   ├── ecw-init.md              # 项目初始化向导
+│   └── ecw-validate-config.md   # 配置验证命令
+├── hooks/
+│   ├── hooks.json               # Hook 注册（PreToolUse → TaskUpdate）
+│   └── verify-completion.py     # 完成验证 Hook（4 项检查）
+├── templates/                   # 配置和知识文件模板
+│   ├── ecw.yml                  # 项目配置模板
+│   ├── domain-registry.md       # 域注册表模板
+│   ├── change-risk-classification.md # 风险分级校准模板
+│   ├── calibration-log.md       # 校准历史模板
+│   ├── ecw-path-mappings.md     # 路径映射模板
+│   ├── CLAUDE.md.snippet        # CLAUDE.md 集成片段
+│   └── knowledge/               # 知识文件模板
+│       ├── common/              # 跨域公共知识（6 个文件）
+│       └── domain/              # 域级知识（3 个文件）
+├── scripts/
+│   ├── java/                    # Java/Spring 项目扫描脚本（3 个）
+│   └── README.md                # 扫描输出格式规范
+├── CLAUDE.md                    # 插件级指引
+├── package.json                 # 版本信息
+├── LICENSE                      # MIT License
+└── README.md
+```
+
+## 故障排查
+
+### 常见问题
+
+**Q: `/ecw-init` 执行后，`/ecw-validate-config` 报告大量 warn？**
+
+A: 正常现象。`ecw-init` 生成的是模板文件，需要根据你的项目填充实际内容。按 validate 报告中的优先级逐项完成。
+
+**Q: verify-completion hook 报"断裂引用"？**
+
+A: 你修改的文件中引用了 `.claude/` 下不存在的路径。检查路径拼写是否正确，或者引用的文件是否已被移动/删除。
+
+**Q: Java 编译检查失败阻止了任务完成？**
+
+A: 编译不过就不能标记完成。修复编译错误后重新标记即可。如果 mvn 不在 PATH 中，编译检查会自动跳过。
+
+**Q: Phase 1 判定的风险等级明显不准？**
+
+A: 两个常见原因：(1) `change-risk-classification.md` 中的关键词映射不够全面 — 补充缺失的关键词；(2) `shared-resources.md` 中缺少共享资源条目 — 重新运行扫描脚本或手动补充。Phase 3 的校准建议可以帮助你系统性改进。
+
+**Q: 知识文件为空，影响分析效果差？**
+
+A: 知识文件质量直接决定分析质量。Java/Spring 项目建议先用 `scripts/java/` 下的扫描脚本自动提取，再人工审查补充。其他技术栈需要手动填充。
+
+## 依赖
+
+- **Claude Code CLI** — ECW 是 Claude Code 插件，需要 CLI 环境
+- **superpowers plugin** — 提供 `writing-plans`、`executing-plans`、`systematic-debugging`、`code-reviewer` 等基础 skill，ECW 的多个环节依赖这些 skill
+
+## License
+
+[MIT](LICENSE)

@@ -1,4 +1,4 @@
-# Risk Classifier — Calibration Log
+# 校准历史 (Calibration Log)
 
 Phase 3 校准历史记录。每次 biz-impact 完成后由 risk-classifier Phase 3 自动追加。
 

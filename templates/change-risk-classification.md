@@ -1,4 +1,4 @@
-# 变更风险分级
+# 变更风险分级 (Change Risk Classification)
 
 > 本文档定义代码变更的风险分级体系。用于 `risk-classifier` skill 的自动判定，也供人工审阅时参考。
 

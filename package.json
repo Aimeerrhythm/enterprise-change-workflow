@@ -1,4 +1,23 @@
 {
   "name": "ecw",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "description": "Claude Code plugin for structured change management in large multi-module projects",
+  "author": "Aimeerrhythm",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aimeerrhythm/enterprise-change-workflow.git"
+  },
+  "homepage": "https://github.com/Aimeerrhythm/enterprise-change-workflow",
+  "bugs": {
+    "url": "https://github.com/Aimeerrhythm/enterprise-change-workflow/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "change-management",
+    "risk-classification",
+    "enterprise",
+    "impact-analysis"
+  ]
 }
