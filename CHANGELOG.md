@@ -18,7 +18,7 @@ Initial release of ECW (Enterprise Change Workflow) plugin for Claude Code.
 - **Requirements Elicitation** (`ecw:requirements-elicitation`) — 9-dimension systematic questioning for single-domain P0/P1 requirements
 - **Spec Challenge** (`ecw:spec-challenge`) — Adversarial spec review via independent agent, challenge-response cycles for P0 and P1 cross-domain plans
 - **Cross-Review** (`ecw:cross-review`) — Structured multi-round cross-consistency verification, converges only when zero findings in a round
-- **Business Impact Analysis** (`ecw:biz-impact`) — Git diff-driven business impact analysis dispatched to specialized agent
+- **Business Impact Analysis** (`ecw:biz-impact-analysis`) — Git diff-driven business impact analysis dispatched to specialized agent
 - **Agents**: `biz-impact-analyzer` (5-step impact analysis) and `spec-challenger` (4-dimension adversarial review)
 - **Commands**: `/ecw-init` (project initialization wizard with Attach/Manual/Scaffold modes), `/ecw-validate-config` (7-step configuration validation)
 - **Completion Verification Hook** — PreToolUse hook with 3 hard blocks (broken references, stale references, Java compilation) and 1 soft reminder (knowledge doc sync)

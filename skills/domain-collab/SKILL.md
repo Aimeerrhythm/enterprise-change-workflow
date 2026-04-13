@@ -6,7 +6,7 @@ description: |
   TRIGGER when: requirement involves 2+ domain keywords defined in project CLAUDE.md routing table,
   user asks "分析影响", "影响哪些域", or risk-classifier routes here for cross-domain needs.
   DO NOT TRIGGER when: single-domain need (use ecw:requirements-elicitation), already have code diff
-  (use ecw:biz-impact), pure technical refactoring with no business logic change.
+  (use ecw:biz-impact-analysis), pure technical refactoring with no business logic change.
 ---
 
 # Domain Collab — 多域协作分析

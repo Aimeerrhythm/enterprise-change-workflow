@@ -46,15 +46,23 @@ def main():
         output_pass(0, 0)
         sys.exit(0)
 
+    # ── 判断是否在已配置的 ECW 项目中 ──
+    # .claude/ecw/ecw.yml 仅在目标项目执行 /ecw-init 后才存在。
+    # 插件仓库本身没有此文件，其 SKILL.md / 模板中的 .claude/ 路径
+    # 引用的是目标项目的结构，不应被视为断裂引用。
+    ecw_configured = os.path.exists(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
     # ── 技术检查 1: 修改的文件中是否有断裂引用 ──
-    for filepath in modified:
-        broken = check_broken_references(cwd, filepath)
-        issues.extend(broken)
+    if ecw_configured:
+        for filepath in modified:
+            broken = check_broken_references(cwd, filepath)
+            issues.extend(broken)
 
     # ── 技术检查 2: 被删除的文件是否还被引用 ──
-    for filepath in deleted:
-        stale = check_stale_references(cwd, filepath)
-        issues.extend(stale)
+    if ecw_configured:
+        for filepath in deleted:
+            stale = check_stale_references(cwd, filepath)
+            issues.extend(stale)
 
     # ── 技术检查 3: Java 编译 ──
     compile_issues, compile_warnings = check_java_compilation(cwd, modified)

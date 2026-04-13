@@ -38,7 +38,7 @@ ECW's core is a **P0-P3 four-level risk classification** that drives workflow de
 |-------|------|-------------|---------|
 | **Phase 1** | After user describes requirement | Keyword matching + shared resource table | Quick risk prediction, determine workflow path |
 | **Phase 2** | After requirement analysis | Full dependency graph (§1-§5) | Precise grading, upgrade/downgrade if needed |
-| **Phase 3** | After implementation + impact analysis | biz-impact report | Calibrate prediction accuracy, improve classification rules |
+| **Phase 3** | After implementation + impact analysis | biz-impact-analysis report | Calibrate prediction accuracy, improve classification rules |
 
 ### Knowledge-Driven Impact Analysis
 
@@ -46,11 +46,11 @@ ECW relies on project-level knowledge files for precise analysis. Five types of 
 
 | # | Knowledge File | Content | Used By |
 |---|---------------|---------|---------|
-| §1 | `cross-domain-calls.md` | Domain-to-domain call matrix | Phase 2, domain-collab, biz-impact |
-| §2 | `mq-topology.md` | MQ topic publish/subscribe relationships | Phase 1 (lightweight), Phase 2, biz-impact |
-| §3 | `shared-resources.md` | Services/components shared by 2+ domains | Phase 1, Phase 2, biz-impact |
-| §4 | `external-systems.md` | External system integrations | Phase 2, biz-impact |
-| §5 | `e2e-paths.md` | End-to-end critical business paths | Phase 2, biz-impact |
+| §1 | `cross-domain-calls.md` | Domain-to-domain call matrix | Phase 2, domain-collab, biz-impact-analysis |
+| §2 | `mq-topology.md` | MQ topic publish/subscribe relationships | Phase 1 (lightweight), Phase 2, biz-impact-analysis |
+| §3 | `shared-resources.md` | Services/components shared by 2+ domains | Phase 1, Phase 2, biz-impact-analysis |
+| §4 | `external-systems.md` | External system integrations | Phase 2, biz-impact-analysis |
+| §5 | `e2e-paths.md` | End-to-end critical business paths | Phase 2, biz-impact-analysis |
 
 ## Workflow Overview
 
@@ -99,13 +99,13 @@ User proposes requirement / change / bug
 | `ecw:requirements-elicitation` | Single-domain P0/P1 requirements | 9-dimension systematic questioning to fully understand requirements |
 | `ecw:spec-challenge` | After plan output (P0, P1 cross-domain) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
 | `ecw:cross-review` | After implementation | Structured multi-round cross-consistency verification, exits only on zero findings |
-| `ecw:biz-impact` | After code review | Git diff → dispatches agent to analyze business impact, outputs structured report |
+| `ecw:biz-impact-analysis` | After code review | Git diff → dispatches agent to analyze business impact, outputs structured report |
 
 ### Agents (2)
 
 | Component | Dispatcher | Description |
 |-----------|-----------|-------------|
-| `biz-impact-analyzer` | `ecw:biz-impact` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
+| `biz-impact-analyzer` | `ecw:biz-impact-analysis` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
 | `spec-challenger` | `ecw:spec-challenge` | 4-dimension review: accuracy / information quality / boundaries & blind spots / robustness → fatal flaws + improvement suggestions |
 
 ### Commands (2)
@@ -207,7 +207,7 @@ Generated configuration files:
 ├── ecw.yml                      # Project config: name, language, component types, scan patterns
 ├── domain-registry.md           # Domain registry: definitions, knowledge dirs, code dirs
 ├── change-risk-classification.md # Risk classification calibration: factor weights, keyword mappings
-├── ecw-path-mappings.md         # Code path → domain mappings (used by biz-impact)
+├── ecw-path-mappings.md         # Code path → domain mappings (used by biz-impact-analysis)
 └── calibration-log.md           # Phase 3 calibration history (auto-appended)
 ```
 
@@ -218,7 +218,7 @@ Add ECW integration configuration to your project's `CLAUDE.md`. Refer to `templ
 1. **Domain knowledge routing table** — keyword → domain mappings for risk-classifier and domain-collab
 2. **Automation rules** — auto-invoke `ecw:risk-classifier` on change requests
 3. **Completion verification rules** — structured self-check requirements before marking complete
-4. **Impact analysis tool distinction** — `ecw:domain-collab` (requirements phase) vs `ecw:biz-impact` (code phase)
+4. **Impact analysis tool distinction** — `ecw:domain-collab` (requirements phase) vs `ecw:biz-impact-analysis` (code phase)
 
 ### Step 7: Populate Knowledge Files
 
@@ -247,7 +247,7 @@ ECW relies on knowledge files in your project to make accurate domain judgments 
 
 ### Cross-Domain Common Knowledge (`common/`)
 
-| File | Description | Phase 1 | Phase 2 | biz-impact |
+| File | Description | Phase 1 | Phase 2 | biz-impact-analysis |
 |------|-------------|---------|---------|------------|
 | `cross-domain-rules.md` | Index file, knowledge usage guide | — | Reference | Reference |
 | `cross-domain-calls.md` (§1) | Domain-to-domain call matrix | — | Query | Query |
@@ -288,7 +288,7 @@ enterprise-change-workflow/
 │   ├── requirements-elicitation/# Requirements elicitation (9-dimension questioning)
 │   ├── spec-challenge/          # Adversarial review (challenge-response cycles)
 │   ├── cross-review/            # Cross-consistency verification (multi-round convergence)
-│   └── biz-impact/              # Business impact analysis (5-step structured)
+│   └── biz-impact-analysis/              # Business impact analysis (5-step structured)
 ├── agents/
 │   ├── biz-impact-analyzer.md   # Impact analysis agent
 │   └── spec-challenger.md       # Adversarial review agent

@@ -89,7 +89,7 @@ Read the path mappings file (path from ecw.yml or default `.claude/ecw/ecw-path-
 ### 4a: Empty Check
 
 If the file has no mapping rows (only header), flag:
-- "路径映射表为空，biz-impact 和完成验证 hook 的域匹配将依赖启发式规则"
+- "路径映射表为空，biz-impact-analysis 和完成验证 hook 的域匹配将依赖启发式规则"
 
 ### 4b: Path Existence
 

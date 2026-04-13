@@ -1,10 +1,10 @@
 ---
-name: biz-impact
+name: biz-impact-analysis
 description: |
   Triggers business impact analysis for code changes.
   Analyzes which business domains, downstream/upstream flows, external systems,
   and end-to-end paths are affected by the diff.
-  Can be invoked manually via /biz-impact or automatically after CR.
+  Can be invoked manually via /biz-impact-analysis or automatically after CR.
 ---
 
 # Business Impact Analysis — 业务流程影响分析
@@ -13,8 +13,8 @@ description: |
 
 ## 触发方式
 
-- **手动**：`/biz-impact` — 分析当前分支 vs master 的全部变更
-- **手动（指定范围）**：`/biz-impact HEAD~3` — 分析最近 N 个 commit
+- **手动**：`/biz-impact-analysis` — 分析当前分支 vs master 的全部变更
+- **手动（指定范围）**：`/biz-impact-analysis HEAD~3` — 分析最近 N 个 commit
 - **自动**：CR 流程完成后自动追加
 
 ## 流程
@@ -67,10 +67,10 @@ description: |
 
 | 输入 | Diff 命令 |
 |------|----------|
-| `/biz-impact` | `git diff master...HEAD` |
-| `/biz-impact HEAD~3` | `git diff HEAD~3...HEAD` |
-| `/biz-impact abc123` | `git diff abc123...HEAD` |
-| `/biz-impact abc123 def456` | `git diff abc123...def456` |
+| `/biz-impact-analysis` | `git diff master...HEAD` |
+| `/biz-impact-analysis HEAD~3` | `git diff HEAD~3...HEAD` |
+| `/biz-impact-analysis abc123` | `git diff abc123...HEAD` |
+| `/biz-impact-analysis abc123 def456` | `git diff abc123...def456` |
 
 ## 与 CR 的集成
 
@@ -80,7 +80,7 @@ description: |
 2. 调度 biz-impact-analyzer agent，基于同一 diff 范围
 3. 两份报告分段呈现：先代码质量，再业务影响
 
-**P0/P1 变更为必要步骤**，P2+ 建议执行。ecw:risk-classifier Phase 1 输出的路由链中已包含 `CR + ecw:biz-impact`，Phase 1 输出时会将其加入 TaskCreate 的 todo list。
+**P0/P1 变更为必要步骤**，P2+ 建议执行。ecw:risk-classifier Phase 1 输出的路由链中已包含 `CR + ecw:biz-impact-analysis`，Phase 1 输出时会将其加入 TaskCreate 的 todo list。
 
 ## 注意事项
 
