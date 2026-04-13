@@ -21,7 +21,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **业务影响分析** (`ecw:biz-impact-analysis`) — 基于 Git diff 的业务影响分析，委派给专用 Agent 执行
 - **Agents**：`biz-impact-analyzer`（5 步影响分析）和 `spec-challenger`（4 维度对抗评审）
 - **Commands**：`/ecw-init`（项目初始化向导，支持 Attach/Manual/Scaffold 三种模式）、`/ecw-validate-config`（7 步配置验证）
-- **完成验证 Hook** — PreToolUse hook，含 3 项硬拦截（断裂引用、残留引用、Java 编译）和 1 项定向提醒（知识文档同步）
+- **完成验证 Hook** — PreToolUse hook，含 4 项硬拦截（断裂引用、残留引用、Java 编译、Java 测试）和 1 项定向提醒（知识文档同步）
 - **Java/Spring 扫描器** — Shell 脚本，用于提取跨域调用、共享资源、MQ 拓扑
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则

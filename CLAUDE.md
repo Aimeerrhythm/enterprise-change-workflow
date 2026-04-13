@@ -82,7 +82,7 @@ ecw:risk-classifier (Phase 1 快速预判)
 | ecw:risk-classifier | 用户提出变更/需求/bug | `/ecw:risk-classifier` |
 | ecw:domain-collab | risk-classifier 路由（跨域） | `/ecw:domain-collab <描述>` |
 | ecw:requirements-elicitation | risk-classifier 路由（单域 P0/P1） | `/ecw:requirements-elicitation` |
-| ecw:spec-challenge | writing-plans 完成后（P0/P1跨域） | `/ecw:spec-challenge <文件>` |
+| ecw:spec-challenge | writing-plans 完成后（P0; P1 仅跨域） | `/ecw:spec-challenge <文件>` |
 | ecw:impl-verify | 实现完成后（P0-P2） | `/ecw:impl-verify` |
 | ecw:biz-impact-analysis | impl-verify 完成后 | `/ecw:biz-impact-analysis [范围]` |
 | ecw:cross-review | — | `/ecw:cross-review`（手动可选） |

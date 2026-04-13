@@ -75,17 +75,17 @@ User proposes requirement / change / bug
         |                     |        |
   Implementation Plan  <------+        |
         |                              |
-  [P0/P1 cross-domain: Spec Challenge] |
+  [P0; P1 cross-domain: Spec Challenge] |
         |                              |
   Implementation  <--------------------+
         |
   Impl-Verify (code correctness + quality verification)
         |
-  Completion Verification Hook (automatic checks)
-        |
   Business Impact Analysis
         |
   [P0/P1: Phase 3 feedback calibration]
+        |
+  Mark complete → Completion Verification Hook (automatic checks)
 ```
 
 ## Components
@@ -97,7 +97,7 @@ User proposes requirement / change / bug
 | `ecw:risk-classifier` | Any change/requirement/bug | P0-P3 risk classification + workflow routing, three phases (predict → precise → calibrate) |
 | `ecw:domain-collab` | Cross-domain requirements (2+ domains) | Parallel domain agents analyze independently → mutual evaluation → coordinator cross-verification |
 | `ecw:requirements-elicitation` | Single-domain P0/P1 requirements | 9-dimension systematic questioning to fully understand requirements |
-| `ecw:spec-challenge` | After plan output (P0, P1 cross-domain) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
+| `ecw:spec-challenge` | After plan output (P0; P1 cross-domain only) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
 | `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit. Replaces code-reviewer |
 | `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
 | `ecw:cross-review` | Manual only (`/ecw:cross-review`) | Cross-file structural consistency verification for document-heavy changes (optional tool) |
@@ -120,15 +120,16 @@ User proposes requirement / change / bug
 
 | Component | Trigger | Description |
 |-----------|---------|-------------|
-| `verify-completion` | PreToolUse auto-intercepts TaskUpdate(completed) | 3 hard blocks + 1 soft reminder |
+| `verify-completion` | PreToolUse auto-intercepts TaskUpdate(completed) | 4 hard blocks + 1 soft reminder |
 
 **Hard blocks (failure → prevents completion):**
 1. Broken reference check — modified files reference non-existent `.claude/` paths
 2. Stale reference check — deleted files still referenced elsewhere
 3. Java compilation check — auto-runs `mvn compile` when `.java` files are modified
+4. Java test check — auto-runs `mvn test` when `.java` files are modified (controlled by `ecw.yml` `verification.run_tests`)
 
 **Soft reminder (non-blocking, injects systemMessage):**
-4. Knowledge doc sync reminder — business code changed but corresponding domain knowledge docs not updated
+5. Knowledge doc sync reminder — business code changed but corresponding domain knowledge docs not updated
 
 ## Installation
 
@@ -205,7 +206,7 @@ Generated configuration files:
 
 ```
 .claude/ecw/
-├── ecw.yml                      # Project config: name, language, component types, scan patterns
+├── ecw.yml                      # Project config: name, language, component types, scan patterns, verification settings
 ├── domain-registry.md           # Domain registry: definitions, knowledge dirs, code dirs
 ├── change-risk-classification.md # Risk classification calibration: factor weights, keyword mappings
 ├── ecw-path-mappings.md         # Code path → domain mappings (used by biz-impact-analysis)
@@ -288,7 +289,7 @@ enterprise-change-workflow/
 │   ├── domain-collab/           # Cross-domain collaborative analysis (three rounds)
 │   ├── requirements-elicitation/# Requirements elicitation (9-dimension questioning)
 │   ├── spec-challenge/          # Adversarial review (challenge-response cycles)
-│   ├── impl-verify/             # Implementation correctness verification (4-round convergence)
+│   ├── impl-verify/             # Implementation correctness verification (multi-round convergence, up to 5 rounds)
 │   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
 │   └── biz-impact-analysis/     # Business impact analysis (5-step structured)
 ├── agents/
@@ -299,7 +300,7 @@ enterprise-change-workflow/
 │   └── ecw-validate-config.md   # Configuration validation command
 ├── hooks/
 │   ├── hooks.json               # Hook registration (PreToolUse → TaskUpdate)
-│   └── verify-completion.py     # Completion verification hook (4 checks)
+│   └── verify-completion.py     # Completion verification hook (5 checks: 4 hard blocks + 1 soft reminder)
 ├── templates/                   # Config and knowledge file templates
 │   ├── ecw.yml                  # Project config template
 │   ├── domain-registry.md       # Domain registry template
