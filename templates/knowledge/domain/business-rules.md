@@ -1,178 +1,174 @@
-# {{Domain Name}} Business Rules
+# {{Domain Name}} 业务规则
 
 > extracted-from-commit: {{COMMIT_HASH}}
 > last-verified: {{DATE}}
 
 <!--
-PURPOSE: This document captures all business rules for a single domain, organized
-by category. The AI assistant reads this when it needs to understand constraints,
-validation logic, concurrency controls, or behavioral rules before making changes.
+用途：本文档按分类记录单个域的所有业务规则。AI 助手在进行变更前
+读取此文件以了解约束、验证逻辑、并发控制或行为规则。
 
-HOW TO POPULATE:
-1. Extract rules from code (lock patterns, validation checks, status transitions).
-2. Extract rules from product specs and domain expert interviews.
-3. Organize by the categories below -- add or remove sections as needed.
-4. For each rule, cite the concrete class/method where it is enforced.
+填充方法：
+1. 从代码中提取规则（锁模式、验证检查、状态流转）。
+2. 从产品规格和领域专家访谈中提取规则。
+3. 按以下分类组织——根据需要增减章节。
+4. 对每条规则，标注其在代码中的执行位置（具体类/方法）。
 -->
 
 ---
 
-## 1. Concurrency Control
+## 1. 并发控制
 
-### Distributed Locks
-
-<!--
-List every distributed lock used in this domain.
-Include the lock key pattern, which node/operation uses it, the granularity,
-timeout settings, and the race condition it prevents.
--->
-
-| Lock Key Pattern | Node / Operation | Granularity | Wait / Timeout | Purpose |
-|-----------------|-----------------|-------------|---------------|---------|
-| `{{DOMAIN}}_LOCK:{{entity_id}}` | {{Operation name}} | {{entity-level}} | {{wait}}s / {{timeout}}s | Prevent concurrent {{operation}} on the same {{entity}} |
-| `{{ANOTHER_KEY}}:{{field}}` | {{Operation name}} | {{field-level}} | {{wait}}s / {{timeout}}s | {{Purpose}} |
-
-### Optimistic Locking (version fields)
+### 分布式锁
 
 <!--
-List every table/entity that uses optimistic locking (version column).
+列出该域中使用的每一把分布式锁。
+包括锁 Key 模式、使用节点/操作、粒度、超时设置和防止的竞态条件。
 -->
 
-| Table / Entity | Scenarios | Description |
-|---------------|-----------|-------------|
-| {{EntityDO}} | {{When version is checked}} | `WHERE version = #{version}` + `SET version = version + 1` |
+| 锁 Key 模式 | 节点 / 操作 | 粒度 | 等待 / 超时 | 用途 |
+|-------------|-----------|------|------------|------|
+| `{{DOMAIN}}_LOCK:{{entity_id}}` | {{操作名称}} | {{实体级}} | {{wait}}s / {{timeout}}s | 防止对同一 {{entity}} 的并发 {{operation}} |
+| `{{ANOTHER_KEY}}:{{field}}` | {{操作名称}} | {{字段级}} | {{wait}}s / {{timeout}}s | {{用途}} |
 
-### Task / Resource Exclusion
+### 乐观锁（version 字段）
 
 <!--
-Document any mutual-exclusion patterns beyond locks (e.g., task ownership,
-workstation binding, operator assignment).
+列出所有使用乐观锁（version 列）的表/实体。
 -->
 
-- {{Description of exclusion rule, e.g., "A task can only be claimed by one operator at a time via obtainTask()"}}
+| 表 / 实体 | 使用场景 | 描述 |
+|----------|---------|------|
+| {{EntityDO}} | {{何时检查 version}} | `WHERE version = #{version}` + `SET version = version + 1` |
+
+### 任务 / 资源互斥
+
+<!--
+记录锁之外的互斥模式（如任务领取、工位绑定、操作员分配）。
+-->
+
+- {{互斥规则描述，如 "一个任务同一时刻只能被一个操作员领取，通过 obtainTask() 实现"}}
 
 ---
 
-## 2. Idempotency Rules
+## 2. 幂等性规则
 
-### Entity Creation Idempotency
-
-<!--
-For each entity creation operation, describe how duplicates are prevented.
--->
-
-| Operation | Idempotency Mechanism | Description |
-|-----------|----------------------|-------------|
-| {{Entity}} creation (MQ) | `findBySourceId(sourceType, sourceId)` | If entity with same source already exists, skip creation |
-| {{Entity}} creation (API) | Transaction-scoped double-check | Second query inside transaction prevents race condition |
-
-### Message Consumption Idempotency
+### 实体创建幂等
 
 <!--
-For each MQ consumer, describe how redelivered messages are handled.
+对每个实体创建操作，描述如何防止重复。
 -->
 
-| Operation / Listener | Idempotency Mechanism | Description |
-|---------------------|----------------------|-------------|
-| {{ListenerClass}} | Status check before processing | If entity already in target status, return early |
-| {{ListenerClass}} | Deduplication by message ID | Store processed message IDs; skip duplicates |
+| 操作 | 幂等机制 | 描述 |
+|------|---------|------|
+| {{Entity}} 创建（MQ） | `findBySourceId(sourceType, sourceId)` | 如果已存在相同来源的实体，跳过创建 |
+| {{Entity}} 创建（API） | 事务内二次查询 | 事务内的第二次查询防止竞态条件 |
 
-### Other Idempotency Patterns
+### 消息消费幂等
 
-| Scenario | Mechanism | Description |
-|----------|-----------|-------------|
-| {{Scenario}} | {{Mechanism}} | {{Details}} |
+<!--
+对每个 MQ 消费者，描述如何处理重复投递的消息。
+-->
+
+| 操作 / 监听器 | 幂等机制 | 描述 |
+|-------------|---------|------|
+| {{ListenerClass}} | 处理前状态检查 | 如果实体已处于目标状态，直接返回 |
+| {{ListenerClass}} | 消息 ID 去重 | 存储已处理的消息 ID；跳过重复消息 |
+
+### 其他幂等模式
+
+| 场景 | 机制 | 描述 |
+|------|------|------|
+| {{场景}} | {{机制}} | {{详情}} |
 
 ---
 
-## 3. MQ Communication (this domain's topics)
+## 3. MQ 通信（本域的 Topic）
 
-### Inbound (messages consumed by this domain)
+### 入站（本域消费的消息）
 
-| Topic | Source System/Domain | Node | Description |
-|-------|---------------------|------|-------------|
-| {{topic_name}} | {{source}} | {{processing_node}} | {{What this message triggers}} |
+| Topic | 来源系统/域 | 处理节点 | 描述 |
+|-------|-----------|---------|------|
+| {{topic_name}} | {{source}} | {{processing_node}} | {{此消息触发的动作}} |
 
-### Outbound (messages published by this domain)
+### 出站（本域发布的消息）
 
-| Topic | Target System/Domain | Node | Description |
-|-------|---------------------|------|-------------|
-| {{topic_name}} | {{target}} | {{publishing_node}} | {{What event triggers this message}} |
-
----
-
-## 4. Validation Rules
-
-<!--
-Document business validation rules enforced in this domain.
-Group by the entity or operation they apply to.
--->
-
-### {{Entity Name}} Validation
-
-| Rule | Enforced In | Description |
-|------|------------|-------------|
-| {{Rule name}} | `{{Class.method()}}` | {{What is validated and what happens on failure}} |
-
-### {{Operation Name}} Validation
-
-| Rule | Enforced In | Description |
-|------|------------|-------------|
-| {{Rule name}} | `{{Class.method()}}` | {{Details}} |
+| Topic | 目标系统/域 | 发布节点 | 描述 |
+|-------|-----------|---------|------|
+| {{topic_name}} | {{target}} | {{publishing_node}} | {{什么事件触发此消息}} |
 
 ---
 
-## 5. State Machines
+## 4. 验证规则
 
 <!--
-For each entity with status transitions, document the allowed transitions.
-Include the trigger (what causes the transition) and the side effects.
+记录该域中执行的业务验证规则。
+按其适用的实体或操作分组。
 -->
 
-### {{Entity Name}} Status Transitions
+### {{实体名称}} 验证
 
-| From Status | To Status | Trigger | Side Effects |
-|------------|-----------|---------|--------------|
+| 规则 | 执行位置 | 描述 |
+|------|---------|------|
+| {{规则名称}} | `{{Class.method()}}` | {{验证什么内容，失败时如何处理}} |
+
+### {{操作名称}} 验证
+
+| 规则 | 执行位置 | 描述 |
+|------|---------|------|
+| {{规则名称}} | `{{Class.method()}}` | {{详情}} |
+
+---
+
+## 5. 状态机
+
+<!--
+对每个有状态流转的实体，记录允许的流转。
+包括触发条件（什么导致流转）和副作用。
+-->
+
+### {{实体名称}} 状态流转
+
+| 源状态 | 目标状态 | 触发条件 | 副作用 |
+|-------|---------|---------|-------|
 | `CREATED` | `IN_PROGRESS` | {{trigger_event}} | {{side_effects}} |
 | `IN_PROGRESS` | `COMPLETED` | {{trigger_event}} | {{side_effects}} |
 | `IN_PROGRESS` | `FAILED` | {{trigger_event}} | {{side_effects}} |
-| `COMPLETED` | -- (terminal) | -- | -- |
+| `COMPLETED` | --（终态） | -- | -- |
 
 ---
 
-## 6. Configuration (dynamic / feature flags)
+## 6. 配置（动态配置 / 功能开关）
 
 <!--
-List any configuration keys that control business behavior in this domain.
-Include the config source (e.g., Nacos, application.yml, database).
+列出该域中控制业务行为的所有配置项。
+包括配置来源（如 Nacos、application.yml、数据库）。
 -->
 
-| Config Key | Source | Default | Description |
-|-----------|--------|---------|-------------|
-| `{{config.key.name}}` | {{Nacos / application.yml / DB}} | {{default_value}} | {{What it controls}} |
+| 配置 Key | 来源 | 默认值 | 描述 |
+|---------|------|-------|------|
+| `{{config.key.name}}` | {{Nacos / application.yml / DB}} | {{default_value}} | {{控制什么}} |
 
 ---
 
-## 7. Cross-Domain Interaction Rules
+## 7. 跨域交互规则
 
 <!--
-Document rules about how this domain interacts with other domains.
-Focus on contracts, expectations, and constraints.
+记录该域与其他域交互的规则。
+关注契约、预期和约束。
 -->
 
-| Interaction | Rule | Description |
-|------------|------|-------------|
-| {{This domain}} -> {{Other domain}} | {{Rule}} | {{Details, e.g., "Must call within same transaction" or "Fire-and-forget via MQ"}} |
+| 交互 | 规则 | 描述 |
+|------|------|------|
+| {{本域}} -> {{其他域}} | {{规则}} | {{详情，如 "必须在同一事务内调用" 或 "通过 MQ fire-and-forget"}} |
 
 ---
 
-## 8. Edge Cases and Special Scenarios
+## 8. 边界情况与特殊场景
 
 <!--
-Document known edge cases, special business scenarios, or non-obvious behaviors
-that developers should be aware of.
+记录已知的边界情况、特殊业务场景或开发者应注意的非显而易见的行为。
 -->
 
-| Scenario | Behavior | Relevant Code |
-|----------|----------|--------------|
-| {{Edge case description}} | {{What happens}} | `{{Class.method()}}` |
+| 场景 | 行为 | 相关代码 |
+|------|------|---------|
+| {{边界情况描述}} | {{实际行为}} | `{{Class.method()}}` |

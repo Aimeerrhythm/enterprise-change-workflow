@@ -1,67 +1,64 @@
-# Cross-Domain Call Matrix
+# 跨域调用矩阵
 
-> Data source: Code scan of dependency injection annotations (e.g., `@Resource`, `@Inject`, `@Autowired`, `@DubboReference`)
-> Last scanned: {{SCAN_DATE}}
-> Scan scope: {{SOURCE_ROOT_PATH}}
-> Total cross-domain calls: {{TOTAL_COUNT}}
-
-<!--
-PURPOSE: This document tracks all direct method calls between domains within
-your system. It is the primary input for impact analysis -- when a class or
-method changes, this matrix tells you which other domains are affected.
-
-HOW TO POPULATE:
-1. Identify all domain boundaries in your codebase (packages, modules, bounded contexts).
-2. Scan for dependency injection across those boundaries.
-3. Record every case where a class in Domain A injects and calls a class in Domain B.
-
-You can generate this automatically with a script that scans your DI annotations,
-or maintain it manually during code reviews.
--->
-
-## Summary Statistics
+> 数据来源：依赖注入注解代码扫描（如 `@Resource`、`@Inject`、`@Autowired`、`@DubboReference`）
+> 最近扫描时间：{{SCAN_DATE}}
+> 扫描范围：{{SOURCE_ROOT_PATH}}
+> 跨域调用总数：{{TOTAL_COUNT}}
 
 <!--
-Aggregate the detail rows below into a caller-callee pair count.
-One row per unique (caller domain, callee domain) pair.
+用途：本文档记录系统内所有域间的直接方法调用。它是影响分析的主要输入——
+当某个类或方法发生变更时，通过此矩阵可以得知哪些其他域会受到影响。
+
+填充方法：
+1. 识别代码库中所有的域边界（包、模块、限界上下文）。
+2. 扫描跨越这些边界的依赖注入。
+3. 记录每一个 Domain A 中的类注入并调用 Domain B 中类的情况。
+
+可以编写脚本自动扫描 DI 注解来生成此文档，也可以在代码评审时手动维护。
 -->
 
-| Caller Domain | Callee Domain | Call Count |
-|---------------|---------------|-----------|
+## 汇总统计
+
+<!--
+将下方明细行聚合为调用方-被调用方对的计数。
+每对唯一的（调用方域, 被调用方域）一行。
+-->
+
+| 调用方域 | 被调用方域 | 调用次数 |
+|---------|----------|---------|
 | orders | inventory | 12 |
 | orders | payments | 5 |
 | shipping | orders | 8 |
 | {{caller_domain}} | {{callee_domain}} | {{count}} |
 
-## Call Details
+## 调用明细
 
 <!--
-One row per injection point. Fill in every cross-domain dependency you find.
+每个注入点一行。填入你发现的每一个跨域依赖。
 
-Column definitions:
-- Caller Domain: The domain that owns the calling class.
-- Callee Domain: The domain that owns the injected interface/class.
-- Caller Class: The concrete class that holds the injected reference.
-- Callee Interface: The interface or class being injected.
-- Call Type: How the dependency is wired (e.g., "Direct injection", "Strategy callback",
-  "RPC reference", "Event listener").
-- Business Scenario: A short description of why this call exists.
-- Data Source: How this entry was discovered (e.g., "code-scan", "manual-review").
+列定义：
+- 调用方域：拥有调用类的域。
+- 被调用方域：拥有被注入接口/类的域。
+- 调用方类：持有注入引用的具体类。
+- 被调用方接口：被注入的接口或类。
+- 调用类型：依赖的注入方式（如 "直接注入"、"策略回调"、"RPC 引用"、"事件监听"）。
+- 业务场景：此调用存在的业务原因。
+- 数据来源：此条目的发现方式（如 "代码扫描"、"人工审查"）。
 -->
 
-| Caller Domain | Callee Domain | Caller Class | Callee Interface | Call Type | Business Scenario | Data Source |
-|---------------|---------------|--------------|------------------|-----------|-------------------|------------|
-| orders | inventory | OrderServiceImpl | StockService | Direct injection | Deduct stock on order confirmation | code-scan |
-| orders | payments | OrderServiceImpl | PaymentGateway | Direct injection | Process payment on checkout | code-scan |
-| shipping | orders | ShippingServiceImpl | OrderQueryService | Direct injection | Look up order details for label generation | code-scan |
+| 调用方域 | 被调用方域 | 调用方类 | 被调用方接口 | 调用类型 | 业务场景 | 数据来源 |
+|---------|----------|---------|------------|---------|---------|---------|
+| orders | inventory | OrderServiceImpl | StockService | 直接注入 | 订单确认时扣减库存 | 代码扫描 |
+| orders | payments | OrderServiceImpl | PaymentGateway | 直接注入 | 结算时处理支付 | 代码扫描 |
+| shipping | orders | ShippingServiceImpl | OrderQueryService | 直接注入 | 生成物流面单时查询订单详情 | 代码扫描 |
 | {{caller}} | {{callee}} | {{caller_class}} | {{callee_interface}} | {{call_type}} | {{scenario}} | {{source}} |
 
 ---
 
-## Maintenance Guidelines
+## 维护指南
 
-1. **Before modifying a shared interface**: Search this document for all callers to assess impact scope.
-2. **Method signature changes**: Must be synchronized across all caller domains listed here.
-3. **New methods**: Lower risk, but verify they do not violate interface contracts.
-4. **Behavioral changes (same signature, different logic)**: Highest risk -- requires regression testing across all callers.
-5. **Keep this document current**: Update it whenever a new cross-domain dependency is introduced or removed.
+1. **修改共享接口前**：在本文档中搜索所有调用方，评估影响范围。
+2. **方法签名变更**：必须同步更新本文档中列出的所有调用方域。
+3. **新增方法**：风险较低，但需验证不违反接口契约。
+4. **行为变更（签名不变，逻辑改变）**：风险最高——需在所有调用方域进行回归测试。
+5. **保持文档时效性**：每当新增或移除跨域依赖时更新本文档。

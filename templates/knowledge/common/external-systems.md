@@ -1,119 +1,118 @@
-# External System Integrations
+# 外部系统集成
 
-> Data source: Code scan + architecture documentation
-> Last scanned: {{SCAN_DATE}}
-> Scan scope: MQ constants, RPC references, HTTP clients, SDK clients
+> 数据来源：代码扫描 + 架构文档
+> 最近扫描时间：{{SCAN_DATE}}
+> 扫描范围：MQ 常量、RPC 引用、HTTP 客户端、SDK 客户端
 
 <!--
-PURPOSE: This document catalogs every external system your application integrates
-with, organized by system. For each system, it lists all integration points --
-MQ topics, RPC/gRPC calls, HTTP endpoints, and SDK usages -- with direction,
-owning domain, and business context.
+用途：本文档按外部系统分类，记录应用与之集成的每一个外部系统。
+对每个系统，列出所有集成点——MQ Topic、RPC/gRPC 调用、HTTP 端点和 SDK 用法，
+包含方向、所属域和业务上下文。
 
-HOW TO POPULATE:
-1. Scan for all external RPC references (e.g., @DubboReference, gRPC stubs, Feign clients).
-2. Scan for all MQ topics that cross system boundaries.
-3. Scan for all HTTP client calls to external URLs.
-4. Group results by external system.
+填充方法：
+1. 扫描所有外部 RPC 引用（如 @DubboReference、gRPC stub、Feign client）。
+2. 扫描所有跨系统边界的 MQ Topic。
+3. 扫描所有调用外部 URL 的 HTTP 客户端。
+4. 按外部系统分组整理结果。
 -->
 
-## Summary
+## 汇总
 
-| Dimension | Count |
-|-----------|-------|
-| External systems | {{count}} |
-| MQ topics (inbound) | {{count}} |
-| MQ topics (outbound) | {{count}} |
-| MQ topics (internal) | {{count}} |
-| RPC references (outbound) | {{count}} |
-| RPC services (exposed) | {{count}} |
-| HTTP integrations | {{count}} |
+| 维度 | 数量 |
+|------|------|
+| 外部系统 | {{count}} |
+| MQ Topic（入站） | {{count}} |
+| MQ Topic（出站） | {{count}} |
+| MQ Topic（内部） | {{count}} |
+| RPC 引用（出站） | {{count}} |
+| RPC 服务（对外暴露） | {{count}} |
+| HTTP 集成 | {{count}} |
 
 ---
 
-## Integration Details by System
+## 按系统分类的集成详情
 
 <!--
-Repeat this section for each external system. Include:
-- System name and description
-- Integration layer (wrapper classes, SDK clients, etc.)
-- A table of all integration points
+对每个外部系统重复此章节。包含：
+- 系统名称和描述
+- 集成层（封装类、SDK 客户端等）
+- 所有集成点的表格
 
-Direction values: Inbound (external -> this system), Outbound (this system -> external), Bidirectional
-Type values: MQ, RPC/Dubbo, gRPC, HTTP, SDK, WebSocket, etc.
+方向取值：入站（外部 -> 本系统）、出站（本系统 -> 外部）、双向
+类型取值：MQ、RPC/Dubbo、gRPC、HTTP、SDK、WebSocket 等
 -->
 
-### {{System Name}} ({{Brief Description}})
+### {{System Name}}（{{简要描述}}）
 
-Integration layer: `{{path-to-wrapper-or-client-code}}`
-RPC references: `{{list of remote interfaces}}`
+集成层：`{{path-to-wrapper-or-client-code}}`
+RPC 引用：`{{list of remote interfaces}}`
 
-| Direction | Type | Topic / Interface / Endpoint | Domain | Business Scenario | Impact Description |
-|-----------|------|------------------------------|--------|-------------------|-------------------|
-| Inbound | MQ | `ext.system.order.create` | orders | Receive new orders from external system | Order creation entry point; schema changes require coordination |
-| Outbound | MQ | `app.to-system.order.status` | orders | Notify external system of order status changes | Status sync; message format changes require downstream coordination |
-| Outbound | RPC | `ExternalFacade.queryProduct()` | catalog | Query product details from external system | Read-only; interface version changes may break calls |
-| Outbound | HTTP | `POST /api/v1/webhook` | notifications | Push event notifications | Requires authentication; endpoint changes need config update |
+| 方向 | 类型 | Topic / 接口 / 端点 | 所属域 | 业务场景 | 影响描述 |
+|------|------|-------------------|-------|---------|---------|
+| 入站 | MQ | `ext.system.order.create` | orders | 接收来自外部系统的新订单 | 订单创建入口；Schema 变更需与对方协调 |
+| 出站 | MQ | `app.to-system.order.status` | orders | 通知外部系统订单状态变更 | 状态同步；消息格式变更需与下游协调 |
+| 出站 | RPC | `ExternalFacade.queryProduct()` | catalog | 从外部系统查询商品详情 | 只读；接口版本变更可能导致调用失败 |
+| 出站 | HTTP | `POST /api/v1/webhook` | notifications | 推送事件通知 | 需认证；端点变更需更新配置 |
 | {{direction}} | {{type}} | {{topic_or_interface}} | {{domain}} | {{scenario}} | {{impact}} |
 
 ---
 
-### {{Another System Name}} ({{Brief Description}})
+### {{Another System Name}}（{{简要描述}}）
 
-Integration layer: `{{path}}`
+集成层：`{{path}}`
 
-| Direction | Type | Topic / Interface / Endpoint | Domain | Business Scenario | Impact Description |
-|-----------|------|------------------------------|--------|-------------------|-------------------|
+| 方向 | 类型 | Topic / 接口 / 端点 | 所属域 | 业务场景 | 影响描述 |
+|------|------|-------------------|-------|---------|---------|
 | {{direction}} | {{type}} | {{topic_or_interface}} | {{domain}} | {{scenario}} | {{impact}} |
 
 ---
 
-## Services Exposed to External Systems
+## 对外暴露的服务
 
 <!--
-If your application exposes APIs (RPC, REST, gRPC) that external systems call,
-list them here. This helps understand the "inbound surface area" of your system.
+如果应用对外暴露了 API（RPC、REST、gRPC）供外部系统调用，
+在此列出。这有助于理解系统的"入站接口面"。
 -->
 
-| Exposed Interface | Domain | Description |
-|-------------------|--------|-------------|
-| OrderFacade | orders | Order CRUD operations |
-| StockQueryFacade | inventory | Stock level queries |
+| 暴露接口 | 所属域 | 描述 |
+|---------|-------|------|
+| OrderFacade | orders | 订单 CRUD 操作 |
+| StockQueryFacade | inventory | 库存查询 |
 | {{facade_class}} | {{domain}} | {{description}} |
 
-## Internal Async Topics (self-produced, self-consumed)
+## 内部异步 Topic（自产自消）
 
 <!--
-These topics do not involve external systems. They exist for internal async
-decoupling. Changes only need to consider internal consumers.
+这些 Topic 不涉及外部系统。它们用于内部异步解耦。
+变更时只需考虑内部消费方。
 -->
 
-| Topic | Constant Name | Domain | Business Scenario |
-|-------|--------------|--------|-------------------|
-| `app.internal.order.index.update` | ORDER_INDEX_ROUTING_KEY | orders | Order search index rebuild |
+| Topic | 常量名 | 所属域 | 业务场景 |
+|-------|-------|-------|---------|
+| `app.internal.order.index.update` | ORDER_INDEX_ROUTING_KEY | orders | 订单搜索索引重建 |
 | `{{topic}}` | {{constant}} | {{domain}} | {{scenario}} |
 
 ---
 
-## Key Code Locations
+## 关键代码位置
 
 <!--
-Quick reference for where integration code lives in the codebase.
+集成代码在代码库中的快速索引。
 -->
 
-| Category | Path |
-|----------|------|
-| MQ constants | `{{path-to-mq-constants}}` |
-| RPC configuration | `{{path-to-rpc-config}}` |
-| External call wrappers | `{{path-to-wrapper-layer}}/` |
-| MQ listeners | `{{path-to-listeners}}/` |
-| Exposed RPC services | `{{path-to-facade-impls}}/` |
+| 类别 | 路径 |
+|------|------|
+| MQ 常量 | `{{path-to-mq-constants}}` |
+| RPC 配置 | `{{path-to-rpc-config}}` |
+| 外部调用封装层 | `{{path-to-wrapper-layer}}/` |
+| MQ 监听器 | `{{path-to-listeners}}/` |
+| 对外暴露的 RPC 服务 | `{{path-to-facade-impls}}/` |
 
 ---
 
-## Maintenance Guidelines
+## 维护指南
 
-1. **Adding a new external system**: Create a new section following the template above.
-2. **Changing message schemas**: Coordinate with the external system team; identify all topics in this document that reference that system.
-3. **Upgrading RPC interface versions**: Check all references listed here and update wrapper code accordingly.
-4. **Monitoring**: Set up alerts for external call failures; this document helps identify which business flows are affected.
+1. **新增外部系统**：按上方模板格式新建一个章节。
+2. **变更消息 Schema**：与外部系统团队协调；在本文档中找出引用该系统的所有 Topic。
+3. **升级 RPC 接口版本**：检查本文档中列出的所有引用，并相应更新封装代码。
+4. **监控**：为外部调用失败设置告警；本文档有助于识别受影响的业务流程。

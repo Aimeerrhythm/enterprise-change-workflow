@@ -1,124 +1,123 @@
-# End-to-End Critical Paths
+# 端到端关键链路
 
-> Data source: Cross-domain dependency graph + business knowledge + code tracing
-> Last updated: {{DATE}}
-
-<!--
-PURPOSE: This document describes the most important end-to-end business flows
-through the system. Each path traces a complete business operation from trigger
-to completion, across all domains and external systems involved.
-
-This is the primary document for impact analysis: when a class or method changes,
-search here to find which end-to-end paths are affected.
-
-HOW TO POPULATE:
-1. Identify the key business operations (e.g., "customer places order", "return processed").
-2. Trace each operation step by step through domains, noting the class/method at each step.
-3. Document the external systems involved at entry and exit points.
-4. List exception/error branches -- these are often where bugs hide.
-5. Mark shared resources that appear in multiple paths.
--->
-
-## Path Index
+> 数据来源：跨域依赖图 + 业务知识 + 代码追踪
+> 最近更新时间：{{DATE}}
 
 <!--
-Summary table of all end-to-end paths. Keep this updated as paths are added.
+用途：本文档描述系统中最重要的端到端业务流程。每条链路追踪一个完整的
+业务操作从触发到完成的全过程，涉及所有参与的域和外部系统。
+
+这是影响分析的核心文档：当某个类或方法发生变更时，
+在此搜索可以找到受影响的端到端链路。
+
+填充方法：
+1. 识别关键业务操作（如 "客户下单"、"退货处理"）。
+2. 逐步追踪每个操作经过的各个域，记录每步涉及的类/方法。
+3. 记录入口和出口处涉及的外部系统。
+4. 列出异常/错误分支——这些往往是 bug 的高发区。
+5. 标注出现在多条链路中的共享资源。
 -->
 
-| # | Path Name | Domains Involved | Steps |
-|---|-----------|-----------------|-------|
-| 1 | Order Fulfillment | Orders -> Inventory -> Fulfillment -> Shipping -> External(Carrier) | 8 |
-| 2 | Return Processing | External(Customer) -> Returns -> Inventory -> Payments -> External(Customer) | 7 |
+## 链路索引
+
+<!--
+所有端到端链路的汇总表。添加新链路时保持更新。
+-->
+
+| # | 链路名称 | 涉及域 | 步骤数 |
+|---|---------|-------|-------|
+| 1 | 订单履约 | Orders -> Inventory -> Fulfillment -> Shipping -> External(Carrier) | 8 |
+| 2 | 退货处理 | External(Customer) -> Returns -> Inventory -> Payments -> External(Customer) | 7 |
 | 3 | {{path_name}} | {{domain_chain}} | {{step_count}} |
 
 ---
 
-## Path Details
+## 链路详情
 
 <!--
-Repeat this section for each end-to-end path.
+对每条端到端链路重复此章节。
 
-For each step, specify:
-- Which domain or external system owns the step (in brackets)
-- The concrete class and method involved
-- What happens at this step
+每个步骤需指明：
+- 哪个域或外部系统负责此步骤（方括号标注）
+- 涉及的具体类和方法
+- 此步骤做了什么
 
-Also document:
-- Exception branches (what happens when things go wrong)
-- Impact markers (which steps, if changed, cascade to other steps)
+同时记录：
+- 异常分支（出错时会发生什么）
+- 影响标记（哪些步骤发生变更会级联影响其他步骤）
 -->
 
 ---
 
-### 1. {{Path Name}}
+### 1. {{链路名称}}
 
-**Keywords**: {{comma-separated keywords for searchability}}
-**Domains involved**: {{External(System)}} -> {{DomainA}} -> {{DomainB}} -> ... -> {{External(System)}}
+**关键词**：{{逗号分隔的关键词，便于搜索}}
+**涉及域**：{{External(System)}} -> {{DomainA}} -> {{DomainB}} -> ... -> {{External(System)}}
 
-1. [External/{{System}}] Trigger event arrives -- `{{topic or endpoint}}`
-2. [{{DomainA}}] Consume event and create entity -- `{{ListenerClass}}` -> `{{ServiceClass.method()}}`
-3. [{{DomainA}} -> {{DomainB}}] Cross-domain call -- `{{SharedService.method()}}` (shared resource, {{N}} domain consumers)
-4. [{{DomainB}}] Process and persist -- `{{ServiceClass.method()}}`
-5. [{{DomainB}} -> {{DomainC}}] Async handoff via MQ -- `{{topic_name}}`
-6. [{{DomainC}}] Final processing -- `{{ServiceClass.method()}}`
-7. [{{DomainC}} -> External/{{System}}] Notify external system -- MQ `{{topic_name}}`
+1. [External/{{System}}] 触发事件到达 -- `{{topic or endpoint}}`
+2. [{{DomainA}}] 消费事件并创建实体 -- `{{ListenerClass}}` -> `{{ServiceClass.method()}}`
+3. [{{DomainA}} -> {{DomainB}}] 跨域调用 -- `{{SharedService.method()}}` （共享资源，{{N}} 个域消费）
+4. [{{DomainB}}] 处理并持久化 -- `{{ServiceClass.method()}}`
+5. [{{DomainB}} -> {{DomainC}}] 通过 MQ 异步交接 -- `{{topic_name}}`
+6. [{{DomainC}}] 最终处理 -- `{{ServiceClass.method()}}`
+7. [{{DomainC}} -> External/{{System}}] 通知外部系统 -- MQ `{{topic_name}}`
 
-**Exception branches**:
-- {{Describe what happens when step N fails}} -> `{{ExceptionHandler.method()}}` -> {{downstream impact}}
-- {{Another failure scenario}} -> {{recovery mechanism}} -- Impact: {{affected domains/steps}}
+**异常分支**：
+- {{步骤 N 失败时的处理}} -> `{{ExceptionHandler.method()}}` -> {{下游影响}}
+- {{另一个失败场景}} -> {{恢复机制}} -- 影响范围：{{受影响的域/步骤}}
 
-**Impact markers**: Changing step {{N}} affects steps {{N+1}} through end of path; changing `{{SharedResource}}` at step {{M}} affects all paths that use it.
+**影响标记**：变更步骤 {{N}} 会影响步骤 {{N+1}} 到链路末尾；变更步骤 {{M}} 的 `{{SharedResource}}` 会影响所有使用该资源的链路。
 
 ---
 
-### 2. {{Another Path Name}}
+### 2. {{另一条链路名称}}
 
-**Keywords**: {{keywords}}
-**Domains involved**: {{chain}}
+**关键词**：{{keywords}}
+**涉及域**：{{chain}}
 
-1. [{{domain}}] {{description}} -- `{{class.method()}}`
+1. [{{domain}}] {{描述}} -- `{{class.method()}}`
 2. ...
 
-**Exception branches**:
+**异常分支**：
 - ...
 
-**Impact markers**: ...
+**影响标记**：...
 
 ---
 
-## Shared Resource Impact Quick Reference
+## 共享资源影响速查表
 
 <!--
-List shared resources that appear across multiple paths.
-When modifying these, ALL listed paths need regression testing.
+列出出现在多条链路中的共享资源。
+修改这些资源时，所有列出的链路都需要回归测试。
 -->
 
-| Shared Resource | Appears in Paths | Risk Level |
-|----------------|-----------------|------------|
-| StockService | 1, 2, 3, 5 (all stock-related) | **Critical** |
-| OrderRepository | 1, 2, 4 | **High** |
-| TransactionHelper | 1, 2, 3, 4, 5 (all) | **Critical** |
+| 共享资源 | 出现在链路 | 风险等级 |
+|---------|----------|---------|
+| StockService | 1, 2, 3, 5（所有库存相关） | **极高** |
+| OrderRepository | 1, 2, 4 | **高** |
+| TransactionHelper | 1, 2, 3, 4, 5（全部） | **极高** |
 | {{resource}} | {{path_numbers}} | **{{level}}** |
 
-## Path Dependencies
+## 链路依赖关系
 
 <!--
-Some paths share steps or branch into each other. Document those relationships here.
-Use a simple text diagram or a list.
+部分链路共享步骤或互相分支。在此记录这些关系。
+使用简单的文本图或列表。
 -->
 
 ```
-{{Path 1}} --error branch--> {{Path 4 (error handling)}}
-{{Path 2}} --triggers--> {{Path 3 (downstream)}}
-{{Path 5}} --reuses step from--> {{Path 1 step 6}}
+{{链路 1}} --异常分支--> {{链路 4（异常处理）}}
+{{链路 2}} --触发--> {{链路 3（下游）}}
+{{链路 5}} --复用步骤--> {{链路 1 步骤 6}}
 ```
 
 ---
 
-## Usage Guidelines
+## 使用指南
 
-1. **Locating impact scope**: Before modifying a class or method, search this document for the class name to find all affected paths.
-2. **Evaluating exception branches**: Pay special attention to exception branches when modifying error handling logic.
-3. **Shared resource changes**: Consult the quick reference table above; changes to listed resources require notifying owners of all affected paths.
-4. **MQ topic schema changes**: Search for the topic name across all path steps to identify affected flows.
-5. **Adding a new path**: Follow the template format above, including exception branches and impact markers.
+1. **定位影响范围**：修改某个类或方法前，在本文档中搜索该类名以找到所有受影响的链路。
+2. **评估异常分支**：修改异常处理逻辑时，特别关注异常分支。
+3. **共享资源变更**：查阅上方速查表；变更所列资源需通知所有受影响链路的负责人。
+4. **MQ Topic Schema 变更**：在所有链路步骤中搜索该 Topic 名称，识别受影响的流程。
+5. **新增链路**：按上方模板格式添加，包含异常分支和影响标记。

@@ -1,110 +1,107 @@
-# {{Domain Name}} Domain Navigation
+# {{Domain Name}} 域导航
 
 > last-updated: {{DATE}}
 
 <!--
-PURPOSE: This is the entry point for a single business domain. It provides a
-complete map of the domain's knowledge documents, process flows, components,
-and external interactions. When the AI assistant receives a task related to
-this domain, it reads this file first to navigate to the right detail document.
+用途：这是单个业务域的入口文件。它提供该域的知识文档、流程、
+组件和外部交互的完整地图。当 AI 助手接到与此域相关的任务时，
+会先读取此文件以导航到正确的详细文档。
 
-HOW TO POPULATE:
-1. List all subdirectories and documents in this domain's knowledge folder.
-2. Identify the major process flows (chains/pipelines) this domain supports.
-3. Map each component/node to its Facade or Service class and its detail document.
-4. List all external system interactions.
+填充方法：
+1. 列出该域知识文件夹下的所有子目录和文档。
+2. 识别该域支持的主要流程（链/管道）。
+3. 将每个组件/节点映射到其 Facade 或 Service 类及其详细文档。
+4. 列出所有外部系统交互。
 
-NAMING CONVENTION for subdirectories:
-- common/     -- shared rules, data models, and cross-cutting nodes
-- {{flow1}}/  -- documents specific to the first major flow
-- {{flow2}}/  -- documents specific to the second major flow
+子目录命名规范：
+- common/     -- 共享规则、数据模型和跨流程节点
+- {{flow1}}/  -- 第一个主要流程的相关文档
+- {{flow2}}/  -- 第二个主要流程的相关文档
 -->
 
 ---
 
-## Directory Structure
+## 目录结构
 
 ```
 {{domain-name}}/
-+-- 00-index.md              <-- you are here
-+-- common/                  # Cross-flow shared resources
-|   +-- data-model.md        # DO classes, enums, status machines, ER diagram
-|   +-- business-rules.md    # Concurrency, idempotency, transactions, cross-domain rules
++-- 00-index.md              <-- 当前文件
++-- common/                  # 跨流程共享资源
+|   +-- data-model.md        # DO 类、枚举、状态机、ER 图
+|   +-- business-rules.md    # 并发控制、幂等性、事务、跨域规则
 |   +-- nodes/
-|       +-- {{shared-node}}.md  # Shared processing node (used by multiple flows)
-+-- {{flow-1}}/              # First major business flow
-|   +-- 00-index.md          # Flow overview + end-to-end diagram
-|   +-- {{node-a}}.md        # Processing node A detail
-|   +-- {{node-b}}.md        # Processing node B detail
-+-- {{flow-2}}/              # Second major business flow
-    +-- 00-index.md          # Flow overview
-    +-- {{node-c}}.md        # Processing node C detail
+|       +-- {{shared-node}}.md  # 共享处理节点（多个流程复用）
++-- {{flow-1}}/              # 第一个主要业务流程
+|   +-- 00-index.md          # 流程概览 + 端到端流程图
+|   +-- {{node-a}}.md        # 处理节点 A 详情
+|   +-- {{node-b}}.md        # 处理节点 B 详情
++-- {{flow-2}}/              # 第二个主要业务流程
+    +-- 00-index.md          # 流程概览
+    +-- {{node-c}}.md        # 处理节点 C 详情
 ```
 
-## Major Flows
+## 主要流程
 
 <!--
-List each distinct business flow this domain supports.
-Include the type identifier (enum value), how it is triggered, complexity (node count),
-and what makes it different from other flows.
+列出该域支持的每个独立业务流程。
+包括类型标识符（枚举值）、触发方式、复杂度（节点数）以及与其他流程的区别。
 -->
 
-| Flow | Type Identifier | Trigger | Node Count | Key Characteristics |
-|------|----------------|---------|------------|---------------------|
-| [{{Flow 1 Name}}]({{flow-1}}/00-index.md) | `{{ENUM_VALUE}}` | {{MQ / API / Scheduled}} | {{N}} | {{Brief description of what makes this flow unique}} |
-| [{{Flow 2 Name}}]({{flow-2}}/00-index.md) | `{{ENUM_VALUE}}` | {{MQ / API / Scheduled}} | {{N}} | {{Brief description}} |
+| 流程 | 类型标识符 | 触发方式 | 节点数 | 关键特征 |
+|------|----------|---------|-------|---------|
+| [{{Flow 1 Name}}]({{flow-1}}/00-index.md) | `{{ENUM_VALUE}}` | {{MQ / API / Scheduled}} | {{N}} | {{此流程的独特之处简述}} |
+| [{{Flow 2 Name}}]({{flow-2}}/00-index.md) | `{{ENUM_VALUE}}` | {{MQ / API / Scheduled}} | {{N}} | {{简述}} |
 
-## Shared Nodes
+## 共享节点
 
 <!--
-Processing nodes that are reused across multiple flows in this domain.
+在该域的多个流程中复用的处理节点。
 -->
 
-- **[{{Node Name}}](common/nodes/{{node}}.md)** -- {{Brief description of the node, e.g., "Factory+Strategy pattern, N variants, unified entry point"}}
+- **[{{Node Name}}](common/nodes/{{node}}.md)** -- {{节点简述，如 "工厂+策略模式，N 个变体，统一入口"}}
 
-## Shared Rules
+## 共享规则
 
-- **[Data Model](common/data-model.md)** -- {{List key entities}}, enums, status machines, ER diagram
-- **[Business Rules](common/business-rules.md)** -- Concurrency control, idempotency, MQ communication, transactions, cross-domain interaction rules
+- **[数据模型](common/data-model.md)** -- {{列出关键实体}}、枚举、状态机、ER 图
+- **[业务规则](common/business-rules.md)** -- 并发控制、幂等性、MQ 通信、事务、跨域交互规则
 
-## External System Interactions
+## 外部系统交互
 
 <!--
-List all external systems this domain communicates with,
-the direction of communication, and the integration method.
+列出该域与之通信的所有外部系统，
+通信方向和集成方式。
 -->
 
-| System | Direction | Integration Type | Description |
-|--------|-----------|-----------------|-------------|
-| {{System A}} | {{System A}} -> This Domain | MQ | {{What data/events come in}} |
-| {{System A}} | This Domain -> {{System A}} | RPC | {{What calls go out}} |
-| {{System B}} | This Domain -> {{System B}} | MQ | {{What notifications go out}} |
+| 系统 | 方向 | 集成类型 | 描述 |
+|------|------|---------|------|
+| {{System A}} | {{System A}} -> 本域 | MQ | {{什么数据/事件流入}} |
+| {{System A}} | 本域 -> {{System A}} | RPC | {{什么调用流出}} |
+| {{System B}} | 本域 -> {{System B}} | MQ | {{什么通知流出}} |
 
-## Component Map
+## 组件地图
 
 <!--
-Map every Facade, Service, or Controller in this domain to its corresponding
-knowledge document. Group by functional area.
+将该域中的每个 Facade、Service 或 Controller 映射到其对应的
+知识文档。按功能区域分组。
 
-This table is the primary lookup for "I need to understand {{ClassName}} -- where
-do I read about it?"
+此表是"我需要了解 {{ClassName}} —— 去哪里读？"的主要查找入口。
 -->
 
-### {{Functional Area 1}} (e.g., "Main Processing Pipeline")
+### {{功能区域 1}}（如 "主处理流水线"）
 
-| Node / Component | Facade / Service Class | Detail Document |
-|-----------------|----------------------|-----------------|
+| 节点 / 组件 | Facade / Service 类 | 详细文档 |
+|------------|-------------------|---------|
 | {{Node Name}} | `{{FacadeClass}}` | [{{doc-name}}.md]({{path}}) |
 | {{Node Name}} | `{{FacadeClass}}` / `{{ServiceClass}}` | [{{doc-name}}.md]({{path}}) |
 
-### {{Functional Area 2}} (e.g., "Error Handling")
+### {{功能区域 2}}（如 "异常处理"）
 
-| Node / Component | Facade / Service Class | Detail Document |
-|-----------------|----------------------|-----------------|
+| 节点 / 组件 | Facade / Service 类 | 详细文档 |
+|------------|-------------------|---------|
 | {{Node Name}} | `{{FacadeClass}}` | [{{doc-name}}.md]({{path}}) |
 
-### {{Functional Area 3}} (e.g., "Support Services")
+### {{功能区域 3}}（如 "支撑服务"）
 
-| Node / Component | Facade / Service Class | Detail Document |
-|-----------------|----------------------|-----------------|
+| 节点 / 组件 | Facade / Service 类 | 详细文档 |
+|------------|-------------------|---------|
 | {{Node Name}} | `{{FacadeClass}}` | [{{doc-name}}.md]({{path}}) |

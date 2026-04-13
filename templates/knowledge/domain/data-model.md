@@ -1,155 +1,151 @@
-# {{Domain Name}} Data Model
+# {{Domain Name}} 数据模型
 
 > extracted-from-commit: {{COMMIT_HASH}}
 > last-verified: {{DATE}}
 
 <!--
-PURPOSE: This document describes the data model for a single domain -- all
-database tables (DO classes), their columns, relationships, and status enums.
-The AI assistant reads this to understand the persistence layer before making
-changes that involve queries, schema, or status transitions.
+用途：本文档描述单个域的数据模型——所有数据库表（DO 类）、
+列、关系和状态枚举。AI 助手在进行涉及查询、Schema 或
+状态流转的变更前读取此文件以了解持久化层。
 
-HOW TO POPULATE:
-1. For each DO class / database table in the domain, list all columns with
-   their Java field names, JDBC types, and descriptions.
-2. Document all enum types used by these tables.
-3. Draw the entity relationships (which tables reference which).
-4. Include status enum definitions with their integer codes and meanings.
+填充方法：
+1. 对域中的每个 DO 类/数据库表，列出所有列及其 Java 字段名、JDBC 类型和描述。
+2. 记录这些表使用的所有枚举类型。
+3. 绘制实体关系（哪些表引用哪些表）。
+4. 包含状态枚举定义及其整数编码和含义。
 -->
 
 ---
 
-## Entity Overview
+## 实体总览
 
 <!--
-Quick reference of all entities (tables) in this domain.
+该域中所有实体（表）的快速索引。
 -->
 
-| Entity (DO Class) | Table Name | Description | Key Business Identifier |
-|-------------------|-----------|-------------|------------------------|
-| {{EntityDO}} | `{{table_name}}` | {{Brief description}} | {{e.g., orderSn, entityId}} |
-| {{AnotherEntityDO}} | `{{table_name}}` | {{Brief description}} | {{business_key}} |
+| 实体（DO 类） | 表名 | 描述 | 关键业务标识 |
+|-------------|------|------|------------|
+| {{EntityDO}} | `{{table_name}}` | {{简述}} | {{如 orderSn、entityId}} |
+| {{AnotherEntityDO}} | `{{table_name}}` | {{简述}} | {{business_key}} |
 
 ---
 
-## Entity Details
+## 实体详情
 
-### {{EntityDO}} -- {{Human-readable name}}
+### {{EntityDO}} -- {{可读名称}}
 
-**Table name**: `{{schema.table_name}}`
+**表名**：`{{schema.table_name}}`
 
 <!--
-List all columns. Include:
-- Database column name (snake_case)
-- Java field name (camelCase)
-- JDBC type
-- Description (include enum references where applicable)
+列出所有列。包含：
+- 数据库列名（snake_case）
+- Java 字段名（camelCase）
+- JDBC 类型
+- 描述（涉及枚举时标注引用）
 -->
 
-| Column | Java Field | JDBC Type | Description |
-|--------|-----------|-----------|-------------|
-| id | id | BIGINT | Primary key |
-| {{column_name}} | {{javaField}} | VARCHAR | {{Human-readable description}} |
-| type | type | INTEGER | Entity type. See `{{TypeEnum}}`: {{value1}}-{{meaning1}}, {{value2}}-{{meaning2}} |
-| status | status | INTEGER | Entity status. See `{{StatusEnum}}` below |
-| version | version | INTEGER | Optimistic lock version |
-| gmt_created | gmtCreated | TIMESTAMP | Creation timestamp |
-| gmt_modified | gmtModified | TIMESTAMP | Last modification timestamp |
-| feature | feature | TEXT | Extension JSON (flexible attributes) |
+| 列名 | Java 字段 | JDBC 类型 | 描述 |
+|------|----------|----------|------|
+| id | id | BIGINT | 主键 |
+| {{column_name}} | {{javaField}} | VARCHAR | {{可读描述}} |
+| type | type | INTEGER | 实体类型。见 `{{TypeEnum}}`：{{value1}}-{{meaning1}}、{{value2}}-{{meaning2}} |
+| status | status | INTEGER | 实体状态。见下方 `{{StatusEnum}}` |
+| version | version | INTEGER | 乐观锁版本号 |
+| gmt_created | gmtCreated | TIMESTAMP | 创建时间 |
+| gmt_modified | gmtModified | TIMESTAMP | 最后修改时间 |
+| feature | feature | TEXT | 扩展 JSON（灵活属性） |
 
 ---
 
-### {{AnotherEntityDO}} -- {{Human-readable name}}
+### {{AnotherEntityDO}} -- {{可读名称}}
 
-**Table name**: `{{schema.table_name}}`
+**表名**：`{{schema.table_name}}`
 
-| Column | Java Field | JDBC Type | Description |
-|--------|-----------|-----------|-------------|
-| id | id | BIGINT | Primary key |
-| {{parent_entity}}_id | {{parentEntity}}Id | BIGINT | Foreign key to {{parent table}} |
+| 列名 | Java 字段 | JDBC 类型 | 描述 |
+|------|----------|----------|------|
+| id | id | BIGINT | 主键 |
+| {{parent_entity}}_id | {{parentEntity}}Id | BIGINT | 外键，关联 {{parent table}} |
 | {{column}} | {{field}} | {{type}} | {{description}} |
 
 ---
 
-## Status Enums
+## 状态枚举
 
 <!--
-For each status enum, list all possible values with their codes and meanings.
-Include transition rules if not documented in business-rules.md.
+对每个状态枚举，列出所有可能的值及其编码和含义。
+如 business-rules.md 中未记录流转规则，在此包含。
 -->
 
 ### {{StatusEnum}}
 
-| Code | Name | Description |
-|------|------|-------------|
-| 1 | `CREATED` | Entity has been created but not yet processed |
-| 2 | `IN_PROGRESS` | Entity is currently being processed |
-| 3 | `COMPLETED` | Entity processing is finished |
-| 4 | `CANCELLED` | Entity was cancelled before completion |
+| 编码 | 名称 | 描述 |
+|------|------|------|
+| 1 | `CREATED` | 实体已创建但尚未处理 |
+| 2 | `IN_PROGRESS` | 实体正在处理中 |
+| 3 | `COMPLETED` | 实体处理完成 |
+| 4 | `CANCELLED` | 实体在完成前被取消 |
 | {{code}} | `{{NAME}}` | {{description}} |
 
 ### {{TypeEnum}}
 
-| Code | Name | Description |
-|------|------|-------------|
-| 1 | `{{TYPE_A}}` | {{Description of type A}} |
-| 2 | `{{TYPE_B}}` | {{Description of type B}} |
+| 编码 | 名称 | 描述 |
+|------|------|------|
+| 1 | `{{TYPE_A}}` | {{类型 A 的描述}} |
+| 2 | `{{TYPE_B}}` | {{类型 B 的描述}} |
 
 ---
 
-## Other Enums
+## 其他枚举
 
 <!--
-List any additional enums used in this domain's tables (e.g., priority levels,
-category types, flag enums).
+列出该域表中使用的其他枚举（如优先级、分类类型、标志枚举）。
 -->
 
 ### {{OtherEnum}}
 
-| Code | Name | Description |
-|------|------|-------------|
+| 编码 | 名称 | 描述 |
+|------|------|------|
 | {{code}} | `{{NAME}}` | {{description}} |
 
 ---
 
-## Entity Relationships
+## 实体关系
 
 <!--
-Describe how entities relate to each other. Use a text-based ER diagram
-or a relationship table. Include cardinality (1:1, 1:N, M:N).
+描述实体之间的关系。使用文本 ER 图或关系表。
+标注基数（1:1、1:N、M:N）。
 -->
 
 ```
-{{ParentEntity}} 1 ---< N {{ChildEntity}}     (one parent has many children)
+{{ParentEntity}} 1 ---< N {{ChildEntity}}     （一个父实体对应多个子实体）
 {{EntityA}} 1 ---< N {{EntityB}} ---< N {{EntityC}}
-{{EntityX}} >--- 1 {{SharedEntity}}            (many X reference one shared entity)
+{{EntityX}} >--- 1 {{SharedEntity}}            （多个 X 引用同一个共享实体）
 ```
 
-### Relationship Details
+### 关系详情
 
-| Parent Entity | Child Entity | Relationship | Join Key | Description |
-|--------------|-------------|-------------|----------|-------------|
-| {{ParentDO}} | {{ChildDO}} | 1:N | {{parent_sn}} | {{Description, e.g., "One order has many line items"}} |
-| {{EntityA}} | {{EntityB}} | M:N | {{join_table}} | {{Description}} |
+| 父实体 | 子实体 | 关系 | 关联键 | 描述 |
+|-------|-------|------|-------|------|
+| {{ParentDO}} | {{ChildDO}} | 1:N | {{parent_sn}} | {{描述，如 "一个订单包含多个明细行"}} |
+| {{EntityA}} | {{EntityB}} | M:N | {{join_table}} | {{描述}} |
 
 ---
 
-## Indexes (key business indexes)
+## 索引（关键业务索引）
 
 <!--
-Optional: list important database indexes that affect query patterns or
-performance considerations developers should know about.
+可选：列出影响查询模式或开发者应了解的性能考量的重要数据库索引。
 -->
 
-| Table | Index Name | Columns | Type | Purpose |
-|-------|-----------|---------|------|---------|
-| {{table}} | {{idx_name}} | {{col1, col2}} | UNIQUE / BTREE | {{Why this index exists}} |
+| 表 | 索引名 | 列 | 类型 | 用途 |
+|----|----|----|----|------|
+| {{table}} | {{idx_name}} | {{col1, col2}} | UNIQUE / BTREE | {{此索引存在的原因}} |
 
 ---
 
-## Maintenance Guidelines
+## 维护指南
 
-1. **Adding a new column**: Update both this document and the corresponding MyBatis XML mapper.
-2. **Adding a new enum value**: Update the enum class, this document, and any switch/if-else logic that uses the enum.
-3. **Changing relationships**: Evaluate impact on all queries that join these tables; update this ER section.
-4. **Status enum changes**: Coordinate with the business-rules.md state machine section.
+1. **新增列**：同时更新本文档和对应的 MyBatis XML Mapper。
+2. **新增枚举值**：更新枚举类、本文档以及所有使用该枚举的 switch/if-else 逻辑。
+3. **变更关系**：评估对所有关联查询的影响；更新本文档的 ER 章节。
+4. **状态枚举变更**：与 business-rules.md 中的状态机章节协调。
