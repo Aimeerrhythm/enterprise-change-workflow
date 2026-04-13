@@ -308,9 +308,11 @@ enterprise-change-workflow/
 │   ├── java/                    # Java/Spring 项目扫描脚本（3 个）
 │   └── README.md                # 扫描输出格式规范
 ├── CLAUDE.md                    # 插件级指引
+├── CHANGELOG.md                 # 版本历史
 ├── package.json                 # 版本信息
 ├── LICENSE                      # MIT License
-└── README.md
+├── README.md                    # English documentation
+└── README.zh-CN.md
 ```
 
 ## 故障排查

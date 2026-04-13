@@ -315,7 +315,8 @@ enterprise-change-workflow/
 ├── CHANGELOG.md                 # Version history
 ├── package.json                 # Version info
 ├── LICENSE                      # MIT License
-└── README.md
+├── README.md
+└── README.zh-CN.md              # Chinese documentation
 ```
 
 ## Troubleshooting
