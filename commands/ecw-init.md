@@ -115,7 +115,7 @@ find .claude/ -mindepth 1 -maxdepth 1 -type d 2>/dev/null
 4. 对每个域候选统计：
    - .md 文件总数（递归）
    - 是否存在 00-index.md
-   - 是否存在 business-rules.md 或 data-model.md
+   - 是否存在 business-rules.md 或 data-model.md（递归搜索，记录相对路径，如 `common/business-rules.md`、`checkstock/common/business-rules.md`）
 
 5. 同时检查 CLAUDE.md 获取额外线索：
    - 如果 CLAUDE.md 中有域路由表，提取域名和路径
@@ -209,12 +209,20 @@ ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requ
 | **Display Name** | {display_name} |
 | **Knowledge Root** | `{actual_knowledge_path}/` |
 | **Entry Document** | `{detected_entry_file}` |
+| **Business Rules** | `{detected_business_rules_path}` |
+| **Data Model** | `{detected_data_model_path}` |
 | **Code Root** | `{code_root}` |
 
 **Responsibilities:** {description}
 ```
 
 与 Scaffold 的关键区别：`Knowledge Root` 使用用户确认的 **实际路径**（如 `.claude/knowledge/inbound/`），而非模板占位符。
+
+`Business Rules` 和 `Data Model` 的确定（使用 Step 1 的扫描结果）：
+- 如果域目录中递归找到 `business-rules.md` → 使用相对于域知识根目录的路径（如 `common/business-rules.md`、`checkstock/common/business-rules.md`）
+- 如果找到多个 → 全部列出，用逗号分隔并标注子模块名（如 `checkstock/common/business-rules.md`（盘点）, `move/common/business-rules.md`（移库））
+- 如果未找到 → 标注"无独立文件"
+- `Data Model` 同理
 
 `Entry Document` 的确定：
 - 如果域目录中存在 `00-index.md` → 使用它

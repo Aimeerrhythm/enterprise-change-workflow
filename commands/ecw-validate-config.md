@@ -116,7 +116,47 @@ cat .claude/ecw/ecw.yml
 
 ---
 
-## Step 6：检查知识文件结构
+## Step 5b：模板版本同步检查
+
+检查项目的 ECW 配置文件是否与当前插件模板保持同步。模板更新后已接入项目的配置不会自动升级，此步骤检测漂移。
+
+**重要：** 读取模板时，使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
+
+### 5b-1：原样复制文件的结构对比
+
+对以下文件（ecw-init 中标注为"原样复制"的模板），对比项目副本与当前模板的**结构性差异**：
+
+**`change-risk-classification.md`：**
+- 读取插件 `templates/change-risk-classification.md`
+- 读取项目 `.claude/ecw/change-risk-classification.md`
+- 对比"风险等级 → 流程要求"表格中引用的 skill/工具名称：
+  - 提取模板和项目文件中所有出现的 skill 名称（如 `impl-verify`、`biz-impact-analysis`、`spec-challenge`、`requirements-elicitation`、`writing-plans`）
+  - 如果项目文件使用了模板中已不存在的术语（如 `code-review` 已被替换为 `impl-verify`），标记为"术语过期"
+- 对比"三维风险因子"章节：检查项目文件是否仍含未替换的模板占位符（`{your_...}` 模式）
+
+**`calibration-log.md`：**
+- 仅检查文件头格式是否与模板一致（此文件主要是追加数据，不做内容对比）
+
+### 5b-2：domain-registry 的字段完整性
+
+对比项目 domain-registry 中每个域定义的字段集合与 Scaffold 模板的标准字段集合：
+
+标准字段集合（来自 ecw-init Scaffold Step 3b）：
+- Domain ID、Display Name / 中文名、Knowledge Root / 知识根目录、Entry Document / 入口文档、Business Rules / 业务规则、Data Model / 数据模型、Code Root / 代码根目录
+
+对每个已注册域：
+- 检查是否缺少 Business Rules / 业务规则 字段 → 标记"缺少业务规则路径"
+- 检查是否缺少 Data Model / 数据模型 字段 → 标记"缺少数据模型路径"
+- 如果字段存在且值不是"无独立文件"之类的显式标注，验证引用的文件是否存在
+
+### 5b-3：输出
+
+对每个检测到的差异，输出：
+- **术语过期**（warn）：项目文件使用了模板中已替换的术语
+- **字段缺失**（warn）：域定义缺少标准字段
+- **引用失效**（fail）：字段引用的文件不存在
+
+---
 
 ### 6a：知识根目录
 
@@ -159,6 +199,7 @@ cat .claude/ecw/ecw.yml
 | domain-registry.md | {pass/warn/fail} |
 | ecw-path-mappings.md | {pass/warn/fail} |
 | change-risk-classification.md | {pass/warn/fail} |
+| 模板版本同步 | {pass/warn/fail} |
 | 知识文件结构 | {pass/warn/fail} |
 
 ### 问题清单
@@ -173,9 +214,9 @@ cat .claude/ecw/ecw.yml
 
 ### 域健康度
 
-| 域 | 注册 | 知识目录 | 入口文档 | 代码目录 | 路径映射 |
-|----|------|---------|---------|---------|---------|
-| {domain} | {ok/missing} | {ok/missing} | {ok/missing} | {ok/missing} | {ok/missing} |
+| 域 | 注册 | 知识目录 | 入口文档 | 业务规则 | 数据模型 | 代码目录 | 路径映射 |
+|----|------|---------|---------|---------|---------|---------|---------|
+| {domain} | {ok/missing} | {ok/missing} | {ok/missing} | {ok/missing/无独立文件} | {ok/missing/无独立文件} | {ok/missing} | {ok/missing} |
 
 ### 建议操作
 
