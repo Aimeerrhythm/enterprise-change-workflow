@@ -81,6 +81,15 @@ scan_patterns:
   # cache_op: "redisTemplate|RedissonClient"     # 缓存操作。命中说明涉及缓存读写，需关注缓存一致性和过期策略。
   # scheduled: "@Scheduled|@XxlJob"              # 定时任务。命中说明是定时触发逻辑，修改可能影响执行频率和业务时序。
 
+# 完成验证配置
+# verify-completion hook 的行为控制。
+verification:
+  # 改了 .java 文件时是否执行 mvn test（失败则阻止标记完成）。
+  # 默认 true。大型项目测试耗时长时可设为 false 仅做编译检查。
+  run_tests: true
+  # mvn test 超时秒数。超时不阻止完成，仅输出警告。
+  test_timeout: 300
+
 # 路径配置
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。
 paths:

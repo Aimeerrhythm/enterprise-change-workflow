@@ -5,8 +5,9 @@ PreToolUse 拦截 TaskUpdate(status=completed)：
 1. 检查本次修改的文件中是否有断裂引用
 2. 检查被删除的文件是否还被其他文件引用
 3. Java 编译检查（改了 .java 文件 → mvn compile，失败则阻止）
-4. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
-技术检查 1-3 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒。
+4. Java 测试检查（改了 .java 文件 → mvn test，失败则阻止；ecw.yml verification.run_tests 控制开关）
+5. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
+技术检查 1-4 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒。
 """
 
 import glob as globmod
@@ -68,15 +69,24 @@ def main():
     compile_issues, compile_warnings = check_java_compilation(cwd, modified)
     issues.extend(compile_issues)
 
+    # ── 技术检查 4: Java 测试（编译通过才执行，避免重复报错） ──
+    test_issues, test_warnings = [], []
+    if not compile_issues:
+        test_issues, test_warnings = check_java_tests(cwd, modified)
+        issues.extend(test_issues)
+
     # ── 非阻止性提醒（分类传递，避免混淆标题） ──
     knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
+
+    # 合并所有警告
+    all_warnings = (compile_warnings or []) + (test_warnings or [])
 
     # ── 输出结果 ──
     if issues:
         output_fail(issues)
         sys.exit(2)
     else:
-        output_pass(len(modified), len(deleted), compile_warnings, knowledge_reminders)
+        output_pass(len(modified), len(deleted), all_warnings, knowledge_reminders)
         sys.exit(0)
 
 
@@ -192,6 +202,46 @@ def check_java_compilation(cwd, modified):
             return ["Java 编译失败:\n" + "\n".join(errors)], []
     except subprocess.TimeoutExpired:
         return [], ["Java 编译超时（>120s），编译结果未验证，请手动执行 `mvn compile` 检查"]
+    except FileNotFoundError:
+        return [], []  # mvn 不在 PATH 中，跳过
+
+    return [], []
+
+
+def check_java_tests(cwd, modified):
+    """如果本次改了 .java 文件且 ecw.yml 启用了测试检查，执行 mvn test。
+
+    受 ecw.yml verification.run_tests 控制（默认 true）。
+    返回 (issues, warnings)：
+    - issues: 测试失败 → deny
+    - warnings: 超时等非致命情况 → 提醒但不阻止
+    """
+    java_files = [f for f in modified if f.endswith(".java")]
+    if not java_files:
+        return [], []
+
+    if not os.path.exists(os.path.join(cwd, "pom.xml")):
+        return [], []
+
+    # 读取 ecw.yml 配置，默认启用测试
+    cfg = _read_ecw_config(cwd)
+    verification = cfg.get("verification", {})
+    if not verification.get("run_tests", True):
+        return [], []
+
+    timeout = verification.get("test_timeout", 300)
+
+    try:
+        r = subprocess.run(
+            ["mvn", "test", "-q", "-T", "1C"],
+            capture_output=True, text=True, cwd=cwd, timeout=timeout
+        )
+        if r.returncode != 0:
+            errors = [l for l in r.stdout.split("\n") + r.stderr.split("\n")
+                      if "[ERROR]" in l or "FAILURE" in l.upper()][:8]
+            return ["Java 测试失败:\n" + "\n".join(errors)], []
+    except subprocess.TimeoutExpired:
+        return [], [f"Java 测试超时（>{timeout}s），测试结果未验证，请手动执行 `mvn test` 检查"]
     except FileNotFoundError:
         return [], []  # mvn 不在 PATH 中，跳过
 
