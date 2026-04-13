@@ -51,8 +51,8 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `writing-plans` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `superpowers:writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `superpowers:writing-plans` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
 | P2（中） | → `superpowers:writing-plans` → 实现 → `ecw:impl-verify` |
 | P3（低） | → 直接实现 |
 
@@ -62,9 +62,9 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 
 | 风险等级 | 下游 skill |
 |---------|-----------|
-| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `writing-plans` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis`（建议）→ **Phase 3** |
+| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `superpowers:writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `superpowers:writing-plans` → `ecw:spec-challenge` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P2（中） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `superpowers:writing-plans` → 实现 → `ecw:impl-verify` → `ecw:biz-impact-analysis`（建议）→ **Phase 3** |
 | P3（低） | → `ecw:domain-collab`（多域协作，简化输出）→ 直接实现 |
 
 > **判定方法：** Step 1 域定位时，对照项目 CLAUDE.md 的域路由部分（关键词→域映射表）统计匹配到的域数量。匹配 2+ 个域 = 跨域需求。
