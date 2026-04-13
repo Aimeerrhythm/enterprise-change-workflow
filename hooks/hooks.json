@@ -2,6 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "TaskUpdate",
         "hooks": [
           {
             "type": "command",
