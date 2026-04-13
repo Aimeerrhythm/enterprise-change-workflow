@@ -90,8 +90,8 @@
 | **方案设计** | writing-plans | writing-plans | writing-plans | 跳过 |
 | **方案审查** | spec-challenge 对抗审查 | 人工审阅 plan | 人工审阅 plan | 跳过 |
 | **跨域确认** | **必须**：所有受影响域 owner 签字 | 建议：通知受影响域 owner | 不需要 | 不需要 |
-| **实现** | 逐步实现 + 每步 code-review | 标准实现 | 标准实现 | 直接实现 |
-| **代码审查** | biz-impact-analysis + 人工 CR checklist 全项 | biz-impact-analysis + 人工 CR | biz-impact-analysis | 自动 CR |
+| **实现** | 逐步实现 + 每步 impl-verify | 标准实现 | 标准实现 | 直接实现 |
+| **代码审查** | impl-verify + biz-impact-analysis + 人工 checklist 全项 | impl-verify + biz-impact-analysis + 人工审查 | impl-verify + biz-impact-analysis | impl-verify |
 | **测试验证** | 测试 + 端到端链路回归 + 灰度方案 | 测试 + 受影响域回归 | 测试 | 测试 |
 | **上下游确认** | **必须**：外部系统团队确认 | 建议确认 | 不需要 | 不需要 |
 

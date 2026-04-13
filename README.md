@@ -25,9 +25,9 @@ ECW's core is a **P0-P3 four-level risk classification** that drives workflow de
 
 | Level | Risk | Workflow Depth | Typical Scenarios |
 |-------|------|---------------|------------------|
-| **P0** | Critical | Full workflow: requirements elicitation → precise grading → full plan → adversarial review → implementation → cross-review → impact analysis → calibration | Multi-domain state machine changes, core path refactoring |
+| **P0** | Critical | Full workflow: requirements elicitation → precise grading → full plan → adversarial review → implementation → impl-verify → impact analysis → calibration | Multi-domain state machine changes, core path refactoring |
 | **P1** | High | Full workflow minus adversarial review (except cross-domain) | Shared resource modifications, MQ format changes |
-| **P2** | Medium | Simplified: plan → implementation → cross-review | Single-domain field additions, local logic adjustments |
+| **P2** | Medium | Simplified: plan → implementation → impl-verify → impact analysis | Single-domain field additions, local logic adjustments |
 | **P3** | Low | Direct implementation | Log adjustments, copy changes, config updates |
 
 **Core principle: Changing a log line and changing inventory deduction should not require the same process.**
@@ -79,7 +79,7 @@ User proposes requirement / change / bug
         |                              |
   Implementation  <--------------------+
         |
-  Cross-Review (multi-round verification)
+  Impl-Verify (code correctness + quality verification)
         |
   Completion Verification Hook (automatic checks)
         |
@@ -90,7 +90,7 @@ User proposes requirement / change / bug
 
 ## Components
 
-### Skills (6)
+### Skills (7)
 
 | Component | Trigger | Description |
 |-----------|---------|-------------|
@@ -98,8 +98,9 @@ User proposes requirement / change / bug
 | `ecw:domain-collab` | Cross-domain requirements (2+ domains) | Parallel domain agents analyze independently → mutual evaluation → coordinator cross-verification |
 | `ecw:requirements-elicitation` | Single-domain P0/P1 requirements | 9-dimension systematic questioning to fully understand requirements |
 | `ecw:spec-challenge` | After plan output (P0, P1 cross-domain) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
-| `ecw:cross-review` | After implementation | Structured multi-round cross-consistency verification, exits only on zero findings |
-| `ecw:biz-impact-analysis` | After code review | Git diff → dispatches agent to analyze business impact, outputs structured report |
+| `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit. Replaces code-reviewer |
+| `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
+| `ecw:cross-review` | Manual only (`/ecw:cross-review`) | Cross-file structural consistency verification for document-heavy changes (optional tool) |
 
 ### Agents (2)
 
@@ -282,13 +283,14 @@ enterprise-change-workflow/
 ├── .claude-plugin/
 │   ├── plugin.json              # Plugin metadata
 │   └── marketplace.json         # Marketplace descriptor
-├── skills/                      # 6 core skills
+├── skills/                      # 7 core skills
 │   ├── risk-classifier/         # Risk classification (P0-P3, three phases)
 │   ├── domain-collab/           # Cross-domain collaborative analysis (three rounds)
 │   ├── requirements-elicitation/# Requirements elicitation (9-dimension questioning)
 │   ├── spec-challenge/          # Adversarial review (challenge-response cycles)
-│   ├── cross-review/            # Cross-consistency verification (multi-round convergence)
-│   └── biz-impact-analysis/              # Business impact analysis (5-step structured)
+│   ├── impl-verify/             # Implementation correctness verification (4-round convergence)
+│   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
+│   └── biz-impact-analysis/     # Business impact analysis (5-step structured)
 ├── agents/
 │   ├── biz-impact-analyzer.md   # Impact analysis agent
 │   └── spec-challenger.md       # Adversarial review agent
@@ -346,7 +348,7 @@ A: Knowledge file quality directly determines analysis quality. For Java/Spring 
 ## Dependencies
 
 - **Claude Code CLI** — ECW is a Claude Code plugin, requires CLI environment
-- **superpowers plugin** — Provides `writing-plans`, `executing-plans`, `systematic-debugging`, `code-reviewer` and other foundational skills; multiple ECW stages depend on these
+- **superpowers plugin** — Provides `writing-plans`, `executing-plans`, `systematic-debugging` and other foundational skills; multiple ECW stages depend on these
 
 ## License
 

@@ -335,8 +335,8 @@ def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminder
     msg = (
         f"**【ECW 完成验证】** 技术检查通过"
         f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
-        "**语义验证**：如果尚未执行 `ecw:cross-review`，"
-        "建议先执行交叉一致性验证再标记完成（纯格式/注释变更可跳过）。"
+        "**语义验证**：如果尚未执行 `ecw:impl-verify`，"
+        "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
     )
 
     if warnings:

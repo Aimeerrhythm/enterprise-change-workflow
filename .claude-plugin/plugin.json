@@ -1,6 +1,6 @@
 {
   "name": "ecw",
-  "description": "Enterprise change management workflow: risk classification, multi-domain collaborative analysis, requirements elicitation, adversarial spec review, and business impact analysis",
+  "description": "Enterprise change management workflow: risk classification, multi-domain collaborative analysis, requirements elicitation, adversarial spec review, implementation correctness verification, and business impact analysis",
   "author": {
     "name": "Aimeerrhythm"
   }
