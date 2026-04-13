@@ -27,6 +27,7 @@ ecw:risk-classifier (Phase 1 快速预判)
 ## 依赖
 
 - **superpowers** plugin — 本 plugin 的 skill 链接到 `superpowers:writing-plans`、`superpowers:systematic-debugging`、`superpowers:executing-plans` 等。必须先安装 superpowers。
+- **Skill 检查优先级**：ECW 已有 `ecw:risk-classifier` 作为变更类任务的统一入口，`using-superpowers` 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 ecw:risk-classifier，不需要额外的 skill 适用性检查。
 
 ## 项目配置
 
@@ -71,7 +72,6 @@ ecw:risk-classifier (Phase 1 快速预判)
 
 需要在项目 CLAUDE.md 中添加：
 1. **域级知识路由表** — 关键词→域的映射，供 ecw:risk-classifier 和 ecw:domain-collab 匹配用
-2. **自动化规则** — 收到变更类需求时自动调用 ecw:risk-classifier
 
 参考 `templates/CLAUDE.md.snippet` 获取模板。
 

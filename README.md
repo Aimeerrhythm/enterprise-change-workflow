@@ -218,9 +218,8 @@ Generated configuration files:
 Add ECW integration configuration to your project's `CLAUDE.md`. Refer to `templates/CLAUDE.md.snippet` for the template. Core content:
 
 1. **Domain knowledge routing table** — keyword → domain mappings for risk-classifier and domain-collab
-2. **Automation rules** — auto-invoke `ecw:risk-classifier` on change requests
-3. **Completion verification rules** — structured self-check requirements before marking complete
-4. **Impact analysis tool distinction** — `ecw:domain-collab` (requirements phase) vs `ecw:biz-impact-analysis` (code phase)
+2. **Completion verification rules** — structured self-check requirements before marking complete
+3. **Impact analysis tool distinction** — `ecw:domain-collab` (requirements phase) vs `ecw:biz-impact-analysis` (code phase)
 
 ### Step 7: Populate Knowledge Files
 

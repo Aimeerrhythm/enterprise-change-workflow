@@ -214,9 +214,8 @@ claude plugin list
 在项目的 `CLAUDE.md` 中添加 ECW 集成配置。参考 `templates/CLAUDE.md.snippet`，核心内容：
 
 1. **域级知识路由表** — 关键词→域的映射，供 risk-classifier 和 domain-collab 匹配
-2. **自动化规则** — 收到变更类需求时自动调用 `ecw:risk-classifier`
-3. **完成验证规则** — 标记完成前的结构化自查要求
-4. **影响分析工具区分** — `ecw:domain-collab`（需求阶段）vs `ecw:biz-impact-analysis`（代码阶段）
+2. **完成验证规则** — 标记完成前的结构化自查要求
+3. **影响分析工具区分** — `ecw:domain-collab`（需求阶段）vs `ecw:biz-impact-analysis`（代码阶段）
 
 ### Step 7：填充知识文件
 
