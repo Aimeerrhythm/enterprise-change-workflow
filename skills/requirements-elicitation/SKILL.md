@@ -3,20 +3,20 @@ name: requirements-elicitation
 description: Use when user proposes a new requirement, feature, change request, or business need - systematically asks exhaustive questions across all affected dimensions until shared understanding is achieved, before any implementation begins
 ---
 
-# Requirements Elicitation
+# 需求澄清
 
-## Overview
+## 概述
 
-When user proposes a requirement, you MUST NOT jump to implementation. Instead, act as a senior business analyst: read existing materials, then systematically question across every affected dimension until both sides reach full consensus on what to build.
+当用户提出需求时，**不得**直接跳到实现。而是作为资深业务分析师：先阅读已有材料，然后系统性地逐维度提问，直到双方对要构建的内容达成完全共识。
 
-**Core principle:** Every unasked question is a future bug, rework, or misunderstanding. Ask now, save later.
+**核心原则：** 每一个没问到的问题，都是未来的 bug、返工或误解。现在多问，将来少改。
 
-## When to Use
+## 何时使用
 
-- User proposes a new feature or requirement
-- User describes a business need or change request
-- User says "I want to...", "we need to...", "add a feature for..."
-- User provides a PRD, spec, or requirement document to implement
+- 用户提出新功能或需求
+- 用户描述业务需要或变更请求
+- 用户说"我想要……"、"我们需要……"、"增加一个功能……"
+- 用户提供 PRD、规格说明或需求文档要求实现
 
 **前置条件：** 本 skill 不再直接触发。所有变更类任务统一由 `ecw:risk-classifier` 作为入口，由 ecw:risk-classifier 根据风险等级和域数量决定是否 invoke 本 skill：
 - P0/P1 单域需求 → ecw:risk-classifier invoke 本 skill（完整流程）
@@ -26,86 +26,86 @@ When user proposes a requirement, you MUST NOT jump to implementation. Instead, 
 
 如果 ecw:risk-classifier 尚未执行，**先执行 ecw:risk-classifier**，再由其决定是否调用本 skill。
 
-**When NOT to use:**
-- User gives a precise, fully-specified technical task ("fix this null pointer on line 42")
-- User explicitly says "just do it, no questions"
+**不适用场景：**
+- 用户给出精确且完全指定的技术任务（"修复第 42 行的空指针"）
+- 用户明确表示"直接做，不要问了"
 - **Bug 修复 / debugging 场景** — bug 修复仍需先经过 `ecw:risk-classifier` 进行风险预判，然后路由到 `superpowers:systematic-debugging` 进行定位和修复，不走本 skill
 - ecw:risk-classifier 判定为 P2 或 P3 的变更
 
-## Skill Interaction
+## Skill 衔接
 
-**After user confirms the requirement summary,执行以下衔接步骤：**
+**用户确认需求摘要后，执行以下衔接步骤：**
 
 1. **P0/P1 需求**：先执行 **ecw:risk-classifier Phase 2**（精确定级）。Phase 2 会基于本 skill 产出的需求摘要重新评估风险等级和影响范围，可能升降级并调整后续流程。Phase 2 完成后，再 invoke `superpowers:writing-plans`。
 2. **P2 需求**（不应走到本 skill，但作为兜底）：直接 invoke `superpowers:writing-plans`。
 
 **不要跳过 Phase 2 直接进入 writing-plans** — Phase 2 是需求分析完成到 plan 编写之间的必经节点。
 
-## Core Flow
+## 核心流程
 
 ```dot
 digraph requirements {
   rankdir=TB;
   
-  "User states requirement" [shape=doublecircle];
-  "Read existing materials" [shape=box];
-  "Restate understanding" [shape=box];
-  "Pick uncovered dimensions" [shape=box];
-  "Ask 3-5 questions" [shape=box];
-  "User answers" [shape=box];
-  "Generate follow-ups from answers" [shape=diamond];
-  "All dimensions covered?" [shape=diamond];
-  "Comprehensive analysis" [shape=box];
-  "Present findings to user" [shape=box];
-  "Produce final requirement summary" [shape=box];
-  "User confirms?" [shape=diamond];
+  "用户提出需求" [shape=doublecircle];
+  "阅读已有材料" [shape=box];
+  "复述理解" [shape=box];
+  "选择未覆盖维度" [shape=box];
+  "提 3-5 个问题" [shape=box];
+  "用户回答" [shape=box];
+  "从回答中生成追问" [shape=diamond];
+  "所有维度已覆盖？" [shape=diamond];
+  "综合分析" [shape=box];
+  "向用户呈现发现" [shape=box];
+  "产出最终需求摘要" [shape=box];
+  "用户确认？" [shape=diamond];
   "Phase 2 精确定级" [shape=box];
-  "Invoke writing-plans" [shape=doublecircle];
+  "invoke writing-plans" [shape=doublecircle];
 
-  "User states requirement" -> "Read existing materials";
-  "Read existing materials" -> "Restate understanding";
-  "Restate understanding" -> "Pick uncovered dimensions";
-  "Pick uncovered dimensions" -> "Ask 3-5 questions";
-  "Ask 3-5 questions" -> "User answers";
-  "User answers" -> "Generate follow-ups from answers";
-  "Generate follow-ups from answers" -> "Ask 3-5 questions" [label="yes, new questions"];
-  "Generate follow-ups from answers" -> "All dimensions covered?" [label="no follow-ups"];
-  "All dimensions covered?" -> "Pick uncovered dimensions" [label="no"];
-  "All dimensions covered?" -> "Comprehensive analysis" [label="yes"];
-  "Comprehensive analysis" -> "Present findings to user";
-  "Present findings to user" -> "Produce final requirement summary";
-  "Produce final requirement summary" -> "User confirms?";
-  "User confirms?" -> "Pick uncovered dimensions" [label="no, gaps found"];
-  "User confirms?" -> "Phase 2 精确定级" [label="yes (P0/P1)"];
-  "Phase 2 精确定级" -> "Invoke writing-plans";
+  "用户提出需求" -> "阅读已有材料";
+  "阅读已有材料" -> "复述理解";
+  "复述理解" -> "选择未覆盖维度";
+  "选择未覆盖维度" -> "提 3-5 个问题";
+  "提 3-5 个问题" -> "用户回答";
+  "用户回答" -> "从回答中生成追问";
+  "从回答中生成追问" -> "提 3-5 个问题" [label="有新问题"];
+  "从回答中生成追问" -> "所有维度已覆盖？" [label="无追问"];
+  "所有维度已覆盖？" -> "选择未覆盖维度" [label="否"];
+  "所有维度已覆盖？" -> "综合分析" [label="是"];
+  "综合分析" -> "向用户呈现发现";
+  "向用户呈现发现" -> "产出最终需求摘要";
+  "产出最终需求摘要" -> "用户确认？";
+  "用户确认？" -> "选择未覆盖维度" [label="否，有遗漏"];
+  "用户确认？" -> "Phase 2 精确定级" [label="是 (P0/P1)"];
+  "Phase 2 精确定级" -> "invoke writing-plans";
 }
 ```
 
-## Step-by-Step Process
+## 分步流程
 
-### Step 1: Read Existing Materials
+### 步骤 1：阅读已有材料
 
-Before asking anything:
-- Read relevant source code, configs, database schemas
-- Read existing docs, PRDs, READMEs
-- Understand current behavior and data model
-- Note what already exists vs what's new
+在提问之前：
+- 阅读相关源代码、配置、数据库 schema
+- 阅读已有文档、PRD、README
+- 理解当前行为和数据模型
+- 记录哪些已存在、哪些是新增
 
-### Step 2: Restate Understanding
+### 步骤 2：复述理解
 
-In 2-3 sentences, tell the user what you understood their requirement to be. This catches gross misunderstandings immediately.
+用 2-3 句话告诉用户你对其需求的理解。这能立即发现重大误解。
 
-### Step 3: Systematic Questioning
+### 步骤 3：系统性提问
 
-Ask questions in batches of **3-5 per round**. Each answer may trigger follow-up questions. Track which dimensions are covered using the checklist below.
+每轮提 **3-5 个问题**。每个回答可能触发追问。使用下方的检查清单跟踪哪些维度已覆盖。
 
-**CRITICAL: Do NOT stop after one round.** Continue until ALL relevant dimensions have been explored. Each user answer opens new questions.
+**关键：不要在一轮后就停止。** 继续提问直到所有相关维度都已探索。每个用户回答都会打开新的问题。
 
-### Step 4: Comprehensive Analysis
+### 步骤 4：综合分析
 
-After all Q&A rounds are complete, launch **one agent** using the Agent tool:
+所有 Q&A 轮次完成后，使用 Agent 工具启动**一个 agent**：
 
-**Prompt:**
+**Prompt：**
 ```
 你是一位资深业务分析师，同时具备批判性审查能力。基于以下需求 Q&A，从两个视角进行分析：
 
@@ -123,157 +123,157 @@ After all Q&A rounds are complete, launch **one agent** using the Agent tool:
 请分开列出两个视角的发现，每条发现标注严重程度（致命/重要/建议）。
 ```
 
-- Include: all Q&A context, existing code/doc findings
+- 包含：所有 Q&A 上下文、已有代码/文档发现
 
-### Step 5: Present Findings & Produce Summary
+### 步骤 5：呈现发现并产出摘要
 
 Agent 返回后：
 1. **致命/重要发现** → 直接向用户提出，作为补充问题或决策点
 2. **建议类发现** → 纳入需求摘要的"注意事项"
 3. **新问题** → 如果分析中发现了 Q&A 未覆盖的维度，追问用户
 
-## Question Dimensions Checklist
+## 提问维度检查清单
 
-You MUST consider EVERY dimension below. Skip only if genuinely irrelevant to this requirement.
+你**必须**考虑以下每一个维度。仅在确实与当前需求无关时才跳过。
 
-### Business & Context
-- What specific problem does this solve? Who requested it?
-- What is the expected business outcome or metric improvement?
-- Who are the end users? Are there different user roles involved?
-- What is the priority and timeline?
+### 业务与背景
+- 这具体解决什么问题？谁提出的？
+- 预期的业务成果或指标改善是什么？
+- 最终用户是谁？是否涉及不同的用户角色？
+- 优先级和时间线？
 
-### Process & Workflow
-- How does the current workflow look? Draw it out step by step.
-- What steps change? What new steps are added?
-- Are there approval flows, review steps, or handoffs?
-- What triggers this process? What ends it?
-- Are there parallel paths or conditional branches?
-- How does this interact with existing workflows?
+### 流程与工作流
+- 当前工作流是什么样的？逐步画出来。
+- 哪些步骤有变化？增加了哪些新步骤？
+- 是否有审批流、审核步骤或交接环节？
+- 什么触发这个流程？什么结束它？
+- 是否有并行路径或条件分支？
+- 这与现有工作流如何交互？
 
-### Data Model & State
-- What new entities, fields, or tables are needed?
-- What existing data is modified or reinterpreted?
-- What are the valid states and state transitions?
-- Are there calculated or derived fields?
-- What are the data retention and archival rules?
+### 数据模型与状态
+- 需要哪些新实体、字段或表？
+- 哪些已有数据被修改或重新解读？
+- 有效的状态和状态转换是什么？
+- 是否有计算字段或派生字段？
+- 数据保留和归档规则？
 
-### Business Rules & Validation
-- What validation rules apply to each field?
-- What calculation logic is involved?
-- Are there business constraints (min/max, dependencies, exclusivity)?
-- What formulas or algorithms drive the logic?
-- Are there configurable rules vs hardcoded rules?
+### 业务规则与校验
+- 每个字段适用什么校验规则？
+- 涉及什么计算逻辑？
+- 是否有业务约束（最小/最大值、依赖关系、互斥性）？
+- 哪些公式或算法驱动逻辑？
+- 哪些规则可配置、哪些硬编码？
 
-### Inventory, Resources & Quantities
-- Does this affect stock, inventory, or resource levels?
-- Are there reservation, hold, or allocation mechanics?
-- What happens on quantity changes (increase, decrease, zero)?
-- Are there unit conversions or multi-warehouse considerations?
-- What about backorders, pre-orders, or negative stock?
+### 库存、资源与数量
+- 是否影响库存、存货或资源水平？
+- 是否有预留、锁定或分配机制？
+- 数量变化时（增加、减少、归零）怎么处理？
+- 是否有单位换算或多仓考虑？
+- 缺货订单、预售或负库存怎么办？
 
-### Edge Cases & Error Scenarios
-- What happens when the operation fails midway?
-- What if required data is missing or invalid?
-- What if two users do the same thing simultaneously?
-- What are the boundary conditions (zero, max, empty, overflow)?
-- What if dependent systems are unavailable?
-- What about timeout and retry behavior?
+### 边界场景与异常处理
+- 操作中途失败怎么办？
+- 如果必需数据缺失或无效？
+- 如果两个用户同时做同一件事？
+- 边界条件是什么（零、最大值、空、溢出）？
+- 依赖系统不可用怎么办？
+- 超时和重试行为？
 
-### Migration & Compatibility
-- How to handle existing data?
-- Is there a migration path or data backfill needed?
-- What about backwards compatibility with existing features?
-- Can this be rolled out gradually (feature flag, A/B)?
+### 迁移与兼容性
+- 已有数据如何处理？
+- 是否需要迁移路径或数据回填？
+- 与已有功能的向后兼容性？
+- 能否分阶段上线（功能开关、A/B 测试）？
 
-### Business Scenarios
-- List all typical business scenarios involving this requirement
-- How does each scenario differ in processing logic?
-- Walk through each scenario step by step - are the rules the same?
-- Are there seasonal, periodic, or conditional variations?
-- What real-world examples can the user provide?
+### 业务场景
+- 列出涉及本需求的所有典型业务场景
+- 各场景在处理逻辑上有何不同？
+- 逐步走查每个场景 — 规则是否相同？
+- 是否有季节性、周期性或条件性变化？
+- 用户能提供哪些真实案例？
 
-### Acceptance Criteria
-- How do we verify this is working correctly?
-- What are the specific test scenarios?
-- What does "done" look like?
+### 验收标准
+- 如何验证功能正常工作？
+- 具体的测试场景有哪些？
+- "完成"是什么样的？
 
-## Questioning Discipline
+## 提问纪律
 
-### Rules
+### 规则
 
-1. **Ask in batches of 3-5** - Don't overwhelm with 20 questions at once
-2. **Prioritize high-impact dimensions first** - Business rules before UI polish
-3. **Follow-up on every answer** - Each answer likely reveals new questions
-4. **Never assume** - If you're guessing, ask instead
-5. **Reference existing code** - "I see the current `Order` model has X, does this change?"
-6. **Be specific** - "What happens when inventory reaches zero during checkout?" not "What about edge cases?"
-7. **Challenge vague answers** - "All users" -> "Including admin? Guest? API consumers?"
+1. **每轮 3-5 个问题** — 不要一次扔 20 个问题
+2. **优先提问高影响维度** — 业务规则优先于 UI 细节
+3. **对每个回答追问** — 每个回答很可能引出新问题
+4. **绝不假设** — 如果在猜测，就去问
+5. **引用已有代码** — "我看到当前 `Order` 模型有 X，这会改变吗？"
+6. **问题要具体** — "结算时库存归零会怎样？"而不是"边界情况怎么办？"
+7. **质疑模糊回答** — "所有用户" → "包括管理员？访客？API 调用方？"
 
-### Red Flags - You're Not Asking Enough
+### 危险信号 — 你问得还不够
 
-| Sign | Action |
-|------|--------|
-| You asked < 10 total questions | You almost certainly missed dimensions |
-| No questions about edge cases | Go back and ask about failures, concurrency, boundaries |
-| No questions about existing data | Ask about migration, backwards compatibility |
-| User said "and so on" or "etc." | Unpack it - those hide complexity |
-| You feel ready to implement after 1 round | You're not. Ask more. |
-| No questions about what happens on error | Every happy path has an unhappy twin |
+| 信号 | 行动 |
+|------|------|
+| 总共问了不到 10 个问题 | 几乎可以肯定遗漏了维度 |
+| 没有关于边界情况的问题 | 回去问失败、并发、边界相关问题 |
+| 没有关于已有数据的问题 | 问迁移和向后兼容性 |
+| 用户说了"等等"或"之类的" | 追问展开 — 那里面藏着复杂度 |
+| 一轮后就觉得可以开始实现了 | 不行。继续问。 |
+| 没有关于出错时怎么办的问题 | 每条正常路径都有一条异常路径 |
 
-### When to Stop
+### 何时停止
 
-Stop ONLY when:
-- Every relevant dimension has at least one question asked and answered
-- Follow-up questions from answers have been exhausted
-- You can write a complete requirement summary without guessing
-- The user confirms the summary is accurate
+仅在以下条件全部满足时停止：
+- 每个相关维度都至少有一个问题被提出和回答
+- 回答引出的追问已全部穷尽
+- 你能写出完整的需求摘要而不需要猜测
+- 用户确认摘要准确
 
-## Output: Requirement Summary
+## 输出：需求摘要
 
-After comprehensive analysis and user decisions on findings, produce the final summary:
+综合分析完成、用户对发现做出决策后，产出最终摘要：
 
 ```markdown
-## Requirement Summary: [Title]
+## 需求摘要：[标题]
 
-### Problem Statement
-[1-2 sentences on what problem this solves]
+### 问题陈述
+[1-2 句话说明解决什么问题]
 
-### Scope
-- In scope: [bullet list]
-- Out of scope: [bullet list]
-- Assumptions: [bullet list]
+### 范围
+- 范围内：[列表]
+- 范围外：[列表]
+- 假设：[列表]
 
-### Detailed Requirements
-[Organized by functional area, each with clear acceptance criteria]
+### 详细需求
+[按功能区域组织，每项附明确的验收标准]
 
-### Data Changes
-[New/modified entities, fields, states]
+### 数据变更
+[新增/修改的实体、字段、状态]
 
-### Process Flow
-[Step-by-step flow with decision points]
+### 流程
+[带决策点的逐步流程]
 
-### Edge Cases & Error Handling
-[Each scenario and expected behavior]
+### 边界场景与异常处理
+[每个场景及预期行为]
 
-### Analysis Findings
-- Critical/important findings incorporated above
-- User decisions on open questions: [list each decision]
+### 分析发现
+- 致命/重要发现已整合到上方对应章节
+- 用户对开放问题的决策：[逐条列出]
 
-### Open Questions
-[Anything still unresolved]
+### 待定问题
+[仍未解决的问题]
 ```
 
-Wait for user confirmation. Once confirmed：
+等待用户确认。确认后：
 - **P0/P1**：先执行 ecw:risk-classifier Phase 2（精确定级），再 invoke `superpowers:writing-plans`
 - **兜底**：如无 Phase 2 需要，直接 invoke `superpowers:writing-plans`
 
-## Common Mistakes
+## 常见错误
 
-| Mistake | Fix |
-|---------|-----|
-| Jumping to implementation after hearing the requirement | STOP. Read code first, then ask questions |
-| Asking only about the happy path | Explicitly ask about failures, edges, concurrency |
-| Accepting "same as X" without verifying | Read X, then confirm specifics differ or match |
-| Stopping after one round of questions | Each answer generates new questions. Keep going. |
-| Asking too many questions at once | Batch to 3-5, prioritize by impact |
-| Not reading existing code first | You miss half the relevant questions without context |
+| 错误 | 纠正 |
+|------|------|
+| 听到需求就直接跳到实现 | 停。先读代码，再提问 |
+| 只问正常路径 | 必须明确问失败、边界、并发场景 |
+| 接受"和 X 一样"而不验证 | 读 X 的实际内容，再确认异同 |
+| 一轮提问后就停止 | 每个回答都会生成新问题。继续。 |
+| 一次问太多问题 | 每轮 3-5 个，按影响优先排序 |
+| 不先读已有代码 | 不了解上下文，你会漏掉一半的关键问题 |
