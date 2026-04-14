@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.2.1] - 2026-04-14
+
+### 修复
+
+- **`spec-challenge` 用户决策权缺失** — spec-challenger 报告返回后 AI 直接自行回应所有致命缺陷，用户无参与机会。改为：展示报告原文 → 逐条 AskUserQuestion 让用户选择处理方式 → AI 按用户决策执行 → 用户最终确认通过
+
 ## [0.2.0] - 2026-04-14
 
 ### 新增
