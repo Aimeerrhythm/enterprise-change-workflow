@@ -1,6 +1,6 @@
 ---
 name: requirements-elicitation
-description: Use when user proposes a new requirement, feature, change request, or business need - systematically asks exhaustive questions across all affected dimensions until shared understanding is achieved, before any implementation begins
+description: Use when user proposes a new requirement, feature, change request, or business need — before any implementation begins. Only for P0/P1 single-domain requirements routed by ecw:risk-classifier.
 ---
 
 # 需求澄清

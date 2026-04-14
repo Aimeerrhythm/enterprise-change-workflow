@@ -1,9 +1,9 @@
 ---
 name: spec-challenge
 description: |
-  Triggers adversarial review of a design spec or solution document.
-  Can be invoked manually via /spec-challenge or automatically after writing-plans completes (P0 changes, P1 cross-domain changes).
-  Orchestrates: challenge → author response → resolution loop.
+  Use when a design spec or solution document needs independent adversarial review.
+  TRIGGER when: writing-plans completes for P0 changes or P1 cross-domain changes,
+  or manually via /spec-challenge on any spec/plan file.
 ---
 
 # Spec Challenge — 方案对抗评审
@@ -18,42 +18,40 @@ description: |
 
 ## 流程
 
+```dot
+digraph spec_challenge {
+  rankdir=TB;
+
+  "收集评审材料" [shape=box];
+  "调度 spec-challenger agent" [shape=box];
+  "作者逐条回应" [shape=box];
+  "输出回应摘要" [shape=box];
+  "所有致命缺陷已解决？" [shape=diamond];
+  "等待用户决策" [shape=box];
+  "评审通过" [shape=doublecircle];
+
+  "收集评审材料" -> "调度 spec-challenger agent";
+  "调度 spec-challenger agent" -> "作者逐条回应";
+  "作者逐条回应" -> "输出回应摘要";
+  "输出回应摘要" -> "所有致命缺陷已解决？";
+  "所有致命缺陷已解决？" -> "评审通过" [label="是"];
+  "所有致命缺陷已解决？" -> "等待用户决策" [label="有需确认项"];
+  "等待用户决策" -> "作者逐条回应";
+}
 ```
-┌─────────────────────────────────────────────┐
-│ 1. 收集评审材料                               │
-│    - 待评审文档（必须）                         │
-│    - 项目知识引用（可选，按需附加）               │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ 2. 调度 spec-challenger agent                │
-│    - 独立上下文（不带作者推理过程）               │
-│    - 传入文档内容 + 项目知识                     │
-│    - 等待返回评审报告                           │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ 3. 作者逐条回应                               │
-│    对每条致命缺陷（F1, F2, ...）：              │
-│    ✅ 同意 → 说明修改方案，立即更新文档           │
-│    ❌ 不同意 → 给出具体技术反驳理由               │
-│    ❓ 需要确认 → 转给用户决策                    │
-│                                              │
-│    对每条改进建议（I1, I2, ...）：              │
-│    ✅ 采纳 → 更新文档                          │
-│    ⏭️ 延后 → 记录到后续迭代                     │
-│                                              │
-│    对盲区标注：                                 │
-│    确认是否需要在文档中明确标注                    │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ 4. 输出回应摘要                               │
-│    展示所有条目的处理结果                        │
-│    如有"需要确认"项，等待用户决策                 │
-│    所有致命缺陷解决后，标记评审通过               │
-└─────────────────────────────────────────────┘
-```
+
+**作者回应规则（步骤 3 详细说明）：**
+
+对每条致命缺陷（F1, F2, ...）：
+- ✅ 同意 → 说明修改方案，立即更新文档
+- ❌ 不同意 → 给出具体技术反驳理由
+- ❓ 需要确认 → 转给用户决策
+
+对每条改进建议（I1, I2, ...）：
+- ✅ 采纳 → 更新文档
+- ⏭️ 延后 → 记录到后续迭代
+
+对盲区标注：确认是否需要在文档中明确标注。
 
 ## 调度 Agent 的 Prompt 模板
 

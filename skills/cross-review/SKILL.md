@@ -1,10 +1,9 @@
 ---
 name: cross-review
 description: >
-  Structured multi-round consistency verification for cross-file content.
-  Checks intra-file and cross-file structural consistency (tables, lists,
-  terminology, counts). Manual-only tool for document-heavy changes.
-  Invocable via /ecw:cross-review.
+  Use when document-heavy changes need cross-file consistency verification
+  (tables, lists, terminology, counts may be inconsistent across files).
+  Manual-only tool, not in the required workflow. Invocable via /ecw:cross-review.
 ---
 
 # Cross-Review — 结构化交叉验证

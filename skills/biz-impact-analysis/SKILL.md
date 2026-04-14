@@ -1,10 +1,10 @@
 ---
 name: biz-impact-analysis
 description: |
-  Triggers business impact analysis for code changes.
-  Analyzes which business domains, downstream/upstream flows, external systems,
-  and end-to-end paths are affected by the diff.
-  Can be invoked manually via /biz-impact-analysis or automatically after impl-verify.
+  Use when code changes are complete and need business impact assessment.
+  TRIGGER when: impl-verify passes (automatic for P0/P1), or manually via
+  /biz-impact-analysis. DO NOT use for pre-implementation requirement analysis
+  (use ecw:domain-collab instead).
 ---
 
 # Business Impact Analysis — 业务流程影响分析
@@ -19,26 +19,9 @@ description: |
 
 ## 流程
 
-```
-┌─────────────────────────────────────────────┐
-│ 1. 确定 Diff 范围                            │
-│    - 无参数 → git diff master...HEAD         │
-│    - 有参数 → git diff {参数}               │
-│    - 获取变更文件列表                         │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ 2. 调度 biz-impact-analyzer agent           │
-│    - 传入 diff 范围参数                      │
-│    - 等待返回影响分析报告                     │
-└──────────────────┬──────────────────────────┘
-                   ↓
-┌─────────────────────────────────────────────┐
-│ 3. 呈现分析报告                              │
-│    - 直接输出 agent 返回的格式化报告           │
-│    - 如有未登记的跨域调用，提醒更新依赖图       │
-└─────────────────────────────────────────────┘
-```
+1. **确定 Diff 范围** — 无参数用 `git diff master...HEAD`，有参数用 `git diff {参数}`，获取变更文件列表
+2. **调度 biz-impact-analyzer agent** — 传入 diff 范围参数，等待返回影响分析报告
+3. **呈现分析报告** — 直接输出 agent 返回的格式化报告，如有未登记的跨域调用则提醒更新依赖图
 
 ## 调度 Agent 的 Prompt 模板
 

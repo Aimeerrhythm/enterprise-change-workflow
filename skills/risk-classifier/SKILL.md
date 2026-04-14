@@ -2,10 +2,8 @@
 name: risk-classifier
 description: >
   Use BEFORE any other skill when user proposes a change, feature, requirement,
-  bug fix, or any code modification. Classifies change risk level (P0-P3) and
-  determines which downstream workflow to invoke. This skill MUST run before
-  ecw:requirements-elicitation. If ecw:requirements-elicitation would normally trigger,
-  run risk-classifier first instead.
+  bug fix, or any code modification. MUST run before ecw:requirements-elicitation
+  or ecw:domain-collab — if either would normally trigger, run this first.
 ---
 
 # Risk Classifier

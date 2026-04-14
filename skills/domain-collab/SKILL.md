@@ -2,7 +2,6 @@
 name: domain-collab
 description: |
   Use when user describes a business requirement spanning 2+ domains.
-  Triggers multi-domain collaborative analysis: parallel domain agents + coordinator cross-check.
   TRIGGER when: requirement involves 2+ domain keywords defined in project CLAUDE.md routing table,
   user asks "分析影响", "影响哪些域", or risk-classifier routes here for cross-domain needs.
   DO NOT TRIGGER when: single-domain need (use ecw:requirements-elicitation), already have code diff
@@ -27,28 +26,27 @@ description: |
 
 ## 流程总览
 
-```
-用户输入需求/改动描述
-        │
-        ▼
-┌─────────────────────┐
-│ Phase 1: 域识别      │
-│ 对照域注册表关键词    │
-│ 匹配涉及的域         │
-└────────┬────────────┘
-         │
-    ┌────┴────┐
-    ▼         ▼
- 2+ 域      0~1 域
-    │       → 提示：单域走 ecw:requirements-elicitation
-    ▼
- Round 1: 独立分析（并行域 agent）
-    │
-    ▼
- Round 2: 域间协商（并行域 agent，各域评估其他域变更对自己的影响）
-    │
-    ▼
- Round 3: Coordinator 合并 + 交叉校验 + 输出报告
+```dot
+digraph domain_collab {
+  rankdir=TB;
+
+  "用户输入需求" [shape=doublecircle];
+  "Phase 1: 域识别" [shape=box];
+  "匹配域数？" [shape=diamond];
+  "提示：单域走 requirements-elicitation" [shape=box];
+  "Round 1: 独立分析（并行）" [shape=box];
+  "Round 2: 域间协商（并行）" [shape=box];
+  "Round 3: Coordinator 交叉校验" [shape=box];
+  "输出报告" [shape=doublecircle];
+
+  "用户输入需求" -> "Phase 1: 域识别";
+  "Phase 1: 域识别" -> "匹配域数？";
+  "匹配域数？" -> "提示：单域走 requirements-elicitation" [label="0~1 域"];
+  "匹配域数？" -> "Round 1: 独立分析（并行）" [label="2+ 域"];
+  "Round 1: 独立分析（并行）" -> "Round 2: 域间协商（并行）";
+  "Round 2: 域间协商（并行）" -> "Round 3: Coordinator 交叉校验";
+  "Round 3: Coordinator 交叉校验" -> "输出报告";
+}
 ```
 
 ## Phase 1: 域识别

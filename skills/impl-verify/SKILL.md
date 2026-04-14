@@ -1,11 +1,9 @@
 ---
 name: impl-verify
 description: >
-  Deep semantic verification of code implementation against requirements, plan,
-  domain knowledge, and engineering standards. Multi-round convergence loop with
-  severity-based exit: zero "must-fix" findings required to pass. Absorbs
-  code-reviewer role. Triggered after implementation, before marking task done.
-  Also invocable manually via /ecw:impl-verify.
+  Use when implementation is complete and ready for verification, before marking
+  task done. Absorbs code-reviewer role — no separate code review needed in ECW
+  workflow. Also invocable manually via /ecw:impl-verify.
 ---
 
 # Impl-Verify — 实现正确性验证
