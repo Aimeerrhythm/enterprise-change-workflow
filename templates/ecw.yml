@@ -6,6 +6,8 @@ project:
   type: "java-monolith"              # java-monolith | java-microservice | go-monolith | node | python
   language: "java"                   # java | go | typescript | python
 
+ecw_version: "0.2.0"                 # ECW 插件版本，/ecw-upgrade 使用此字段判断升级状态
+
 # 组件类型定义
 # 域分析中识别的变更组件分类。每种类型定义 grep 验证模式。
 # {name} 占位符在运行时替换为实际类名/文件名。
@@ -89,6 +91,20 @@ verification:
   run_tests: true
   # mvn test 超时秒数。超时不阻止完成，仅输出警告。
   test_timeout: 300
+
+# TDD 流程配置
+# 控制测试先行流程的行为。与 risk-classifier 路由联动。
+tdd:
+  # 是否启用 TDD 流程。
+  # true：P0-P2 强制在实现前写失败测试，P3 推荐。
+  # false：TDD 阶段降级为推荐（不强制），用户可自行决定。
+  enabled: true
+  # verify-completion hook 中检查新增/修改的 BizService/Manager 是否有对应测试文件。
+  # 默认 false。设为 true 后，缺少测试文件时输出非阻塞提醒。
+  check_test_files: false
+  # 测试基类（供参考，不影响逻辑）。
+  # Java: "BaseUnitTest" | Go: "TestSuite" | Node: 留空
+  # base_test_class: "BaseUnitTest"
 
 # 路径配置
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。

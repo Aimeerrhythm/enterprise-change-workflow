@@ -7,7 +7,8 @@ PreToolUse 拦截 TaskUpdate(status=completed)：
 3. Java 编译检查（改了 .java 文件 → mvn compile，失败则阻止）
 4. Java 测试检查（改了 .java 文件 → mvn test，失败则阻止；ecw.yml verification.run_tests 控制开关）
 5. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
-技术检查 1-4 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒。
+6. TDD 测试覆盖提醒（BizService/Manager 改了但无对应测试文件 → 定向提醒；ecw.yml tdd.check_test_files 控制开关）
+技术检查 1-4 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒 + TDD 测试覆盖提醒。
 """
 
 import glob as globmod
@@ -77,6 +78,7 @@ def main():
 
     # ── 非阻止性提醒（分类传递，避免混淆标题） ──
     knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
+    test_reminders = check_test_coverage(cwd, modified)
 
     # 合并所有警告
     all_warnings = (compile_warnings or []) + (test_warnings or [])
@@ -86,7 +88,7 @@ def main():
         output_fail(issues)
         sys.exit(2)
     else:
-        output_pass(len(modified), len(deleted), all_warnings, knowledge_reminders)
+        output_pass(len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders)
         sys.exit(0)
 
 
@@ -363,6 +365,37 @@ def check_knowledge_doc_freshness(cwd, modified):
     return reminders
 
 
+def check_test_coverage(cwd, modified):
+    """检查新增/修改的 BizService/Manager 是否有对应测试文件。返回提醒列表（不阻止完成）。"""
+    reminders = []
+
+    cfg = _read_ecw_config(cwd)
+    tdd = cfg.get("tdd", {})
+    if not tdd.get("check_test_files", False):
+        return reminders
+
+    biz_files = [f for f in modified
+                 if f.endswith(".java")
+                 and ("BizServiceImpl" in f or "ManagerImpl" in f)]
+
+    if not biz_files:
+        return reminders
+
+    for biz_file in biz_files:
+        # src/main/java → src/test/java, Impl.java → Test.java
+        test_file = biz_file.replace("src/main/java", "src/test/java")
+        test_file = re.sub(r'Impl\.java$', 'Test.java', test_file)
+
+        if not os.path.exists(os.path.join(cwd, test_file)):
+            class_name = os.path.basename(biz_file).replace("Impl.java", "")
+            reminders.append(
+                f"`{class_name}` 有代码变更但未找到对应测试文件 `{test_file}`。"
+                f"TDD 流程要求新增/修改的 BizService 和 Manager 需有对应测试。"
+            )
+
+    return reminders
+
+
 def output_fail(issues):
     """技术检查失败 → 阻止完成"""
     msg = "**【ECW 完成验证】实现结果存在技术问题，请修复后重试：**\n\n"
@@ -380,8 +413,8 @@ def output_fail(issues):
     print(json.dumps(result, ensure_ascii=False))
 
 
-def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None):
-    """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒"""
+def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None, test_reminders=None):
+    """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒 + TDD 测试覆盖提醒"""
     msg = (
         f"**【ECW 完成验证】** 技术检查通过"
         f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
@@ -396,6 +429,10 @@ def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminder
     if knowledge_reminders:
         msg += "\n\n---\n\n**【知识文档同步提醒】** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n"
         msg += "\n\n".join(f"- {r}" for r in knowledge_reminders)
+
+    if test_reminders:
+        msg += "\n\n---\n\n**【TDD 测试覆盖提醒】** 以下业务组件有代码变更但缺少对应测试：\n\n"
+        msg += "\n".join(f"- {r}" for r in test_reminders)
 
     result = {"systemMessage": msg}
     print(json.dumps(result, ensure_ascii=False))

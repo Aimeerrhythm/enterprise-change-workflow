@@ -4,6 +4,26 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.2.0] - 2026-04-14
+
+### 新增
+
+- **TDD 流程集成** — 在 ECW 工作流中嵌入测试先行（TDD）阶段
+  - `risk-classifier` 路由表在实现步骤前插入 TDD:RED（P0-P2 强制，P3 推荐，紧急通道跳过）
+  - Bug 修复路由嵌入复现测试步骤（TDD:RED → 修复 GREEN）
+- **`/ecw-upgrade` 升级命令** — 版本化项目配置升级，支持版本检测、迁移列表、逐步执行、幂等保护
+- **版本化迁移模板体系** — `templates/upgrades/{version}/` 目录结构，每个版本包含 migration.md + snippet 模板
+- **ecw.yml `tdd` 配置节** — 控制 TDD 流程行为（enabled / check_test_files / base_test_class）
+- **ecw.yml `ecw_version` 字段** — 跟踪项目 ECW 配置版本，`/ecw-upgrade` 基于此判断升级状态
+
+### 增强
+
+- **`impl-verify` Round 3 测试验证** — 新增测试覆盖、测试质量、测试先行三个验证维度
+- **`impl-verify` 偏差模式** — 新增断言缺失、Mock 滥用两个常见偏差模式
+- **完成验证 Hook** — 新增 TDD 测试覆盖提醒（非阻塞），检查 BizService/Manager 是否有对应测试文件
+- **CLAUDE.md.snippet 职责边界重构** — snippet 瘦身为纯域路由模板，文档同步规则/影响分析工具区分等通用规则移至插件 CLAUDE.md
+- **升级命令健壮性** — 部分迁移失败时不更新版本号，支持重跑修复
+
 ## [0.1.0] - 2025-04-13
 
 ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
@@ -26,4 +46,5 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.2.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.1.0

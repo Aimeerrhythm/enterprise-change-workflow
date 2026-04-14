@@ -1,0 +1,13 @@
+# TDD 流程配置
+# 控制测试先行流程的行为。与 risk-classifier 路由联动。
+tdd:
+  # 是否启用 TDD 流程。
+  # true：P0-P2 强制在实现前写失败测试，P3 推荐。
+  # false：TDD 阶段降级为推荐（不强制），用户可自行决定。
+  enabled: true
+  # verify-completion hook 中检查新增/修改的 BizService/Manager 是否有对应测试文件。
+  # 默认 false。设为 true 后，缺少测试文件时输出非阻塞提醒。
+  check_test_files: false
+  # 测试基类（供参考，不影响逻辑）。
+  # Java: "BaseUnitTest" | Go: "TestSuite" | Node: 留空
+  # base_test_class: "{{base_test_class}}"

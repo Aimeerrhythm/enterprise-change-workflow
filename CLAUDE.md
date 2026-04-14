@@ -62,11 +62,28 @@ ecw:risk-classifier (Phase 1 快速预判)
 1. **`ecw:impl-verify`** — 实现正确性验证，多轮收敛直到零「必须修复」。交叉对照代码 vs 需求/领域知识/Plan/工程标准，同时覆盖代码质量审查（替代 code-reviewer）。
 2. **`verify-completion` hook（自动）** — 机械检查：引用完整性、编译、测试、知识同步。技术检查不过会阻止完成。
 
-> hook 由 PreToolUse 自动执行，无需手动调用。hook 的硬拦截包括：断裂引用检查、残留引用检查、Java 编译检查、Java 测试检查（ecw.yml `verification.run_tests` 控制开关）。定向提醒包括：知识文档同步提醒。
+> hook 由 PreToolUse 自动执行，无需手动调用。hook 的硬拦截包括：断裂引用检查、残留引用检查、Java 编译检查、Java 测试检查（ecw.yml `verification.run_tests` 控制开关）。定向提醒包括：知识文档同步提醒、TDD 测试覆盖提醒（ecw.yml `tdd.check_test_files` 控制开关）。
 >
 > impl-verify 在标记完成前执行（P3 或纯格式/注释变更可跳过）。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
 >
 > `ecw:cross-review` 作为手动可选工具（`/ecw:cross-review`），适用于文档密集型变更的跨文件结构一致性检查，不在必经链路中。
+
+## 文档同步规则
+
+**代码变更后必须同步对应的知识文件。按变更涉及的层级检查：**
+
+- **项目结构**（模块/组件/依赖/数据模型变更）→ 更新 `project/` 下对应文档
+- **业务逻辑**（状态流转/业务规则变更）→ 更新 `.claude/knowledge/<域>/business-rules.md`
+- **跨域集成**（调用关系/MQ/共享资源/外部系统/端到端链路）→ 更新 `.claude/knowledge/common/` 下对应文档
+
+## 影响分析工具区分
+
+| 工具 | 阶段 | 输入 | 用途 |
+|------|------|------|------|
+| `ecw:domain-collab` | **需求阶段**（实现前） | 自然语言需求描述 | 分析需求涉及哪些域、各域需要什么变更、跨域依赖和冲突 |
+| `ecw:biz-impact-analysis` | **代码阶段**（实现后） | git diff | 分析已完成的代码变更实际影响了哪些业务流程、外部系统、端到端链路 |
+
+**不要混用**：需求分析阶段用 `ecw:domain-collab`，代码变更后用 `ecw:biz-impact-analysis`。
 
 ### 项目 CLAUDE.md 集成
 
@@ -91,3 +108,4 @@ ecw:risk-classifier (Phase 1 快速预判)
 |---------|------|
 | `/ecw-init` | 初始化项目 ECW 配置 |
 | `/ecw-validate-config` | 检查配置完整性和正确性 |
+| `/ecw-upgrade` | 升级项目 ECW 配置到最新插件版本 |

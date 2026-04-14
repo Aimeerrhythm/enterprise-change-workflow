@@ -1,6 +1,7 @@
 # ECW (Enterprise Change Workflow) -- CLAUDE.md Snippet
 
 > 将以下内容追加到项目的 CLAUDE.md 中。根据项目实际情况替换占位符。
+> ECW 的自动化规则、完成验证规则、文档同步规则等通用规则由插件自动提供，无需手动添加。
 
 ---
 
@@ -28,41 +29,3 @@
 -->
 
 > 每个域的 `00-index.md` 包含：链路速查、节点定位、Facade 地图、外部系统交互。按需读取即可。
-
-## 文档同步规则
-
-**代码变更后必须同步对应文档。按变更涉及的层级检查：**
-
-- **项目结构**（Controller/Service/Model/模块/依赖/数据模型）-> 更新 `project/` 下对应文档（`architecture.md`、`domains.md`、`models.md`、`tech-stack.md`）
-- **业务逻辑**（状态流转/业务规则变更）-> 更新 `.claude/knowledge/<域>/business-rules.md`
-- **跨域集成**（调用关系/MQ/共享资源/外部系统/端到端链路）-> 更新 `.claude/knowledge/common/` 下对应文档
-
-## 自动化规则
-
-- **收到变更类需求时**：自动调用 `ecw:risk-classifier`，完成风险分级后再决定后续流程（ecw:requirements-elicitation / writing-plans / 直接实现）
-- **收到 bug 修复类需求时**：先调用 `ecw:risk-classifier` 评估风险，然后路由到 `superpowers:systematic-debugging` 定位和修复
-- **实现完成后**：执行 `ecw:impl-verify` 实现正确性验证（代码 ↔ 需求/领域知识/Plan/工程标准），多轮收敛直到零「必须修复」，然后再标记任务完成。impl-verify 同时覆盖代码质量审查，替代 code-reviewer
-- **impl-verify 完成后**：调用 `ecw:biz-impact-analysis` 生成业务影响分析报告（P0/P1 变更为必要步骤，P2+ 建议执行），基于同一 diff 范围。P0/P1 变更在 biz-impact-analysis 完成后自动触发 `ecw:risk-classifier` Phase 3 反馈校准
-- **Skill 检查优先级**：本项目已有 `ecw:risk-classifier` 作为变更类任务的统一入口，using-superpowers 的通用 skill 检查不应重复触发 risk-classifier 已覆盖的路径。收到变更/需求/bug 类请求时，直接走 ecw:risk-classifier，不需要额外的 skill 适用性检查
-
-## 完成验证规则
-
-**声明任务"完成"之前的验证链路：**
-
-1. **`ecw:impl-verify`** — 实现正确性验证，多轮收敛直到零「必须修复」。交叉对照代码 vs 需求/领域知识/Plan/工程标准，同时覆盖代码质量审查（替代 code-reviewer）。
-2. **`verify-completion` hook（自动）** — 机械检查：引用完整性、编译、知识同步。技术检查不过会阻止完成。
-
-> hook 由 PreToolUse 自动执行，无需手动调用。hook 的硬拦截包括：断裂引用检查、残留引用检查、Java 编译检查、Java 测试检查（ecw.yml `verification.run_tests` 控制开关）。定向提醒包括：知识文档同步提醒。
->
-> impl-verify 在标记完成前执行（P3 或纯格式/注释变更可跳过）。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
->
-> `ecw:cross-review` 作为手动可选工具（`/ecw:cross-review`），适用于文档密集型变更的跨文件结构一致性检查，不在必经链路中。
-
-## 影响分析工具区分
-
-| 工具 | 阶段 | 输入 | 用途 |
-|------|------|------|------|
-| `ecw:domain-collab` | **需求阶段**（实现前） | 自然语言需求描述 | 分析需求涉及哪些域、各域需要什么变更、跨域依赖和冲突 |
-| `ecw:biz-impact-analysis` | **代码阶段**（实现后） | git diff | 分析已完成的代码变更实际影响了哪些业务流程、外部系统、端到端链路 |
-
-**不要混用**：需求分析阶段用 `ecw:domain-collab`，代码变更后用 `ecw:biz-impact-analysis`。前者是前置预判，后者是后置验证。
