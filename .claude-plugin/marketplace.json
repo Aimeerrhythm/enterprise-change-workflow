@@ -6,7 +6,10 @@
   "plugins": [
     {
       "name": "ecw",
-      "source": "./",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Aimeerrhythm/enterprise-change-workflow.git"
+      },
       "description": "Enterprise change management workflow: risk classification, multi-domain collaborative analysis, requirements elicitation, adversarial spec review, implementation correctness verification, and business impact analysis"
     }
   ]

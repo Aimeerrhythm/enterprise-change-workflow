@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -109,12 +109,13 @@ User proposes requirement / change / bug
 | `biz-impact-analyzer` | `ecw:biz-impact-analysis` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
 | `spec-challenger` | `ecw:spec-challenge` | 4-dimension review: accuracy / information quality / boundaries & blind spots / robustness → fatal flaws + improvement suggestions |
 
-### Commands (2)
+### Commands (3)
 
 | Component | Description |
 |-----------|-------------|
 | `/ecw-init` | Project initialization wizard (3 modes: Attach/Manual/Scaffold) |
 | `/ecw-validate-config` | Validate ECW configuration completeness (7-step check, outputs pass/warn/fail report) |
+| `/ecw-upgrade` | Upgrade project ECW configuration to latest plugin version (idempotent migrations, partial failure protection) |
 
 ### Hook (1)
 
@@ -296,7 +297,8 @@ enterprise-change-workflow/
 │   └── spec-challenger.md       # Adversarial review agent
 ├── commands/
 │   ├── ecw-init.md              # Project initialization wizard
-│   └── ecw-validate-config.md   # Configuration validation command
+│   ├── ecw-validate-config.md   # Configuration validation command
+│   └── ecw-upgrade.md           # Configuration upgrade command (versioned migrations)
 ├── hooks/
 │   ├── hooks.json               # Hook registration (PreToolUse → TaskUpdate)
 │   └── verify-completion.py     # Completion verification hook (5 checks: 4 hard blocks + 1 soft reminder)
@@ -321,9 +323,33 @@ enterprise-change-workflow/
 └── README.zh-CN.md              # Chinese documentation
 ```
 
+## Upgrading the Plugin
+
+### Update to Latest Version
+
+```bash
+claude plugin update ecw
+```
+
+Or run `/plugin update ecw` inside a Claude Code session, then restart the session to use new skills and commands.
+
+### Upgrade Project Configuration
+
+After updating the plugin, if the new version includes configuration migrations (e.g., new ecw.yml fields, new knowledge file templates), run in your target project:
+
+```
+/ecw-upgrade
+```
+
+This command detects the version gap between your project's ECW config and the plugin, lists pending migrations, and applies changes step by step.
+
 ## Troubleshooting
 
 ### Common Issues
+
+**Q: New commands/skills don't appear after updating the plugin?**
+
+A: Make sure you ran `claude plugin update ecw` and restarted the Claude Code session.
 
 **Q: `/ecw-init` ran but `/ecw-validate-config` shows many warnings?**
 
