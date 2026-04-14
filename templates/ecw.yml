@@ -46,7 +46,7 @@ component_types:
   #   grep_pattern: "class {name}"
   #   search_path: "src/controllers/"
 
-# 代码扫描模式（biz-impact-analyzer 使用）
+# 代码扫描模式（biz-impact-analysis 使用）
 # 定义如何在 diff 中检测跨域依赖和外部集成。
 # 每个 key 是语义类别，value 是在代码中 grep 的标识字符串。
 scan_patterns:

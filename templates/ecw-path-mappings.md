@@ -1,6 +1,6 @@
 # 代码路径→域映射 (Code Path Mappings)
 
-> 本文件定义项目源码目录到业务域的映射关系。biz-impact-analyzer agent 使用此文件将 diff 中的文件路径定位到业务域。
+> 本文件定义项目源码目录到业务域的映射关系。biz-impact-analysis agent 使用此文件将 diff 中的文件路径定位到业务域。
 > 由 /ecw-init 生成初始版本，随项目演进手动维护。
 
 ---
@@ -32,7 +32,7 @@
 
 ## 业务目录完整映射
 
-> 列出业务代码根目录下所有子目录及其所属域。biz-impact-analyzer 使用此表将 diff 文件路径定位到具体域。
+> 列出业务代码根目录下所有子目录及其所属域。biz-impact-analysis 使用此表将 diff 文件路径定位到具体域。
 
 | 子目录 | 所属域 |
 |--------|--------|

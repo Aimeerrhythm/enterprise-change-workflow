@@ -8,7 +8,7 @@ description: |
 
 # Spec Challenge — 方案对抗评审
 
-在方案/设计文档产出后，调度 `spec-challenger` agent 进行独立的对抗性评审，评审报告展示给用户后由用户逐条确认处理方式。
+在方案/设计文档产出后，调度 `spec-challenge` agent 进行独立的对抗性评审，评审报告展示给用户后由用户逐条确认处理方式。
 
 ## 触发方式
 
@@ -23,7 +23,7 @@ digraph spec_challenge {
   rankdir=TB;
 
   "收集评审材料" [shape=box];
-  "调度 spec-challenger agent" [shape=box];
+  "调度 spec-challenge agent" [shape=box];
   "展示评审报告" [shape=box];
   "逐条用户确认" [shape=box];
   "作者按用户决策执行" [shape=box];
@@ -31,8 +31,8 @@ digraph spec_challenge {
   "用户最终确认" [shape=box];
   "评审通过" [shape=doublecircle];
 
-  "收集评审材料" -> "调度 spec-challenger agent";
-  "调度 spec-challenger agent" -> "展示评审报告";
+  "收集评审材料" -> "调度 spec-challenge agent";
+  "调度 spec-challenge agent" -> "展示评审报告";
   "展示评审报告" -> "逐条用户确认";
   "逐条用户确认" -> "作者按用户决策执行";
   "作者按用户决策执行" -> "输出回应摘要";
@@ -43,9 +43,9 @@ digraph spec_challenge {
 
 ### 关键规则：用户主导决策
 
-**spec-challenger 报告返回后，严禁 AI 自行回应。** 必须按以下步骤执行：
+**spec-challenge 报告返回后，严禁 AI 自行回应。** 必须按以下步骤执行：
 
-1. **展示** — 完整展示 spec-challenger 的评审报告原文
+1. **展示** — 完整展示 spec-challenge 的评审报告原文
 2. **逐条确认** — 对每条致命缺陷（F1, F2, ...），用 AskUserQuestion 让用户选择处理方式：
    - ✅ 同意修改 — AI 按此执行修改
    - ❌ 不同意 — 用户提供理由或由 AI 草拟技术反驳供用户确认
@@ -58,7 +58,7 @@ digraph spec_challenge {
 
 ## 调度 Agent 的 Prompt 模板
 
-调度 spec-challenger agent 时，使用以下 prompt 结构：
+调度 spec-challenge agent 时，使用以下 prompt 结构：
 
 ```
 请评审以下技术方案文档。
@@ -88,7 +88,7 @@ digraph spec_challenge {
 
 ### 步骤 1：展示评审报告
 
-spec-challenger agent 返回后，**原样展示**完整评审报告给用户。不做任何回应、不做任何判断。
+spec-challenge agent 返回后，**原样展示**完整评审报告给用户。不做任何回应、不做任何判断。
 
 ### 步骤 2：逐条致命缺陷确认
 

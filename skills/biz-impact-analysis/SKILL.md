@@ -9,7 +9,7 @@ description: |
 
 # Business Impact Analysis — 业务流程影响分析
 
-在代码变更后，调度 `biz-impact-analyzer` agent 分析变更对业务流程的影响。
+在代码变更后，调度 `biz-impact-analysis` agent 分析变更对业务流程的影响。
 
 ## 触发方式
 
@@ -20,12 +20,12 @@ description: |
 ## 流程
 
 1. **确定 Diff 范围** — 无参数用 `git diff master...HEAD`，有参数用 `git diff {参数}`，获取变更文件列表
-2. **调度 biz-impact-analyzer agent** — 传入 diff 范围参数，等待返回影响分析报告
+2. **调度 biz-impact-analysis agent** — 传入 diff 范围参数，等待返回影响分析报告
 3. **呈现分析报告** — 直接输出 agent 返回的格式化报告，如有未登记的跨域调用则提醒更新依赖图
 
 ## 调度 Agent 的 Prompt 模板
 
-调度 biz-impact-analyzer agent 时，使用以下 prompt 结构：
+调度 biz-impact-analysis agent 时，使用以下 prompt 结构：
 
 ```
 请分析以下代码变更的业务影响。
@@ -60,7 +60,7 @@ description: |
 当 `ecw:impl-verify` 完成后：
 
 1. impl-verify 完成代码正确性 + 质量验证（零「必须修复」）
-2. 调度 biz-impact-analyzer agent，基于同一 diff 范围
+2. 调度 biz-impact-analysis agent，基于同一 diff 范围
 3. 输出业务影响分析报告
 
 **P0/P1 变更为必要步骤**，P2+ 建议执行。ecw:risk-classifier Phase 1 输出的路由链中已包含 `ecw:impl-verify + ecw:biz-impact-analysis`，Phase 1 输出时会将其加入 TaskCreate 的 todo list。

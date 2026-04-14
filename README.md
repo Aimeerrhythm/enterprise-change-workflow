@@ -106,8 +106,8 @@ User proposes requirement / change / bug
 
 | Component | Dispatcher | Description |
 |-----------|-----------|-------------|
-| `biz-impact-analyzer` | `ecw:biz-impact-analysis` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
-| `spec-challenger` | `ecw:spec-challenge` | 4-dimension review: accuracy / information quality / boundaries & blind spots / robustness → fatal flaws + improvement suggestions |
+| `biz-impact-analysis` | `ecw:biz-impact-analysis` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
+| `spec-challenge` | `ecw:spec-challenge` | 4-dimension review: accuracy / information quality / boundaries & blind spots / robustness → fatal flaws + improvement suggestions |
 
 ### Commands (3)
 
@@ -293,8 +293,8 @@ enterprise-change-workflow/
 │   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
 │   └── biz-impact-analysis/     # Business impact analysis (5-step structured)
 ├── agents/
-│   ├── biz-impact-analyzer.md   # Impact analysis agent
-│   └── spec-challenger.md       # Adversarial review agent
+│   ├── biz-impact-analysis.md   # Impact analysis agent
+│   └── spec-challenge.md       # Adversarial review agent
 ├── commands/
 │   ├── ecw-init.md              # Project initialization wizard
 │   ├── ecw-validate-config.md   # Configuration validation command

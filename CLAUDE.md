@@ -42,7 +42,7 @@ ecw:risk-classifier (Phase 1 快速预判)
 | `.claude/ecw/ecw.yml` | 项目配置（名称、语言、组件类型、扫描模式、路径） |
 | `.claude/ecw/domain-registry.md` | 域注册表（域定义、知识目录、代码目录） |
 | `.claude/ecw/change-risk-classification.md` | 风险因子校准（关键词→等级映射、敏感度定义） |
-| `.claude/ecw/ecw-path-mappings.md` | 代码路径→域映射（biz-impact-analyzer 使用） |
+| `.claude/ecw/ecw-path-mappings.md` | 代码路径→域映射（biz-impact-analysis 使用） |
 
 ### 知识文件（按需填充）
 

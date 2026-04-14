@@ -1,5 +1,5 @@
 ---
-name: biz-impact-analyzer
+name: biz-impact-analysis
 description: |
   Analyzes business impact of code changes by combining structured dependency graph
   queries with incremental code scanning. Outputs a formatted impact report covering

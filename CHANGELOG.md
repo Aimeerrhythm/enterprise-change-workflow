@@ -4,6 +4,16 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.2.2] - 2026-04-14
+
+### 修复
+
+- **Agent/Skill 命名统一** — Agent 文件名与 Skill 名不一致（`spec-challenger` vs `spec-challenge`、`biz-impact-analyzer` vs `biz-impact-analysis`），导致 AI 混淆名字调用 Skill 工具失败后降级直调 Agent，跳过 Skill 编排逻辑。统一 Agent 名 = Skill 名，消除歧义
+
+### 新增
+
+- **`release.sh` 发布脚本** — 统一版本号更新 + git tag + push 流程
+
 ## [0.2.1] - 2026-04-14
 
 ### 修复

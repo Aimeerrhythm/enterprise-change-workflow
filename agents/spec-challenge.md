@@ -1,5 +1,5 @@
 ---
-name: spec-challenger
+name: spec-challenge
 description: |
   Adversarial technical reviewer that challenges design specs and solution documents.
   Dispatched after a spec or design document is produced, reviews it from an independent
