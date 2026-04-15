@@ -48,11 +48,11 @@ ecw:risk-classifier (Phase 1 快速预判)
 
 | 文件 | 写入时机 | 用途 |
 |------|---------|------|
-| `.claude/ecw/session-state.md` | risk-classifier Phase 1 输出后 | ECW 流程状态记录，新 session 恢复用 |
+| `.claude/ecw/session-state.md` | risk-classifier Phase 1 输出后 | ECW 流程状态记录 + Subagent Ledger，新 session 恢复用 |
 | `.claude/plans/domain-collab-report.md` | domain-collab Round 3 完成后 | 完整多域协作分析报告 |
 | `.claude/ecw/knowledge-summary.md` | domain-collab Round 3 完成后 | 知识文件摘要，跨 skill 复用 |
 | `.claude/ecw/spec-challenge-report.md` | spec-challenge agent 返回后 | 对抗评审报告 |
-| `.claude/ecw/impl-verify-findings.md` | impl-verify 发现 ≥5 must-fix 时 | 修复清单 |
+| `.claude/ecw/impl-verify-findings.md` | impl-verify 发现 >5 must-fix 时 | 修复清单（会话内仅输出摘要） |
 
 ### 知识文件（按需填充）
 

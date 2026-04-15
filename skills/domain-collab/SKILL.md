@@ -137,6 +137,7 @@ notes: "其他需要注意的事项"
 2. 用上方模板填充变量，为每个域生成 prompt
 3. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
 4. 收集所有 Agent 返回的 YAML 结果
+5. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加记录（每个域 Agent 一行）：`| domain-collab R1 | {域名} | general | medium |`。Scale 参考：small（<20K tokens）、medium（20-80K）、large（>80K），域分析 R1 通常 medium。
 
 ### Round 2: 域间协商（并行）
 
@@ -209,6 +210,7 @@ negotiation_result:
 1. 用上方模板填充变量，为每个域生成 Round 2 prompt
 2. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
 3. 收集所有 Agent 返回的 YAML 结果
+4. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加记录（每个域 Agent 一行）：`| domain-collab R2 | {域名} | general | small |`。域协商 R2 通常 small。
 
 **Round 2 跳过规则**：如果某个域在 Round 1 返回 `impact_level: none` 且没有其他域的 `cross_domain_risks` 指向它，**跳过该域的 Round 2 Agent 派发**。该域不受影响且没有被其他域标记为可能受影响，Round 2 协商不会产生新发现。在 Round 3 交叉校验中标注："域 X 在 Round 1 无影响且无指向风险，Round 2 跳过。"
 

@@ -94,7 +94,11 @@ digraph spec_challenge {
 
 ### 步骤 1：展示评审报告
 
-spec-challenge agent 返回后，**原样展示**完整评审报告给用户。不做任何回应、不做任何判断。
+spec-challenge agent 返回后：
+
+1. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加一行：`| spec-challenge | reviewer | ecw:spec-challenge | large |`。Scale 参考：small（<20K tokens）、medium（20-80K）、large（>80K），spec-challenge agent 通常 large。
+2. 将完整评审报告写入 `.claude/ecw/spec-challenge-report.md`。
+3. **原样展示**完整评审报告给用户。不做任何回应、不做任何判断。
 
 ### 步骤 2：逐条致命缺陷确认
 

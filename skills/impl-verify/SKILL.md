@@ -259,7 +259,34 @@ description: >
 | 1 | ... | ... |
 
 验证通过，可以标记任务完成。
+
+**下一步**：
+- P0/P1 变更 → **立即**使用 Skill 工具 invoke `ecw:biz-impact-analysis`，分析代码变更的业务影响。
+- P2 变更 → **建议**执行 `ecw:biz-impact-analysis`（非强制，可由用户决定跳过）。
+- P3 / 纯格式变更 → 无需 biz-impact-analysis。
+
+如果 TaskList 中有 pending 的 "ecw:biz-impact-analysis" Task，标记 impl-verify Task 为 completed 后该 Task 自动解除阻塞。
 ```
+
+## 输出约束
+
+### 会话内输出限制
+
+每轮（Round）findings 表：
+- **≤ 5 条 must-fix**：直接输出完整 findings 表
+- **> 5 条 must-fix**：会话内输出摘要（统计数 + top 3 最严重项），完整 findings 写入 `.claude/ecw/impl-verify-findings.md`
+- **零 must-fix**：使用简化输出格式（`### Impl-Verify Round {N} — {维度}` + `**发现**：无必须修复项。{Y} 条建议（不阻塞）。` + `**本轮零必须修复，验证通过。**`），不超过 3 行
+
+最终通过摘要：
+- 总结不超过 **15 行**（各 Round 一行结果 + 未处理建议列表 max 5 条）
+- 如有被跳过的建议（suggestion），仅列出数量，不列明细
+
+### 修复复验轮
+
+修复后的复验轮（Round N+）仅输出：
+- 复验的 must-fix 编号 + pass/fail 结果（表格形式，一行一条）
+- 新发现（如有）
+- **不重复输出已通过的 Round 结果**
 
 ## 常见合理化 — 你正在绕过验证
 

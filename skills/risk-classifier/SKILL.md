@@ -208,14 +208,45 @@ Phase 1 输出后（用户确认前），将 ECW 状态写入 `.claude/ecw/sessi
 - **路由**: {完整路由链}
 - **当前阶段**: phase1-complete
 - **创建时间**: {YYYY-MM-DD HH:mm}
+- **实现后任务**: impl-verify({task_id}) → biz-impact-analysis({task_id}) → phase3({task_id})
+
+## Subagent Ledger
+
+| Phase | Agent | Type | Est. Scale |
+|-------|-------|------|-----------|
 ```
 
-此文件仅作为记录，不要求其他 skill 读取或更新。用途：
+此文件作为 ECW 流程状态的唯一持久化载体，各 skill 的 coordinator 在 Agent 调度完成后追加 Subagent Ledger 行。用途：
 - 新 session 继续工作时读取恢复上下文
 - 用户查看当前 ECW 流程状态
 - compression 后手动恢复（用户说"读一下 ECW 状态"）
+- 监控脚本评估 subagent 消耗
 
 > **会话提示**：P0 跨域变更的完整流程通常需要 500+ turns。建议在方案完成后（spec-challenge 之后）切换新 session 执行实现，避免上下文压缩导致信息丢失。
+
+### 路由任务创建
+
+Phase 1 用户确认后，为**实现后**的流程步骤创建 pending Tasks，确保不遗漏：
+
+| 风险等级 | 创建的 Tasks |
+|---------|------------|
+| P0/P1 | `ecw:impl-verify` → `ecw:biz-impact-analysis` → `Phase 3 校准` |
+| P2 | `ecw:impl-verify`（biz-impact-analysis 建议但不强制） |
+| P3 | 无 |
+
+**创建方式**：使用 TaskCreate 工具，设置 blockedBy 依赖关系：
+
+1. TaskCreate: **"ecw:impl-verify — 实现正确性验证"**
+   - description: "实现完成后执行 `/ecw:impl-verify`，零「必须修复」才通过。完成后标记此 Task 并继续下一个。"
+   - status: pending
+2. TaskCreate: **"ecw:biz-impact-analysis — 业务影响分析"**（仅 P0/P1）
+   - description: "impl-verify 通过后执行 `/ecw:biz-impact-analysis`，分析代码变更对业务流程的影响。"
+   - blockedBy: [impl-verify task ID]
+3. TaskCreate: **"Phase 3 校准 — 风险分级反馈"**（仅 P0/P1）
+   - description: "biz-impact-analysis 报告产出后执行 Phase 3 校准，对比预测 vs 实际影响。"
+   - blockedBy: [biz-impact-analysis task ID]
+
+> 这些 Task 在实现阶段始终可见（TaskList），AI 完成所有实现任务后会看到 pending 的 impl-verify Task，自然衔接到下一步。Bug 修复路由同理创建（参照 Bug 修复类变更路由表）。
 
 ---
 
