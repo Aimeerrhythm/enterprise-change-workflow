@@ -260,7 +260,7 @@ description: >
 
 验证通过，可以标记任务完成。
 
-**下一步**（从 `.claude/ecw/session-state.md` 读取风险等级）：
+**下一步**（从 `.claude/ecw/session-state.md` 读取风险等级；如果文件不存在或缺少风险等级字段，用 AskUserQuestion 询问用户当前风险等级）：
 - P0/P1 变更 → **立即**使用 Skill 工具 invoke `ecw:biz-impact-analysis`，分析代码变更的业务影响。
 - P2 变更 → **建议**执行 `ecw:biz-impact-analysis`（非强制，可由用户决定跳过）。
 - P3 / 纯格式变更 → 无需 biz-impact-analysis。
