@@ -81,11 +81,10 @@ digraph domain_collab {
 - 域名: {domain_name}
 - 职责: {description}
 
-## 你的知识文档（必须按顺序读取）
-1. 先读知识入口: {knowledge_root}{index} — 了解域整体结构
-2. 再读业务规则: {knowledge_root}{business_rules} — 了解核心约束
-3. 再读数据模型: {knowledge_root}{data_model} — 了解实体和状态
-4. 根据需求关键词，定位到相关链路/节点文档并读取
+## 你的知识文档
+读取入口: {knowledge_root}{index}，从中定位与需求相关的章节。
+只读取与需求描述直接相关的知识文件和章节，不要全部读取。
+核心文件：{knowledge_root}{business_rules}（状态机和验证规则章节）、{knowledge_root}{data_model}（相关实体）。
 {extra_knowledge_lines}
 
 ## 代码目录（需要时可以 grep 验证）
@@ -158,21 +157,15 @@ Round 1 中你对需求做了独立分析，现在其他域也完成了分析。
 ## 你在 Round 1 的分析结果
 {round1_yaml_output}
 
-## 其他域的变更计划
+## 其他域的变更计划（摘要）
 {for each other domain:}
-### {other_domain_name}域
-- 影响等级: {impact_level}
-- 概述: {summary}
-- 变更组件:
-{affected_components formatted list}
-- 状态变更:
-{state_changes formatted list}
-- 指向你的跨域风险:
-{cross_domain_risks where target == current domain, or "无" if none}
+### {other_domain_name}域 — {impact_level}
+{summary}
+变更: {affected_components as comma-separated "type:name" list}
+指向你的风险: {cross_domain_risks where target == current domain, one line each, or "无"}
 
-## 你的知识文档（需要时读取验证）
-- 入口: {knowledge_root}{index}
-- 业务规则: {knowledge_root}{business_rules}
+如需验证业务规则，按需读取：{knowledge_root}{business_rules}。
+只在其他域变更可能影响本域规则时读取，不要预防性全量读取。
 
 ## 协商任务
 1. 检查其他域的变更是否影响你的域（接口变更、消息体变更、共享资源变更等）
@@ -204,6 +197,8 @@ negotiation_result:
 1. 用上方模板填充变量，为每个域生成 Round 2 prompt
 2. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
 3. 收集所有 Agent 返回的 YAML 结果
+
+**Round 2 跳过规则**：如果某个域在 Round 1 返回 `impact_level: none` 且没有其他域的 `cross_domain_risks` 指向它，**跳过该域的 Round 2 Agent 派发**。该域不受影响且没有被其他域标记为可能受影响，Round 2 协商不会产生新发现。在 Round 3 交叉校验中标注："域 X 在 Round 1 无影响且无指向风险，Round 2 跳过。"
 
 ---
 
@@ -318,6 +313,28 @@ negotiation_result:
 
 ## 风险点汇总
 - {各域 notes 中的注意事项}
+```
+
+**3f. 写入知识摘要文件**
+
+将本次分析中读取的知识文件关键信息写入 `.claude/ecw/knowledge-summary.md`，供后续 skill（risk-classifier Phase 2、impl-verify Round 2）复用，减少重复读取原始知识文件：
+
+```markdown
+# Knowledge Summary（domain-collab 分析提取）
+
+## 涉及域: {域列表}
+
+## 相关共享资源
+{从 shared-resources.md 提取的、与本次变更相关的条目}
+
+## 相关跨域调用
+{从 cross-domain-calls.md 提取的、涉及变更域的条目}
+
+## 相关 MQ Topic
+{从 mq-topology.md 提取的、涉及变更域的条目}
+
+## 相关业务规则摘要
+{每个涉及域的 business-rules.md 中与本次变更相关的状态机和验证规则摘要}
 ```
 
 ---

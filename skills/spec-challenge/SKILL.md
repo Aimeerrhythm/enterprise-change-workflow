@@ -58,30 +58,36 @@ digraph spec_challenge {
 
 ## 调度 Agent 的 Prompt 模板
 
-调度 spec-challenge agent 时，使用以下 prompt 结构：
+调度 spec-challenge agent 时，Coordinator 先确定 `{affected_domains}`：
+- **自动触发**：从当前会话中 domain-collab 报告或 risk-classifier 输出获取域列表
+- **手动触发**：从文档内容中提取涉及的域关键词，匹配项目 CLAUDE.md 域路由表；如无法确定，设为"请从文档内容推断涉及的域"
+
+使用以下 prompt 结构：
 
 ```
-请评审以下技术方案文档。
+请评审一份技术方案文档。
 
-## 待评审文档
+## 待评审文档位置
 
-{文档完整内容}
+文件路径：{文档文件路径}
 
-## 项目背景（供验证用）
+请自行读取该文件获取完整内容。
 
-先读取 `.claude/ecw/ecw.yml` 获取 project.name，读取 ecw.yml `paths.domain_registry` 获取域列表。
-构造项目背景：
-"本项目是一个 {project.name}，包含以下业务域：{从 domain-registry 提取的域中文名列表}"
+## 项目背景
 
-项目知识文档位于 .claude/knowledge/，包含各域的业务规则、数据模型、节点 Spec。
+读取 `.claude/ecw/ecw.yml` 获取 project.name，读取 ecw.yml `paths.domain_registry` 获取域列表。
+项目知识文档位于 ecw.yml `paths.knowledge_root` 指定的目录。
 跨域调用关系记录在 ecw.yml `paths.knowledge_common` 下的 `cross-domain-rules.md`。
 
-{如果有相关的项目知识文件内容，附加在这里}
+方案涉及的域：{affected_domains}
+按需读取上述域的相关知识文件验证方案的准确性。不要一次性读取所有知识文件。
 
 ## 评审要求
 
 按你的评审维度（准确性、信息质量、边界与盲区、健壮性）逐一评审。
 严格按规定的输出格式返回评审报告。
+
+请使用中文输出评审报告。
 ```
 
 ## 用户确认流程详细说明

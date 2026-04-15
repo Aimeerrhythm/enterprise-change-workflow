@@ -20,8 +20,13 @@ description: |
 ## 流程
 
 1. **确定 Diff 范围** — 无参数用 `git diff master...HEAD`，有参数用 `git diff {参数}`，获取变更文件列表
-2. **调度 biz-impact-analysis agent** — 传入 diff 范围参数，等待返回影响分析报告
-3. **呈现分析报告** — 直接输出 agent 返回的格式化报告，如有未登记的跨域调用则提醒更新依赖图
+2. **Coordinator 预处理** — Agent 派发前执行：
+   1. 执行 `git diff --stat {diff_range}` 获取变更统计
+   2. 执行 `git diff --name-only {diff_range}` 获取文件列表
+   3. 读取 `ecw-path-mappings.md`，将文件列表映射到域
+   4. 将上述结果填入 Agent prompt，替代完整 diff
+3. **调度 biz-impact-analysis agent** — 传入预处理结果，等待返回影响分析报告
+4. **呈现分析报告** — 直接输出 agent 返回的格式化报告，如有未登记的跨域调用则提醒更新依赖图
 
 ## 调度 Agent 的 Prompt 模板
 
@@ -34,16 +39,23 @@ description: |
 
 {diff_range}
 
+## 变更文件概要（Coordinator 预处理结果）
+
+{git_diff_stat_output}
+
+## 域定位结果
+
+{file_to_domain_mapping}
+
 ## 说明
 
-按照你的 5 步分析流程执行：
-1. Diff 解析与域定位
-2. 依赖图查询
-3. 增量代码扫描
-4. 外部系统影响评估
-5. 生成影响报告
+按照你的 5 步分析流程执行。
+注意：完整 diff 内容由 Coordinator 预处理提供了文件列表和域定位。
+Step 1 中，只对需要检查方法签名变更的文件执行 `git diff {diff_range} -- {文件路径}`。
+Step 3 增量扫描中，只对命中 scan_patterns 的文件读取具体变更内容。
+不要对所有文件执行 `git diff {diff_range}` 获取完整变更内容。
 
-输出完整的业务影响分析报告。
+请使用中文输出影响分析报告。
 ```
 
 ## 参数解析规则
