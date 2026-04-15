@@ -4,6 +4,29 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.3.1] - 2026-04-15
+
+### 性能优化
+
+- **domain-collab OUTPUT 约束** — R1/R2 YAML 长度上限（30/20 行），none-impact 域仅输出 3 个字段；R3 完整报告写入 `.claude/plans/domain-collab-report.md`，会话内仅保留 30 行摘要
+- **risk-classifier 状态持久化** — Phase 1 输出后写入 `.claude/ecw/session-state.md`，支持跨 session 恢复和压缩韧性
+- **session 分割建议** — Phase 1 对 P0 跨域给出轻量提示；spec-challenge 完成后通过 AskUserQuestion 推荐新 session 执行实现
+- **CLAUDE.md 产出物清单** — 新增 ECW 产出物文件表，明确各文件写入时机和用途
+
+> 与 v0.3.0 合计效果：分析阶段上下文 83.5% → 53.5%，0 次压缩；结合 session 分割，全流程压缩次数 6 → 2-3
+
+## [0.3.0] - 2026-04-15
+
+### 性能优化
+
+- **domain-collab INPUT 优化** — R1 知识按需加载，R2 输入压缩 + skip 规则（无影响域跳过 R2）
+- **biz-impact-analysis 优化** — Coordinator 预处理替代全量 diff 嵌入，条件化知识加载
+- **impl-verify 优化** — diff-once 策略（读一次 diff 全轮复用）+ 章节级知识范围限定
+- **spec-challenge 优化** — 文件路径引用替代内容嵌入，域级知识范围限定
+- **跨 skill 知识复用** — `knowledge-summary.md` 由 domain-collab 生成，risk-classifier/impl-verify 复用
+
+> 预估 ECW 阶段 token 消耗降低 40%，压缩次数 6 → 2-3
+
 ## [0.2.2] - 2026-04-14
 
 ### 修复
@@ -19,6 +42,7 @@
 ### 修复
 
 - **`spec-challenge` 用户决策权缺失** — spec-challenger 报告返回后 AI 直接自行回应所有致命缺陷，用户无参与机会。改为：展示报告原文 → 逐条 AskUserQuestion 让用户选择处理方式 → AI 按用户决策执行 → 用户最终确认通过
+- **marketplace source 外部化** — marketplace source 改为外部 URL 引用，支持标准 plugin update 流程
 
 ## [0.2.0] - 2026-04-14
 
@@ -62,5 +86,9 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.1
+[0.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.0
+[0.2.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.2
+[0.2.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.1.0
