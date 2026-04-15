@@ -4,6 +4,31 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.3.2] - 2026-04-15
+
+### 新增
+
+- **实现策略路由** — risk-classifier 新增「实现策略选择」章节，根据 Plan Task 数量 × 风险等级自动选择直接实现或 `subagent-driven-development`，减少不必要的 subagent 调度开销
+- **Post-impl 自动衔接** — Phase 1 用户确认后通过 TaskCreate + blockedBy 创建 impl-verify → biz-impact-analysis → Phase 3 的 pending Task 链，确保实现后流程不遗漏
+- **Subagent Ledger** — session-state.md 新增 Subagent Ledger 表，各 skill 的 Coordinator 在 Agent 调度完成后追加记录，支持 subagent 消耗可观测性
+- **impl-verify 输出约束** — ≤5 must-fix 直接输出 / >5 写文件仅输出摘要 / 零 must-fix ≤3 行 / 复验轮增量输出，减少 token 消耗和上下文压缩风险
+
+### 修复
+
+- **superpowers 冲突** — 移除与 `superpowers:subagent-driven-development` "Never skip reviews" 规则冲突的"跳过 per-task review"指令，改为"两者互补不替代"
+- **impl-verify 下一步路由** — 明确从 session-state.md 读取风险等级；新增退化处理：文件不存在时用 AskUserQuestion 询问用户
+- **biz-impact-analysis Agent 职责边界** — Agent Step 1 标题和知识加载规则明确 Coordinator 负责域定位，Agent 接收预处理结果
+- **spec-challenge 策略提示** — 区分 4-8 和 >8 Task，>8 时提醒合并简单 Task；恢复 P2 分支判断，与 risk-classifier 路由表完全对齐
+- **session-state 时序** — 移除 `{task_id}` 占位符（Phase 1 写入时 Task 尚未创建）；`实现策略` 默认值改为 TBD
+- **Bug 修复 Task 创建** — 明确 Bug 修复路由的 Task 创建规则（所有等级创建 impl-verify；P0/P1 额外创建 biz-impact-analysis → Phase 3）
+- **新 session 恢复** — 明确 TaskCreate 不跨 session 持久化，新 session 需从 session-state.md `实现后任务` 字段重建 Tasks
+- **`--phase3` 手动触发** — risk-classifier 手动触发表新增 `--phase3` 选项
+
+### 增强
+
+- **合并简单 Task 规则** — 补充具体判定启发式：单文件 + 无条件分支 = 可合并；状态机/跨域/多文件联动 = 必须独立
+- **实现策略单一源** — risk-classifier 为实现策略的权威定义源，spec-challenge 和 CLAUDE.md 引用而非重复定义
+
 ## [0.3.1] - 2026-04-15
 
 ### 性能优化
@@ -86,6 +111,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.0
 [0.2.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.2
