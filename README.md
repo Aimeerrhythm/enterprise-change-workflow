@@ -328,7 +328,7 @@ enterprise-change-workflow/
 ### Update to Latest Version
 
 ```bash
-claude plugin update ecw
+claude plugin update ecw@enterprise-change-workflow
 ```
 
 Or run `/plugin update ecw` inside a Claude Code session, then restart the session to use new skills and commands.
@@ -349,7 +349,7 @@ This command detects the version gap between your project's ECW config and the p
 
 **Q: New commands/skills don't appear after updating the plugin?**
 
-A: Make sure you ran `claude plugin update ecw` and restarted the Claude Code session.
+A: Make sure you ran `claude plugin update ecw@enterprise-change-workflow` and restarted the Claude Code session.
 
 **Q: `/ecw-init` ran but `/ecw-validate-config` shows many warnings?**
 

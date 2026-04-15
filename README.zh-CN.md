@@ -324,7 +324,7 @@ enterprise-change-workflow/
 ### 更新到最新版本
 
 ```bash
-claude plugin update ecw
+claude plugin update ecw@enterprise-change-workflow
 ```
 
 或在 Claude Code 会话中执行 `/plugin update ecw`，然后重启会话即可使用新增的 skill 和 command。
@@ -345,7 +345,7 @@ claude plugin update ecw
 
 **Q: 更新插件后新命令/skill 没有出现？**
 
-A: 确认已执行 `claude plugin update ecw` 并重启了 Claude Code 会话。
+A: 确认已执行 `claude plugin update ecw@enterprise-change-workflow` 并重启了 Claude Code 会话。
 
 **Q: `/ecw-init` 执行后，`/ecw-validate-config` 报告大量 warn？**
 
