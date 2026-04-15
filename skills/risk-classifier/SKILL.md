@@ -195,6 +195,28 @@ multiSelect: true
 
 用户选择后直接执行对应路由，不再需要二次确认。
 
+### 状态持久化
+
+Phase 1 输出后（用户确认前），将 ECW 状态写入 `.claude/ecw/session-state.md`：
+
+```markdown
+# ECW Session State
+
+- **风险等级**: P{X}
+- **域**: {域列表}
+- **模式**: {单域/跨域}
+- **路由**: {完整路由链}
+- **当前阶段**: phase1-complete
+- **创建时间**: {YYYY-MM-DD HH:mm}
+```
+
+此文件仅作为记录，不要求其他 skill 读取或更新。用途：
+- 新 session 继续工作时读取恢复上下文
+- 用户查看当前 ECW 流程状态
+- compression 后手动恢复（用户说"读一下 ECW 状态"）
+
+> **会话提示**：P0 跨域变更的完整流程通常需要 500+ turns。建议在方案完成后（spec-challenge 之后）切换新 session 执行实现，避免上下文压缩导致信息丢失。
+
 ---
 
 ## 紧急通道（Fast Track）

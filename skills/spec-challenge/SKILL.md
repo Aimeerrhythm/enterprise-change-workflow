@@ -184,6 +184,29 @@ ecw:risk-classifier (P0 / P1跨域)
   → implementation
 ```
 
+### 评审完成后：会话切分建议
+
+spec-challenge 完成且用户确认评审结果后（Plan 已更新），对 **P0 和 P1 跨域变更** 输出切分建议：
+
+此时分析阶段产出物已全部落盘：
+- domain-collab 报告 → `.claude/plans/domain-collab-report.md`
+- Plan 文件 → `.claude/plans/` 目录
+- Spec-challenge 记录 → `.claude/ecw/spec-challenge-report.md`
+- ECW 状态 → `.claude/ecw/session-state.md`
+- 知识摘要 → `.claude/ecw/knowledge-summary.md`
+
+使用 AskUserQuestion 询问：
+
+```
+问题: "方案阶段完成，建议如何继续？"
+选项:
+  1. "新 session 实现（推荐）" — 在新 session 中执行实现，所有分析产出物已保存在文件中
+  2. "当前 session 继续" — 继续在当前 session 实现（注意：长 session 可能导致上下文压缩和信息丢失）
+```
+
+选 1 时输出：
+"所有分析产出物已保存。在新 session 中说「继续 ECW 实现」，我会读取 Plan 文件和状态文件继续工作。"
+
 ### 手动触发
 
 任何时候对任意 spec/plan 文件执行 `/spec-challenge <文件路径>`。

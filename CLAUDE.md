@@ -44,6 +44,16 @@ ecw:risk-classifier (Phase 1 快速预判)
 | `.claude/ecw/change-risk-classification.md` | 风险因子校准（关键词→等级映射、敏感度定义） |
 | `.claude/ecw/ecw-path-mappings.md` | 代码路径→域映射（biz-impact-analysis 使用） |
 
+### ECW 产出物文件（自动生成）
+
+| 文件 | 写入时机 | 用途 |
+|------|---------|------|
+| `.claude/ecw/session-state.md` | risk-classifier Phase 1 输出后 | ECW 流程状态记录，新 session 恢复用 |
+| `.claude/plans/domain-collab-report.md` | domain-collab Round 3 完成后 | 完整多域协作分析报告 |
+| `.claude/ecw/knowledge-summary.md` | domain-collab Round 3 完成后 | 知识文件摘要，跨 skill 复用 |
+| `.claude/ecw/spec-challenge-report.md` | spec-challenge agent 返回后 | 对抗评审报告 |
+| `.claude/ecw/impl-verify-findings.md` | impl-verify 发现 ≥5 must-fix 时 | 修复清单 |
+
 ### 知识文件（按需填充）
 
 | 文件 | 用途 |

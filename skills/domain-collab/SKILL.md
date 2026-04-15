@@ -104,6 +104,13 @@ digraph domain_collab {
 5. 不要猜测，只基于你读到的文档和代码做判断
 6. 如果本域完全不受影响，说明原因
 
+## 输出约束
+- YAML 块总长度不超过 30 行
+- `notes` 字段不超过 2 句话
+- 如果 `impact_level` 为 none，只输出 domain + impact_level + summary 三个字段
+- 如果无 `state_changes` 或无 `cross_domain_risks`，省略该字段（不要输出空数组）
+- 不要输出分析推理过程，只输出结论性 YAML
+
 ## 输出格式（严格按此 YAML 格式输出，用 ```yaml 代码块包裹）
 domain: {domain_id}
 impact_level: none | low | medium | high
@@ -173,6 +180,11 @@ Round 1 中你对需求做了独立分析，现在其他域也完成了分析。
 3. 如果 Round 1 你报了 impact_level: none，但其他域的变更确实影响了你，更新你的评估
 4. 如果发现其他域的变更计划与你的域存在冲突（同时改同一接口、状态机不兼容等），指出冲突点
 5. 如果其他域的变更完全不影响你，直接报 revised_impact_level 与 Round 1 一致，其余字段留空
+
+## 输出约束
+- YAML 块总长度不超过 20 行
+- 如果其他域变更完全不影响本域，只输出 domain + revised_impact_level（与 Round 1 一致）+ 一句话说明
+- 不要输出分析推理过程，只输出结论性 YAML
 
 ## 输出格式（严格按此 YAML 格式输出，用 ```yaml 代码块包裹）
 domain: {domain_id}
@@ -244,6 +256,18 @@ negotiation_result:
 
 **3e. 输出报告**
 
+1. **将完整报告写入文件** `.claude/plans/domain-collab-report.md`（使用下方完整报告模板）
+2. **在对话中只输出摘要版本**（不超过 30 行），包含：
+   - 涉及域总览表（域名 + 等级 + 变更组件数 + 一句话概述）
+   - 域间冲突（如有）
+   - 建议实施顺序
+   - 风险点汇总
+
+详细的各域分析、代码验证结果、协商发现等完整内容在文件中查阅。后续 Phase 2 和 writing-plans 直接读取文件获取完整数据。
+
+<details>
+<summary>完整报告模板（写入文件时使用）</summary>
+
 ```markdown
 # 多域协作分析报告
 
@@ -314,6 +338,8 @@ negotiation_result:
 ## 风险点汇总
 - {各域 notes 中的注意事项}
 ```
+
+</details>
 
 **3f. 写入知识摘要文件**
 
