@@ -76,6 +76,8 @@ ecw:risk-classifier (Phase 1 快速预判)
 >
 > impl-verify 在标记完成前执行（P3 或纯格式/注释变更可跳过）。发现问题先修，修完再验。**不要把验证推迟到用户要求时才做。**
 >
+> **实现阶段不需要额外的 review agent**：impl-verify 已吸收 code-reviewer 的代码质量审查职责（Round 4 工程标准维度）。使用 `subagent-driven-development` 时，subagent 只做实现，不做 per-task code review / spec review — 留给 impl-verify 统一验证。这可避免 review agent 与 impl-verify 的功能重叠，减少 ~50% 的实现阶段 subagent 消耗。
+>
 > `ecw:cross-review` 作为手动可选工具（`/ecw:cross-review`），适用于文档密集型变更的跨文件结构一致性检查，不在必经链路中。
 
 ## 文档同步规则

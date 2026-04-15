@@ -211,6 +211,13 @@ spec-challenge 完成且用户确认评审结果后（Plan 已更新），对 **
 选 1 时输出：
 "所有分析产出物已保存。在新 session 中说「继续 ECW 实现」，我会读取 Plan 文件和状态文件继续工作。"
 
+同时输出实现策略建议（基于 Plan 中 Task 数量）：
+- Plan Tasks ≤ 3 → "建议直接实现（Task 少，不需要 subagent 并行）"
+- Plan Tasks 4+ 且 P0/P1 → "建议使用 `superpowers:subagent-driven-development`（Task 多，并行加速）。注意：实现阶段不需要 per-task review agent，ECW 的 impl-verify 会统一做代码审查。"
+- Plan Tasks 4+ 且 P2 → "建议直接实现（中等风险，不需要并行化开销）"
+
+将建议的策略更新到 `.claude/ecw/session-state.md` 的 `实现策略` 字段。
+
 ### 手动触发
 
 任何时候对任意 spec/plan 文件执行 `/spec-challenge <文件路径>`。

@@ -102,6 +102,32 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 >
 > **确认节点合并：** risk-classifier 的 AskUserQuestion 一次性输出等级 + 域列表 + 模式 + 后续路由。用户确认后下游 skill（ecw:domain-collab / ecw:requirements-elicitation）**跳过自身的确认步骤**，直接执行。
 
+### 实现策略选择
+
+路由表中的"实现(GREEN)"需要根据 Plan 中的 Task 数量和风险等级选择实现方式：
+
+| 条件 | 策略 | 理由 |
+|------|------|------|
+| Plan Tasks ≤ 3 | **直接实现**（主 session 内逐个完成） | Task 少，subagent 调度开销不值得 |
+| Plan Tasks 4-8，P0/P1 | **`superpowers:subagent-driven-development`** | Task 多且复杂，subagent 并行有意义 |
+| Plan Tasks 4-8，P2 | **直接实现** | 中等风险，不需要并行化开销 |
+| Plan Tasks > 8，P0/P1 | **`superpowers:subagent-driven-development`**，合并简单 Task | 避免 subagent 数量爆炸 |
+| P3 | **直接实现** | 低风险，无 Plan |
+| Bug 修复 | **直接实现** | 通常单点修复，无需并行 |
+
+**实现策略在 writing-plans 完成后、进入实现前确定**。依据 Plan 文件中的 Task 列表计数。
+
+**关键规则 — 实现阶段不需要独立 review agent**：
+
+ECW 的 `ecw:impl-verify` 在实现**全部完成后**统一执行代码正确性 + 质量验证（Round 1-4），已吸收 code-reviewer 的职责。因此：
+- 使用 `subagent-driven-development` 时，**跳过 per-task code review / spec review**，subagent 只做实现
+- 直接实现时，同样不需要在每个 Task 完成后做独立 review — 留给 impl-verify 统一处理
+- 这可以将实现阶段 subagent 数量减少 ~50%（省掉所有 review agent）
+
+**合并简单 Task 的规则**（Plan Tasks > 8 时）：
+- 枚举/常量定义、配置变更、文档同步等**非业务逻辑 Task**合并为 1-2 个 subagent 批量执行
+- 涉及状态机、跨域接口、核心业务逻辑的 Task 保持独立 subagent
+
 ### Bug 修复类变更
 
 | 风险等级 | 下游 skill |
@@ -208,6 +234,7 @@ Phase 1 输出后（用户确认前），将 ECW 状态写入 `.claude/ecw/sessi
 - **路由**: {完整路由链}
 - **当前阶段**: phase1-complete
 - **创建时间**: {YYYY-MM-DD HH:mm}
+- **实现策略**: {直接实现 | subagent-driven}（writing-plans 完成后根据 Task 数量更新）
 - **实现后任务**: impl-verify({task_id}) → biz-impact-analysis({task_id}) → phase3({task_id})
 
 ## Subagent Ledger
