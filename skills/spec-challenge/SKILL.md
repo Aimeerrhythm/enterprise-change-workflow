@@ -213,7 +213,8 @@ spec-challenge 完成且用户确认评审结果后（Plan 已更新），对 **
 
 同时输出实现策略建议（基于 Plan 中 Task 数量，详见 risk-classifier「实现策略选择」章节）：
 - Plan Tasks ≤ 3 → "建议直接实现（Task 少，不需要 subagent 并行）"
-- Plan Tasks 4+ → "建议使用 `superpowers:subagent-driven-development`（Task 多，并行加速）"
+- Plan Tasks 4+，P0/P1 → "建议使用 `superpowers:subagent-driven-development`（Task 多，并行加速）"
+- Plan Tasks 4+，P2 → "建议直接实现（中等风险，不需要并行化开销）"
 
 将建议的策略更新到 `.claude/ecw/session-state.md` 的 `实现策略` 字段。
 

@@ -118,8 +118,8 @@ bug 报告 → risk-classifier（Phase 1，快速预判）
 **实现策略在 writing-plans 完成后、进入实现前确定**。依据 Plan 文件中的 Task 列表计数。
 
 **合并简单 Task 的规则**（Plan Tasks > 8 时）：
-- 枚举/常量定义、配置变更、文档同步等**非业务逻辑 Task**合并为 1-2 个 subagent 批量执行
-- 涉及状态机、跨域接口、核心业务逻辑的 Task 保持独立 subagent
+- **可合并**（批量交给 1-2 个 subagent）：单文件变更且无条件分支逻辑——枚举/常量定义、DTO/VO 新增字段、Mapper 单方法、配置变更、文档同步
+- **必须独立**：涉及状态机、跨域接口、多文件联动、条件分支或核心业务逻辑的 Task
 
 **与 impl-verify 的关系**：
 - `subagent-driven-development` 自带 per-task spec review + code quality review，这些审查在实现阶段**即时发现**问题，避免错误级联
@@ -248,6 +248,8 @@ Phase 1 输出后（用户确认前），将 ECW 状态写入 `.claude/ecw/sessi
 - 监控脚本评估 subagent 消耗
 
 > **会话提示**：P0 跨域变更的完整流程通常需要 500+ turns。建议在方案完成后（spec-challenge 之后）切换新 session 执行实现，避免上下文压缩导致信息丢失。
+>
+> **新 session 恢复**：TaskCreate 创建的 Task 不跨 session 持久化。新 session 读取 `session-state.md` 恢复上下文时，需根据 `实现后任务` 字段重新创建 pending Tasks（使用上述 TaskCreate 规则）。
 
 ### 路由任务创建
 
