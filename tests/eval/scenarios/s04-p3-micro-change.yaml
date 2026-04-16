@@ -1,0 +1,34 @@
+# S4: P3 Micro Change
+# Low-risk change should skip all heavy workflow
+- vars:
+    input: "把这个类的日志级别从 INFO 改成 DEBUG"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P3';
+      metric: risk_level_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('writing-plans');
+      metric: routing_excludes_writing_plans
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('requirements-elicitation');
+      metric: routing_excludes_requirements_elicitation
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('spec-challenge');
+      metric: routing_excludes_spec_challenge

@@ -1,0 +1,47 @@
+# S9: P2 Cross-Domain Requirement
+# P2 cross-domain: triggers domain-collab but NOT spec-challenge
+- vars:
+    input: "商品模块和库存模块需要统一缓存策略，减少重复查询"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P2';
+      metric: risk_level_p2
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.mode === 'cross-domain';
+      metric: mode_cross_domain
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('domain-collab');
+      metric: routing_includes_domain_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('spec-challenge');
+      metric: routing_excludes_spec_challenge
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('writing-plans');
+      metric: routing_includes_writing_plans
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('impl-verify');
+      metric: routing_includes_impl_verify

@@ -1,0 +1,173 @@
+# ECW Routing Matrix — Golden Fixture
+#
+# Defines the expected routing for each {risk_level, domain_mode, change_type} combination.
+# Used by lint_skills.py to verify risk-classifier SKILL.md routing tables are complete.
+#
+# Fields:
+#   level: P0 | P1 | P2 | P3
+#   mode: single-domain | cross-domain
+#   type: requirement | bug | fast-track
+#   must_include: skills that MUST appear in the routing chain
+#   must_exclude: skills that MUST NOT appear in the routing chain
+
+# ── Requirement Changes — Single Domain ──
+
+- level: P0
+  mode: single-domain
+  type: requirement
+  must_include:
+    - requirements-elicitation
+    - writing-plans
+    - spec-challenge
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - domain-collab
+
+- level: P1
+  mode: single-domain
+  type: requirement
+  must_include:
+    - requirements-elicitation
+    - writing-plans
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - domain-collab
+    - spec-challenge
+
+- level: P2
+  mode: single-domain
+  type: requirement
+  must_include:
+    - writing-plans
+    - impl-verify
+  must_exclude:
+    - domain-collab
+    - requirements-elicitation
+    - spec-challenge
+    - biz-impact-analysis
+
+- level: P3
+  mode: single-domain
+  type: requirement
+  must_include: []
+  must_exclude:
+    - domain-collab
+    - requirements-elicitation
+    - writing-plans
+    - spec-challenge
+
+# ── Requirement Changes — Cross-Domain ──
+
+- level: P0
+  mode: cross-domain
+  type: requirement
+  must_include:
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - requirements-elicitation
+
+- level: P1
+  mode: cross-domain
+  type: requirement
+  must_include:
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - requirements-elicitation
+
+- level: P2
+  mode: cross-domain
+  type: requirement
+  must_include:
+    - domain-collab
+    - writing-plans
+    - impl-verify
+  must_exclude:
+    - requirements-elicitation
+    - spec-challenge
+
+- level: P3
+  mode: cross-domain
+  type: requirement
+  must_include:
+    - domain-collab
+  must_exclude:
+    - requirements-elicitation
+    - writing-plans
+    - spec-challenge
+
+# ── Bug Fix Changes — High Risk (P0/P1) ──
+
+- level: P0
+  mode: any
+  type: bug
+  must_include:
+    - systematic-debugging
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - requirements-elicitation
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+
+- level: P1
+  mode: any
+  type: bug
+  must_include:
+    - systematic-debugging
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - requirements-elicitation
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+
+# ── Bug Fix Changes — Low Risk (P2/P3) ──
+
+- level: P2
+  mode: any
+  type: bug
+  must_include:
+    - systematic-debugging
+    - impl-verify
+  must_exclude:
+    - requirements-elicitation
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+
+- level: P3
+  mode: any
+  type: bug
+  must_include:
+    - systematic-debugging
+    - impl-verify
+  must_exclude:
+    - requirements-elicitation
+    - domain-collab
+    - writing-plans
+    - spec-challenge
+
+# ── Fast Track Changes ──
+
+- level: any
+  mode: any
+  type: fast-track
+  must_include:
+    - impl-verify
+    - biz-impact-analysis
+  must_exclude:
+    - requirements-elicitation
+    - spec-challenge
+    - domain-collab

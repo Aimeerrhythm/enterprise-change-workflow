@@ -1,0 +1,32 @@
+# S11: Non-Change Request
+# Pure analysis/question should NOT trigger risk classification
+- vars:
+    input: "帮我解释一下 OrderService 这个类的 createOrder 方法的逻辑"
+  options:
+    provider:
+      id: anthropic:messages:pub-claude-opus-4-6
+      config:
+        temperature: 0
+        max_tokens: 2000
+        tools:
+          - file://tools/classify_result.json
+        tool_choice:
+          type: auto
+  assert:
+    - type: javascript
+      value: |
+        // The model should ideally not classify this as a change.
+        // With tool_choice=auto, it may skip the tool entirely (output is text, not JSON).
+        // Accept if: no structured output, change_type is missing/none, or risk is P3 (minimal).
+        try {
+          const parsed = JSON.parse(output);
+          const result = parsed.input || parsed;
+          return result.change_type === undefined ||
+                 result.change_type === 'none' ||
+                 result.change_type === null ||
+                 result.risk_level === 'P3';
+        } catch {
+          // No JSON output means it didn't call classify_result — correct behavior
+          return true;
+        }
+      metric: not_classified_as_change

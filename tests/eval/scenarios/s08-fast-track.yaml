@@ -1,0 +1,48 @@
+# S8: Fast Track (Emergency Fix)
+# Fast track should skip requirement elicitation, spec-challenge, TDD
+- vars:
+    input: "线上 P0 故障紧急修复：支付回调接口超时，导致大量订单状态卡在待支付"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'fast-track' || result.change_type === 'bug';
+      metric: change_type_fast_track_or_bug
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('requirements-elicitation');
+      metric: routing_excludes_requirements_elicitation
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('spec-challenge');
+      metric: routing_excludes_spec_challenge
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('impl-verify');
+      metric: routing_includes_impl_verify
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('domain-collab');
+      metric: routing_excludes_domain_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('biz-impact-analysis');
+      metric: routing_includes_biz_impact_analysis

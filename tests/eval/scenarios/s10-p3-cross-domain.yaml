@@ -1,0 +1,27 @@
+# S10: P3 Cross-Domain
+# P3 cross-domain: domain-collab simplified, skip most workflow
+- vars:
+    input: "统一订单模块和库存模块的日志输出格式"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P3' || result.risk_level === 'P2';
+      metric: risk_level_p3_or_p2
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('writing-plans') || result.risk_level === 'P2';
+      metric: routing_no_heavy_workflow_for_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('spec-challenge');
+      metric: routing_excludes_spec_challenge

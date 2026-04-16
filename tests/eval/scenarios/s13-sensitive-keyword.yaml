@@ -1,0 +1,14 @@
+# S13: Sensitive Keyword Trigger
+# PII / data deletion should trigger high risk
+- vars:
+    input: "需要删除用户数据表中的身份证号和手机号等 PII 字段，满足数据合规要求"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Sensitive operation (data deletion + PII) should be at least P1
+        return result.risk_level === 'P0' || result.risk_level === 'P1';
+      metric: high_risk_for_pii_deletion

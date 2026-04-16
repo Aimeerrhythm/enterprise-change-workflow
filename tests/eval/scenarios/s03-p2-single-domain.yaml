@@ -1,0 +1,33 @@
+# S3: P2 Single-Domain Small Requirement
+# Medium-risk single-domain should skip requirements-elicitation
+- vars:
+    input: "优化商品列表的查询性能，增加分页缓存"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P2' || result.risk_level === 'P3';
+      metric: risk_level_p2_or_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'requirement' || result.change_type === 'fast-track';
+      metric: change_type_requirement_or_fast_track
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('requirements-elicitation');
+      metric: routing_excludes_requirements_elicitation
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return !routing.includes('spec-challenge');
+      metric: routing_excludes_spec_challenge

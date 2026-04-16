@@ -1,0 +1,13 @@
+# S15: Manual Override
+# User specifying "P0" should accept the override
+- vars:
+    input: "/risk-classify P0 这个日志变更需要特别审查"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P0';
+      metric: accepts_manual_override_p0

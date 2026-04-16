@@ -1,0 +1,68 @@
+# ECW Skill Anchor Keywords — Golden Fixture
+#
+# Each skill must contain these critical keywords/phrases in its SKILL.md.
+# Absence indicates accidental deletion of core sections during refactoring.
+#
+# Format: skill_directory_name -> list of required anchors
+
+risk-classifier:
+  - "Phase 1"
+  - "Phase 2"
+  - "Phase 3"
+  - "AskUserQuestion"
+  - "session-state.md"
+  - "P0"
+  - "P1"
+  - "P2"
+  - "P3"
+  - "Fast Track"
+  - "Common Mistakes"
+
+tdd:
+  - "RED"
+  - "GREEN"
+  - "Refactor"
+  - "Iron Law"
+  - "Skip Confirmation"
+  - "P0"
+  - "P1"
+  - "P2"
+
+impl-verify:
+  - "must-fix"
+  - "zero must-fix"
+  - "Round"
+  - "convergence"
+
+domain-collab:
+  - "Round 1"
+  - "Round 2"
+  - "Round 3"
+  - "Coordinator"
+
+impl-orchestration:
+  - "implementer-prompt.md"
+  - "spec-reviewer-prompt.md"
+
+systematic-debugging:
+  - "root cause"
+  - "reproduction"
+
+writing-plans:
+  - "Plan"
+  - "rollback"
+
+spec-challenge:
+  - "Fatal Flaw"
+  - "adversarial"
+
+requirements-elicitation:
+  - "Systematic Questioning"
+  - "Questioning Dimension"
+
+biz-impact-analysis:
+  - "biz-impact-analysis"
+  - "knowledge"
+
+cross-review:
+  - "cross-file"

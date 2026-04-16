@@ -1,0 +1,48 @@
+{
+  "name": "classify_result",
+  "description": "Report the risk classification result in structured format. Call this tool to record your Phase 1 assessment.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "risk_level": {
+        "type": "string",
+        "enum": ["P0", "P1", "P2", "P3"],
+        "description": "The assessed risk level"
+      },
+      "mode": {
+        "type": "string",
+        "enum": ["single-domain", "cross-domain"],
+        "description": "Whether the change spans one or multiple domains"
+      },
+      "change_type": {
+        "type": "string",
+        "enum": ["requirement", "bug", "fast-track"],
+        "description": "The type of change"
+      },
+      "domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of affected domain names"
+      },
+      "routing": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "requirements-elicitation",
+            "domain-collab",
+            "writing-plans",
+            "spec-challenge",
+            "tdd",
+            "impl-orchestration",
+            "impl-verify",
+            "biz-impact-analysis",
+            "systematic-debugging"
+          ]
+        },
+        "description": "Ordered list of downstream ECW skills in the routing chain"
+      }
+    },
+    "required": ["risk_level", "mode", "change_type", "routing"]
+  }
+}

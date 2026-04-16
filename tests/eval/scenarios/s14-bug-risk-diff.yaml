@@ -1,0 +1,35 @@
+# S14: Bug P0 vs P3 Risk Difference
+# P0 bug should include biz-impact-analysis; low-risk bug should not
+- vars:
+    input: "线上支付回调处理有 bug，导致部分用户扣款成功但订单未更新为已支付状态"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'bug';
+      metric: change_type_bug
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Payment bug affecting order state should be high risk
+        return result.risk_level === 'P0' || result.risk_level === 'P1';
+      metric: high_risk_payment_bug
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('systematic-debugging');
+      metric: routing_includes_debugging
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P0/P1 bugs should include biz-impact-analysis
+        return routing.includes('biz-impact-analysis');
+      metric: routing_includes_biz_impact

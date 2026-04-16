@@ -1,0 +1,14 @@
+# S12: Insufficient Information
+# Vague input should default to cautious but low risk (P2 or P3)
+- vars:
+    input: "改一下那个功能"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Insufficient info should not escalate to high risk
+        return result.risk_level === 'P2' || result.risk_level === 'P3';
+      metric: defaults_to_p2_or_p3
