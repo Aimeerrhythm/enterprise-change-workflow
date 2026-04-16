@@ -164,9 +164,9 @@ make -C tests clean       # 清理缓存
 支持单项运行：
 
 ```bash
-python tests/static/lint_skills.py --check frontmatter
-python tests/static/lint_skills.py --check routing-matrix
-python tests/static/lint_skills.py --quiet  # 仅输出错误
+python3 tests/static/lint_skills.py --check frontmatter
+python3 tests/static/lint_skills.py --check routing-matrix
+python3 tests/static/lint_skills.py --quiet  # 仅输出错误
 ```
 
 ### Layer 1b: Hook 单元测试
