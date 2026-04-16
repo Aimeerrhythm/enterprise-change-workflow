@@ -13,6 +13,10 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 **Announce at start:** "Using ecw:writing-plans to create the implementation plan."
 
+## Plan Mode — Do Not Use
+
+**Do NOT call `EnterPlanMode` or `ExitPlanMode`.** This skill writes plans directly to `.claude/plans/` via the Write tool. Claude Code's built-in plan mode is a separate mechanism not used by ECW. After writing the plan file, use **AskUserQuestion** to confirm with the user (see Downstream Handoff).
+
 ## Risk-Aware Detail Level
 
 Read `.claude/ecw/session-state.md` for risk level and affected domains. If unavailable, use AskUserQuestion.
@@ -92,6 +96,11 @@ This structure informs the task decomposition.
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
 
+**Test Context:**
+- Test framework: {from pom.xml/package.json, e.g., JUnit 5 + MockitoExtension}
+- Base test class: {from ecw.yml tdd.base_test_class, or "none"}
+- Key dependencies for test: {list interfaces/classes the test needs to mock or import, with file paths}
+
 - [ ] **Step 1: Write the failing test**
 
 ```python
@@ -141,6 +150,19 @@ Every step must contain the actual content. These are **plan failures** — neve
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 
+## Design Completeness Check
+
+Before saving the plan, verify ALL open design questions are resolved. The plan must be **self-contained for TDD execution** — if the TDD phase would need to ask "how should this work?", the plan is incomplete.
+
+**Checklist — resolve each applicable item before saving (skip items that don't apply to this change):**
+- [ ] Data storage approach decided (new table vs. extend existing, field types)
+- [ ] Field naming and data format specified (JSON structure, enum values, etc.)
+- [ ] Configuration strategy defined (Nacos key names, default values, fallback behavior)
+- [ ] Error codes and messages specified (exact code values, message text)
+- [ ] External API contracts confirmed (method signatures of called services)
+
+If any item has open questions, use **AskUserQuestion** to resolve them NOW. Do not save a plan with unresolved design decisions — TDD will inherit the ambiguity and waste turns re-asking.
+
 ## Self-Review
 
 After writing the complete plan, review with fresh eyes:
@@ -150,6 +172,8 @@ After writing the complete plan, review with fresh eyes:
 **2. Placeholder scan:** Search for red flags — any patterns from the "No Placeholders" section. Fix them.
 
 **3. Type consistency:** Do types, method signatures, and property names in later tasks match earlier definitions? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. TDD readiness:** Could the TDD phase write tests from this Plan without reading any additional source files beyond the ones listed in each Task's **Files** and **Test Context** sections? If not, add the missing file paths, interface signatures, and import context.
 
 If you find issues, fix them inline.
 

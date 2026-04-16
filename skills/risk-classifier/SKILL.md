@@ -247,7 +247,18 @@ This file serves as the sole persistence carrier for ECW workflow state. Each sk
 - Manual recovery after compression (user says "read ECW state")
 - Monitoring scripts to assess subagent consumption
 
-> **Session advisory**: Full workflow for P0 cross-domain changes typically requires 500+ turns. Recommend switching to a new session after plan completion (after spec-challenge) to avoid context compression causing information loss.
+> **Session advisory — context management**:
+>
+> After Plan completion (writing-plans finishes), evaluate whether to continue or start a new session:
+>
+> | Signal | Advisory |
+> |--------|----------|
+> | P0/P1 with prior domain-collab or requirements-elicitation | **Strongly recommend new session** — requirement analysis + plan writing likely consumed 100K+ context |
+> | P2 with Plan ≥ 5 Tasks | **Recommend new session** — TDD for many tasks will push context toward compaction threshold |
+> | P2 with Plan ≤ 4 Tasks, no prior requirement analysis | **Continue** — context overhead is manageable |
+> | P3 | **Continue** — no formal plan, minimal context |
+>
+> Full workflow for P0 cross-domain changes typically requires 500+ turns. Recommend switching to a new session after plan completion (after spec-challenge) to avoid context compression causing information loss.
 >
 > **New session recovery**: Tasks created by TaskCreate do not persist across sessions. When a new session reads `session-state.md` to restore context, it needs to re-create pending Tasks based on the `Post-Implementation Tasks` field (using the TaskCreate rules above).
 
