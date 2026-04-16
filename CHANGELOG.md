@@ -4,6 +4,43 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.4.0] - 2026-04-15
+
+### Breaking Change
+
+- **移除 superpowers 依赖** — ECW 现在完全自包含，无需安装 superpowers 插件。所有 `superpowers:*` 引用替换为 `ecw:*` 自有 Skill
+
+### 新增
+
+- **`ecw:writing-plans`** — 替代 `superpowers:writing-plans`。风险感知 Plan 编写（P0/P1 完整步骤、P2 可合并简单 Task），域上下文注入（ecw-path-mappings + business-rules.md），下游自动衔接（spec-challenge / tdd / impl-orchestration）
+- **`ecw:tdd`** — 替代 `superpowers:test-driven-development`。按 P0-P3 差异化强制程度（P0 含验证日志、P1 完整循环、P2 简化、P3 推荐不强制），ecw.yml `tdd.enabled` 联动，Skip 确认协议
+- **`ecw:systematic-debugging`** — 替代 `superpowers:systematic-debugging`。域知识驱动根因定位：P0/P1 完整跨域追踪（§1 cross-domain-calls、§2 mq-topology、§3 shared-resources），P2/P3 简化仅查 §3
+- **`ecw:impl-orchestration`** — 替代 `superpowers:subagent-driven-development`。风险感知 review 深度（P0 双重 review、P1 仅 spec review），移除 final code reviewer（由 ecw:impl-verify 替代），Subagent Ledger 追踪
+- **`templates/upgrades/0.4.0/migration.md`** — 现有用户升级迁移指南
+
+### 移除
+
+- superpowers 插件依赖声明
+- 所有 `superpowers:writing-plans`、`superpowers:test-driven-development`、`superpowers:systematic-debugging`、`superpowers:subagent-driven-development` 引用
+
+### 修复
+
+- **P2 跨域路由矛盾** — P2 跨域路由包含 Phase 2，但 Phase 2 规则明确排除 P2。移除 P2 路由中的 Phase 2 步骤
+- **Phase 2 章节名语言不匹配** — Phase 2 引用英文章节名 "Data Changes"/"Process Flow"，但 requirements-elicitation 输出中文 "数据变更"/"流程"
+- **domain-collab 无条件要求 Phase 2** — 新增 P2 豁免分支，P2 跳过 Phase 2 直接进入 ecw:writing-plans
+- **tdd Enforcement 表缺 Bug/Emergency 行** — 补充 Bug（强制复现测试）和 Emergency（跳过）行
+- **writing-plans 未更新 session-state.md 实现策略** — Plan 完成后根据 Task 数量确定策略并写入 session-state.md
+- **impl-orchestration 缺 P2 排除声明** — "Don't use when" 新增 P2
+- **impl-orchestration 缺 session-state 退化处理** — 新增 AskUserQuestion 兜底
+- **implementer-prompt 缺跨域知识路径** — 新增 Cross-Domain Knowledge 和 Test Base Class 字段
+- **spec-challenge 流程图 `writing-plans` 缺 `ecw:` 前缀** — 统一为 `ecw:writing-plans`
+- **plugin.json description 过时** — 从 6 项能力扩展为 11 项
+- **紧急通道未显式声明跳过 TDD** — 紧急通道输出和核心要点中增加 TDD 跳过说明
+- **Phase 3 触发机制不明确** — 明确由路由任务创建的 Phase 3 Task 驱动执行
+- **tdd graphviz 歧义边** — 分离 verify_green 和 verify_refactor 两个校验节点
+- **Skill 名引用一致性** — 全部 bare `writing-plans` 引用统一为 `ecw:writing-plans`
+- **README.zh-CN.md 缺版本 badge** — 补充 License 和 Version badge
+
 ## [0.3.2] - 2026-04-15
 
 ### 新增
@@ -111,6 +148,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.4.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.0

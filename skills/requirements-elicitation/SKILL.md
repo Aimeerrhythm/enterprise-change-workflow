@@ -21,7 +21,7 @@ description: Use when user proposes a new requirement, feature, change request, 
 **前置条件：** 本 skill 不再直接触发。所有变更类任务统一由 `ecw:risk-classifier` 作为入口，由 ecw:risk-classifier 根据风险等级和域数量决定是否 invoke 本 skill：
 - P0/P1 单域需求 → ecw:risk-classifier invoke 本 skill（完整流程）
 - P0/P1 跨域需求 → ecw:risk-classifier invoke `ecw:domain-collab`（替代本 skill）
-- P2 → ecw:risk-classifier 跳过本 skill，直接进 writing-plans（1 轮简化确认）
+- P2 → ecw:risk-classifier 跳过本 skill，直接进 ecw:writing-plans（1 轮简化确认）
 - P3 → 跳过本 skill，直接实现
 
 如果 ecw:risk-classifier 尚未执行，**先执行 ecw:risk-classifier**，再由其决定是否调用本 skill。
@@ -29,17 +29,17 @@ description: Use when user proposes a new requirement, feature, change request, 
 **不适用场景：**
 - 用户给出精确且完全指定的技术任务（"修复第 42 行的空指针"）
 - 用户明确表示"直接做，不要问了"
-- **Bug 修复 / debugging 场景** — bug 修复仍需先经过 `ecw:risk-classifier` 进行风险预判，然后路由到 `superpowers:systematic-debugging` 进行定位和修复，不走本 skill
+- **Bug 修复 / debugging 场景** — bug 修复仍需先经过 `ecw:risk-classifier` 进行风险预判，然后路由到 `ecw:systematic-debugging` 进行定位和修复，不走本 skill
 - ecw:risk-classifier 判定为 P2 或 P3 的变更
 
 ## Skill 衔接
 
 **用户确认需求摘要后，执行以下衔接步骤：**
 
-1. **P0/P1 需求**：先执行 **ecw:risk-classifier Phase 2**（精确定级）。Phase 2 会基于本 skill 产出的需求摘要重新评估风险等级和影响范围，可能升降级并调整后续流程。Phase 2 完成后，再 invoke `superpowers:writing-plans`。
-2. **P2 需求**（不应走到本 skill，但作为兜底）：直接 invoke `superpowers:writing-plans`。
+1. **P0/P1 需求**：先执行 **ecw:risk-classifier Phase 2**（精确定级）。Phase 2 会基于本 skill 产出的需求摘要重新评估风险等级和影响范围，可能升降级并调整后续流程。Phase 2 完成后，再 invoke `ecw:writing-plans`。
+2. **P2 需求**（不应走到本 skill，但作为兜底）：直接 invoke `ecw:writing-plans`。
 
-**不要跳过 Phase 2 直接进入 writing-plans** — Phase 2 是需求分析完成到 plan 编写之间的必经节点。
+**不要跳过 Phase 2 直接进入 ecw:writing-plans** — Phase 2 是需求分析完成到 plan 编写之间的必经节点。
 
 ## 核心流程
 
@@ -60,7 +60,7 @@ digraph requirements {
   "产出最终需求摘要" [shape=box];
   "用户确认？" [shape=diamond];
   "Phase 2 精确定级" [shape=box];
-  "invoke writing-plans" [shape=doublecircle];
+  "invoke ecw:writing-plans" [shape=doublecircle];
 
   "用户提出需求" -> "阅读已有材料";
   "阅读已有材料" -> "复述理解";
@@ -77,7 +77,7 @@ digraph requirements {
   "产出最终需求摘要" -> "用户确认？";
   "用户确认？" -> "选择未覆盖维度" [label="否，有遗漏"];
   "用户确认？" -> "Phase 2 精确定级" [label="是 (P0/P1)"];
-  "Phase 2 精确定级" -> "invoke writing-plans";
+  "Phase 2 精确定级" -> "invoke ecw:writing-plans";
 }
 ```
 
@@ -124,6 +124,8 @@ digraph requirements {
 ```
 
 - 包含：所有 Q&A 上下文、已有代码/文档发现
+
+**Ledger 更新**：Agent 返回后，向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加一行：`| requirements-elicitation | 综合分析 | general | medium |`。
 
 ### 步骤 5：呈现发现并产出摘要
 
@@ -264,8 +266,8 @@ Agent 返回后：
 ```
 
 等待用户确认。确认后：
-- **P0/P1**：先执行 ecw:risk-classifier Phase 2（精确定级），再 invoke `superpowers:writing-plans`
-- **兜底**：如无 Phase 2 需要，直接 invoke `superpowers:writing-plans`
+- **P0/P1**：先执行 ecw:risk-classifier Phase 2（精确定级），再 invoke `ecw:writing-plans`
+- **兜底**：如无 Phase 2 需要，直接 invoke `ecw:writing-plans`
 
 ## 常见错误
 

@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -90,15 +90,19 @@ User proposes requirement / change / bug
 
 ## Components
 
-### Skills (7)
+### Skills (11)
 
 | Component | Trigger | Description |
 |-----------|---------|-------------|
 | `ecw:risk-classifier` | Any change/requirement/bug | P0-P3 risk classification + workflow routing, three phases (predict → precise → calibrate) |
 | `ecw:domain-collab` | Cross-domain requirements (2+ domains) | Parallel domain agents analyze independently → mutual evaluation → coordinator cross-verification |
 | `ecw:requirements-elicitation` | Single-domain P0/P1 requirements | 9-dimension systematic questioning to fully understand requirements |
+| `ecw:writing-plans` | After requirements analysis (P0-P2) | Risk-aware implementation planning with domain context injection and downstream handoff |
 | `ecw:spec-challenge` | After plan output (P0; P1 cross-domain only) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
-| `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit. Replaces code-reviewer |
+| `ecw:tdd` | Before implementation code (P0-P2) | Risk-differentiated test-driven development with ecw.yml integration |
+| `ecw:impl-orchestration` | Plan execution with 4+ tasks (P0/P1) | Fresh subagent per task + risk-aware review gates, replaces manual task-by-task execution |
+| `ecw:systematic-debugging` | Bug/test failure/unexpected behavior | Domain-knowledge-driven root cause analysis with cross-domain tracing (§1-§5) |
+| `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit |
 | `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
 | `ecw:cross-review` | Manual only (`/ecw:cross-review`) | Cross-file structural consistency verification for document-heavy changes (optional tool) |
 
@@ -137,7 +141,6 @@ User proposes requirement / change / bug
 ### Prerequisites
 
 - **Claude Code CLI** — ECW is a Claude Code plugin, requires CLI environment
-- **superpowers plugin** — Provides `writing-plans`, `executing-plans`, `systematic-debugging` and other foundational skills
 
 ### Step 1: Register Marketplace
 
@@ -284,10 +287,14 @@ enterprise-change-workflow/
 ├── .claude-plugin/
 │   ├── plugin.json              # Plugin metadata
 │   └── marketplace.json         # Marketplace descriptor
-├── skills/                      # 7 core skills
+├── skills/                      # 11 core skills
 │   ├── risk-classifier/         # Risk classification (P0-P3, three phases)
 │   ├── domain-collab/           # Cross-domain collaborative analysis (three rounds)
 │   ├── requirements-elicitation/# Requirements elicitation (9-dimension questioning)
+│   ├── writing-plans/           # Risk-aware implementation planning
+│   ├── tdd/                     # Test-driven development (risk-differentiated)
+│   ├── impl-orchestration/      # Subagent-driven plan execution (risk-aware review)
+│   ├── systematic-debugging/    # Domain-knowledge-driven debugging
 │   ├── spec-challenge/          # Adversarial review (challenge-response cycles)
 │   ├── impl-verify/             # Implementation correctness verification (multi-round convergence, up to 5 rounds)
 │   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
@@ -374,7 +381,7 @@ A: Knowledge file quality directly determines analysis quality. For Java/Spring 
 ## Dependencies
 
 - **Claude Code CLI** — ECW is a Claude Code plugin, requires CLI environment
-- **superpowers plugin** — Provides `writing-plans`, `executing-plans`, `systematic-debugging` and other foundational skills; multiple ECW stages depend on these
+- **No external plugin dependencies** — ECW is self-contained with all skills built-in (writing-plans, tdd, systematic-debugging, impl-orchestration, etc.)
 
 ## License
 

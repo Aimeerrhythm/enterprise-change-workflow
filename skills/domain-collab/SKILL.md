@@ -265,7 +265,7 @@ negotiation_result:
    - 建议实施顺序
    - 风险点汇总
 
-详细的各域分析、代码验证结果、协商发现等完整内容在文件中查阅。后续 Phase 2 和 writing-plans 直接读取文件获取完整数据。
+详细的各域分析、代码验证结果、协商发现等完整内容在文件中查阅。后续 Phase 2 和 ecw:writing-plans 直接读取文件获取完整数据。
 
 <details>
 <summary>完整报告模板（写入文件时使用）</summary>
@@ -385,15 +385,16 @@ negotiation_result:
 
 ## 后续衔接：risk-classifier Phase 2
 
-**协作分析报告输出后，立即执行 risk-classifier Phase 2（精确定级）。**
+**P0/P1**：协作分析报告输出后，立即执行 risk-classifier Phase 2（精确定级）。Phase 2 会基于本 skill 产出的协作分析报告（各域 `affected_components`、`cross_domain_risks`、Coordinator 交叉校验发现）重新评估风险等级。Phase 2 完成后再进入 `ecw:writing-plans`。
 
-Phase 2 会基于本 skill 产出的协作分析报告（各域 `affected_components`、`cross_domain_risks`、Coordinator 交叉校验发现）重新评估风险等级。Phase 2 完成后再进入 `writing-plans`。
+**P2**：跳过 Phase 2（Phase 1 轻量检查已覆盖），直接进入 `ecw:writing-plans`。
 
-**不要跳过 Phase 2 直接进入 writing-plans** — 协作分析可能发现 Phase 1 未预见的跨域依赖，导致等级需要升级。
+**不要在 P0/P1 时跳过 Phase 2 直接进入 writing-plans** — 协作分析可能发现 Phase 1 未预见的跨域依赖，导致等级需要升级。
 
 衔接流程：
 ```
-ecw:domain-collab 报告 → risk-classifier Phase 2 → writing-plans → [P0/P1跨域: ecw:spec-challenge] → 实现
+P0/P1: ecw:domain-collab 报告 → risk-classifier Phase 2 → ecw:writing-plans → [P0/P1跨域: ecw:spec-challenge] → 实现
+P2:    ecw:domain-collab 报告 → ecw:writing-plans → 实现 → ecw:impl-verify → ecw:biz-impact-analysis（建议）
 ```
 
 ---

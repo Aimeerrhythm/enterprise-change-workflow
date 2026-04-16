@@ -30,7 +30,7 @@
   - **测试先行（TDD）**：新功能/Bug 修复必须先写失败测试，再写实现代码。编译通过不代表逻辑正确，测试通过才算完成
   ```
   如果未找到匹配行，不做替换操作（用户可能已自定义）
-- **不再注入 TDD 章节** — TDD 规则已由 ECW 插件（risk-classifier 路由 + superpowers:tdd skill）和 patterns.md（迁移 C）覆盖，无需在项目 CLAUDE.md 中重复
+- **不再注入 TDD 章节** — TDD 规则已由 ECW 插件（risk-classifier 路由 + ecw:tdd skill）和 patterns.md（迁移 C）覆盖，无需在项目 CLAUDE.md 中重复
 - **snippet 文件**: 无（替换内容直接在本文件中定义）
 - **幂等检查**: 搜索核心约定区域中的"测试先行"或"TDD"关键词。如果已存在，跳过并输出："CLAUDE.md 核心约定已包含 TDD 引用，跳过迁移 B"
 
