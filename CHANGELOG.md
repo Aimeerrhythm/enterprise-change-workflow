@@ -11,12 +11,17 @@
 - **三层提示词验证体系** — 完整的测试套件，覆盖 11 个 SKILL.md 的结构完整性和 risk-classifier 的路由决策正确性
   - **Layer 1**：Python 静态扫描（14 项检查，<3s，$0）— frontmatter、互引完整性、产出物路径、路由 DAG、锚点关键词、session-state 合约、路由矩阵验证等
   - **Layer 1b**：pytest Hook 单元测试（56 用例，<10s，$0）— 覆盖 `verify-completion.py` 全部公开函数
-  - **Layer 2**：promptfoo + Claude API 行为 Eval（15 场景，~25s，~$0.20）— tool_use 结构化输出，验证 risk-classifier 路由决策
-- **routing_matrix.yaml** — 13 条路由 golden fixture，覆盖 {P0-P3} × {单域/跨域} × {需求/Bug/紧急} 组合，区分高危 Bug（P0/P1 含 biz-impact-analysis）和低危 Bug（P2/P3）
+  - **Layer 2**：promptfoo + Claude API 行为 Eval（17 场景，~5s，~$0.20）— tool_use 结构化输出，验证 risk-classifier 路由决策，覆盖 routing_matrix 全部 13 条链路
+- **routing_matrix.yaml** — 13 条路由 golden fixture，覆盖 {P0-P3} × {单域/跨域} × {需求/Bug/紧急} 全组合，区分高危 Bug（P0/P1 含 biz-impact-analysis）和低危 Bug（P2/P3 排除 biz-impact-analysis）
+- **s16-p2-bug / s17-p3-bug** — 补全 P2/P3 Bug 路由场景，验证低危 Bug 排除 biz-impact-analysis 的规则
 - **classify_result tool schema** — 带 routing enum 约束的结构化输出工具定义，将 LLM 路由名限定为 9 个有效 ECW skill 名
 - **anchor_keywords.yaml** — 11 个 skill 的锚点关键词 fixture
 - **Makefile** — `make lint` / `make test-hook` / `make eval-quick` / `make eval-full` / `make all` / `make clean`
 - **tests/README.md** — 设计思路 + 维护手册，含 6 个维护场景的操作指南和 CI 集成示例
+
+### 修复
+
+- **README.md lint 命令 python → python3** — macOS 无 `python` 命令，统一为 `python3`
 
 ## [0.4.1] - 2026-04-16
 
