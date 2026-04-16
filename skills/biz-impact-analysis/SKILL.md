@@ -7,99 +7,99 @@ description: |
   (use ecw:domain-collab instead).
 ---
 
-# Business Impact Analysis — 业务流程影响分析
+# Business Impact Analysis
 
-在代码变更后，调度 `biz-impact-analysis` agent 分析变更对业务流程的影响。
+After code changes are complete, dispatch the `biz-impact-analysis` agent to analyze the impact of changes on business processes.
 
-## 触发方式
+## Trigger
 
-- **手动**：`/biz-impact-analysis` — 分析当前分支 vs master 的全部变更
-- **手动（指定范围）**：`/biz-impact-analysis HEAD~3` — 分析最近 N 个 commit
-- **自动**：ecw:impl-verify 完成后自动追加
+- **Manual**: `/biz-impact-analysis` — Analyze all changes on current branch vs master
+- **Manual (specify range)**: `/biz-impact-analysis HEAD~3` — Analyze last N commits
+- **Automatic**: Appended automatically after ecw:impl-verify completes
 
-## 流程
+## Flow
 
-1. **确定 Diff 范围** — 无参数用 `git diff master...HEAD`，有参数用 `git diff {参数}`，获取变更文件列表
-2. **Coordinator 预处理** — Agent 派发前执行：
-   1. 执行 `git diff --stat {diff_range}` 获取变更统计
-   2. 执行 `git diff --name-only {diff_range}` 获取文件列表
-   3. 读取 `ecw-path-mappings.md`，将文件列表映射到域
-   4. 将上述结果填入 Agent prompt，替代完整 diff
-3. **调度 biz-impact-analysis agent** — 传入预处理结果，等待返回影响分析报告
-4. **呈现分析报告** — 直接输出 agent 返回的格式化报告，如有未登记的跨域调用则提醒更新依赖图
+1. **Determine Diff Range** — No args: use `git diff master...HEAD`; with args: use `git diff {args}` to get changed file list
+2. **Coordinator Preprocessing** — Execute before Agent dispatch:
+   1. Run `git diff --stat {diff_range}` to get change statistics
+   2. Run `git diff --name-only {diff_range}` to get file list
+   3. Read `ecw-path-mappings.md`, map file list to domains
+   4. Fill above results into Agent prompt, replacing full diff
+3. **Dispatch biz-impact-analysis agent** — Pass in preprocessed results, await impact analysis report
+4. **Present analysis report** — Output the agent's formatted report directly; if unregistered cross-domain calls are found, remind to update dependency graph
 
-## 调度 Agent 的 Prompt 模板
+## Agent Dispatch Prompt Template
 
-调度 biz-impact-analysis agent 时，使用以下 prompt 结构：
+When dispatching the biz-impact-analysis agent, use the following prompt structure:
 
 ```
-请分析以下代码变更的业务影响。
+Please analyze the business impact of the following code changes.
 
-## Diff 范围
+## Diff Range
 
 {diff_range}
 
-## 变更文件概要（Coordinator 预处理结果）
+## Changed File Summary (Coordinator Preprocessed Results)
 
 {git_diff_stat_output}
 
-## 域定位结果
+## Domain Identification Results
 
 {file_to_domain_mapping}
 
-## 说明
+## Instructions
 
-按照你的 5 步分析流程执行。
-注意：完整 diff 内容由 Coordinator 预处理提供了文件列表和域定位。
-Step 1 中，只对需要检查方法签名变更的文件执行 `git diff {diff_range} -- {文件路径}`。
-Step 3 增量扫描中，只对命中 scan_patterns 的文件读取具体变更内容。
-不要对所有文件执行 `git diff {diff_range}` 获取完整变更内容。
+Execute your 5-step analysis process.
+Note: Full diff content has been preprocessed by Coordinator, providing file list and domain identification.
+In Step 1, only execute `git diff {diff_range} -- {file_path}` for files that need method signature change inspection.
+In Step 3 incremental scan, only read specific change content for files matching scan_patterns.
+Do not execute `git diff {diff_range}` for full change content on all files.
 
-请使用中文输出影响分析报告。
+Please output the impact analysis report in Chinese.
 ```
 
-## 参数解析规则
+## Argument Parsing Rules
 
-| 输入 | Diff 命令 |
-|------|----------|
+| Input | Diff Command |
+|-------|-------------|
 | `/biz-impact-analysis` | `git diff master...HEAD` |
 | `/biz-impact-analysis HEAD~3` | `git diff HEAD~3...HEAD` |
 | `/biz-impact-analysis abc123` | `git diff abc123...HEAD` |
 | `/biz-impact-analysis abc123 def456` | `git diff abc123...def456` |
 
-## 与 impl-verify 的集成
+## Integration with impl-verify
 
-当 `ecw:impl-verify` 完成后：
+When `ecw:impl-verify` completes:
 
-1. impl-verify 完成代码正确性 + 质量验证（零「必须修复」）
-2. 调度 biz-impact-analysis agent，基于同一 diff 范围
-3. 输出业务影响分析报告
+1. impl-verify completes code correctness + quality verification (zero must-fix)
+2. Dispatch biz-impact-analysis agent based on the same diff range
+3. Output business impact analysis report
 
-**P0/P1 变更为必要步骤**，P2+ 建议执行。ecw:risk-classifier Phase 1 输出的路由链中已包含 `ecw:impl-verify + ecw:biz-impact-analysis`，Phase 1 输出时会将其加入 TaskCreate 的 todo list。
+**Mandatory for P0/P1 changes**; suggested for P2+. The routing chain output by ecw:risk-classifier Phase 1 already includes `ecw:impl-verify + ecw:biz-impact-analysis`, and Phase 1 adds them to TaskCreate todo list.
 
-## 与 Phase 3 的集成
+## Integration with Phase 3
 
-biz-impact-analysis 报告输出后：
+After biz-impact-analysis report is output:
 
-1. 如当前为 **P0/P1** 变更（从 `.claude/ecw/session-state.md` 读取风险等级），**立即执行 Phase 3 校准** — 使用 Skill 工具 invoke `ecw:risk-classifier`，附带参数 `--phase3`
-2. 如当前为 **P2** 变更，建议执行 Phase 3（非强制，由用户决定）
-3. Phase 3 不再需要手动触发 — biz-impact-analysis 完成后自动衔接
+1. If current change is **P0/P1** (read risk level from `.claude/ecw/session-state.md`), **immediately execute Phase 3 calibration** — use Skill tool to invoke `ecw:risk-classifier` with argument `--phase3`
+2. If current change is **P2**, suggest executing Phase 3 (not mandatory; user decides)
+3. Phase 3 no longer needs manual trigger — automatically chains after biz-impact-analysis completes
 
-如果 TaskList 中有 pending 的 "Phase 3 校准" Task，标记 biz-impact-analysis Task 为 completed 后该 Task 自动解除阻塞。
+If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 
-## Subagent Ledger 更新
+## Subagent Ledger Update
 
-Agent 返回后，向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加一行：
+After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table:
 
 ```
 | biz-impact-analysis | analyst | ecw:biz-impact-analysis | large |
 ```
 
-Scale 参考：small（<20K tokens）、medium（20-80K）、large（>80K）。biz-impact-analysis agent 通常 large（需读取多个知识文件 + 代码扫描）。
+Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
 
-## 注意事项
+## Notes
 
-- 分析结果依赖 ecw.yml `paths.knowledge_common` 下的依赖图数据质量
-- 报告中的"分析覆盖度"段落标注了哪些维度可能有遗漏
-- 报告中标记的"未登记跨域调用"需要人工确认后更新依赖图
-- 报告中标记的"疑似过期条目"需要人工确认后清理
+- Analysis results depend on dependency graph data quality under ecw.yml `paths.knowledge_common`
+- The "Analysis Coverage" section in the report indicates which dimensions may have gaps
+- "Unregistered cross-domain calls" flagged in the report need manual confirmation before updating dependency graph
+- "Suspected stale entries" flagged in the report need manual confirmation before cleanup

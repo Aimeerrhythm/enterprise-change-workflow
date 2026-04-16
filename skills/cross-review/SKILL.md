@@ -6,123 +6,123 @@ description: >
   Manual-only tool, not in the required workflow. Invocable via /ecw:cross-review.
 ---
 
-# Cross-Review — 结构化交叉验证
+# Cross-Review — Structured Cross-File Verification
 
-对变更文件执行多轮交叉一致性验证，直到一轮零发现才退出。聚焦文件间结构一致性。
+Execute multi-round cross-consistency verification on changed files. Exit only when a round produces zero findings. Focuses on inter-file structural consistency.
 
-## 为什么需要
+## Why This Is Needed
 
-同一概念在同一文件的不同章节或多个文件中的描述容易出现不一致（表格行数不同、列表遗漏、术语混用）。在文档密集型变更（多个 markdown 文件互相引用）中尤为常见。结构化多维度验证 + 收敛循环能系统性消除这类问题。
+The same concept described in different sections of the same file or across multiple files often becomes inconsistent (table row counts differ, list items missing, terminology mixed). This is especially common in document-heavy changes (multiple markdown files cross-referencing each other). Structured multi-dimensional verification + convergence loop systematically eliminates these issues.
 
-## 触发方式
+## Trigger
 
-- **手动**：`/ecw:cross-review`
-- 适用场景：文档密集型变更（多个 markdown/配置文件互相引用时）
-- 不在开发流程的必经链路中——代码正确性和质量由 `ecw:impl-verify` 负责
+- **Manual**: `/ecw:cross-review`
+- Applicable scenarios: Document-heavy changes (when multiple markdown/config files cross-reference each other)
+- Not in the required development workflow — code correctness and quality are handled by `ecw:impl-verify`
 
-## 与其他验证组件的关系
+## Relationship with Other Verification Components
 
-| 组件 | 审什么 | 区别 |
-|------|--------|------|
-| **ecw:cross-review（本 skill）** | 文件内/跨文件结构一致性 | 多轮收敛，聚焦文档一致性，手动可选 |
-| ecw:impl-verify | 代码正确性 + 质量 | 多轮收敛，聚焦代码 vs 需求/规则/Plan/标准，必经步骤 |
-| ecw:spec-challenge | 方案盲点、边界条件 | 方案阶段，非实现阶段 |
-| verify-completion hook | 引用存在性、编译、知识同步 | 机械硬拦截，非语义检查 |
+| Component | What It Reviews | Distinction |
+|-----------|----------------|------------|
+| **ecw:cross-review (this skill)** | Intra-file/cross-file structural consistency | Multi-round convergence, focuses on document consistency, manual optional |
+| ecw:impl-verify | Code correctness + quality | Multi-round convergence, focuses on code vs requirements/rules/Plan/standards, mandatory step |
+| ecw:spec-challenge | Plan blind spots, boundary conditions | Plan phase, not implementation phase |
+| verify-completion hook | Reference existence, compilation, knowledge sync | Mechanical hard intercept, not semantic check |
 
-## 执行协议
+## Execution Protocol
 
-### Round 1 — 跨文件一致性矩阵
+### Round 1 — Cross-File Consistency Matrix
 
-**目标**：同一概念在多个文件中的描述是否一致。
+**Goal**: Is the same concept described consistently across multiple files?
 
-**操作**：
+**Operations**:
 
-1. 列出本次变更的所有文件（`git diff --name-only` 或从 task context 获取）
-2. 提取每个文件中的**结构化内容**：
-   - 表格行（markdown table rows）
-   - 列表项（bulleted/numbered lists）
-   - 枚举值（如"4 项检查"、"6 个知识文件"）
-   - 配置项（YAML keys、JSON fields）
-   - 维度/字段列表（如对比表的行）
-3. 对同一概念出现在 2+ 文件的情况，逐项交叉比对：
-   - 表格 A 的行数 = 表格 B 的行数？
-   - 列表 A 的条目 = 列表 B 的条目？内容相同？
-   - 术语/命名在所有文件中是否一致？（如"Phase 3" vs "Risk Phase 3"）
-   - 数量引用（"4 项检查"）是否匹配实际内容？
-4. 对每个不一致项，记录：`[文件A:行号] vs [文件B:行号] — 描述差异`
+1. List all files changed in this round (`git diff --name-only` or from task context)
+2. Extract **structured content** from each file:
+   - Table rows (markdown table rows)
+   - List items (bulleted/numbered lists)
+   - Enumerated values (e.g., "4 checks", "6 knowledge files")
+   - Config items (YAML keys, JSON fields)
+   - Dimension/field lists (e.g., comparison table rows)
+3. For the same concept appearing in 2+ files, cross-compare item by item:
+   - Table A row count = Table B row count?
+   - List A items = List B items? Same content?
+   - Are terms/names consistent across all files? (e.g., "Phase 3" vs "Risk Phase 3")
+   - Do quantity references ("4 checks") match actual content?
+4. For each inconsistency, record: `[FileA:line] vs [FileB:line] — describe the difference`
 
-### Round 2+（条件触发）— 修复副作用检查
+### Round 2+ (Conditional Trigger) — Fix Side-Effect Check
 
-**仅当 Round 1 发现了问题并修复后才触发。**
+**Triggered only when Round 1 found issues that have been fixed.**
 
-**操作**：
+**Operations**:
 
-1. 对修复涉及的文件，重新执行 Round 1 的交叉比对
-2. 确认修复没有引入新的不一致
-3. 如果本轮又有发现，修复后继续下一轮
+1. For files involved in fixes, re-run Round 1 cross-comparison
+2. Confirm fixes did not introduce new inconsistencies
+3. If this round finds more issues, fix and continue to next round
 
-### 收敛条件
+### Convergence Condition
 
-**最近一轮零发现 → 退出，输出验证通过报告。**
+**Most recent round has zero findings → exit, output verification passed report.**
 
-## 输出格式
+## Output Format
 
-每轮输出：
-
-```markdown
-### Cross-Review Round {N} — {维度名称}
-
-**检查范围**：{文件列表}
-
-**发现**：
-
-| # | 文件A | 文件B | 不一致描述 | 严重度 |
-|---|-------|-------|-----------|--------|
-| 1 | README.md:148 | ecw-validate-config.md:132 | 知识文件列表差 1 项（缺 cross-domain-rules.md） | 必须修复 |
-| 2 | SKILL.md:395 | SKILL.md:320 | Step 4 表格 4 行，Step 1 表格 5 行（缺"外部系统"） | 必须修复 |
-
-**本轮发现 {N} 个问题。修复后将执行 Round {M}。**
-```
-
-零发现时输出：
+Per-round output:
 
 ```markdown
-### Cross-Review Round {N} — {维度名称}
+### Cross-Review Round {N} — {dimension name}
 
-**检查范围**：{文件列表}
+**Check scope**: {file list}
 
-**发现**：无
+**Findings**:
 
-**本轮零发现，验证通过。**
+| # | File A | File B | Inconsistency Description | Severity |
+|---|--------|--------|--------------------------|----------|
+| 1 | README.md:148 | ecw-validate-config.md:132 | Knowledge file list differs by 1 item (missing cross-domain-rules.md) | must-fix |
+| 2 | SKILL.md:395 | SKILL.md:320 | Step 4 table has 4 rows, Step 1 table has 5 rows (missing "external systems") | must-fix |
+
+**This round: {N} issues found. Will execute Round {M} after fixes.**
 ```
 
-最终通过时输出总结：
+Zero findings output:
 
 ```markdown
-## Cross-Review 验证通过
+### Cross-Review Round {N} — {dimension name}
 
-经过 {N} 轮验证（修复了 {M} 个问题），所有变更文件的交叉一致性检查通过。
+**Check scope**: {file list}
+
+**Findings**: None
+
+**This round zero findings, verification passed.**
 ```
 
-## 约束
+Final pass summary:
 
-- **循环上限**：最多 5 轮。超过 5 轮仍有发现，输出所有未解决项并建议用户介入。
-- **可跳过场景**：纯格式修改、仅改注释/日志等明显无业务逻辑变更的场景。
-- **不做的事**：
-  - 不验证代码正确性或质量（ecw:impl-verify 的职责）
-  - 不分析业务影响（ecw:biz-impact-analysis 的职责）
-  - 不检查编译/引用（verify-completion hook 的职责）
-  - 不评审方案设计（ecw:spec-challenge 的职责）
+```markdown
+## Cross-Review Verification Passed
 
-## 常见交叉不一致模式
+After {N} rounds of verification (fixed {M} issues), cross-file consistency check passed for all changed files.
+```
 
-供 Round 1 重点关注：
+## Constraints
 
-| 模式 | 示例 |
-|------|------|
-| **列表长度不一致** | README 说"6 个知识文件"，validate-config 只检查 5 个 |
-| **表格维度遗漏** | 对比表 Step 1 有 5 行维度，Step 4 模板只有 4 行 |
-| **术语不统一** | 一处叫"Phase 3"，另一处叫"Risk Phase 3" |
-| **组件引用遗漏** | 新增了命令，但 ecw-init 的"下一步"没提到它 |
-| **路由链不完整** | 工作流图有某步骤，但 Skill Interaction 表没有 |
-| **配置与实现脱节** | 模板增加了字段，但验证命令没检查该字段 |
+- **Loop cap**: Maximum 5 rounds. If findings remain after 5 rounds, output all unresolved items and suggest user intervention.
+- **Skippable scenarios**: Pure formatting changes, comment/log-only changes with clearly no business logic impact.
+- **Out of scope**:
+  - Does not verify code correctness or quality (ecw:impl-verify's responsibility)
+  - Does not analyze business impact (ecw:biz-impact-analysis's responsibility)
+  - Does not check compilation/references (verify-completion hook's responsibility)
+  - Does not review plan design (ecw:spec-challenge's responsibility)
+
+## Common Cross-Inconsistency Patterns
+
+For focused attention in Round 1:
+
+| Pattern | Example |
+|---------|---------|
+| **List length mismatch** | README says "6 knowledge files", validate-config only checks 5 |
+| **Table dimension omission** | Comparison table Step 1 has 5 dimension rows, Step 4 template only has 4 |
+| **Inconsistent terminology** | One place says "Phase 3", another says "Risk Phase 3" |
+| **Component reference omission** | Added new command, but ecw-init "Next Steps" doesn't mention it |
+| **Incomplete routing chain** | Workflow diagram has a step, but Skill Interaction table does not |
+| **Config-implementation desync** | Template added a field, but validation command doesn't check it |

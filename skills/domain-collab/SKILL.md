@@ -3,406 +3,406 @@ name: domain-collab
 description: |
   Use when user describes a business requirement spanning 2+ domains.
   TRIGGER when: requirement involves 2+ domain keywords defined in project CLAUDE.md routing table,
-  user asks "分析影响", "影响哪些域", or risk-classifier routes here for cross-domain needs.
+  user asks "analyze impact", "which domains affected", or risk-classifier routes here for cross-domain needs.
   DO NOT TRIGGER when: single-domain need (use ecw:requirements-elicitation), already have code diff
   (use ecw:biz-impact-analysis), pure technical refactoring with no business logic change.
 ---
 
-# Domain Collab — 多域协作分析
+# Domain Collab — Multi-Domain Collaboration Analysis
 
-接收涉及 2+ 域的自然语言需求，并行派发域专属 Agent 进行分析，Coordinator 交叉校验后输出结构化报告。
+Accepts natural language requirements spanning 2+ domains, dispatches domain-specific Agents in parallel for analysis, and outputs a structured report after Coordinator cross-validation.
 
-> **单域需求** 由 `ecw:requirements-elicitation` 处理，本 skill 专注多域场景。
+> **Single-domain requirements** are handled by `ecw:requirements-elicitation`. This skill focuses on multi-domain scenarios.
 
-## 触发方式
+## Trigger
 
-- **手动**: `/domain-collab <需求或改动描述>`
-- **自动识别**: 用户描述业务需求时触发
+- **Manual**: `/domain-collab <requirement or change description>`
+- **Auto-detect**: Triggered when user describes a business requirement
 
-## 前置步骤
+## Prerequisites
 
-1. 读取 ecw.yml `paths.domain_registry` 指定的文件（默认 `.claude/ecw/domain-registry.md`）获取域定义
-2. 确认 ecw.yml `paths.knowledge_common` 下的 `cross-domain-rules.md` 存在
+1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/domain-registry.md`) to get domain definitions
+2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_common`
 
-## 流程总览
+## Workflow Overview
 
 ```dot
 digraph domain_collab {
   rankdir=TB;
 
-  "用户输入需求" [shape=doublecircle];
-  "Phase 1: 域识别" [shape=box];
-  "匹配域数？" [shape=diamond];
-  "提示：单域走 requirements-elicitation" [shape=box];
-  "Round 1: 独立分析（并行）" [shape=box];
-  "Round 2: 域间协商（并行）" [shape=box];
-  "Round 3: Coordinator 交叉校验" [shape=box];
-  "输出报告" [shape=doublecircle];
+  "User input requirement" [shape=doublecircle];
+  "Phase 1: Domain Identification" [shape=box];
+  "Matched domains?" [shape=diamond];
+  "Hint: single-domain, use requirements-elicitation" [shape=box];
+  "Round 1: Independent Analysis (parallel)" [shape=box];
+  "Round 2: Inter-Domain Negotiation (parallel)" [shape=box];
+  "Round 3: Coordinator Cross-Validation" [shape=box];
+  "Output Report" [shape=doublecircle];
 
-  "用户输入需求" -> "Phase 1: 域识别";
-  "Phase 1: 域识别" -> "匹配域数？";
-  "匹配域数？" -> "提示：单域走 requirements-elicitation" [label="0~1 域"];
-  "匹配域数？" -> "Round 1: 独立分析（并行）" [label="2+ 域"];
-  "Round 1: 独立分析（并行）" -> "Round 2: 域间协商（并行）";
-  "Round 2: 域间协商（并行）" -> "Round 3: Coordinator 交叉校验";
-  "Round 3: Coordinator 交叉校验" -> "输出报告";
+  "User input requirement" -> "Phase 1: Domain Identification";
+  "Phase 1: Domain Identification" -> "Matched domains?";
+  "Matched domains?" -> "Hint: single-domain, use requirements-elicitation" [label="0~1 domains"];
+  "Matched domains?" -> "Round 1: Independent Analysis (parallel)" [label="2+ domains"];
+  "Round 1: Independent Analysis (parallel)" -> "Round 2: Inter-Domain Negotiation (parallel)";
+  "Round 2: Inter-Domain Negotiation (parallel)" -> "Round 3: Coordinator Cross-Validation";
+  "Round 3: Coordinator Cross-Validation" -> "Output Report";
 }
 ```
 
-## Phase 1: 域识别
+## Phase 1: Domain Identification
 
-1. 从项目 CLAUDE.md 的域路由部分（关键词→域映射表）读取关键词，匹配用户输入，识别涉及的域
-2. 从 domain-registry 读取匹配域的元数据（知识目录、代码目录等）
-3. 判断是否适用：
-   - 匹配 0 个域 → 提示用户："无法识别涉及的业务域，请补充描述或指定域名"
-   - 匹配 1 个域 → 提示："单域需求建议使用 `/requirements-elicitation`，本 skill 专注多域协作分析"
-   - 匹配 2+ 域 → 继续执行协作分析
-4. 如果由 risk-classifier 调用并已传入域列表，**跳过确认**，直接执行。
-5. 如果手动触发（`/domain-collab`），向用户确认："识别到涉及 {域列表}，将进行多域协作分析。"
+1. Read keywords from project CLAUDE.md domain routing section (keyword→domain mapping table), match against user input, identify involved domains
+2. Read matched domain metadata from domain-registry (knowledge directory, code directory, etc.)
+3. Determine applicability:
+   - 0 domains matched → Prompt user: "Cannot identify involved business domains. Please add more description or specify domain names"
+   - 1 domain matched → Prompt: "Single-domain requirement — suggest using `/requirements-elicitation`. This skill focuses on multi-domain collaboration analysis"
+   - 2+ domains matched → Proceed with collaboration analysis
+4. If called by risk-classifier with domain list already provided, **skip confirmation** and execute directly.
+5. If manually triggered (`/domain-collab`), confirm with user: "Identified domains: {domain list}. Will proceed with multi-domain collaboration analysis."
 
 ---
 
-## 多域协作分析（3 轮）
+## Multi-Domain Collaboration Analysis (3 Rounds)
 
-### Round 1: 独立分析（并行）
+### Round 1: Independent Analysis (parallel)
 
-为每个匹配到的域派发一个 Agent（使用 Agent tool，`subagent_type: general-purpose`）。
+Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general-purpose`).
 
-**前置步骤（Coordinator 在派发 Agent 前执行）：** 读取 `.claude/ecw/ecw.yml` 获取 project.name 和 component_types，读取 ecw.yml `paths.domain_registry` 获取域定义。
+**Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
-**所有域 Agent 使用统一的 prompt 模板：**
+**All domain Agents use a unified prompt template:**
 
 ```
-你是 {project_name} {domain_name}域专家 Agent。你的任务是分析一个需求对你负责的域的影响。
-（project_name 从 `.claude/ecw/ecw.yml` 读取）
+You are a {project_name} {domain_name} domain expert Agent. Your task is to analyze the impact of a requirement on your responsible domain.
+(project_name read from `.claude/ecw/ecw.yml`)
 
-## 你的域信息
-- 域ID: {domain_id}
-- 域名: {domain_name}
-- 职责: {description}
+## Your Domain Info
+- Domain ID: {domain_id}
+- Domain Name: {domain_name}
+- Responsibilities: {description}
 
-## 你的知识文档
-读取入口: {knowledge_root}{index}，从中定位与需求相关的章节。
-只读取与需求描述直接相关的知识文件和章节，不要全部读取。
-核心文件：{knowledge_root}{business_rules}（状态机和验证规则章节）、{knowledge_root}{data_model}（相关实体）。
+## Your Knowledge Documents
+Read entry point: {knowledge_root}{index}. From there, locate sections relevant to the requirement.
+Only read knowledge files and sections directly relevant to the requirement description — do not read everything.
+Core files: {knowledge_root}{business_rules} (state machine and validation rules sections), {knowledge_root}{data_model} (related entities).
 {extra_knowledge_lines}
 
-## 代码目录（需要时可以 grep 验证）
-- 主目录: {code_root}
+## Code Directory (grep to verify when needed)
+- Main directory: {code_root}
 {related_code_dirs}
 
-## 需求描述
+## Requirement Description
 ---
 {user_requirement}
 ---
 
-## 分析要求
-1. 基于你的知识文档分析需求对本域的影响
-2. 识别需要变更的组件（从 `.claude/ecw/ecw.yml` 的 `component_types` 字段读取可选值）
-3. 识别状态流转变化
-4. 识别可能影响其他域的风险点
-5. 不要猜测，只基于你读到的文档和代码做判断
-6. 如果本域完全不受影响，说明原因
+## Analysis Requirements
+1. Analyze the requirement's impact on this domain based on your knowledge documents
+2. Identify components that need changes (read available values from `.claude/ecw/ecw.yml` `component_types` field)
+3. Identify state transition changes
+4. Identify risk points that may affect other domains
+5. Do not guess — only make judgments based on documents and code you have read
+6. If this domain is completely unaffected, explain why
 
-## 输出约束
-- YAML 块总长度不超过 30 行
-- `notes` 字段不超过 2 句话
-- 如果 `impact_level` 为 none，只输出 domain + impact_level + summary 三个字段
-- 如果无 `state_changes` 或无 `cross_domain_risks`，省略该字段（不要输出空数组）
-- 不要输出分析推理过程，只输出结论性 YAML
+## Output Constraints
+- YAML block total length no more than 30 lines
+- `notes` field no more than 2 sentences
+- If `impact_level` is none, only output domain + impact_level + summary (three fields)
+- If no `state_changes` or no `cross_domain_risks`, omit that field (do not output empty arrays)
+- Do not output analysis reasoning process — only output conclusive YAML
 
-## 输出格式（严格按此 YAML 格式输出，用 ```yaml 代码块包裹）
+## Output Format (strictly follow this YAML format, wrapped in ```yaml code block)
 domain: {domain_id}
 impact_level: none | low | medium | high
-summary: "一句话概述需求对本域的影响"
+summary: "One-sentence summary of requirement impact on this domain"
 affected_components:
-  - type: "从 ecw.yml component_types 读取可选值"
-    name: "类名或资源名"
-    change: "需要做什么变更"
+  - type: "Read available values from ecw.yml component_types"
+    name: "Class name or resource name"
+    change: "What change is needed"
 state_changes:
-  - entity: "实体名"
-    from: "原状态"
-    to: "新状态"
-    trigger: "触发条件"
+  - entity: "Entity name"
+    from: "Original state"
+    to: "New state"
+    trigger: "Trigger condition"
 cross_domain_risks:
-  - target: "目标域ID"
+  - target: "Target domain ID"
     type: "direct_call | mq | shared_resource"
-    resource: "资源名"
-    reason: "为什么可能受影响"
-notes: "其他需要注意的事项"
+    resource: "Resource name"
+    reason: "Why it may be affected"
+notes: "Other things to note"
 ```
 
-**Coordinator 操作步骤：**
-1. 从 domain-registry 读取每个匹配域的元数据
-2. 用上方模板填充变量，为每个域生成 prompt
-3. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
-4. 收集所有 Agent 返回的 YAML 结果
-5. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加记录（每个域 Agent 一行）：`| domain-collab R1 | {域名} | general | medium |`。Scale 参考：small（<20K tokens）、medium（20-80K）、large（>80K），域分析 R1 通常 medium。
+**Coordinator operation steps:**
+1. Read each matched domain's metadata from domain-registry
+2. Fill the template above with variables to generate a prompt for each domain
+3. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
+4. Collect all Agent YAML results
+5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium.
 
-### Round 2: 域间协商（并行）
+### Round 2: Inter-Domain Negotiation (parallel)
 
-Round 1 各域独立分析完成后，Coordinator 把各域的变更计划交叉分发，让每个域评估**其他域的变更**是否影响自己。
+After Round 1 independent analysis completes, Coordinator distributes each domain's change plan to others, letting each domain assess whether **other domains' changes** affect them.
 
-**Coordinator 操作步骤：**
+**Coordinator operation steps:**
 
-1. 收集 Round 1 所有域 agent 的 YAML 输出
-2. 为每个域生成一份"其他域变更摘要"——汇总其他所有域的 `affected_components`、`state_changes`、`cross_domain_risks`
-3. 特别标注：其他域的 `cross_domain_risks` 中 `target` 指向本域的项（"有域专门提到了你可能受影响"）
-4. 并行派发新一轮域 agent
+1. Collect Round 1 YAML output from all domain agents
+2. For each domain, generate an "other domains' changes summary" — aggregate all other domains' `affected_components`, `state_changes`, `cross_domain_risks`
+3. Specifically flag: other domains' `cross_domain_risks` where `target` points to this domain ("another domain specifically noted you may be affected")
+4. Dispatch new round of domain agents in parallel
 
-**Round 2 域 Agent 使用统一的 prompt 模板：**
+**Round 2 domain Agent unified prompt template:**
 
 ```
-你是 {project_name} {domain_name}域专家 Agent（协商轮）。
+You are a {project_name} {domain_name} domain expert Agent (negotiation round).
 
-Round 1 中你对需求做了独立分析，现在其他域也完成了分析。你的任务是评估其他域的变更计划是否影响你的域。
+In Round 1 you performed independent analysis of the requirement. Now other domains have also completed their analysis. Your task is to assess whether other domains' change plans affect your domain.
 
-## 原始需求
+## Original Requirement
 ---
 {user_requirement}
 ---
 
-## 你在 Round 1 的分析结果
+## Your Round 1 Analysis Result
 {round1_yaml_output}
 
-## 其他域的变更计划（摘要）
+## Other Domains' Change Plans (Summary)
 {for each other domain:}
-### {other_domain_name}域 — {impact_level}
+### {other_domain_name} Domain — {impact_level}
 {summary}
-变更: {affected_components as comma-separated "type:name" list}
-指向你的风险: {cross_domain_risks where target == current domain, one line each, or "无"}
+Changes: {affected_components as comma-separated "type:name" list}
+Risks pointing to you: {cross_domain_risks where target == current domain, one line each, or "None"}
 
-如需验证业务规则，按需读取：{knowledge_root}{business_rules}。
-只在其他域变更可能影响本域规则时读取，不要预防性全量读取。
+If you need to verify business rules, read as needed: {knowledge_root}{business_rules}.
+Only read when other domains' changes may affect your domain's rules — do not preemptively read everything.
 
-## 协商任务
-1. 检查其他域的变更是否影响你的域（接口变更、消息体变更、共享资源变更等）
-2. 如果受影响，说明具体影响点和你这边需要的配套变更
-3. 如果 Round 1 你报了 impact_level: none，但其他域的变更确实影响了你，更新你的评估
-4. 如果发现其他域的变更计划与你的域存在冲突（同时改同一接口、状态机不兼容等），指出冲突点
-5. 如果其他域的变更完全不影响你，直接报 revised_impact_level 与 Round 1 一致，其余字段留空
+## Negotiation Task
+1. Check if other domains' changes affect your domain (interface changes, message body changes, shared resource changes, etc.)
+2. If affected, describe the specific impact point and the companion changes needed on your side
+3. If you reported impact_level: none in Round 1, but other domains' changes do affect you, update your assessment
+4. If you discover conflicts between other domains' change plans and your domain (modifying same interface simultaneously, incompatible state machines, etc.), flag the conflict points
+5. If other domains' changes have zero impact on you, simply report revised_impact_level matching Round 1, leave other fields empty
 
-## 输出约束
-- YAML 块总长度不超过 20 行
-- 如果其他域变更完全不影响本域，只输出 domain + revised_impact_level（与 Round 1 一致）+ 一句话说明
-- 不要输出分析推理过程，只输出结论性 YAML
+## Output Constraints
+- YAML block total length no more than 20 lines
+- If other domains' changes have zero impact on this domain, only output domain + revised_impact_level (matching Round 1) + one-sentence explanation
+- Do not output analysis reasoning process — only output conclusive YAML
 
-## 输出格式（严格按此 YAML 格式输出，用 ```yaml 代码块包裹）
+## Output Format (strictly follow this YAML format, wrapped in ```yaml code block)
 domain: {domain_id}
 negotiation_result:
   revised_impact_level: none | low | medium | high
   impact_from_others:
-    - source_domain: "哪个域的变更影响了你"
-      impact: "具体影响描述"
-      required_action: "你这边需要做的配套变更"
+    - source_domain: "Which domain's changes affected you"
+      impact: "Specific impact description"
+      required_action: "Companion changes needed on your side"
   conflicts:
-    - with_domain: "冲突对方域"
-      description: "冲突描述"
-      suggestion: "建议解决方式"
+    - with_domain: "Conflicting domain"
+      description: "Conflict description"
+      suggestion: "Suggested resolution"
   revised_components:
-    - type: "组件类型"
-      name: "类名"
-      change: "变更内容"
-      reason: "因为哪个域的什么变更导致需要配套改动"
+    - type: "Component type"
+      name: "Class name"
+      change: "Change content"
+      reason: "What change from which domain necessitates this companion change"
 ```
 
-**Coordinator 操作步骤：**
-1. 用上方模板填充变量，为每个域生成 Round 2 prompt
-2. 使用 Agent tool 并行派发所有域 Agent（在一条消息中发出多个 Agent tool 调用）
-3. 收集所有 Agent 返回的 YAML 结果
-4. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加记录（每个域 Agent 一行）：`| domain-collab R2 | {域名} | general | small |`。域协商 R2 通常 small。
+**Coordinator operation steps:**
+1. Fill the template above with variables to generate Round 2 prompt for each domain
+2. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
+3. Collect all Agent YAML results
+4. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small |`. Domain negotiation R2 is typically small.
 
-**Round 2 跳过规则**：如果某个域在 Round 1 返回 `impact_level: none` 且没有其他域的 `cross_domain_risks` 指向它，**跳过该域的 Round 2 Agent 派发**。该域不受影响且没有被其他域标记为可能受影响，Round 2 协商不会产生新发现。在 Round 3 交叉校验中标注："域 X 在 Round 1 无影响且无指向风险，Round 2 跳过。"
+**Round 2 skip rule**: If a domain returned `impact_level: none` in Round 1 AND no other domain's `cross_domain_risks` points to it, **skip Round 2 Agent dispatch for that domain**. That domain is unaffected and no other domain flagged it as potentially affected — Round 2 negotiation would not produce new findings. Note in Round 3 cross-validation: "Domain X had no impact in Round 1 and no inbound risks; Round 2 skipped."
 
 ---
 
-### Round 3: Coordinator 交叉校验与汇总
+### Round 3: Coordinator Cross-Validation & Summary
 
-**Coordinator 自己完成以下步骤（不派发 Agent）：**
+**Coordinator completes the following steps itself (no Agent dispatch):**
 
-**3a. 合并 Round 1 + Round 2 结果**
+**3a. Merge Round 1 + Round 2 Results**
 
-对每个域：
-- 如果 Round 2 的 `revised_impact_level` 高于 Round 1 的 `impact_level` → 以 Round 2 为准
-- 把 Round 2 的 `revised_components` 追加到 Round 1 的 `affected_components`
-- 把 Round 2 的 `impact_from_others` 加入跨域依赖关系
-- 把 Round 2 的 `conflicts` 汇总到冲突列表
+For each domain:
+- If Round 2's `revised_impact_level` is higher than Round 1's `impact_level` → Use Round 2 value
+- Append Round 2's `revised_components` to Round 1's `affected_components`
+- Add Round 2's `impact_from_others` to cross-domain dependency relationships
+- Aggregate Round 2's `conflicts` into conflict list
 
-**3b. 跨域冲突检测**
+**3b. Cross-Domain Conflict Detection**
 
-遍历合并后所有域的 `cross_domain_risks` + Round 2 的 `conflicts`，检查：
-- 是否有两个域对同一资源提出了不兼容的变更 → 标记为"域间冲突"
-- 是否有域 A 的 `cross_domain_risks` 指向域 B，但域 B 在 Round 1 和 Round 2 都报了 `none` → 标记为"疑似遗漏"
+Traverse all domains' merged `cross_domain_risks` + Round 2 `conflicts`, check:
+- Do two domains propose incompatible changes to the same resource → Flag as "inter-domain conflict"
+- Does domain A's `cross_domain_risks` point to domain B, but domain B reported `none` in both Round 1 and Round 2 → Flag as "suspected omission"
 
-**3c. 跨域规则校验（遗漏检测）**
+**3c. Cross-Domain Rule Validation (Omission Detection)**
 
-读取以下文件做最终校验（按需读取，不要一次全部读取）：
-- `cross-domain-calls.md` → 验证各域提到的直接调用关系是否登记
-- `mq-topology.md` → 验证各域提到的 MQ 关系是否登记
-- `shared-resources.md` → 检查是否有被忽略的共享资源影响
+Read the following files for final validation (read as needed, not all at once):
+- `cross-domain-calls.md` → Verify whether direct call relationships mentioned by each domain are registered
+- `mq-topology.md` → Verify whether MQ relationships mentioned by each domain are registered
+- `shared-resources.md` → Check for overlooked shared resource impacts
 
-**3d. 代码验证**
+**3d. Code Verification**
 
-对每个 `affected_component` 执行 Grep 验证。从 ecw.yml `component_types` 读取组件类型及其对应的验证模式：
-- 服务层组件 → `Grep pattern="class {name}" path=项目根目录`
-- 消息队列组件 → `Grep pattern="{name}" path=项目根目录`
-- 领域模型组件 → `Grep pattern="class {name}" path=领域模型目录`
+For each `affected_component`, execute Grep verification. Read component types and their corresponding verification patterns from ecw.yml `component_types`:
+- Service-layer components → `Grep pattern="class {name}" path=project root`
+- Message queue components → `Grep pattern="{name}" path=project root`
+- Domain model components → `Grep pattern="class {name}" path=domain model directory`
 
-标记验证结果：
-- 找到 → 已验证
-- 未找到 → 文档过期（知识文档说有但代码中找不到）
-- 代码中存在但知识文档未提及 → 未登记（建议补充到知识文档）
+Tag verification results:
+- Found → verified
+- Not found → stale (knowledge docs say it exists but not found in code)
+- Exists in code but not mentioned in knowledge docs → unregistered (suggest adding to knowledge docs)
 
-对每个 `cross_domain_risk`：
-- `Grep pattern="{resource}" path=项目根目录` 确认调用关系确实存在
+For each `cross_domain_risk`:
+- `Grep pattern="{resource}" path=project root` to confirm call relationship actually exists
 
-**3e. 输出报告**
+**3e. Output Report**
 
-1. **将完整报告写入文件** `.claude/plans/domain-collab-report.md`（使用下方完整报告模板）
-2. **在对话中只输出摘要版本**（不超过 30 行），包含：
-   - 涉及域总览表（域名 + 等级 + 变更组件数 + 一句话概述）
-   - 域间冲突（如有）
-   - 建议实施顺序
-   - 风险点汇总
+1. **Write full report to file** `.claude/plans/domain-collab-report.md` (using the full report template below)
+2. **Output only summary version in conversation** (no more than 30 lines), including:
+   - Domain overview table (domain name + level + changed component count + one-line summary)
+   - Inter-domain conflicts (if any)
+   - Suggested implementation order
+   - Risk point summary
 
-详细的各域分析、代码验证结果、协商发现等完整内容在文件中查阅。后续 Phase 2 和 ecw:writing-plans 直接读取文件获取完整数据。
+Detailed per-domain analysis, code verification results, negotiation findings, etc. are in the file. Subsequent Phase 2 and ecw:writing-plans read the file directly for full data.
 
 <details>
-<summary>完整报告模板（写入文件时使用）</summary>
+<summary>Full Report Template (used when writing to file)</summary>
 
 ```markdown
-# 多域协作分析报告
+# Multi-Domain Collaboration Analysis Report
 
-## 需求概述
+## Requirement Summary
 {user_requirement}
 
-## 涉及域总览（合并 Round 1 + Round 2）
-| 域 | Round 1 等级 | 协商后等级 | 变更组件数 | 概述 |
-|---|-------------|----------|----------|------|
+## Domain Overview (Merged Round 1 + Round 2)
+| Domain | Round 1 Level | Post-Negotiation Level | Changed Components | Summary |
+|--------|--------------|----------------------|-------------------|---------|
 | {domain_name} | {round1_level} | {final_level} | {count} | {summary} |
 
-## 各域详细分析
+## Per-Domain Detailed Analysis
 
-### {domain_name}域
-**影响等级**: {impact_level}
-**概述**: {summary}
+### {domain_name} Domain
+**Impact Level**: {impact_level}
+**Summary**: {summary}
 
-**需要变更的组件：**
-| 类型 | 名称 | 变更内容 | 验证 |
-|------|------|---------|------|
+**Components to Change:**
+| Type | Name | Change Content | Verification |
+|------|------|---------------|-------------|
 | {type} | {name} | {change} | verified/stale |
 
-**状态变更：**
-- {entity}: {from} → {to}（{trigger}）
+**State Changes:**
+- {entity}: {from} → {to} ({trigger})
 
-**跨域风险：**
-- → {target}: {reason}（{type}: {resource}）
+**Cross-Domain Risks:**
+- → {target}: {reason} ({type}: {resource})
 
-### （下一个域...）
+### (next domain...)
 
-## 域间协商发现
+## Inter-Domain Negotiation Findings
 
-### 影响等级变更
-（如果 Round 2 协商后有域的影响等级升级，列出变更原因）
-| 域 | Round 1 等级 | 协商后等级 | 原因 |
-|---|-------------|----------|------|
+### Impact Level Changes
+(If any domain's impact level upgraded after Round 2 negotiation, list the change reason)
+| Domain | Round 1 Level | Post-Negotiation Level | Reason |
+|--------|--------------|----------------------|--------|
 | {domain} | {round1_level} | {round2_level} | {reason} |
-（如果所有域等级无变化，显示"无等级变更"）
+(If all domain levels unchanged, show "No level changes")
 
-### 协商发现的配套变更
-（Round 2 中各域发现的、因其他域变更而需要的配套改动）
-| 域 | 新增组件 | 变更内容 | 触发方 |
-|---|---------|---------|--------|
-| {domain} | {component} | {change} | {source_domain} 的 {what} 变更 |
-（如果无配套变更，显示"无"）
+### Companion Changes Discovered in Negotiation
+(Changes each domain discovered in Round 2 that are needed due to other domains' changes)
+| Domain | New Component | Change Content | Triggered By |
+|--------|--------------|---------------|-------------|
+| {domain} | {component} | {change} | {source_domain}'s {what} change |
+(If no companion changes, show "None")
 
-### 域间冲突
-（Round 2 协商 + Coordinator 交叉校验发现的冲突）
-| 域 A | 域 B | 冲突描述 | 建议 |
-|-----|------|---------|------|
+### Inter-Domain Conflicts
+(Conflicts found in Round 2 negotiation + Coordinator cross-validation)
+| Domain A | Domain B | Conflict Description | Suggestion |
+|----------|----------|---------------------|------------|
 | {domain_a} | {domain_b} | {description} | {suggestion} |
-（如果无冲突，显示"无"）
+(If no conflicts, show "None")
 
-## Coordinator 交叉校验发现
-### 遗漏检测
-- {domain}: 域 A 指出 cross_domain_risk 指向 {domain}，但 {domain} 在 Round 1 和协商轮都报了 none — 建议确认
+## Coordinator Cross-Validation Findings
+### Omission Detection
+- {domain}: Domain A flagged cross_domain_risk pointing to {domain}, but {domain} reported none in both Round 1 and negotiation — suggest confirming
 
-## 跨域依赖与实施顺序
-（根据 cross_domain_risks 的依赖关系，给出建议的实施顺序）
-1. 先改 {被依赖域}（被其他域调用/消费）
-2. 再改 {依赖域}
-3. 最后改 {下游域}
+## Cross-Domain Dependencies & Implementation Order
+(Based on cross_domain_risks dependency relationships, suggest implementation order)
+1. First modify {depended-upon domain} (called/consumed by other domains)
+2. Then modify {dependent domain}
+3. Finally modify {downstream domain}
 
-## 代码验证结果
-- verified: {name} — 已确认存在
-- stale: {name} — 知识文档记录有但代码中未找到，建议确认
+## Code Verification Results
+- verified: {name} — confirmed to exist
+- stale: {name} — knowledge docs record it but not found in code, suggest confirming
 
-## 风险点汇总
-- {各域 notes 中的注意事项}
+## Risk Point Summary
+- {notes from each domain}
 ```
 
 </details>
 
-**3f. 写入知识摘要文件**
+**3f. Write Knowledge Summary File**
 
-将本次分析中读取的知识文件关键信息写入 `.claude/ecw/knowledge-summary.md`，供后续 skill（risk-classifier Phase 2、impl-verify Round 2）复用，减少重复读取原始知识文件：
+Write key information from knowledge files read during this analysis to `.claude/ecw/knowledge-summary.md` for reuse by downstream skills (risk-classifier Phase 2, impl-verify Round 2), reducing redundant reads of original knowledge files:
 
 ```markdown
-# Knowledge Summary（domain-collab 分析提取）
+# Knowledge Summary (extracted during domain-collab analysis)
 
-## 涉及域: {域列表}
+## Involved Domains: {domain list}
 
-## 相关共享资源
-{从 shared-resources.md 提取的、与本次变更相关的条目}
+## Related Shared Resources
+{Entries extracted from shared-resources.md relevant to this change}
 
-## 相关跨域调用
-{从 cross-domain-calls.md 提取的、涉及变更域的条目}
+## Related Cross-Domain Calls
+{Entries extracted from cross-domain-calls.md involving changed domains}
 
-## 相关 MQ Topic
-{从 mq-topology.md 提取的、涉及变更域的条目}
+## Related MQ Topics
+{Entries extracted from mq-topology.md involving changed domains}
 
-## 相关业务规则摘要
-{每个涉及域的 business-rules.md 中与本次变更相关的状态机和验证规则摘要}
+## Related Business Rules Summary
+{For each involved domain: summary of state machines and validation rules from business-rules.md relevant to this change}
 ```
 
 ---
 
 ---
 
-## 兜底逻辑
+## Fallback Logic
 
-如果所有域 Agent 返回 `impact_level: none`：
+If all domain Agents return `impact_level: none`:
 
-1. 检查用户输入是否涉及共享层关键词：
+1. Check if user input involves shared-layer keywords:
    - `CoreBizService`, `Manager`, `common`, `infra`, `util`, `share`
-2. 如果涉及：
-   - 读取 `shared-resources.md`，查找相关共享资源的所有使用方域
-   - 输出警告："此改动不属于特定业务域，但涉及共享资源 {resource}，被 {域列表} 使用，建议逐一确认影响"
-3. 如果不涉及：
-   - 输出："分析完成，未发现业务域影响。此改动可能是纯技术改造。"
+2. If yes:
+   - Read `shared-resources.md`, find all consumer domains for the related shared resource
+   - Output warning: "This change does not belong to a specific business domain, but involves shared resource {resource} used by {domain list}. Suggest confirming impact on each."
+3. If no:
+   - Output: "Analysis complete. No business domain impact detected. This change may be a pure technical refactoring."
 
 ---
 
-## 后续衔接：risk-classifier Phase 2
+## Downstream Handoff: risk-classifier Phase 2
 
-**P0/P1**：协作分析报告输出后，立即执行 risk-classifier Phase 2（精确定级）。Phase 2 会基于本 skill 产出的协作分析报告（各域 `affected_components`、`cross_domain_risks`、Coordinator 交叉校验发现）重新评估风险等级。Phase 2 完成后再进入 `ecw:writing-plans`。
+**P0/P1**: After collaboration analysis report is output, immediately execute risk-classifier Phase 2 (precise classification). Phase 2 will re-assess risk level based on this skill's collaboration analysis report (per-domain `affected_components`, `cross_domain_risks`, Coordinator cross-validation findings). Proceed to `ecw:writing-plans` after Phase 2 completes.
 
-**P2**：跳过 Phase 2（Phase 1 轻量检查已覆盖），直接进入 `ecw:writing-plans`。
+**P2**: Skip Phase 2 (Phase 1 lightweight check already covered), proceed directly to `ecw:writing-plans`.
 
-**不要在 P0/P1 时跳过 Phase 2 直接进入 writing-plans** — 协作分析可能发现 Phase 1 未预见的跨域依赖，导致等级需要升级。
+**Do not skip Phase 2 for P0/P1 and go directly to writing-plans** — collaboration analysis may discover cross-domain dependencies not foreseen in Phase 1, requiring level upgrade.
 
-衔接流程：
+Handoff flow:
 ```
-P0/P1: ecw:domain-collab 报告 → risk-classifier Phase 2 → ecw:writing-plans → [P0/P1跨域: ecw:spec-challenge] → 实现
-P2:    ecw:domain-collab 报告 → ecw:writing-plans → 实现 → ecw:impl-verify → ecw:biz-impact-analysis（建议）
+P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plans → [P0/P1 cross-domain: ecw:spec-challenge] → Implementation
+P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
 ```
 
 ---
 
-## 注意事项
+## Notes
 
-- 每轮 Agent 派发使用 Agent tool 的并行调用（单条消息多个 Agent tool call）
-- Agent prompt 中的变量用 domain-registry 的数据填充
-- 代码验证使用 Grep tool，不使用 bash grep
-- 跨域规则文件按需读取，不要一次全部读入
-- 分析结果中的每个跨域风险都要标注来源（知识文档 / 跨域规则 / 代码扫描）
+- Each round of Agent dispatch uses Agent tool's parallel calls (multiple Agent tool calls in a single message)
+- Agent prompt variables are filled with domain-registry data
+- Code verification uses Grep tool, not bash grep
+- Cross-domain rule files are read as needed — do not load all at once
+- Every cross-domain risk in analysis results must be tagged with source (knowledge docs / cross-domain rules / code scan)

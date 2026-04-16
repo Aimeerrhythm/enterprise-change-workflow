@@ -10,230 +10,230 @@ description: >
 
 ## Overview
 
-对任何代码变更进行风险分级（P0~P3），**驱动后续流程的详略程度**。分三个阶段执行：Phase 1（需求描述阶段，快速预判）、Phase 2（plan 完成后，精确定级）、Phase 3（实现完成后，基于 biz-impact-analysis 反馈校准预测准确度）。
+Classify risk level (P0~P3) for any code change, **driving the depth of downstream workflow**. Executed in three phases: Phase 1 (requirement description stage, quick pre-assessment), Phase 2 (after plan completion, precise classification), Phase 3 (after implementation, calibrate prediction accuracy based on biz-impact-analysis feedback).
 
-**核心原则：** 改日志和改库存扣减的流程不应该一样重。
+**Core Principle:** The process for changing a log statement should not be as heavy as changing inventory deduction logic.
 
-## TDD 阶段说明
+## TDD Phase Notes
 
-路由表中的 **TDD:RED** 表示在实现代码之前先写失败测试。这是 ECW 流水线的结构性步骤，不是可选建议。
+**TDD:RED** in routing tables means writing failing tests before implementation code. This is a structural step in the ECW pipeline, not an optional suggestion.
 
-### 执行方式
+### Execution
 
-TDD:RED 阶段触发时，invoke `ecw:tdd` skill 执行 Red-Green-Refactor 循环。`ecw:tdd` 根据风险等级差异化执行：P0 含验证日志、P1 完整循环、P2 简化模式、P3 推荐不强制。
+When TDD:RED phase triggers, invoke `ecw:tdd` skill to execute the Red-Green-Refactor cycle. `ecw:tdd` differentiates by risk level: P0 includes verification logs, P1 full cycle, P2 simplified mode, P3 recommended but not mandatory.
 
-### 按风险等级差异化
+### Risk-Level Differentiation
 
-| 等级 | TDD 要求 | 说明 |
-|------|---------|------|
-| P0-P2 | **强制** | Plan 完成后（P0 含 spec-challenge），先写覆盖 Plan 中测试场景的失败测试，再写实现代码 |
-| P3 | **推荐** | 路由中不含 TDD 步骤，建议用户自行决定是否测试先行 |
-| Bug | **强制** | systematic-debugging 定位根因后，先写复现 bug 的失败测试，再修复 |
-| 紧急通道 | **跳过** | 以修复速度优先，TDD 不适用；修复完成后通过 mvn test 验证回归 |
+| Level | TDD Requirement | Details |
+|-------|----------------|---------|
+| P0-P2 | **Mandatory** | After plan completion (P0 includes spec-challenge), write failing tests covering plan test scenarios first, then write implementation code |
+| P3 | **Recommended** | Routing does not include TDD step; user decides whether to test first |
+| Bug | **Mandatory** | After systematic-debugging locates root cause, write a failing test that reproduces the bug, then fix |
+| Fast Track | **Skip** | Fix speed takes priority; TDD not applicable; verify regression via mvn test after fix |
 
-> **配置联动**：当 ecw.yml `tdd.enabled` 设为 `false` 时，上述所有"强制"均降级为"推荐"，用户可自行决定是否测试先行。
+> **Configuration linkage**: When ecw.yml `tdd.enabled` is set to `false`, all "mandatory" above downgrades to "recommended" — user decides whether to test first.
 
-### 跳过确认
+### Skip Confirmation
 
-P0-P2 的 TDD:RED 为必经步骤，默认不提供跳过选项。
+TDD:RED for P0-P2 is a mandatory step with no skip option by default.
 
-如用户在 P0-P2 流程中强烈要求跳过 TDD，使用 AskUserQuestion 确认风险后方可跳过：
+If user strongly requests to skip TDD during P0-P2 flow, use AskUserQuestion to confirm risk before allowing skip:
 ```
-问题: "确认跳过 TDD？跳过后测试覆盖将依赖实现后的 mvn test。"
-选项:
-  1. "继续 TDD（推荐）" — 先写失败测试再实现
-  2. "跳过 TDD" — 直接实现（跳过测试先行）
+Question: "Confirm skip TDD? Without TDD, test coverage relies on post-implementation mvn test."
+Options:
+  1. "Continue TDD (Recommended)" — Write failing tests first, then implement
+  2. "Skip TDD" — Implement directly (skip test-first)
 ```
 
-## Bug 修复路由
+## Bug Fix Routing
 
-bug 修复同样先经过本 skill 进行风险预判，然后串联 `ecw:systematic-debugging` 进行定位和修复：
+Bug fixes also go through this skill for risk pre-assessment first, then chain to `ecw:systematic-debugging` for diagnosis and fix:
 
 ```
-bug 报告 → risk-classifier（Phase 1，快速预判）
-  → systematic-debugging（定位根因）
-  → TDD:RED（写复现 bug 的失败测试）
-  → 修复（GREEN，让测试通过）
-  → mvn test（全量回归）
+bug report → risk-classifier (Phase 1, quick pre-assessment)
+  → systematic-debugging (locate root cause)
+  → TDD:RED (write failing test reproducing the bug)
+  → fix (GREEN, make test pass)
+  → mvn test (full regression)
   → ecw:impl-verify
-  → ecw:biz-impact-analysis（如果 P0/P1）
-  → Phase 3 校准（自动）
+  → ecw:biz-impact-analysis (if P0/P1)
+  → Phase 3 calibration (automatic)
 ```
 
-不论风险等级，bug 修复都跳过 ecw:requirements-elicitation（bug 不需要需求澄清，需要的是定位和修复）。
+Regardless of risk level, bug fixes skip ecw:requirements-elicitation (bugs need diagnosis and fix, not requirement elicitation).
 
 ## When to Use
 
-- 用户提出任何需求、功能变更、bug 修复、代码修改
-- 用户说 "我想要..."、"需要改..."、"加个功能..."、"修一下..."
-- **必须在 ecw:requirements-elicitation 之前执行**
-- **bug 修复也必须先经过本 skill**，然后路由到 systematic-debugging
+- User proposes any requirement, feature change, bug fix, or code modification
+- User says "I want to...", "need to change...", "add a feature...", "fix this..."
+- **Must execute before ecw:requirements-elicitation**
+- **Bug fixes must also go through this skill first**, then route to systematic-debugging
 
 **When NOT to use:**
-- 纯代码阅读/分析/提问（"这个类是做什么的？"）
-- 用户明确说 "按 PX 走"（人工指定等级，跳过自动判定）
-- 已经在当前会话中完成过 Phase 1 且等级未被质疑
+- Pure code reading/analysis/questions ("What does this class do?")
+- User explicitly says "use PX" (manually specified level, skip auto-classification)
+- Phase 1 already completed in current session and level not contested
 
 ## Skill Interaction
 
-**本 skill 是所有变更类任务的入口。** 执行完 Phase 1 后，根据风险等级链接到对应的下游 skill：
+**This skill is the entry point for all change-type tasks.** After Phase 1, link to downstream skills based on risk level:
 
-### 需求类变更 — 单域（Step 1 匹配到 0~1 个域）
+### Requirement Changes — Single Domain (Step 1 matches 0~1 domains)
 
-| 风险等级 | 下游 skill |
-|---------|-----------|
-| P0（极高）| → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1（高） | → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P2（中） | → `ecw:writing-plans` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` |
-| P3（低） | → 直接实现（TDD 推荐但不强制） |
+| Risk Level | Downstream Skills |
+|-----------|-------------------|
+| P0 (Critical) | → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P1 (High) | → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P2 (Medium) | → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` |
+| P3 (Low) | → Direct implementation (TDD recommended but not mandatory) |
 
-### 需求类变更 — 跨域（Step 1 匹配到 2+ 个域）
+### Requirement Changes — Cross-Domain (Step 1 matches 2+ domains)
 
-当需求涉及多个业务域时，用 `ecw:domain-collab`（多域协作分析）**替代** `ecw:requirements-elicitation`。ecw:domain-collab 已包含各域深度分析 + Coordinator 交叉校验，产出足以驱动 plan 编写。
+When requirements span multiple business domains, use `ecw:domain-collab` (multi-domain collaboration analysis) **instead of** `ecw:requirements-elicitation`. ecw:domain-collab already includes per-domain deep analysis + Coordinator cross-validation, producing sufficient output to drive plan writing.
 
-| 风险等级 | 下游 skill |
-|---------|-----------|
-| P0（极高）| → `ecw:domain-collab`（多域协作）→ **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1（高） | → `ecw:domain-collab`（多域协作）→ **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P2（中） | → `ecw:domain-collab`（多域协作）→ `ecw:writing-plans` → **TDD:RED** → 实现(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis`（建议） |
-| P3（低） | → `ecw:domain-collab`（多域协作，简化输出）→ 直接实现（TDD 推荐但不强制） |
+| Risk Level | Downstream Skills |
+|-----------|-------------------|
+| P0 (Critical) | → `ecw:domain-collab` (multi-domain) → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P1 (High) | → `ecw:domain-collab` (multi-domain) → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
+| P2 (Medium) | → `ecw:domain-collab` (multi-domain) → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` (suggested) |
+| P3 (Low) | → `ecw:domain-collab` (multi-domain, simplified output) → Direct implementation (TDD recommended but not mandatory) |
 
-> **判定方法：** Step 1 域定位时，对照项目 CLAUDE.md 的域路由部分（关键词→域映射表）统计匹配到的域数量。匹配 2+ 个域 = 跨域需求。
+> **Determination method:** During Step 1 domain identification, check the project CLAUDE.md domain routing section (keyword→domain mapping table) and count matched domains. 2+ domain matches = cross-domain requirement.
 >
-> **确认节点合并：** risk-classifier 的 AskUserQuestion 一次性输出等级 + 域列表 + 模式 + 后续路由。用户确认后下游 skill（ecw:domain-collab / ecw:requirements-elicitation）**跳过自身的确认步骤**，直接执行。
+> **Confirmation node merge:** risk-classifier's AskUserQuestion outputs level + domain list + mode + downstream routing in one go. After user confirms, downstream skills (ecw:domain-collab / ecw:requirements-elicitation) **skip their own confirmation step** and execute directly.
 
-### 实现策略选择
+### Implementation Strategy Selection
 
-路由表中的"实现(GREEN)"需要根据 Plan 中的 Task 数量和风险等级选择实现方式：
+The "Implementation(GREEN)" in routing tables requires choosing implementation approach based on Plan Task count and risk level:
 
-| 条件 | 策略 | 理由 |
-|------|------|------|
-| Plan Tasks ≤ 3 | **直接实现**（主 session 内逐个完成） | Task 少，subagent 调度开销不值得 |
-| Plan Tasks 4-8，P0/P1 | **`ecw:impl-orchestration`** | Task 多且复杂，subagent 并行有意义 |
-| Plan Tasks 4-8，P2 | **直接实现** | 中等风险，不需要并行化开销 |
-| Plan Tasks > 8，P0/P1 | **`ecw:impl-orchestration`**，合并简单 Task | 避免 subagent 数量爆炸 |
-| P3 | **直接实现** | 低风险，无 Plan |
-| Bug 修复 | **直接实现** | 通常单点修复，无需并行 |
+| Condition | Strategy | Rationale |
+|-----------|----------|-----------|
+| Plan Tasks ≤ 3 | **Direct implementation** (complete sequentially in main session) | Few tasks; subagent dispatch overhead not worthwhile |
+| Plan Tasks 4-8, P0/P1 | **`ecw:impl-orchestration`** | Many complex tasks; subagent parallelism adds value |
+| Plan Tasks 4-8, P2 | **Direct implementation** | Medium risk; parallelization overhead unnecessary |
+| Plan Tasks > 8, P0/P1 | **`ecw:impl-orchestration`**, merge simple Tasks | Avoid subagent count explosion |
+| P3 | **Direct implementation** | Low risk, no Plan |
+| Bug fix | **Direct implementation** | Usually single-point fix, no parallelism needed |
 
-**实现策略在 ecw:writing-plans 完成后、进入实现前确定**。依据 Plan 文件中的 Task 列表计数。
+**Implementation strategy is determined after ecw:writing-plans completes, before entering implementation.** Based on Task list count in the Plan file.
 
-**合并简单 Task 的规则**（Plan Tasks > 8 时）：
-- **可合并**（批量交给 1-2 个 subagent）：单文件变更且无条件分支逻辑——枚举/常量定义、DTO/VO 新增字段、Mapper 单方法、配置变更、文档同步
-- **必须独立**：涉及状态机、跨域接口、多文件联动、条件分支或核心业务逻辑的 Task
+**Rules for merging simple Tasks** (when Plan Tasks > 8):
+- **Mergeable** (batch to 1-2 subagents): Single-file changes with no conditional branching — enum/constant definitions, DTO/VO new fields, Mapper single methods, config changes, doc sync
+- **Must be independent**: Tasks involving state machines, cross-domain interfaces, multi-file coordination, conditional branching, or core business logic
 
-**与 impl-verify 的关系**：
-- `ecw:impl-orchestration` 自带 per-task spec review + code quality review（P0），这些审查在实现阶段**即时发现**问题，避免错误级联
-- `ecw:impl-verify` 在实现**全部完成后**从需求/领域知识/Plan/工程标准四个维度做交叉验证，是更高层次的正确性检查
-- 两者互补，不互相替代
+**Relationship with impl-verify**:
+- `ecw:impl-orchestration` has built-in per-task spec review + code quality review (P0), providing **immediate feedback** during implementation to prevent error cascading
+- `ecw:impl-verify` performs cross-validation from requirements/domain knowledge/Plan/engineering standards **after all implementation completes** — a higher-level correctness check
+- The two complement each other; neither replaces the other
 
-### Bug 修复类变更
+### Bug Fix Changes
 
-| 风险等级 | 下游 skill |
-|---------|-----------|
-| 任何等级 | → invoke `ecw:systematic-debugging`（定位根因）→ **TDD:RED**（写复现测试）→ 修复(GREEN) → mvn test → `ecw:impl-verify` → ecw:biz-impact-analysis（P0/P1）→ **Phase 3** |
+| Risk Level | Downstream Skills |
+|-----------|-------------------|
+| Any level | → invoke `ecw:systematic-debugging` (locate root cause) → **TDD:RED** (write reproduction test) → Fix(GREEN) → mvn test → `ecw:impl-verify` → ecw:biz-impact-analysis (P0/P1) → **Phase 3** |
 
-Bug 修复不走 ecw:requirements-elicitation，但风险等级仍然决定事后的 ecw:biz-impact-analysis 要求。
+Bug fixes skip ecw:requirements-elicitation, but risk level still determines post-fix ecw:biz-impact-analysis requirements.
 
-**Phase 2** 在需求分析（ecw:requirements-elicitation / ecw:domain-collab）完成后、ecw:writing-plans 之前自动执行（见下方 Phase 2 章节）。
+**Phase 2** executes automatically after requirement analysis (ecw:requirements-elicitation / ecw:domain-collab) completes, before ecw:writing-plans (see Phase 2 section below).
 
 ---
 
-## Phase 1：快速预判
+## Phase 1: Quick Pre-Assessment
 
-### 触发时机
+### Trigger Timing
 
-用户描述完需求后，**第一个 skill 触发前**。
+After user describes requirement, **before the first downstream skill triggers**.
 
-### 执行步骤
+### Execution Steps
 
-#### Step 1：关键词提取与域定位
+#### Step 1: Keyword Extraction & Domain Identification
 
-从用户的需求描述中提取：
-- **业务关键词** → 映射到域（参考项目 CLAUDE.md 的域路由部分（关键词→域映射表））
-- **操作关键词** → 判定操作类型（增删改查、状态变更、消息格式等）
-- **敏感词** → 直接触发高风险标记
-- **域匹配计数** → 统计匹配到几个不同的域（用于判定单域/跨域路由，参见 Skill Interaction）
+Extract from user's requirement description:
+- **Business keywords** → Map to domains (reference project CLAUDE.md domain routing section (keyword→domain mapping table))
+- **Operation keywords** → Determine operation type (CRUD, state changes, message format, etc.)
+- **Sensitive words** → Directly trigger high-risk flag
+- **Domain match count** → Count how many distinct domains matched (for single-domain/cross-domain routing, see Skill Interaction)
 
-**域匹配判定：** 从项目 CLAUDE.md 的域路由部分（关键词→域映射表）读取关键词，逐一匹配用户输入。记录匹配到的域列表和数量，输出到 Phase 1 报告中。
+**Domain match determination:** Read keywords from project CLAUDE.md domain routing section (keyword→domain mapping table), match against user input one by one. Record matched domain list and count, output to Phase 1 report.
 
-**敏感词判定：** → 读取 ecw.yml `paths.risk_factors` 指定的文件（默认 `.claude/ecw/change-risk-classification.md`）§快速参考 获取完整的关键词→预估等级映射表。命中任一敏感词 → 至少 P1。
+**Sensitive word determination:** → Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Quick Reference for the complete keyword→estimated level mapping table. Match any sensitive word → at least P1.
 
-#### Step 2：快速查共享资源表
+#### Step 2: Quick Shared Resource Check
 
-读取 ecw.yml `paths.knowledge_common` 下的 `shared-resources.md`（§3），检查用户提到的类/方法是否在共享资源表中。
+Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`, check whether classes/methods mentioned by user appear in the shared resources table.
 
-→ 读取 ecw.yml `paths.risk_factors` 指定的文件（默认 `.claude/ecw/change-risk-classification.md`）§因子 1：影响范围 获取域依赖数量→风险等级的阈值映射。
+→ Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Factor 1: Impact Scope for the domain dependency count→risk level threshold mapping.
 
-**注意：** Phase 1 查 §3（共享资源）+ §2（MQ 拓扑，仅检查用户提到的关键词是否涉及 MQ Topic）。不查 §1/§4/§5（Phase 2 再查）。
+**Note:** Phase 1 checks §3 (shared resources) + §2 (MQ topology, only check if user-mentioned keywords involve MQ Topics). Does not check §1/§4/§5 (deferred to Phase 2).
 
-**P2 轻量检查：** 对于 P2 单域需求（跳过 ecw:requirements-elicitation，无需求分析产物），Phase 1 的 §3 + §2 检查结果即为最终风险信号。如果发现涉及共享资源或 MQ Topic 的写操作变更，**当场升级为 P1**，不等 Phase 2。
+**P2 lightweight check:** For P2 single-domain requirements (skips ecw:requirements-elicitation, no requirement analysis artifacts), Phase 1's §3 + §2 check results serve as final risk signals. If shared resources or MQ Topic write-operation changes are discovered, **upgrade to P1 immediately** — do not wait for Phase 2.
 
-#### Step 3：综合判定
+#### Step 3: Composite Assessment
 
 ```
-总风险 = max(关键词预估等级, 共享资源等级)
-跨域判定 = Step 1 匹配到的域数量 >= 2 ? "跨域" : "单域"
+Total Risk = max(Keyword Estimated Level, Shared Resource Level)
+Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domain"
 ```
 
-> 完整的三维因子定义（影响范围 / 变更类型 / 业务敏感度）参见 ecw.yml `paths.risk_factors` 指定的文件 §三维风险因子。Phase 1 只用前两维快速判定，Phase 2 使用完整三维。
+> Full three-dimensional factor definitions (Impact Scope / Change Type / Business Sensitivity) are in the file specified by ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses only the first two dimensions for quick assessment; Phase 2 uses all three.
 
-如果信息不足以判定，**默认 P2**（宁可多做不能少做）。
+If information is insufficient to determine, **default to P2** (better to over-process than under-process).
 
-根据"总风险 + 跨域判定"查 Skill Interaction 路由表确定后续流程。
+Look up "Total Risk + Cross-Domain determination" in the Skill Interaction routing table to determine downstream workflow.
 
-### Phase 1 输出格式
+### Phase 1 Output Format
 
-先输出简要评估（不超过 5 行）：
+First output a brief assessment (no more than 5 lines):
 
 ```markdown
-## 变更风险预判（Phase 1）
+## Change Risk Pre-Assessment (Phase 1)
 
-**P{X}** | {单域/跨域}（{域列表}）| {多域协作/B/无} | {一句话判定理由}
+**P{X}** | {single-domain/cross-domain} ({domain list}) | {multi-domain collab/B/none} | {one-line rationale}
 
-后续路由：{完整路由链，如 ecw:domain-collab(多域协作) → Phase 2 → ecw:writing-plans → TDD:RED → 实现(GREEN) → ecw:biz-impact-analysis → Phase 3}
+Downstream routing: {full routing chain, e.g., ecw:domain-collab(multi-domain) → Phase 2 → ecw:writing-plans → TDD:RED → Implementation(GREEN) → ecw:biz-impact-analysis → Phase 3}
 ```
 
-然后**立即使用 `AskUserQuestion` 工具**让用户确认（一次性确认等级 + 域 + 路由），不要输出大段文字等用户手动回复。用户确认后下游 skill 直接执行，不再二次确认。
+Then **immediately use `AskUserQuestion` tool** for user confirmation (confirm level + domains + routing in one go); do not output lengthy text waiting for manual reply. After user confirms, downstream skills execute directly without re-confirmation.
 
-**AskUserQuestion 调用方式：**
-
-```
-问题: "风险等级 P{X}，按上述流程继续？"
-选项:
-  1. "继续（推荐）" — 按当前等级和路由执行
-  2. "调整等级" — 升级或降级风险等级（选后追问目标等级）
-  3. "只分析" — 完成影响分析，不进入实现
-  4. "紧急修复" — 走快速通道，跳过完整流程
-```
-
-如果是 **P0/P1 且涉及库存、状态机、MQ 等高敏感变更**，在选项前追加一个多选确认问题：
+**AskUserQuestion invocation:**
 
 ```
-问题: "以下情况是否存在？（影响风险判定）"
+Question: "Risk level P{X}, proceed with the above workflow?"
+Options:
+  1. "Proceed (Recommended)" — Execute with current level and routing
+  2. "Adjust level" — Upgrade or downgrade risk level (will ask target level after selection)
+  3. "Analysis only" — Complete impact analysis without entering implementation
+  4. "Emergency fix" — Use fast track, skip full workflow
+```
+
+If **P0/P1 involving inventory, state machines, MQ, or other high-sensitivity changes**, prepend a multi-select confirmation question before the options:
+
+```
+Question: "Do any of the following apply? (affects risk assessment)"
 multiSelect: true
-选项:
-  1. "大促前冻结期" — 当前处于发版冻结窗口
-  2. "需外部系统配合" — 需要其他团队同步发版
-  3. "均不涉及" — 以上都不存在
+Options:
+  1. "Pre-release freeze period" — Currently in release freeze window
+  2. "External system coordination needed" — Requires other teams to co-release
+  3. "None of the above" — Neither applies
 ```
 
-用户选择后直接执行对应路由，不再需要二次确认。
+After user selection, execute the corresponding route directly without re-confirmation.
 
-### 状态持久化
+### State Persistence
 
-Phase 1 用户确认后，将 ECW 状态写入 `.claude/ecw/session-state.md`（用户可能在确认时调整等级，确认后写入保证数据准确）：
+After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.md` (user may adjust level during confirmation; writing after confirmation ensures data accuracy):
 
 ```markdown
 # ECW Session State
 
-- **风险等级**: P{X}
-- **域**: {域列表}
-- **模式**: {单域/跨域}
-- **路由**: {完整路由链}
-- **当前阶段**: phase1-complete
-- **创建时间**: {YYYY-MM-DD HH:mm}
-- **实现策略**: TBD（ecw:writing-plans 完成后根据 Task 数量确定）
-- **实现后任务**: impl-verify → biz-impact-analysis → phase3（Task IDs 在用户确认后由 TaskCreate 生成）
+- **Risk Level**: P{X}
+- **Domains**: {domain list}
+- **Mode**: {single-domain/cross-domain}
+- **Routing**: {full routing chain}
+- **Current Phase**: phase1-complete
+- **Created**: {YYYY-MM-DD HH:mm}
+- **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
+- **Post-Implementation Tasks**: impl-verify → biz-impact-analysis → phase3 (Task IDs generated by TaskCreate after user confirmation)
 
 ## Subagent Ledger
 
@@ -241,327 +241,327 @@ Phase 1 用户确认后，将 ECW 状态写入 `.claude/ecw/session-state.md`（
 |-------|-------|------|-----------|
 ```
 
-此文件作为 ECW 流程状态的唯一持久化载体，各 skill 的 coordinator 在 Agent 调度完成后追加 Subagent Ledger 行。用途：
-- 新 session 继续工作时读取恢复上下文
-- 用户查看当前 ECW 流程状态
-- compression 后手动恢复（用户说"读一下 ECW 状态"）
-- 监控脚本评估 subagent 消耗
+This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. Purposes:
+- Restore context when continuing work in a new session
+- User can view current ECW workflow state
+- Manual recovery after compression (user says "read ECW state")
+- Monitoring scripts to assess subagent consumption
 
-> **会话提示**：P0 跨域变更的完整流程通常需要 500+ turns。建议在方案完成后（spec-challenge 之后）切换新 session 执行实现，避免上下文压缩导致信息丢失。
+> **Session advisory**: Full workflow for P0 cross-domain changes typically requires 500+ turns. Recommend switching to a new session after plan completion (after spec-challenge) to avoid context compression causing information loss.
 >
-> **新 session 恢复**：TaskCreate 创建的 Task 不跨 session 持久化。新 session 读取 `session-state.md` 恢复上下文时，需根据 `实现后任务` 字段重新创建 pending Tasks（使用上述 TaskCreate 规则）。
+> **New session recovery**: Tasks created by TaskCreate do not persist across sessions. When a new session reads `session-state.md` to restore context, it needs to re-create pending Tasks based on the `Post-Implementation Tasks` field (using the TaskCreate rules above).
 
-### 路由任务创建
+### Route Task Creation
 
-Phase 1 用户确认后，为**实现后**的流程步骤创建 pending Tasks，确保不遗漏：
+After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission:
 
-| 风险等级 | 创建的 Tasks |
-|---------|------------|
-| P0/P1 | `ecw:impl-verify` → `ecw:biz-impact-analysis` → `Phase 3 校准` |
-| P2 | `ecw:impl-verify`（biz-impact-analysis 建议但不强制） |
-| P3 | 无 |
+| Risk Level | Tasks to Create |
+|-----------|----------------|
+| P0/P1 | `ecw:impl-verify` → `ecw:biz-impact-analysis` → `Phase 3 Calibration` |
+| P2 | `ecw:impl-verify` (biz-impact-analysis suggested but not mandatory) |
+| P3 | None |
 
-**创建方式**：使用 TaskCreate 工具，设置 blockedBy 依赖关系：
+**Creation method**: Use TaskCreate tool, set blockedBy dependency chain:
 
-1. TaskCreate: **"ecw:impl-verify — 实现正确性验证"**
-   - description: "实现完成后执行 `/ecw:impl-verify`，零「必须修复」才通过。完成后标记此 Task 并继续下一个。"
+1. TaskCreate: **"ecw:impl-verify — Implementation correctness verification"**
+   - description: "After implementation completes, execute `/ecw:impl-verify`. Pass only with zero must-fix findings. Mark this Task complete and continue to next."
    - status: pending
-2. TaskCreate: **"ecw:biz-impact-analysis — 业务影响分析"**（仅 P0/P1）
-   - description: "impl-verify 通过后执行 `/ecw:biz-impact-analysis`，分析代码变更对业务流程的影响。"
+2. TaskCreate: **"ecw:biz-impact-analysis — Business impact analysis"** (P0/P1 only)
+   - description: "After impl-verify passes, execute `/ecw:biz-impact-analysis` to analyze business impact of code changes."
    - blockedBy: [impl-verify task ID]
-3. TaskCreate: **"Phase 3 校准 — 风险分级反馈"**（仅 P0/P1）
-   - description: "biz-impact-analysis 报告产出后执行 Phase 3 校准，对比预测 vs 实际影响。"
+3. TaskCreate: **"Phase 3 Calibration — Risk classification feedback"** (P0/P1 only)
+   - description: "After biz-impact-analysis report is produced, execute Phase 3 calibration to compare predicted vs. actual impact."
    - blockedBy: [biz-impact-analysis task ID]
 
-> 这些 Task 在实现阶段始终可见（TaskList），AI 完成所有实现任务后会看到 pending 的 impl-verify Task，自然衔接到下一步。
+> These Tasks remain visible during implementation (TaskList). After AI completes all implementation tasks, it will see the pending impl-verify Task and naturally proceed to the next step.
 >
-> **Bug 修复**同理创建：所有等级创建 `ecw:impl-verify`；P0/P1 额外创建 `ecw:biz-impact-analysis` → `Phase 3 校准`（与需求类变更相同的 blockedBy 链）。
+> **Bug fixes** follow the same pattern: All levels create `ecw:impl-verify`; P0/P1 additionally create `ecw:biz-impact-analysis` → `Phase 3 Calibration` (same blockedBy chain as requirement changes).
 
 ---
 
-## 紧急通道（Fast Track）
+## Fast Track
 
-### 适用场景
+### Applicable Scenarios
 
-- 线上故障紧急修复（hotfix）
-- 用户明确说 "紧急"/"hotfix"/"线上问题"/"先修再补流程"
+- Production incident emergency fix (hotfix)
+- User explicitly says "urgent" / "hotfix" / "production issue" / "fix first, process later"
 
-### 执行逻辑
+### Execution Logic
 
-> 流程步骤和跳过项参见 ecw.yml `paths.risk_factors` 指定的文件 §紧急通道。
+> Workflow steps and skip items are in the file specified by ecw.yml `paths.risk_factors` §Fast Track.
 
-核心要点：保留 Phase 1 记录等级 → 1 轮简化确认 → 精简 plan → 实现（跳过 TDD）+ mvn test → `ecw:impl-verify` → 事后补做 `ecw:biz-impact-analysis`（标注 `[紧急通道]`）→ Phase 3 校准（标注 `[紧急通道]`）。
+Key points: Retain Phase 1 to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`) → Phase 3 calibration (tagged `[Fast Track]`).
 
-### 紧急通道路由表
+### Fast Track Routing Table
 
-| 风险等级 | 下游 skill |
-|---------|-----------|
-| 任何等级 | → Phase 1 快速确认 → 精简 plan（跳过需求澄清、对抗审查、TDD）→ 实现 + mvn test → `ecw:impl-verify` → `ecw:biz-impact-analysis`（标注`[紧急通道]`）→ Phase 3 校准 |
+| Risk Level | Downstream Skills |
+|-----------|-------------------|
+| Any level | → Phase 1 quick confirmation → lean plan (skip requirement elicitation, spec-challenge, TDD) → implementation + mvn test → `ecw:impl-verify` → `ecw:biz-impact-analysis` (tagged `[Fast Track]`) → Phase 3 calibration |
 
-### 紧急通道输出格式
+### Fast Track Output Format
 
-Phase 1 输出中追加：
+Append to Phase 1 output:
 
 ```markdown
-### 模式：紧急通道
+### Mode: Fast Track
 
-> 已进入紧急修复模式，跳过完整需求澄清、对抗审查和 TDD。
-> 修复完成后将补做 ecw:biz-impact-analysis 分析。
+> Entered emergency fix mode. Skipping full requirement elicitation, spec-challenge, and TDD.
+> Will run ecw:biz-impact-analysis post-fix.
 
-### 快速确认（3 个问题）
-1. 问题现象和影响范围？
-2. 修复方案（改什么、怎么改）？
-3. 是否有临时止血措施已上线？
+### Quick Confirmation (3 questions)
+1. What is the issue symptom and impact scope?
+2. Fix approach (what to change, how to change)?
+3. Is there a temporary mitigation already deployed?
 ```
 
 ---
 
-## Phase 2：精确定级
+## Phase 2: Precise Classification
 
-> **一句话**：Phase 1 靠关键词猜，Phase 2 靠依赖图查。P0/P1 需求分析完成后、ecw:writing-plans 之前自动执行。
+> **One-liner**: Phase 1 guesses from keywords; Phase 2 queries the dependency graph. Executes automatically for P0/P1 after requirement analysis completes, before ecw:writing-plans.
 
-### 快速参考
+### Quick Reference
 
-| 项 | 说明 |
-|----|------|
-| **谁执行** | risk-classifier 自身（不派 agent） |
-| **何时** | ecw:requirements-elicitation / ecw:domain-collab 完成后，ecw:writing-plans 之前 |
-| **适用** | P0/P1（有需求分析产物） |
-| **不适用** | P2（Phase 1 轻量检查已覆盖）、P3、Bug 修复（不经需求分析，直接走 systematic-debugging） |
-| **输入** | 需求分析产出的变更组件列表 |
-| **输出** | 精确等级 + 升降级处理 |
-| **升级** | 强制补充缺失流程步骤 |
-| **降级** | 建议用户可简化，由用户决定 |
+| Item | Details |
+|------|---------|
+| **Who executes** | risk-classifier itself (no agent dispatch) |
+| **When** | After ecw:requirements-elicitation / ecw:domain-collab completes, before ecw:writing-plans |
+| **Applicable** | P0/P1 (have requirement analysis artifacts) |
+| **Not applicable** | P2 (Phase 1 lightweight check already covered), P3, Bug fixes (skip requirement analysis, go directly to systematic-debugging) |
+| **Input** | List of changed components from requirement analysis output |
+| **Output** | Precise level + upgrade/downgrade handling |
+| **Upgrade** | Mandatory: backfill missing workflow steps |
+| **Downgrade** | Suggested: user may simplify, user decides |
 
-**重要：** Phase 1 输出时将 "Phase 2 精确定级" 加入 TaskCreate 的 todo list，确保不遗漏。
+**Important:** When outputting Phase 1, add "Phase 2 Precise Classification" to TaskCreate todo list to prevent omission.
 
-### 执行步骤
+### Execution Steps
 
-#### Step 1：提取需求分析产出的变更组件列表
+#### Step 1: Extract Changed Component List from Requirement Analysis
 
-从需求分析结果中提取所有将要修改的：
-- ecw:requirements-elicitation → 从需求摘要的"数据变更"和"流程"章节提取实体/组件
-- ecw:domain-collab → 从各域的 `affected_components` YAML 字段提取类名和资源名
+Extract all components to be modified from requirement analysis results:
+- ecw:requirements-elicitation → Extract entities/components from "Data Changes" and "Workflow" sections of requirement summary
+- ecw:domain-collab → Extract class names and resource names from each domain's `affected_components` YAML field
 
-> 信息粒度为类级（非方法级），足以做依赖图查询。
+> Information granularity is class-level (not method-level), sufficient for dependency graph queries.
 
-#### Step 2：完整依赖图查询
+#### Step 2: Full Dependency Graph Query
 
-**知识摘要优先读取**：如果 `.claude/ecw/knowledge-summary.md` 存在（由 domain-collab 生成），优先从该文件读取跨域依赖信息。仅在摘要文件不存在或信息不足时才读取原始知识文件。
+**Knowledge summary priority read**: If `.claude/ecw/knowledge-summary.md` exists (generated by domain-collab), read cross-domain dependency info from that file first. Only read original knowledge files when summary file does not exist or has insufficient information.
 
-对每个受影响的类/方法：
+For each affected class/method:
 
-| 查询 | 数据源 | 目的 |
-|------|--------|------|
-| 域间调用 | §1 `cross-domain-calls.md` | 谁调用了这个类？这个类调用了谁？（2 跳） |
-| MQ 影响 | §2 `mq-topology.md` | 涉及的 Topic 有哪些消费方/发布方？ |
-| 共享资源扇出 | §3 `shared-resources.md` | 完整使用方域列表 |
-| 外部系统 | §4 `external-systems.md` | 出入站接口影响 |
-| 端到端链路 | §5 `e2e-paths.md` | 落在哪条链路的哪个 step |
+| Query | Data Source | Purpose |
+|-------|------------|---------|
+| Cross-domain calls | §1 `cross-domain-calls.md` | Who calls this class? Who does this class call? (2 hops) |
+| MQ impact | §2 `mq-topology.md` | What consumers/publishers for involved Topics? |
+| Shared resource fanout | §3 `shared-resources.md` | Full list of consumer domains |
+| External systems | §4 `external-systems.md` | Inbound/outbound interface impact |
+| End-to-end paths | §5 `e2e-paths.md` | Which path, which step affected |
 
-#### Step 3：变更类型分析
+#### Step 3: Change Type Analysis
 
-分析 plan 中描述的变更模式：
-- 是否涉及状态机变更？
-- 是否删除/重命名公开方法？
-- 是否修改方法签名？
-- 是否涉及 SQL 写操作变更？
+Analyze change patterns described in the plan:
+- Does it involve state machine changes?
+- Does it delete/rename public methods?
+- Does it modify method signatures?
+- Does it involve SQL write-operation changes?
 
-#### Step 4：重新评定风险等级
+#### Step 4: Re-assess Risk Level
 
 ```
-Phase 2 等级 = max(影响范围, 变更类型, 业务敏感度)
+Phase 2 Level = max(Impact Scope, Change Type, Business Sensitivity)
 ```
 
-参考 ecw.yml `paths.risk_factors` 指定的文件中的三维因子表。
+Reference the three-dimensional factor table in the file specified by ecw.yml `paths.risk_factors`.
 
-#### Step 5：与 Phase 1 比较，处理升降级
+#### Step 5: Compare with Phase 1, Handle Upgrades/Downgrades
 
-| 场景 | 动作 |
-|------|------|
-| Phase 2 > Phase 1（升级） | **强制**：告知用户，补充缺失的流程步骤 |
-| Phase 2 < Phase 1（降级） | **建议**：告知用户可简化后续流程，由用户决定 |
-| Phase 2 = Phase 1 | 确认判定，继续执行 |
+| Scenario | Action |
+|----------|--------|
+| Phase 2 > Phase 1 (upgrade) | **Mandatory**: Inform user, backfill missing workflow steps |
+| Phase 2 < Phase 1 (downgrade) | **Suggested**: Inform user that downstream workflow can be simplified, user decides |
+| Phase 2 = Phase 1 | Confirm assessment, continue execution |
 
-### Phase 2 输出格式
+### Phase 2 Output Format
 
 ```markdown
-## 变更风险精确评估（Phase 2）
+## Change Risk Precise Assessment (Phase 2)
 
-### 风险等级：P{X}（Phase 1 预判：P{Y}，{升级/降级/不变}）
+### Risk Level: P{X} (Phase 1 pre-assessment: P{Y}, {upgraded/downgraded/unchanged})
 
-### 分级因子
-| 因子 | 等级 | 原因 |
-|------|------|------|
-| 影响范围 | P{X} | {详细说明：涉及哪些共享资源/跨域调用/MQ Topic} |
-| 变更类型 | P{X} | {详细说明：状态机/签名/SQL 等} |
-| 业务敏感度 | P{X} | {详细说明：库存/任务/订单等} |
+### Classification Factors
+| Factor | Level | Rationale |
+|--------|-------|-----------|
+| Impact Scope | P{X} | {details: which shared resources/cross-domain calls/MQ Topics} |
+| Change Type | P{X} | {details: state machine/signature/SQL etc.} |
+| Business Sensitivity | P{X} | {details: inventory/tasks/orders etc.} |
 
-### 影响范围明细
-- **共享资源：** {列表}
-- **跨域调用：** {列表}
-- **MQ Topic：** {列表}
-- **端到端链路：** {链路编号 + 受影响 step}
-- **外部系统：** {列表}
+### Impact Scope Details
+- **Shared resources:** {list}
+- **Cross-domain calls:** {list}
+- **MQ Topics:** {list}
+- **End-to-end paths:** {path ID + affected steps}
+- **External systems:** {list}
 
-### 等级变更
-{升级 → 列出需要补充的流程步骤}
-{降级 → 列出可以跳过的流程步骤（建议，用户决定）}
-{不变 → "Phase 1 预判准确，按原计划继续"}
+### Level Change
+{upgrade → list workflow steps to backfill}
+{downgrade → list workflow steps that can be skipped (suggested, user decides)}
+{unchanged → "Phase 1 pre-assessment was accurate, proceed as planned"}
 
-### 后续流程（更新）
-{根据最终等级列出剩余流程步骤}
+### Downstream Workflow (Updated)
+{list remaining workflow steps based on final level}
 ```
 
 ---
 
-## Phase 3：反馈校准（实现完成后）
+## Phase 3: Feedback Calibration (Post-Implementation)
 
-> **一句话**：Phase 1/2 靠规则预测，Phase 3 靠 biz-impact-analysis 实际数据校验预测准确度，输出配置校准建议。
+> **One-liner**: Phase 1/2 predict by rules; Phase 3 validates prediction accuracy using actual biz-impact-analysis data and outputs configuration calibration suggestions.
 
-### 快速参考
+### Quick Reference
 
-| 项 | 说明 |
-|----|------|
-| **谁执行** | risk-classifier 自身（不派 agent） |
-| **何时** | ecw:biz-impact-analysis 报告产出后自动执行 |
-| **适用** | P0/P1（必做）、P2（建议做）、紧急通道（事后 biz-impact-analysis 时一并执行） |
-| **不适用** | P3（不做 biz-impact-analysis，无 Phase 3） |
-| **输入** | Phase 1/Phase 2 的预测数据 + ecw:biz-impact-analysis 报告 |
-| **输出** | 校准建议（不自动修改配置） |
+| Item | Details |
+|------|---------|
+| **Who executes** | risk-classifier itself (no agent dispatch) |
+| **When** | Automatically after ecw:biz-impact-analysis report is produced |
+| **Applicable** | P0/P1 (mandatory), P2 (suggested), Fast Track (execute alongside post-hoc biz-impact-analysis) |
+| **Not applicable** | P3 (no biz-impact-analysis, no Phase 3) |
+| **Input** | Phase 1/Phase 2 prediction data + ecw:biz-impact-analysis report |
+| **Output** | Calibration suggestions (does not auto-modify configuration) |
 
-### 触发时机
+### Trigger Timing
 
-ecw:biz-impact-analysis 完成后，由当前会话的流程驱动方执行（即路由任务创建中的 "Phase 3 校准" Task 变为可执行状态后，AI 自行执行本章节逻辑）。不派发 Agent。前置条件：当前会话中 Phase 1 或 Phase 2 产出了风险等级，且 ecw:biz-impact-analysis 报告已生成。
+After ecw:biz-impact-analysis completes, executed by the current session's workflow driver (i.e., when the "Phase 3 Calibration" Task from route task creation becomes executable, AI executes this section's logic). No Agent dispatch. Prerequisites: Phase 1 or Phase 2 produced a risk level in current session, and ecw:biz-impact-analysis report has been generated.
 
-### 执行步骤
+### Execution Steps
 
-#### Step 1：对比预测 vs 实际
+#### Step 1: Compare Predicted vs. Actual
 
-从 biz-impact-analysis 报告中提取实际影响指标，与 Phase 1/Phase 2 的预测对比：
+Extract actual impact metrics from biz-impact-analysis report, compare with Phase 1/Phase 2 predictions:
 
-| 维度 | Phase 1 预测 | Phase 2 精确 | biz-impact-analysis 实际 | 偏差 |
-|------|-------------|-------------|----------------|------|
-| 影响域数 | {predicted} | {refined} | {actual} | {+/-N} |
-| 跨域调用 | {predicted} | {refined} | {actual} | {+/-N} |
-| MQ Topic | {predicted} | {refined} | {actual} | {+/-N} |
-| 外部系统 | {predicted} | {refined} | {actual} | {+/-N} |
-| 端到端链路 | {predicted} | {refined} | {actual} | {+/-N} |
-| 变更文件数 | — | — | {actual} | — |
+| Dimension | Phase 1 Predicted | Phase 2 Precise | biz-impact-analysis Actual | Deviation |
+|-----------|------------------|-----------------|---------------------------|-----------|
+| Affected domain count | {predicted} | {refined} | {actual} | {+/-N} |
+| Cross-domain calls | {predicted} | {refined} | {actual} | {+/-N} |
+| MQ Topics | {predicted} | {refined} | {actual} | {+/-N} |
+| External systems | {predicted} | {refined} | {actual} | {+/-N} |
+| End-to-end paths | {predicted} | {refined} | {actual} | {+/-N} |
+| Changed file count | — | — | {actual} | — |
 
-#### Step 2：判定预测准确性
+#### Step 2: Determine Prediction Accuracy
 
-根据 biz-impact-analysis 的实际影响范围，使用 `change-risk-classification.md` 中的三维因子表（影响范围 / 变更类型 / 业务敏感度）反推"实际应有等级"。对比对象为 Phase 2 等级（如果执行了 Phase 2）或 Phase 1 等级：
+Based on biz-impact-analysis actual impact scope, use the three-dimensional factor table (Impact Scope / Change Type / Business Sensitivity) in `change-risk-classification.md` to reverse-derive "actual appropriate level". Compare against Phase 2 level (if Phase 2 was executed) or Phase 1 level:
 
-| 场景 | 判定 |
-|------|------|
-| 预测等级 = 实际应有等级 | **准确** |
-| 预测过高（例如 P0 但实际只影响 1 个域、0 MQ） | **过度预警** |
-| 预测过低（例如 P2 但实际影响了 3+ 域、多个 MQ） | **漏报** |
+| Scenario | Determination |
+|----------|--------------|
+| Predicted level = actual appropriate level | **Accurate** |
+| Over-predicted (e.g., P0 but actually only 1 domain, 0 MQ) | **Over-alert** |
+| Under-predicted (e.g., P2 but actually 3+ domains, multiple MQ) | **Missed** |
 
-#### Step 3：输出校准建议
+#### Step 3: Output Calibration Suggestions
 
-**偏差显著时**（等级差 ≥ 2 级，或关键维度偏差 ≥ 50%），输出校准建议：
+**When deviation is significant** (level difference ≥ 2, or key dimension deviation ≥ 50%), output calibration suggestions:
 
 ```markdown
-## 风险预测校准建议（Phase 3）
+## Risk Prediction Calibration Suggestions (Phase 3)
 
-### 预测 vs 实际
-| 维度 | Phase 1 预测 | Phase 2 精确 | biz-impact-analysis 实际 |
-|------|-------------|-------------|----------------|
-| 风险等级 | P{x} | P{y} | 实际应为 P{z} |
-| 影响域数 | {n} | {n} | {n} |
-| 跨域调用 | {n} | {n} | {n} |
-| MQ Topic | {n} | {n} | {n} |
-| 外部系统 | {n} | {n} | {n} |
+### Predicted vs. Actual
+| Dimension | Phase 1 Predicted | Phase 2 Precise | biz-impact-analysis Actual |
+|-----------|------------------|-----------------|---------------------------|
+| Risk Level | P{x} | P{y} | Should be P{z} |
+| Affected domain count | {n} | {n} | {n} |
+| Cross-domain calls | {n} | {n} | {n} |
+| MQ Topics | {n} | {n} | {n} |
+| External systems | {n} | {n} | {n} |
 
-### 偏差分析
-{原因分析：为什么预测不准？}
-- 关键词匹配遗漏？→ change-risk-classification.md 需补充关键词
-- 共享资源表不全？→ shared-resources.md 需补充使用方域列表
-- 域注册表范围不准？→ domain-registry.md 需调整代码目录
-- 跨域调用矩阵缺失？→ cross-domain-calls.md 需补充调用关系
+### Deviation Analysis
+{Root cause analysis: Why was the prediction inaccurate?}
+- Keyword match missed? → change-risk-classification.md needs additional keywords
+- Shared resource table incomplete? → shared-resources.md needs consumer domain list additions
+- Domain registry scope inaccurate? → domain-registry.md needs code directory adjustment
+- Cross-domain call matrix missing? → cross-domain-calls.md needs call relationship additions
 
-### 建议调整
-- `change-risk-classification.md`: {具体建议，如"将 XXX 关键词从 P2 提升到 P1"}
-- `shared-resources.md`: {如"补充 XXX 共享资源的使用方域列表"}
-- `domain-registry.md`: {如"XXX 域的代码目录范围需要扩大"}
-- `cross-domain-calls.md`: {如"补充 A→B 的调用关系"}
+### Suggested Adjustments
+- `change-risk-classification.md`: {specific suggestion, e.g., "Upgrade keyword XXX from P2 to P1"}
+- `shared-resources.md`: {e.g., "Add consumer domain list for shared resource XXX"}
+- `domain-registry.md`: {e.g., "Expand code directory scope for domain XXX"}
+- `cross-domain-calls.md`: {e.g., "Add call relationship A→B"}
 
-> 以上为建议，需要用户确认后手动修改配置文件。
+> Above are suggestions only. Require user confirmation before manual configuration changes.
 ```
 
-**预测准确时**，输出简短确认：
+**When prediction is accurate**, output brief confirmation:
 
 ```
-Phase 3 校准完成：预测等级 P{x} 与实际影响一致，无需调整。
+Phase 3 calibration complete: Predicted level P{x} matches actual impact. No adjustments needed.
 ```
 
-**轻微偏差时**（等级差 1 级且关键维度偏差 < 50%），记录但不输出建议：
+**When deviation is minor** (level difference 1 and key dimension deviation < 50%), record but do not output suggestions:
 
 ```
-Phase 3 校准完成：预测等级 P{x}，实际接近 P{y}，轻微偏差在可接受范围内。
+Phase 3 calibration complete: Predicted level P{x}, actual closer to P{y}. Minor deviation within acceptable range.
 ```
 
-#### Step 4：追加校准记录
+#### Step 4: Append Calibration Record
 
-每次 Phase 3 执行完毕后，将校准结果追加到 `.claude/ecw/calibration-log.md`（路径可在 ecw.yml `paths.calibration_log` 配置）。
+After each Phase 3 execution, append calibration results to `.claude/ecw/calibration-log.md` (path configurable via ecw.yml `paths.calibration_log`).
 
-追加格式：
+Append format:
 
 ```markdown
-### {YYYY-MM-DD} — {变更简述}
+### {YYYY-MM-DD} — {change summary}
 
-| 维度 | Phase 1 | Phase 2 | 实际 |
-|------|---------|---------|------|
-| 风险等级 | P{x} | P{y} | P{z} |
-| 影响域数 | {n} | {n} | {n} |
-| 跨域调用 | {n} | {n} | {n} |
-| MQ Topic | {n} | {n} | {n} |
-| 外部系统 | {n} | {n} | {n} |
+| Dimension | Phase 1 | Phase 2 | Actual |
+|-----------|---------|---------|--------|
+| Risk Level | P{x} | P{y} | P{z} |
+| Affected domain count | {n} | {n} | {n} |
+| Cross-domain calls | {n} | {n} | {n} |
+| MQ Topics | {n} | {n} | {n} |
+| External systems | {n} | {n} | {n} |
 
-**判定**：{准确 / 过度预警 / 漏报 / 轻微偏差}
-**偏差原因**：{一句话说明，无偏差写"—"}
+**Determination**: {Accurate / Over-alert / Missed / Minor deviation}
+**Deviation cause**: {one-line explanation; write "—" if no deviation}
 
 ---
 ```
 
-> 如果文件不存在，先从 `templates/calibration-log.md` 复制初始模板（或直接创建含标题头的空文件）。
+> If file does not exist, first copy initial template from `templates/calibration-log.md` (or create an empty file with header).
 
-### 注意事项
+### Notes
 
-- Phase 3 **不自动修改任何配置文件**，只输出建议
-- 校准记录自动追加到 `calibration-log.md`，积累后可用于识别系统性偏差模式
-- 紧急通道的事后 biz-impact-analysis 同样触发 Phase 3
-
----
-
-## 手动触发
-
-除自动触发外，支持以下手动场景：
-
-| 命令 | 用途 |
-|------|------|
-| `/risk-classify` | 对当前需求手动触发 Phase 1 |
-| `/risk-classify P0` | 人工强制指定等级，跳过自动判定 |
-| `/risk-classify --recheck` | 重新执行 Phase 2（实现中途发现范围变大时使用） |
-| `/risk-classify --hotfix` | 进入紧急通道，走简化修复流程 |
-| `/risk-classify --phase3` | 执行 Phase 3 校准（biz-impact-analysis 报告产出后使用） |
+- Phase 3 **does not auto-modify any configuration files**, only outputs suggestions
+- Calibration records are auto-appended to `calibration-log.md`; accumulated records can be used to identify systematic deviation patterns
+- Fast Track post-hoc biz-impact-analysis also triggers Phase 3
 
 ---
 
-## 常见错误
+## Manual Trigger
 
-| 错误 | 后果 | 修正 |
-|------|------|------|
-| Phase 1 没等用户确认就继续 | 用户无法调整等级 | 必须等用户确认后再 invoke 下游 skill |
-| P0 变更跳过了 ecw:spec-challenge | 方案盲点未暴露 | 回退，补做 ecw:spec-challenge |
-| Phase 2 升级后没有补充流程 | 高风险变更走了低风险流程 | 升级是强制的，必须补充 |
-| 降级后直接跳过流程 | 人没确认就简化了 | 降级是建议的，需人确认 |
-| 只看关键词不查 §3 | 遗漏共享资源影响 | Phase 1 必须查 §3 |
-| 跨域需求走了 ecw:requirements-elicitation | 缺少各域独立分析和交叉审查 | 2+ 域匹配时必须走 ecw:domain-collab |
-| impl-verify 完成后忘了跑 ecw:biz-impact-analysis | 代码变更的业务影响未评估 | P0/P1 变更 impl-verify 完成后必须调用 `/biz-impact-analysis` |
-| P0-P2 变更跳过了 TDD:RED | 没有失败测试证明测试有效 | 测试先行是结构性要求，不是可选步骤 |
-| Bug 修复没写复现测试 | 修复正确性无法自动验证 | 先写复现测试（RED），再修复让测试通过（GREEN） |
-| biz-impact-analysis 后跳过 Phase 3 | 预测偏差没有被发现，规则无法改进 | biz-impact-analysis 报告产出后必须执行 Phase 3 校准 |
-| Phase 3 建议未经用户确认就修改配置 | 单次变更可能有偶然性，自动修改可能引入偏差 | Phase 3 只输出建议，由用户决定是否采纳 |
+In addition to automatic triggering, the following manual scenarios are supported:
+
+| Command | Purpose |
+|---------|---------|
+| `/risk-classify` | Manually trigger Phase 1 for current requirement |
+| `/risk-classify P0` | Manually force-assign level, skip auto-classification |
+| `/risk-classify --recheck` | Re-execute Phase 2 (use when scope expansion discovered mid-implementation) |
+| `/risk-classify --hotfix` | Enter Fast Track, use simplified fix workflow |
+| `/risk-classify --phase3` | Execute Phase 3 calibration (use after biz-impact-analysis report is produced) |
+
+---
+
+## Common Mistakes
+
+| Mistake | Consequence | Correction |
+|---------|------------|------------|
+| Phase 1 proceeded without waiting for user confirmation | User cannot adjust level | Must wait for user confirmation before invoking downstream skills |
+| P0 change skipped ecw:spec-challenge | Plan blind spots unexposed | Roll back, run ecw:spec-challenge |
+| Phase 2 upgrade did not backfill workflow | High-risk change went through low-risk workflow | Upgrade is mandatory; must backfill |
+| Downgrade applied without user confirmation | Workflow simplified without human approval | Downgrade is suggested; requires human confirmation |
+| Only checked keywords, skipped §3 | Missed shared resource impact | Phase 1 must check §3 |
+| Cross-domain requirement routed to ecw:requirements-elicitation | Missing per-domain independent analysis and cross-validation | 2+ domain matches must route to ecw:domain-collab |
+| Forgot ecw:biz-impact-analysis after impl-verify | Business impact of code changes not assessed | P0/P1 changes must invoke `/biz-impact-analysis` after impl-verify |
+| P0-P2 change skipped TDD:RED | No failing test to prove test effectiveness | Test-first is a structural requirement, not optional |
+| Bug fix without reproduction test | Fix correctness cannot be automatically verified | Write reproduction test first (RED), then fix to make it pass (GREEN) |
+| Skipped Phase 3 after biz-impact-analysis | Prediction deviation not discovered; rules cannot improve | Must execute Phase 3 calibration after biz-impact-analysis report |
+| Phase 3 suggestion applied without user confirmation | Single change may be coincidental; auto-modification may introduce bias | Phase 3 only outputs suggestions; user decides whether to adopt |

@@ -4,6 +4,14 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.4.1] - 2026-04-16
+
+### 性能优化
+
+- **Skill/Agent/Command 提示词中英文转换** — 14 个提示词文件从中文转为英文，总 token 从 52,859 降至 38,641（-26.9%）。P0 跨域工作流每次会话节省约 8,500-10,600 tokens（200K 上下文窗口释放约 7.1%），延迟上下文压缩触发
+  - 已转换文件：risk-classifier、impl-verify、domain-collab、requirements-elicitation、ecw-init、biz-impact-analysis (agent+skill)、spec-challenge (agent+skill)、ecw-validate-config、ecw-upgrade、cross-review、implementer-prompt、CLAUDE.md
+  - 3 轮子 Agent 语义校验：语义保真度 → 结构完整性 → 术语一致性，零残留中文、零含义漂移
+
 ## [0.4.0] - 2026-04-15
 
 ### Breaking Change
@@ -149,6 +157,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.4.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.1

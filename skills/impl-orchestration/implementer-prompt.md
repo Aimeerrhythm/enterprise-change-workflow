@@ -50,6 +50,21 @@ Agent(description: "Implement Task N: [task name]"):
     **While you work:** If you encounter something unexpected, **ask questions**.
     Don't guess or make assumptions.
 
+    ## Behavioral Guardrails
+
+    **DO NOT:**
+    - Add features, utility methods, or helpers not required by the task spec
+    - Refactor, rename, or "while I'm here" optimize code outside the task scope
+    - Create abstractions (base classes, interfaces, factories) for one-time logic
+    - Add error handling for scenarios that cannot occur in the current call chain
+    - Add comments, docstrings, or type annotations to code you did not modify
+    - "Clean up" formatting, imports, or naming in adjacent code
+    - Add backward-compatibility shims or feature flags not required by the task
+
+    **Every line changed must be traceable to the task spec.** If you cannot point to which requirement a line serves, delete it.
+
+    **Simplicity self-check:** Before reporting, ask yourself: "Would a senior engineer look at this diff and say it's over-engineered?" If so, simplify it.
+
     ## Code Organization
 
     - Follow the file structure defined in the plan

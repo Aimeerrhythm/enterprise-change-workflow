@@ -3,165 +3,165 @@ name: ecw-upgrade
 description: Upgrade ECW configuration in your project. Scans all migrations, applies pending ones via idempotent checks, with user confirmation.
 ---
 
-# ECW Upgrade — 项目配置升级
+# ECW Upgrade — Project Configuration Upgrade
 
-你正在执行 `/ecw-upgrade` 命令。你的任务是扫描所有可用迁移，通过幂等检查判断哪些已应用、哪些待执行，然后逐步应用待执行的变更。严格按以下步骤顺序执行，不要跳步。
+You are executing the `/ecw-upgrade` command. Your task is to scan all available migrations, determine which are already applied and which are pending via idempotent checks, then apply pending changes step by step. Follow the steps below strictly in order — do not skip steps.
 
-**重要：** 此命令属于 `enterprise-change-workflow` 插件。下文引用的所有模板和迁移文件位于该插件的 `templates/` 目录。读取时使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
-
----
-
-## Step 0：前置检查
-
-检查 `.claude/ecw/ecw.yml` 是否存在。如果不存在：
-
-```
-ECW 未初始化。请先运行 /ecw-init 初始化项目配置。
-```
-
-然后停止。
+**Important:** This command belongs to the `enterprise-change-workflow` plugin. All templates and migration files referenced below are in the plugin's `templates/` directory. Read them using the Read tool from the plugin installation path (i.e., `templates/` under the parent directory containing this `commands/` folder).
 
 ---
 
-## Step 1：扫描迁移并检测待执行项
+## Step 0: Prerequisite Check
 
-### 1a：列出所有迁移
+Check if `.claude/ecw/ecw.yml` exists. If not:
 
-扫描插件 `templates/upgrades/` 目录，列出所有子目录名（每个子目录名即版本号）。按版本号升序排列。
+```
+ECW not initialized. Please run /ecw-init first to initialize project configuration.
+```
+
+Then stop.
+
+---
+
+## Step 1: Scan Migrations & Detect Pending Items
+
+### 1a: List All Migrations
+
+Scan plugin `templates/upgrades/` directory, list all subdirectory names (each subdirectory name is a version number). Sort by version ascending.
 
 ```bash
 ls templates/upgrades/
 ```
 
-### 1b：逐版本幂等检测
+### 1b: Per-Version Idempotent Detection
 
-对每个迁移版本（升序），读取 `templates/upgrades/{version}/migration.md`，提取每个迁移步骤的**幂等检查**逻辑并执行：
+For each migration version (ascending), read `templates/upgrades/{version}/migration.md`, extract the **idempotent check** logic for each migration step and execute:
 
-- 幂等检查通过（条件已满足） → 标记为"已应用"
-- 幂等检查未通过（条件不满足） → 标记为"待执行"
-- 步骤有前置条件不满足 → 标记为"不适用"
+- Idempotent check passes (condition already met) → Tag as "already applied"
+- Idempotent check fails (condition not met) → Tag as "pending"
+- Step has unmet prerequisites → Tag as "not applicable"
 
-### 1c：汇总结果
+### 1c: Summarize Results
 
-统计所有迁移步骤的状态。
+Tally status of all migration steps.
 
-**全部为"已应用"或"不适用"** → 输出：
-
-```
-ECW 配置已是最新，所有迁移均已应用，无需操作。
-```
-
-然后停止。
-
-**有"待执行"的步骤** → 使用 `AskUserQuestion` 展示：
+**All "already applied" or "not applicable"** → Output:
 
 ```
-ECW 配置升级 — 检测到待执行的迁移：
+ECW configuration is up to date. All migrations already applied. No action needed.
+```
+
+Then stop.
+
+**Has "pending" steps** → Use `AskUserQuestion` to present:
+
+```
+ECW Configuration Upgrade — Pending migrations detected:
 
 {version_1}:
-  {概述内容}
-  待执行步骤：{列出待执行的步骤摘要}
-  已跳过步骤：{列出已应用的步骤}
+  {overview content}
+  Pending steps: {list pending step summaries}
+  Skipped steps: {list already-applied steps}
 
-{version_2}（如有）:
+{version_2} (if any):
   ...
 
-选项：
-  1. "执行升级（推荐）" — 逐步执行待执行的迁移步骤
-  2. "仅查看详情" — 显示详细迁移内容但不执行
-  3. "跳过" — 不执行升级
+Options:
+  1. "Run upgrade (Recommended)" — Execute pending migration steps one by one
+  2. "View details only" — Show detailed migration content without executing
+  3. "Skip" — Do not run upgrade
 ```
 
-如用户选择 "仅查看详情"：读取并展示每个迁移的完整 `migration.md` 内容，然后再次提问是否执行。
+If user selects "View details only": Read and display each migration's full `migration.md` content, then ask again whether to execute.
 
-如用户选择 "跳过"：停止。
+If user selects "Skip": Stop.
 
 ---
 
-## Step 2：逐版本执行迁移
+## Step 2: Execute Migrations Per Version
 
-对每个待执行的版本（按升序），执行以下流程：
+For each pending version (ascending), execute the following:
 
-### 2a：读取迁移定义
+### 2a: Read Migration Definition
 
-读取 `templates/upgrades/{version}/migration.md`，提取 `## 迁移步骤` 章节中的每个迁移步骤。
+Read `templates/upgrades/{version}/migration.md`, extract each migration step from the `## Migration Steps` section.
 
-### 2b：收集用户输入
+### 2b: Collect User Input
 
-在执行任何迁移步骤之前，先收集所有占位符的值。读取迁移定义中所有 snippet 文件的占位符（`{{...}}` 模式），去重后通过 AskUserQuestion 一次性收集：
+Before executing any migration steps, collect all placeholder values first. Read all snippet files in the migration definition for placeholder (`{{...}}`) patterns, deduplicate, then collect via a single AskUserQuestion:
 
 ```
-配置升级需要以下信息：
+Configuration upgrade needs the following info:
 
-1. 测试基类名称（Java 默认 "BaseUnitTest"，Go 默认 "TestSuite"）
-2. 测试模块名称（如 "wms-service"、"app"、"src"）
+1. Test base class name (Java default "BaseUnitTest", Go default "TestSuite")
+2. Test module name (e.g., "wms-service", "app", "src")
 
-请提供（或按回车接受默认值）：
+Please provide (or press enter for defaults):
 ```
 
-### 2c：逐步执行迁移
+### 2c: Execute Steps Sequentially
 
-按迁移定义中的顺序（A → B → C ...）执行每个步骤。每个步骤：
+Follow the order defined in the migration (A → B → C ...) for each step:
 
-1. **幂等检查**：按迁移定义中的检查方式验证。如果已执行过，输出跳过原因并继续下一步
-2. **条件检查**：如果步骤有条件（如"仅 Java"），验证条件。不满足则跳过
-3. **读取目标文件**：使用 Read 工具读取项目中的目标文件
-4. **读取 snippet 模板**：从插件 `templates/upgrades/{version}/` 读取
-5. **替换占位符**：用 Step 2b 收集的值替换 `{{...}}`
-6. **定位插入点**：按迁移定义中的指引定位。使用 Edit 工具的 old_string 匹配插入位置
-7. **执行变更**：使用 Edit 或 Write 工具应用变更
-8. **输出结果**：
+1. **Idempotent check**: Verify per the migration definition's check method. If already executed, output skip reason and continue to next step
+2. **Condition check**: If the step has conditions (e.g., "Java only"), verify. If unmet, skip
+3. **Read target file**: Use the Read tool to read the project's target file
+4. **Read snippet template**: Read from plugin `templates/upgrades/{version}/`
+5. **Replace placeholders**: Replace `{{...}}` with values collected in Step 2b
+6. **Locate insertion point**: Follow the migration definition's guidance. Use Edit tool's old_string to match insertion location
+7. **Apply change**: Use Edit or Write tool to apply the change
+8. **Output result**:
 
 ```markdown
-✓ 迁移 {step_id}: {描述}
-  - 文件: {file_path}
-  - 操作: {insert/replace/append}
-  - 变更: {简述}
+✓ Migration {step_id}: {description}
+  - File: {file_path}
+  - Operation: {insert/replace/append}
+  - Change: {brief description}
 ```
 
-**错误处理**：
+**Error handling**:
 
-- 如果目标文件不存在 → 输出警告，跳过该步骤
-- 如果 Edit 工具的 old_string 匹配失败 → 输出 "无法定位插入点，请手动添加以下内容到 {file_path}："，然后输出 snippet 内容
-- 如果任何步骤出错 → 不阻塞后续步骤，记录错误到最终报告
+- Target file does not exist → Output warning, skip step
+- Edit tool's old_string match fails → Output "Cannot locate insertion point. Please manually add the following content to {file_path}:", then output snippet content
+- Any step errors → Do not block subsequent steps; record error in final report
 
 ---
 
-## Step 3：验证与总结
+## Step 3: Verify & Summarize
 
-### 3a：运行配置验证
+### 3a: Run Configuration Validation
 
-提示用户可运行 `/ecw-validate-config` 验证升级后的配置完整性。
+Prompt user that they can run `/ecw-validate-config` to verify post-upgrade configuration completeness.
 
-### 3b：输出升级总结
+### 3b: Output Upgrade Summary
 
 ```markdown
-## ECW 配置升级完成
+## ECW Configuration Upgrade Complete
 
-### 已执行的迁移
+### Executed Migrations
 
-| 版本 | 步骤 | 状态 | 说明 |
-|------|------|------|------|
-| {version} | 迁移 A: {描述} | {成功/跳过(已应用)/跳过(不适用)/失败} | {详情} |
-| {version} | 迁移 B: {描述} | {成功/跳过(已应用)/跳过(不适用)/失败} | {详情} |
+| Version | Step | Status | Details |
+|---------|------|--------|---------|
+| {version} | Migration A: {description} | {success/skipped (already applied)/skipped (not applicable)/failed} | {details} |
+| {version} | Migration B: {description} | {success/skipped (already applied)/skipped (not applicable)/failed} | {details} |
 | ... | ... | ... | ... |
 
-### 已变更的文件
+### Changed Files
 
-{列出所有被修改的文件路径}
+{list all modified file paths}
 
-### 后续操作
+### Next Steps
 
-1. **检查变更内容** — 浏览上述文件，确认注入的内容符合预期
-2. **自定义配置** — 根据项目情况调整 ecw.yml 中的 tdd 配置（如启用 check_test_files）
-3. **替换占位符** — 检查注入内容中是否残留 `{{...}}` 占位符
-4. **运行验证** — 执行 `/ecw-validate-config` 确认配置完整性
+1. **Review changes** — Browse the above files to confirm injected content meets expectations
+2. **Customize configuration** — Adjust tdd config in ecw.yml per project needs (e.g., enable check_test_files)
+3. **Replace placeholders** — Check if any `{{...}}` placeholders remain in injected content
+4. **Run validation** — Execute `/ecw-validate-config` to confirm configuration completeness
 ```
 
 ---
 
-## 错误处理
+## Error Handling
 
-- 如果 ecw.yml 无法解析，报告错误并停止（不执行任何迁移）
-- 如果某个迁移步骤失败，记录错误后继续执行后续步骤
-- 如果 snippet 模板无法读取，报告 "无法读取迁移模板 {path}。插件安装可能不完整。" 并跳过该步骤
+- If ecw.yml cannot be parsed, report error and stop (do not execute any migrations)
+- If a migration step fails, record error then continue executing subsequent steps
+- If a snippet template cannot be read, report "Cannot read migration template {path}. Plugin installation may be incomplete." and skip that step

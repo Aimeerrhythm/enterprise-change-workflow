@@ -3,169 +3,169 @@ name: ecw-validate-config
 description: Validate ECW configuration files for completeness and correctness. Checks for unfilled placeholders, missing files, and broken references.
 ---
 
-# ECW 配置验证
+# ECW Configuration Validation
 
-你正在执行 `/ecw-validate-config` 命令。你的任务是检查项目的 ECW 配置完整性和正确性，然后输出结构化报告。严格按以下步骤顺序执行。
+You are executing the `/ecw-validate-config` command. Your task is to check the project's ECW configuration completeness and correctness, then output a structured report. Follow the steps below strictly in order.
 
 ---
 
-## Step 1：定位配置
+## Step 1: Locate Configuration
 
-检查 `.claude/ecw/` 目录是否存在。如不存在，报告：
+Check if `.claude/ecw/` directory exists. If not, report:
 
 ```
-ECW 未初始化。请先运行 /ecw-init 初始化项目配置。
+ECW not initialized. Please run /ecw-init first to initialize project configuration.
 ```
 
-然后停止。
+Then stop.
 
-如果目录存在，读取 `ecw.yml`：
+If the directory exists, read `ecw.yml`:
 
 ```bash
 cat .claude/ecw/ecw.yml
 ```
 
-解析 `paths` 部分获取所有配置路径。如 paths 部分缺失，回退到默认值。
+Parse the `paths` section to get all configuration paths. If the paths section is missing, fall back to defaults.
 
 ---
 
-## Step 2：检查 ecw.yml
+## Step 2: Check ecw.yml
 
-读取 `.claude/ecw/ecw.yml` 并检查：
+Read `.claude/ecw/ecw.yml` and check:
 
-### 2a：未填充的占位符
+### 2a: Unfilled Placeholders
 
-搜索未替换的模板占位符：
-- `project.name` 中仍为 `"Your Project Name"`
-- 值中包含 `{...}` 模式
-- `component_types` 仍被注释（只有默认的 `Service` 条目）
+Search for unreplaced template placeholders:
+- `project.name` still set to `"Your Project Name"`
+- Values containing `{...}` patterns
+- `component_types` still commented out (only default `Service` entry)
 
-### 2b：语言一致性
+### 2b: Language Consistency
 
-- `project.language` 应与项目根目录的文件匹配（pom.xml → java、go.mod → go 等）
-- `scan_patterns` 的值应适配声明的语言
+- `project.language` should match files in project root (pom.xml → java, go.mod → go, etc.)
+- `scan_patterns` values should be appropriate for the declared language
 
-### 2c：路径有效性
+### 2c: Path Validity
 
-对 `paths` 部分的每个路径，检查引用的文件/目录是否存在：
+For each path in the `paths` section, check whether the referenced file/directory exists:
 - `domain_registry`
 - `risk_factors`
 - `path_mappings`
 - `knowledge_root`
 - `knowledge_common`
-- `calibration_log`（可选，可能尚不存在——不算错误）
+- `calibration_log` (optional — may not exist yet; not an error)
 
 ---
 
-## Step 3：检查 domain-registry.md
+## Step 3: Check domain-registry.md
 
-读取域注册表文件（路径来自 ecw.yml 或默认 `.claude/ecw/domain-registry.md`）。
+Read the domain registry file (path from ecw.yml or default `.claude/ecw/domain-registry.md`).
 
-### 3a：空白检查
+### 3a: Empty Check
 
-如果文件中没有域区块（只有模板头部），标记：
-- "域注册表为空，尚未注册任何业务域"
+If the file contains no domain blocks (only template header), flag:
+- "Domain registry is empty — no business domains registered"
 
-### 3b：逐域验证
+### 3b: Per-Domain Validation
 
-对每个注册的域，提取：
-- 域 ID
-- 知识根目录路径
-- 入口文档路径
-- 代码根目录路径
+For each registered domain, extract:
+- Domain ID
+- Knowledge root path
+- Entry document path
+- Code root path
 
-检查：
-- **知识根目录是否存在？** — `ls {knowledge_root}/ 2>/dev/null`
-- **入口文档是否存在？** — 检查指定路径的文件是否存在
-- **代码根目录是否存在？** — `ls {code_root}/ 2>/dev/null`
-- **是否残留占位符？** — 是否有 `{{...}}` 或 `{your_...}` 模式
-
----
-
-## Step 4：检查 ecw-path-mappings.md
-
-读取路径映射文件（路径来自 ecw.yml 或默认 `.claude/ecw/ecw-path-mappings.md`）。
-
-### 4a：空白检查
-
-如果文件中没有映射行（只有头部），标记：
-- "路径映射表为空，biz-impact-analysis 和完成验证 hook 的域匹配将依赖启发式规则"
-
-### 4b：路径存在性
-
-对每个映射行（`| path_prefix | domain |`）：
-- 检查 `path_prefix` 目录是否存在于项目中
-- 检查 `domain` 是否已在 domain-registry.md 中注册
-
-标记不匹配项：
-- 路径不存在 → "路径 `{path}` 不存在"
-- 域未注册 → "域 `{domain}` 未在 domain-registry.md 中注册"
+Check:
+- **Does knowledge root exist?** — `ls {knowledge_root}/ 2>/dev/null`
+- **Does entry document exist?** — Check if file at specified path exists
+- **Does code root exist?** — `ls {code_root}/ 2>/dev/null`
+- **Any remaining placeholders?** — `{{...}}` or `{your_...}` patterns
 
 ---
 
-## Step 5：检查 change-risk-classification.md
+## Step 4: Check ecw-path-mappings.md
 
-读取风险分级文件。
+Read the path mappings file (path from ecw.yml or default `.claude/ecw/ecw-path-mappings.md`).
 
-### 5a：占位符检查
+### 4a: Empty Check
 
-搜索未填充的占位符：
-- `{your_...}` 模式
-- `{{...}}` 模式
-- `TODO` / `TBD` 标记
+If the file has no mapping rows (header only), flag:
+- "Path mapping table is empty — biz-impact-analysis and completion verification hook domain matching will rely on heuristics"
 
----
+### 4b: Path Existence
 
-## Step 5b：模板结构同步检查
+For each mapping row (`| path_prefix | domain |`):
+- Check if `path_prefix` directory exists in the project
+- Check if `domain` is registered in domain-registry.md
 
-检查项目的 ECW 配置文件是否与当前插件模板保持结构一致。模板更新后已接入项目的配置不会自动升级，此步骤检测结构性漂移。
-
-**重要：** 读取模板时，使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
-
-### 5b-1：原样复制文件的结构对比
-
-对以下文件（ecw-init 中标注为"原样复制"的模板），对比项目副本与当前模板的**结构性差异**：
-
-**`change-risk-classification.md`：**
-- 读取插件 `templates/change-risk-classification.md`
-- 读取项目 `.claude/ecw/change-risk-classification.md`
-- 对比"风险等级 → 流程要求"表格中引用的 skill/工具名称：
-  - 提取模板和项目文件中所有出现的 skill 名称（如 `impl-verify`、`biz-impact-analysis`、`spec-challenge`、`requirements-elicitation`、`writing-plans`）
-  - 如果项目文件使用了模板中已不存在的术语（如 `code-review` 已被替换为 `impl-verify`），标记为"术语过期"
-- 对比"三维风险因子"章节：检查项目文件是否仍含未替换的模板占位符（`{your_...}` 模式）
-
-**`calibration-log.md`：**
-- 仅检查文件头格式是否与模板一致（此文件主要是追加数据，不做内容对比）
-
-### 5b-2：domain-registry 的字段完整性
-
-对比项目 domain-registry 中每个域定义的字段集合与 Scaffold 模板的标准字段集合：
-
-标准字段集合（来自 ecw-init Scaffold Step 3b）：
-- Domain ID、Display Name / 中文名、Knowledge Root / 知识根目录、Entry Document / 入口文档、Business Rules / 业务规则、Data Model / 数据模型、Code Root / 代码根目录
-
-对每个已注册域：
-- 检查是否缺少 Business Rules / 业务规则 字段 → 标记"缺少业务规则路径"
-- 检查是否缺少 Data Model / 数据模型 字段 → 标记"缺少数据模型路径"
-- 如果字段存在且值不是"无独立文件"之类的显式标注，验证引用的文件是否存在
-
-### 5b-3：输出
-
-对每个检测到的差异，输出：
-- **术语过期**（warn）：项目文件使用了模板中已替换的术语
-- **字段缺失**（warn）：域定义缺少标准字段
-- **引用失效**（fail）：字段引用的文件不存在
+Flag mismatches:
+- Path does not exist → "Path `{path}` does not exist"
+- Domain not registered → "Domain `{domain}` is not registered in domain-registry.md"
 
 ---
 
-### 6a：知识根目录
+## Step 5: Check change-risk-classification.md
 
-检查知识根目录是否存在。如不存在，标记：
-- "知识根目录 `{path}` 不存在"
+Read the risk classification file.
 
-### 6b：公共知识
+### 5a: Placeholder Check
 
-检查 `knowledge_common` 目录是否存在。如存在，检查标准文件：
+Search for unfilled placeholders:
+- `{your_...}` patterns
+- `{{...}}` patterns
+- `TODO` / `TBD` markers
+
+---
+
+## Step 5b: Template Structure Sync Check
+
+Check whether project ECW configuration files remain structurally consistent with current plugin templates. Template updates do not auto-upgrade already-integrated project configurations; this step detects structural drift.
+
+**Important:** When reading templates, use the Read tool from the plugin installation path (i.e., `templates/` under the parent directory containing this `commands/` folder).
+
+### 5b-1: Structural Comparison of As-Is-Copied Files
+
+For the following files (marked as "copy as-is" in ecw-init), compare the project copy against the current template for **structural differences**:
+
+**`change-risk-classification.md`:**
+- Read plugin `templates/change-risk-classification.md`
+- Read project `.claude/ecw/change-risk-classification.md`
+- Compare skill/tool names referenced in the "Risk Level → Workflow Requirements" table:
+  - Extract all skill names appearing in both template and project files (e.g., `impl-verify`, `biz-impact-analysis`, `spec-challenge`, `requirements-elicitation`, `writing-plans`)
+  - If project file uses terminology no longer present in template (e.g., `code-review` replaced by `impl-verify`), flag as "stale terminology"
+- Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders (`{your_...}` patterns)
+
+**`calibration-log.md`:**
+- Only check if file header format matches the template (this file is primarily append-only data — no content comparison)
+
+### 5b-2: domain-registry Field Completeness
+
+Compare each domain definition's field set in the project domain-registry against the Scaffold template's standard field set:
+
+Standard field set (from ecw-init Scaffold Step 3b):
+- Domain ID, Display Name, Knowledge Root, Entry Document, Business Rules, Data Model, Code Root
+
+For each registered domain:
+- Check if Business Rules field is missing → Flag "missing business rules path"
+- Check if Data Model field is missing → Flag "missing data model path"
+- If field exists and value is not an explicit annotation like "no standalone file", verify the referenced file exists
+
+### 5b-3: Output
+
+For each detected difference, output:
+- **Stale terminology** (warn): Project file uses terminology replaced in the template
+- **Missing field** (warn): Domain definition missing a standard field
+- **Broken reference** (fail): Field references a file that does not exist
+
+---
+
+### 6a: Knowledge Root
+
+Check if knowledge root directory exists. If not, flag:
+- "Knowledge root directory `{path}` does not exist"
+
+### 6b: Common Knowledge
+
+Check if `knowledge_common` directory exists. If it exists, check standard files:
 - `cross-domain-rules.md`
 - `cross-domain-calls.md`
 - `mq-topology.md`
@@ -173,64 +173,64 @@ cat .claude/ecw/ecw.yml
 - `external-systems.md`
 - `e2e-paths.md`
 
-对每个文件：检查是否存在，以及内容是否仍为模板占位符（文件大小 < 200 字节或仅包含标题）。
+For each file: Check if it exists and whether content is still template placeholder (file size < 200 bytes or contains only headers).
 
-### 6c：域级知识
+### 6c: Domain-Level Knowledge
 
-对域注册表中的每个域，检查其知识目录：
-- 目录是否存在？
-- `00-index.md`（或配置的入口文档）是否存在？
-- 是否有包含实际内容的 `.md` 文件？
+For each domain in the domain registry, check its knowledge directory:
+- Does the directory exist?
+- Does `00-index.md` (or configured entry document) exist?
+- Are there `.md` files with actual content?
 
 ---
 
-## Step 7：输出报告
+## Step 7: Output Report
 
-输出结构化验证报告：
+Output structured validation report:
 
 ```markdown
-## ECW 配置验证报告
+## ECW Configuration Validation Report
 
-### 总览
+### Summary
 
-| 检查项 | 状态 |
-|--------|------|
+| Check Item | Status |
+|-----------|--------|
 | ecw.yml | {pass/warn/fail} |
 | domain-registry.md | {pass/warn/fail} |
 | ecw-path-mappings.md | {pass/warn/fail} |
 | change-risk-classification.md | {pass/warn/fail} |
-| 模板结构同步 | {pass/warn/fail} |
-| 知识文件结构 | {pass/warn/fail} |
+| Template structure sync | {pass/warn/fail} |
+| Knowledge file structure | {pass/warn/fail} |
 
-### 问题清单
+### Issue List
 
-**必须修复（影响 ECW 功能）：**
+**Must fix (affects ECW functionality):**
 
-{编号列表，或 "无"}
+{numbered list, or "None"}
 
-**建议修复（提升准确性）：**
+**Suggested fix (improves accuracy):**
 
-{编号列表，或 "无"}
+{numbered list, or "None"}
 
-### 域健康度
+### Domain Health
 
-| 域 | 注册 | 知识目录 | 入口文档 | 业务规则 | 数据模型 | 代码目录 | 路径映射 |
-|----|------|---------|---------|---------|---------|---------|---------|
-| {domain} | {ok/missing} | {ok/missing} | {ok/missing} | {ok/missing/无独立文件} | {ok/missing/无独立文件} | {ok/missing} | {ok/missing} |
+| Domain | Registered | Knowledge Dir | Entry Doc | Business Rules | Data Model | Code Dir | Path Mapping |
+|--------|-----------|--------------|----------|---------------|-----------|---------|-------------|
+| {domain} | {ok/missing} | {ok/missing} | {ok/missing} | {ok/missing/no standalone file} | {ok/missing/no standalone file} | {ok/missing} | {ok/missing} |
 
-### 建议操作
+### Recommended Actions
 
-{按优先级排列的修复建议}
+{prioritized list of fix recommendations}
 ```
 
-状态定义：
-- **pass** — 配置完整，无问题
-- **warn** — 配置存在但有待完善项（占位符、空文件）
-- **fail** — 配置缺失或严重错误
+Status definitions:
+- **pass** — Configuration complete, no issues
+- **warn** — Configuration exists but has items to improve (placeholders, empty files)
+- **fail** — Configuration missing or severely broken
 
 ---
 
-## 错误处理
+## Error Handling
 
-- 如果某个文件无法读取，记录错误后继续检查其他文件。
-- 如果 ecw.yml 无法解析，报告解析错误并回退到默认路径继续剩余检查。
+- If a file cannot be read, record the error then continue checking other files.
+- If ecw.yml cannot be parsed, report the parse error and fall back to default paths for remaining checks.

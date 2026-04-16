@@ -6,180 +6,180 @@ description: |
   or manually via /spec-challenge on any spec/plan file.
 ---
 
-# Spec Challenge — 方案对抗评审
+# Spec Challenge — Adversarial Plan Review
 
-在方案/设计文档产出后，调度 `spec-challenge` agent 进行独立的对抗性评审，评审报告展示给用户后由用户逐条确认处理方式。
+After a plan/design document is produced, dispatch the `spec-challenge` agent for independent adversarial review. Present the review report to the user, who confirms handling for each item.
 
-## 触发方式
+## Trigger
 
-- **手动**：`/spec-challenge <文件路径>` — 对指定文档发起评审
-- **手动（无参数）**：`/spec-challenge` — 自动查找当前会话中最近产出的 spec 文件
-- **自动**：P0 变更、P1 跨域变更的 ecw:writing-plans 完成后，自动触发
+- **Manual**: `/spec-challenge <file path>` — Launch review on specified document
+- **Manual (no args)**: `/spec-challenge` — Auto-find the most recently produced spec file in current session
+- **Automatic**: After ecw:writing-plans completes for P0 changes or P1 cross-domain changes
 
-## 流程
+## Flow
 
 ```dot
 digraph spec_challenge {
   rankdir=TB;
 
-  "收集评审材料" [shape=box];
-  "调度 spec-challenge agent" [shape=box];
-  "展示评审报告" [shape=box];
-  "逐条用户确认" [shape=box];
-  "作者按用户决策执行" [shape=box];
-  "输出回应摘要" [shape=box];
-  "用户最终确认" [shape=box];
-  "评审通过" [shape=doublecircle];
+  "Collect review materials" [shape=box];
+  "Dispatch spec-challenge agent" [shape=box];
+  "Present review report" [shape=box];
+  "Per-item user confirmation" [shape=box];
+  "Author executes per user decisions" [shape=box];
+  "Output response summary" [shape=box];
+  "User final confirmation" [shape=box];
+  "Review passed" [shape=doublecircle];
 
-  "收集评审材料" -> "调度 spec-challenge agent";
-  "调度 spec-challenge agent" -> "展示评审报告";
-  "展示评审报告" -> "逐条用户确认";
-  "逐条用户确认" -> "作者按用户决策执行";
-  "作者按用户决策执行" -> "输出回应摘要";
-  "输出回应摘要" -> "用户最终确认";
-  "用户最终确认" -> "评审通过";
+  "Collect review materials" -> "Dispatch spec-challenge agent";
+  "Dispatch spec-challenge agent" -> "Present review report";
+  "Present review report" -> "Per-item user confirmation";
+  "Per-item user confirmation" -> "Author executes per user decisions";
+  "Author executes per user decisions" -> "Output response summary";
+  "Output response summary" -> "User final confirmation";
+  "User final confirmation" -> "Review passed";
 }
 ```
 
-### 关键规则：用户主导决策
+### Key Rule: User Drives Decisions
 
-**spec-challenge 报告返回后，严禁 AI 自行回应。** 必须按以下步骤执行：
+**After spec-challenge report returns, AI must NOT respond on its own.** Follow these steps strictly:
 
-1. **展示** — 完整展示 spec-challenge 的评审报告原文
-2. **逐条确认** — 对每条致命缺陷（F1, F2, ...），用 AskUserQuestion 让用户选择处理方式：
-   - ✅ 同意修改 — AI 按此执行修改
-   - ❌ 不同意 — 用户提供理由或由 AI 草拟技术反驳供用户确认
-   - ❓ 需要讨论 — 进入讨论，直到用户做出决定
-3. **改进建议批量确认** — 改进建议（I1, I2, ...）可以一次性展示，让用户多选采纳/延后
-4. **执行** — AI 根据用户确认的决策逐条执行
-5. **最终确认** — 输出回应摘要，用户确认后评审通过
+1. **Present** — Display the full spec-challenge review report verbatim
+2. **Per-item confirmation** — For each fatal flaw (F1, F2, ...), use AskUserQuestion to let user choose handling:
+   - ✅ Agree to modify — AI executes the modification
+   - ❌ Disagree — User provides rationale, or AI drafts technical rebuttal for user confirmation
+   - ❓ Needs discussion — Enter discussion until user decides
+3. **Batch confirm improvements** — Improvement suggestions (I1, I2, ...) can be presented at once, letting user multi-select which to adopt/defer
+4. **Execute** — AI executes per user-confirmed decisions
+5. **Final confirmation** — Output response summary, review passes after user confirms
 
-对盲区标注：确认是否需要在文档中明确标注。
+For blind spot annotations: Confirm whether they need to be explicitly noted in the document.
 
-## 调度 Agent 的 Prompt 模板
+## Agent Dispatch Prompt Template
 
-调度 spec-challenge agent 时，Coordinator 先确定 `{affected_domains}`：
-- **自动触发**：从当前会话中 domain-collab 报告或 risk-classifier 输出获取域列表
-- **手动触发**：从文档内容中提取涉及的域关键词，匹配项目 CLAUDE.md 域路由表；如无法确定，设为"请从文档内容推断涉及的域"
+When dispatching the spec-challenge agent, Coordinator first determines `{affected_domains}`:
+- **Auto-trigger**: Get domain list from current session's domain-collab report or risk-classifier output
+- **Manual trigger**: Extract domain keywords from document content, match against project CLAUDE.md domain routing table; if undeterminable, set to "please infer involved domains from document content"
 
-使用以下 prompt 结构：
-
-```
-请评审一份技术方案文档。
-
-## 待评审文档位置
-
-文件路径：{文档文件路径}
-
-请自行读取该文件获取完整内容。
-
-## 项目背景
-
-读取 `.claude/ecw/ecw.yml` 获取 project.name，读取 ecw.yml `paths.domain_registry` 获取域列表。
-项目知识文档位于 ecw.yml `paths.knowledge_root` 指定的目录。
-跨域调用关系记录在 ecw.yml `paths.knowledge_common` 下的 `cross-domain-rules.md`。
-
-方案涉及的域：{affected_domains}
-按需读取上述域的相关知识文件验证方案的准确性。不要一次性读取所有知识文件。
-
-## 评审要求
-
-按你的评审维度（准确性、信息质量、边界与盲区、健壮性）逐一评审。
-严格按规定的输出格式返回评审报告。
-
-请使用中文输出评审报告。
-```
-
-## 用户确认流程详细说明
-
-### 步骤 1：展示评审报告
-
-spec-challenge agent 返回后：
-
-1. **Ledger 更新**：向 `.claude/ecw/session-state.md` 的 Subagent Ledger 表追加一行：`| spec-challenge | reviewer | ecw:spec-challenge | large |`。Scale 参考：small（<20K tokens）、medium（20-80K）、large（>80K），spec-challenge agent 通常 large。
-2. 将完整评审报告写入 `.claude/ecw/spec-challenge-report.md`。
-3. **原样展示**完整评审报告给用户。不做任何回应、不做任何判断。
-
-### 步骤 2：逐条致命缺陷确认
-
-对每条致命缺陷（F1, F2, ...），用 AskUserQuestion 向用户提问：
+Use the following prompt structure:
 
 ```
-问题: "[F{n}] {缺陷标题} — {缺陷摘要}，你的决定？"
-选项:
-  - "同意修改" — AI 将修改方案文档来解决此缺陷
-  - "不同意" — 保持原方案，AI 草拟技术反驳理由供你确认
-  - "需要讨论" — 进入讨论，你可以补充上下文后再决定
+Please review a technical plan document.
+
+## Document to Review
+
+File path: {document file path}
+
+Please read the file yourself to get the full content.
+
+## Project Context
+
+Read `.claude/ecw/ecw.yml` to get project.name, read ecw.yml `paths.domain_registry` to get domain list.
+Project knowledge documents are in the directory specified by ecw.yml `paths.knowledge_root`.
+Cross-domain call relationships are recorded in `cross-domain-rules.md` under ecw.yml `paths.knowledge_common`.
+
+Domains involved in the plan: {affected_domains}
+Read relevant knowledge files for the above domains as needed to verify plan accuracy. Do not read all knowledge files at once.
+
+## Review Requirements
+
+Review each dimension (accuracy, information quality, boundaries & blind spots, robustness) one by one.
+Strictly follow the prescribed output format for the review report.
+
+Please output the review report in Chinese.
 ```
 
-**可以将多个致命缺陷合并到一次 AskUserQuestion 中（每条一个问题，最多 4 条一组）。**
+## User Confirmation Flow Details
 
-### 步骤 3：改进建议批量确认
+### Step 1: Present Review Report
 
-改进建议（I1, I2, ...）列表展示后，用一个多选 AskUserQuestion 让用户选择采纳项：
+After spec-challenge agent returns:
+
+1. **Ledger update**: Append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large.
+2. Write the full review report to `.claude/ecw/spec-challenge-report.md`.
+3. **Present verbatim** the full review report to user. No responses, no judgments.
+
+### Step 2: Per-Item Fatal Flaw Confirmation
+
+For each fatal flaw (F1, F2, ...), use AskUserQuestion to ask the user:
 
 ```
-问题: "以下改进建议，哪些需要采纳？未选的将延后到后续迭代。"
+Question: "[F{n}] {flaw title} — {flaw summary}. Your decision?"
+Options:
+  - "Agree to modify" — AI will modify the plan document to address this flaw
+  - "Disagree" — Keep original plan; AI will draft technical rebuttal for your confirmation
+  - "Needs discussion" — Enter discussion; you can provide additional context before deciding
+```
+
+**Multiple fatal flaws can be combined into one AskUserQuestion (one question per flaw, max 4 per group).**
+
+### Step 3: Batch Confirm Improvement Suggestions
+
+After presenting the improvement suggestions (I1, I2, ...) list, use one multi-select AskUserQuestion for user to select which to adopt:
+
+```
+Question: "Which improvement suggestions should be adopted? Unselected ones will be deferred to future iterations."
 multiSelect: true
-选项: I1, I2, I3, ...
+Options: I1, I2, I3, ...
 ```
 
-### 步骤 4：按用户决策执行
+### Step 4: Execute Per User Decisions
 
-根据用户的选择：
-- **同意修改的致命缺陷** → 修改方案文档，说明具体改动
-- **不同意的致命缺陷** → 草拟技术反驳理由，展示给用户确认
-- **采纳的改进建议** → 更新文档
-- **延后的改进建议** → 记录到文档"后续迭代"章节
+Based on user selections:
+- **Agreed fatal flaws** → Modify plan document, describe specific changes
+- **Disagreed fatal flaws** → Draft technical rebuttal, present to user for confirmation
+- **Adopted improvements** → Update document
+- **Deferred improvements** → Record in document's "Future Iterations" section
 
-## 回应摘要格式
+## Response Summary Format
 
-所有条目处理完毕后，输出汇总表供用户最终确认：
+After all items are handled, output summary table for user final confirmation:
 
 ```markdown
-## 评审回应摘要
+## Review Response Summary
 
-| 编号 | 类型 | 标题 | 用户决策 | 执行结果 |
-|------|------|------|---------|---------|
-| F1 | 致命 | ... | ✅ 同意修改 | 已更新 §3.2 |
-| F2 | 致命 | ... | ❌ 不同意 | 技术反驳：... |
-| F3 | 致命 | ... | ❓ 讨论后同意 | 已更新 §4.1 |
-| I1 | 改进 | ... | ✅ 采纳 | 已更新 |
-| I2 | 改进 | ... | ⏭️ 延后 | 记录到后续迭代 |
+| ID | Type | Title | User Decision | Execution Result |
+|----|------|-------|--------------|-----------------|
+| F1 | Fatal | ... | ✅ Agree to modify | Updated §3.2 |
+| F2 | Fatal | ... | ❌ Disagree | Technical rebuttal: ... |
+| F3 | Fatal | ... | ❓ Discussed, then agreed | Updated §4.1 |
+| I1 | Improvement | ... | ✅ Adopted | Updated |
+| I2 | Improvement | ... | ⏭️ Deferred | Recorded for future iterations |
 
-**状态**：等待用户最终确认
+**Status**: Awaiting user final confirmation
 ```
 
-输出摘要后，用 AskUserQuestion 请求用户最终确认：
-- "确认通过" — 评审完成，进入下一阶段
-- "还有修改" — 用户补充意见，继续调整
+After outputting summary, use AskUserQuestion for user final confirmation:
+- "Confirm passed" — Review complete, proceed to next phase
+- "More changes needed" — User adds feedback, continue adjusting
 
-## 评审完成条件
+## Review Completion Conditions
 
-- **用户已逐条确认**所有致命缺陷的处理方式
-- 所有致命缺陷要么被修复（用户同意），要么被技术理由反驳（用户不同意）
-- 用户已选择采纳/延后的改进建议
-- 文档已更新反映所有"同意修改"和"采纳"的改动
-- **用户最终确认**回应摘要，评审通过
+- User has **confirmed handling** for every fatal flaw
+- All fatal flaws are either fixed (user agreed) or rebutted with technical rationale (user disagreed)
+- User has selected which improvement suggestions to adopt/defer
+- Document has been updated to reflect all "agree to modify" and "adopted" changes
+- **User final confirmation** on response summary — review passed
 
-## 与流程的集成
+## Workflow Integration
 
-### 自动触发场景
+### Auto-Trigger Scenarios
 
-ecw:writing-plans 完成后，以下场景自动触发 ecw:spec-challenge 对抗审查：
+After ecw:writing-plans completes, ecw:spec-challenge adversarial review auto-triggers for:
 
-- **P0 变更**（任何域模式）
-- **P1 跨域变更**（涉及 2+ 域的高风险变更，跨域耦合风险需要独立审查）
+- **P0 changes** (any domain mode)
+- **P1 cross-domain changes** (high-risk changes involving 2+ domains — cross-domain coupling risks need independent review)
 
-流程：
+Flow:
 
-1. ecw:writing-plans 输出 plan 文件
-2. **先触发 ecw:spec-challenge** — 对 plan 进行对抗性评审
-3. challenge-response 完成后，将更新后的 plan 交给用户 review
-4. 用户 review 通过后进入实现
+1. ecw:writing-plans outputs plan file
+2. **Trigger ecw:spec-challenge first** — Adversarial review of the plan
+3. After challenge-response completes, present updated plan for user review
+4. After user review passes, enter implementation
 
 ```
-ecw:risk-classifier (P0 / P1跨域)
+ecw:risk-classifier (P0 / P1 cross-domain)
   → ecw:requirements-elicitation / ecw:domain-collab
   → Phase 2
   → ecw:writing-plans: write plan
@@ -188,37 +188,37 @@ ecw:risk-classifier (P0 / P1跨域)
   → implementation
 ```
 
-### 评审完成后：会话切分建议
+### Post-Review: Session Split Recommendation
 
-spec-challenge 完成且用户确认评审结果后（Plan 已更新），对 **P0 和 P1 跨域变更** 输出切分建议：
+After spec-challenge completes and user confirms review results (Plan updated), output split recommendation for **P0 and P1 cross-domain changes**:
 
-此时分析阶段产出物已全部落盘：
-- domain-collab 报告 → `.claude/plans/domain-collab-report.md`
-- Plan 文件 → `.claude/plans/` 目录
-- Spec-challenge 记录 → `.claude/ecw/spec-challenge-report.md`
-- ECW 状态 → `.claude/ecw/session-state.md`
-- 知识摘要 → `.claude/ecw/knowledge-summary.md`
+At this point, all analysis phase artifacts have been persisted:
+- domain-collab report → `.claude/plans/domain-collab-report.md`
+- Plan file → `.claude/plans/` directory
+- Spec-challenge record → `.claude/ecw/spec-challenge-report.md`
+- ECW state → `.claude/ecw/session-state.md`
+- Knowledge summary → `.claude/ecw/knowledge-summary.md`
 
-使用 AskUserQuestion 询问：
+Use AskUserQuestion:
 
 ```
-问题: "方案阶段完成，建议如何继续？"
-选项:
-  1. "新 session 实现（推荐）" — 在新 session 中执行实现，所有分析产出物已保存在文件中
-  2. "当前 session 继续" — 继续在当前 session 实现（注意：长 session 可能导致上下文压缩和信息丢失）
+Question: "Plan phase complete. How would you like to continue?"
+Options:
+  1. "New session for implementation (Recommended)" — Implement in a new session; all analysis artifacts are saved to files
+  2. "Continue in current session" — Continue implementing in current session (note: long sessions may cause context compression and information loss)
 ```
 
-选 1 时输出：
-"所有分析产出物已保存。在新 session 中说「继续 ECW 实现」，我会读取 Plan 文件和状态文件继续工作。"
+When option 1 is selected, output:
+"All analysis artifacts have been saved. In a new session, say 'continue ECW implementation' and I will read the Plan file and state file to resume work."
 
-同时输出实现策略建议（基于 Plan 中 Task 数量，详见 risk-classifier「实现策略选择」章节）：
-- Plan Tasks ≤ 3 → "建议直接实现（Task 少，不需要 subagent 并行）"
-- Plan Tasks 4-8，P0/P1 → "建议使用 `ecw:impl-orchestration`（Task 多，并行加速）"
-- Plan Tasks > 8，P0/P1 → "建议使用 `ecw:impl-orchestration`，合并简单 Task（详见实现策略选择章节）"
-- Plan Tasks 4+，P2 → "建议直接实现（中等风险，不需要并行化开销）"
+Also output implementation strategy recommendation (based on Task count in Plan; see risk-classifier "Implementation Strategy Selection" section):
+- Plan Tasks ≤ 3 → "Recommend direct implementation (few tasks, subagent parallelism not needed)"
+- Plan Tasks 4-8, P0/P1 → "Recommend using `ecw:impl-orchestration` (many tasks, parallelism accelerates)"
+- Plan Tasks > 8, P0/P1 → "Recommend using `ecw:impl-orchestration`, merge simple Tasks (see Implementation Strategy Selection section)"
+- Plan Tasks 4+, P2 → "Recommend direct implementation (medium risk, parallelization overhead unnecessary)"
 
-将建议的策略更新到 `.claude/ecw/session-state.md` 的 `实现策略` 字段。
+Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-state.md`.
 
-### 手动触发
+### Manual Trigger
 
-任何时候对任意 spec/plan 文件执行 `/spec-challenge <文件路径>`。
+At any time, run `/spec-challenge <file path>` on any spec/plan file.

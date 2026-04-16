@@ -6,332 +6,332 @@ description: >
   workflow. Also invocable manually via /ecw:impl-verify.
 ---
 
-# Impl-Verify — 实现正确性验证
+# Impl-Verify — Implementation Correctness Verification
 
-在实现完成后、标记任务完成前，对代码变更执行多维度交叉验证：代码逻辑 ↔ 需求 / 领域知识 / Plan / 工程标准。多轮收敛，零「必须修复」才通过。
+After implementation completes and before marking the task done, perform multi-dimensional cross-validation of code changes: code logic ↔ requirements / domain knowledge / Plan / engineering standards. Converge over multiple rounds; exit only with zero must-fix findings.
 
-## 为什么需要
+## Why This Is Needed
 
-实现阶段最危险的不是"代码写不出来"，而是"代码写出来了但逻辑不对"。典型问题：
+The most dangerous thing during implementation is not "code won't compile" but "code compiles but logic is wrong." Typical issues:
 
-- 状态机少了一个转换，某些场景下业务流程卡死
-- 验证规则漏了一条，非法数据写进数据库
-- Plan 说"失败时回滚"，代码却吞了异常
-- 需求说"从配置读取"，代码里硬编码了
+- State machine missing a transition — business flow deadlocks in certain scenarios
+- Validation rule omitted — invalid data written to database
+- Plan says "rollback on failure" — code swallows the exception
+- Requirement says "read from config" — code hardcodes the value
 
-这些问题靠编译检查抓不到（编译能过），靠结构一致性检查也抓不到（文件间没有矛盾），只有把代码逻辑和需求/规则/设计决策逐条对照才能发现。
+These issues cannot be caught by compilation checks (compilation passes), nor by structural consistency checks (no inter-file contradictions). Only line-by-line comparison of code logic against requirements/rules/design decisions can reveal them.
 
-## 触发方式
+## Trigger
 
-- **自动**：实现完成后，标记 task complete 之前
-- **手动**：`/ecw:impl-verify`
+- **Automatic**: After implementation completes, before marking task as complete
+- **Manual**: `/ecw:impl-verify`
 
-## 与其他验证组件的关系
+## Relationship with Other Verification Components
 
-| 组件 | 验什么 | 执行模型 | 必经？ |
-|------|--------|---------|--------|
-| **ecw:impl-verify（本 skill）** | 代码正确性 + 质量 | 多轮收敛，零「必须修复」退出 | 是（P0-P2） |
-| verify-completion hook | 编译、测试、引用完整性、知识同步 | 自动拦截 | 是（自动） |
-| ecw:biz-impact-analysis | 业务影响范围 | 单次分析 | 是（P0/P1 必须） |
-| ecw:cross-review | 文件间结构一致性 | 多轮收敛 | 否（手动可选） |
-| ecw:spec-challenge | 方案盲点、边界条件 | challenge-response | 方案阶段，非实现阶段 |
+| Component | What It Verifies | Execution Model | Mandatory? |
+|-----------|-----------------|-----------------|------------|
+| **ecw:impl-verify (this skill)** | Code correctness + quality | Multi-round convergence, exit on zero must-fix | Yes (P0-P2) |
+| verify-completion hook | Compilation, tests, reference integrity, knowledge sync | Auto-intercept | Yes (automatic) |
+| ecw:biz-impact-analysis | Business impact scope | Single analysis | Yes (P0/P1 mandatory) |
+| ecw:cross-review | Inter-file structural consistency | Multi-round convergence | No (manual, optional) |
+| ecw:spec-challenge | Plan blind spots, boundary conditions | Challenge-response | Plan phase, not implementation phase |
 
-**与 code-reviewer 的关系**：impl-verify Round 4（工程标准）吸收了 code-reviewer 的代码质量审查职责。在 ECW 工作流中，impl-verify 替代 code-reviewer 作为实现后的代码审查步骤。
+**Relationship with code-reviewer**: impl-verify Round 4 (engineering standards) absorbs the code quality review responsibility of code-reviewer. In the ECW workflow, impl-verify replaces code-reviewer as the post-implementation code review step.
 
-## 输入材料收集
+## Input Material Collection
 
-执行前，按以下顺序定位输入材料：
+Before execution, locate input materials in the following order:
 
-| 材料 | 来源 | Round |
-|------|------|-------|
-| **需求文档** | 当前会话中 requirements-elicitation 的输出 / domain-collab 报告 / 用户原始需求描述 | Round 1 |
-| **领域知识** | `.claude/knowledge/{domain}/business-rules.md`、`data-model.md`（通过 ecw-path-mappings.md 定位受影响域） | Round 2 |
-| **Plan 文件** | 当前会话中 writing-plans 产出的 plan 文件 | Round 3 |
-| **变更代码** | `git diff --name-only` + `git diff`（获取文件列表和详细变更） | 所有 Round |
-| **项目模式** | 项目已有代码的命名/分层/错误处理惯例 | Round 4 |
+| Material | Source | Round |
+|----------|--------|-------|
+| **Requirement document** | Current session's requirements-elicitation output / domain-collab report / user's original requirement description | Round 1 |
+| **Domain knowledge** | `.claude/knowledge/{domain}/business-rules.md`, `data-model.md` (locate affected domains via ecw-path-mappings.md) | Round 2 |
+| **Plan file** | Plan file produced by writing-plans in current session | Round 3 |
+| **Changed code** | `git diff --name-only` + `git diff` (get file list and detailed changes) | All Rounds |
+| **Project patterns** | Existing code's naming/layering/error-handling conventions | Round 4 |
 
-**知识文件读取优先级**（Round 2）：
-1. 先检查 `.claude/ecw/knowledge-summary.md` 是否存在且覆盖本次变更的域
-2. 如果摘要文件充分（包含状态机、验证规则、数据模型相关章节），基于摘要执行 Round 2
-3. 如果摘要不存在或不充分，读取完整的域知识文件
+**Knowledge file read priority** (Round 2):
+1. First check if `.claude/ecw/knowledge-summary.md` exists and covers domains affected by this change
+2. If summary file is sufficient (contains state machine, validation rules, data model sections), execute Round 2 based on summary
+3. If summary does not exist or is insufficient, read full domain knowledge files
 
-**退化处理**：
-- 无需求文档（P3 或退化场景）→ 跳过 Round 1，警告用户
-- 无领域知识文件 → 跳过 Round 2，警告用户
-- 无 Plan 文件 → 跳过 Round 3，警告用户
-- 以上均无 → 仅执行 Round 4（工程标准），输出警告
+**Degradation handling**:
+- No requirement document (P3 or degraded scenario) → Skip Round 1, warn user
+- No domain knowledge files → Skip Round 2, warn user
+- No Plan file → Skip Round 3, warn user
+- None of the above available → Execute Round 4 only (engineering standards), output warning
 
-### Diff 读取策略（减少重复）
+### Diff Read Strategy (Reduce Redundancy)
 
-1. **Round 1 开始前**：执行一次 `git diff --name-only` 和 `git diff`，将结果记为"基线 diff"
-2. **Round 2-4**：不重新执行 `git diff`。基于 Round 1 已读取的 diff 内容进行对照。如果需要查看特定文件的变更细节，使用 `git diff -- {具体文件}` 而非全量 diff
-3. **Round N+（修复复验）**：仅对修复涉及的文件执行 `git diff HEAD~1 -- {文件}` 获取增量变更，不重读全量 diff
-4. **文件变更表缓存**：Round 1 产出的变更文件列表（文件名 + 变更类型 + 变更行数）作为后续 Round 的索引，不需要重新生成
+1. **Before Round 1**: Execute `git diff --name-only` and `git diff` once, record as "baseline diff"
+2. **Rounds 2-4**: Do not re-execute `git diff`. Cross-reference against diff content already read in Round 1. If specific file change details are needed, use `git diff -- {specific file}` instead of full diff
+3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes; do not re-read full diff
+4. **Changed file table cache**: The changed file list (filename + change type + changed line count) produced in Round 1 serves as index for subsequent Rounds; no need to regenerate
 
-## 执行协议
+## Execution Protocol
 
-### Round 1 — 需求 ↔ 代码（双向追踪）
+### Round 1 — Requirements ↔ Code (Bidirectional Tracing)
 
-**目标**：每条需求被正确实现，每段代码变更有需求依据。
+**Goal**: Every requirement is correctly implemented; every code change has requirement backing.
 
-**A→B 方向（需求→代码）**：
+**A→B Direction (Requirements→Code)**:
 
-1. 从需求文档提取所有需求条目（功能点、业务规则、数据变更、边界条件）
-2. 对每条需求，定位代码实现（file:line）
-3. **不只确认存在，验证逻辑**：
-   - 条件分支是否与需求的条件一致？
-   - 边界值是否按需求处理？
-   - 数据变更是否匹配需求描述的字段/类型/约束？
-   - 错误场景是否按需求处理？
-4. 标注结果：
-   - ✅ 正确 — 逻辑匹配
-   - ⚠️ 偏差 — 实现与需求存在差异（描述偏差内容）→ **必须修复**
-   - ❌ 缺失 — 未实现 → **必须修复**
+1. Extract all requirement items from requirement document (feature points, business rules, data changes, boundary conditions)
+2. For each requirement, locate code implementation (file:line)
+3. **Don't just confirm existence — verify logic**:
+   - Do conditional branches match the requirement's conditions?
+   - Are boundary values handled per requirements?
+   - Do data changes match requirement-described fields/types/constraints?
+   - Are error scenarios handled per requirements?
+4. Tag results:
+   - ✅ Correct — logic matches
+   - ⚠️ Deviation — implementation differs from requirement (describe the deviation) → **must-fix**
+   - ❌ Missing — not implemented → **must-fix**
 
-**B→A 方向（代码→需求）**：
+**B→A Direction (Code→Requirements)**:
 
-1. 扫描 `git diff` 中所有新增/修改的代码
-2. 对每段显著变更（新方法、修改逻辑、新类、新字段），追溯到需求或设计决策
-3. 标注结果：
-   - ✅ 有依据 — 对应具体需求条目
-   - ❓ 无依据 — 需求文档中无对应项 → **需确认**（可能是范围蔓延，也可能是合理的实现细节）
+1. Scan all added/modified code in `git diff`
+2. For each significant change (new method, modified logic, new class, new field), trace back to requirement or design decision
+3. Tag results:
+   - ✅ Has backing — maps to specific requirement item
+   - ❓ No backing — no corresponding item in requirement document → **needs confirmation** (may be scope creep, or may be a reasonable implementation detail)
 
-### Round 2 — 领域知识 ↔ 代码（规则对齐）
+### Round 2 — Domain Knowledge ↔ Code (Rule Alignment)
 
-> 使用 Round 1 已读取的 diff 内容，不重新执行全量 `git diff`。仅按需读取特定文件的变更。
+> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
-**目标**：代码实现与域级业务规则和数据模型一致。
+**Goal**: Code implementation is consistent with domain-level business rules and data model.
 
-**操作**：
+**Operations**:
 
-1. 通过 `ecw-path-mappings.md` 定位变更代码所属的域
-2. 读取该域的 `business-rules.md` 和 `data-model.md`。**只读取与 diff 变更内容相关的章节**：状态机章节（如 diff 涉及状态变更）、验证规则章节（如 diff 涉及校验逻辑）、并发章节（如 diff 涉及锁操作）、幂等章节（如 diff 涉及 MQ 消费者）。如果不确定哪些章节相关，读取完整文件。
-3. 逐项比对：
+1. Locate the domain of changed code via `ecw-path-mappings.md`
+2. Read that domain's `business-rules.md` and `data-model.md`. **Only read sections relevant to diff changes**: state machine section (if diff involves state changes), validation rules section (if diff involves validation logic), concurrency section (if diff involves lock operations), idempotency section (if diff involves MQ consumers). If unsure which sections are relevant, read the full file.
+3. Compare item by item:
 
-| 维度 | 对照源 | 检查内容 |
-|------|--------|---------|
-| **状态机** | business-rules.md 状态机章节 | 代码的状态转换 = 文档定义？有无非法跳转？副作用（通知/MQ）是否匹配？ |
-| **验证规则** | business-rules.md 验证章节 | 代码的校验逻辑 = 文档的约束条件？必填字段、值域、格式是否一致？ |
-| **并发控制** | business-rules.md 并发章节 | 代码的锁模式（乐观锁/悲观锁/分布式锁）= 文档规则？ |
-| **幂等性** | business-rules.md 幂等章节 | MQ 消费者 / API 端点是否按文档做了去重？ |
-| **数据模型** | data-model.md | 新增字段类型/约束/默认值 = 文档定义？枚举值 = 文档枚举？ |
-| **跨域交互** | business-rules.md 跨域章节 | 跨域调用是否走文档定义的 Facade？参数/返回值是否匹配？ |
+| Dimension | Reference Source | What to Check |
+|-----------|-----------------|---------------|
+| **State machine** | business-rules.md state machine section | Do code state transitions = document definitions? Any illegal jumps? Do side effects (notifications/MQ) match? |
+| **Validation rules** | business-rules.md validation section | Does code validation logic = document constraints? Are required fields, value ranges, formats consistent? |
+| **Concurrency control** | business-rules.md concurrency section | Does code lock pattern (optimistic/pessimistic/distributed) = document rules? |
+| **Idempotency** | business-rules.md idempotency section | Do MQ consumers / API endpoints deduplicate per document? |
+| **Data model** | data-model.md | Do new field types/constraints/defaults = document definitions? Do enum values = document enums? |
+| **Cross-domain interaction** | business-rules.md cross-domain section | Do cross-domain calls go through document-defined Facade? Do parameters/return values match? |
 
-4. 不一致项标注：偏差描述 + 严重度（**必须修复** 或 **建议**）
+4. Tag inconsistencies: deviation description + severity (**must-fix** or **suggestion**)
 
-### Round 3 — Plan ↔ 代码（决策验证）
+### Round 3 — Plan ↔ Code (Decision Verification)
 
-> 使用 Round 1 已读取的 diff 内容，不重新执行全量 `git diff`。仅按需读取特定文件的变更。
+> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
-**目标**：Plan 中的每个设计决策在代码中被遵循。
+**Goal**: Every design decision in the Plan is followed in code.
 
-**操作**：
+**Operations**:
 
-1. 读取 Plan 文件，提取所有设计决策（架构选择、复用指令、执行顺序、错误处理策略、测试要求）
-2. 逐条验证：
+1. Read Plan file, extract all design decisions (architecture choices, reuse directives, execution order, error handling strategy, test requirements)
+2. Verify each:
 
-| 决策类型 | 验证方式 |
-|---------|---------|
-| 架构选择 | Plan 说"用策略模式" → 代码是否用了策略模式（而非 if-else 链）？ |
-| 复用指令 | Plan 说"复用 XxxManager.doSomething()" → 代码是否调用了该方法（而非重新实现）？ |
-| 执行顺序 | Plan 说"状态变更后发 MQ" → MQ 发送是否在状态更新之后？ |
-| 错误处理 | Plan 说"失败记日志+告警不阻塞" → catch 块是否如此实现？ |
-| 测试覆盖 | Plan 列了测试场景 → 是否都有对应测试用例？ |
-| 测试质量 | 测试是否包含精确断言（assertThat / assertEquals）而非仅 println 或 Assert.notNull？ |
-| 测试先行 | 测试文件是否在实现代码之前或同批次产出？（参考 git log，非阻塞提示） |
+| Decision Type | Verification Method |
+|--------------|-------------------|
+| Architecture choice | Plan says "use strategy pattern" → Did code use strategy pattern (not if-else chain)? |
+| Reuse directive | Plan says "reuse XxxManager.doSomething()" → Did code call that method (not re-implement)? |
+| Execution order | Plan says "send MQ after state change" → Is MQ send after state update? |
+| Error handling | Plan says "log + alert on failure, don't block" → Does catch block implement this? |
+| Test coverage | Plan listed test scenarios → Do corresponding test cases exist for all? |
+| Test quality | Do tests include precise assertions (assertThat / assertEquals) rather than just println or Assert.notNull? |
+| Test-first | Were test files produced before or in the same batch as implementation code? (reference git log; non-blocking hint) |
 
-3. 偏差标注 → **必须修复**（测试先行为**建议**级，不阻塞收敛）
+3. Tag deviations → **must-fix** (test-first is **suggestion** level, does not block convergence)
 
-### Round 4 — 工程标准 ↔ 代码（质量审查）
+### Round 4 — Engineering Standards ↔ Code (Quality Review)
 
-> 使用 Round 1 已读取的 diff 内容，不重新执行全量 `git diff`。仅按需读取特定文件的变更。
+> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
-**目标**：代码质量符合项目工程标准。吸收 code-reviewer 的职责。
+**Goal**: Code quality meets project engineering standards. Absorbs code-reviewer responsibilities.
 
-**操作**：
+**Operations**:
 
-1. 扫描变更代码，对照项目已有模式和工程标准：
+1. Scan changed code against project existing patterns and engineering standards:
 
-| 维度 | 检查内容 |
-|------|---------|
-| **命名一致性** | 新增类/方法/变量命名是否符合项目已有模式？ |
-| **重复代码** | 是否有可复用已有方法的场景？是否和其他类有大段重复？ |
-| **方法复杂度** | 单方法是否职责过多需拆分？嵌套层级是否过深？ |
-| **分层违反** | Controller 直接调用 Mapper？Service 直接操作 HTTP 请求？ |
-| **依赖方向** | 是否引入反向依赖（下层调用上层）？ |
-| **错误处理模式** | 是否与项目已有错误处理模式一致（统一异常类型、错误码规范）？ |
-| **资源管理** | 数据库连接/文件句柄/流是否正确关闭？ |
+| Dimension | What to Check |
+|-----------|---------------|
+| **Naming consistency** | Do new class/method/variable names match project existing patterns? |
+| **Duplicate code** | Are there opportunities to reuse existing methods? Any large duplications with other classes? |
+| **Method complexity** | Does a single method have too many responsibilities and need splitting? Is nesting depth excessive? |
+| **Layering violation** | Controller directly calling Mapper? Service directly operating HTTP request? |
+| **Dependency direction** | Does it introduce reverse dependency (lower layer calling upper layer)? |
+| **Error handling pattern** | Consistent with project existing error handling pattern (unified exception types, error code conventions)? |
+| **Resource management** | Are database connections/file handles/streams properly closed? |
 
-2. **严重度标注**：
-   - **必须修复**：分层违反、资源泄漏、严重重复（50+ 行相同逻辑）、反向依赖
-   - **建议**：方法偏长、命名可优化、轻微重复、可抽取但不紧急
+2. **Severity tagging**:
+   - **must-fix**: Layering violations, resource leaks, severe duplication (50+ lines of identical logic), reverse dependencies
+   - **suggestion**: Method too long, naming could be better, minor duplication, extractable but not urgent
 
-### Round N+（条件触发）— 修复复验
+### Round N+ (Conditional Trigger) — Fix Re-Verification
 
-**仅当之前任何 Round 存在「必须修复」发现且已修复后触发。**
+**Triggered only when any previous Round has must-fix findings that have been fixed.**
 
-**操作**：
+**Operations**:
 
-1. 收集所有修复涉及的文件
-2. 对这些文件重跑相关维度的检查（不是全量重跑，只跑受影响的 Round）
-3. 如本轮仍有「必须修复」发现，继续修复并触发下一轮
-4. 如用户也处理了「建议」级问题，修复复验同样覆盖这些变更（确保不引入新问题）
+1. Collect all files involved in fixes
+2. Re-run related dimension checks on those files (not a full re-run — only the affected Rounds)
+3. If this round still has must-fix findings, continue fixing and trigger next round
+4. If user also addressed suggestion-level issues, re-verification covers those changes too (ensure no new issues introduced)
 
-### 收敛条件
+### Convergence Condition
 
-**最近一轮零「必须修复」发现 → 退出，输出验证通过报告。**
+**Most recent round has zero must-fix findings → exit, output verification passed report.**
 
-- 「建议」级发现不阻塞收敛，记入最终报告供参考
-- **循环上限**：最多 5 轮。超过 5 轮仍有「必须修复」，输出所有未解决项并建议用户介入
+- Suggestion-level findings do not block convergence; recorded in final report for reference
+- **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention
 
-## 严重度定义
+## Severity Definitions
 
-| 严重度 | 定义 | 阻塞收敛 | 典型场景 |
-|--------|------|---------|---------|
-| **必须修复** | 不修复会导致功能错误、数据损坏、安全漏洞或严重架构问题 | 是 | 状态机缺转换、验证遗漏、异常吞掉、资源泄漏、分层违反、跨域契约违反 |
-| **建议** | 修复可提升代码质量和可维护性，但不影响功能正确性 | 否 | 方法偏长、命名不统一、轻微重复、可抽取公共方法 |
+| Severity | Definition | Blocks Convergence | Typical Scenarios |
+|----------|-----------|-------------------|-------------------|
+| **must-fix** | Not fixing will cause functional errors, data corruption, security vulnerabilities, or severe architectural issues | Yes | State machine missing transition, validation omission, exception swallowed, resource leak, layering violation, cross-domain contract violation |
+| **suggestion** | Fixing improves code quality and maintainability but does not affect functional correctness | No | Method too long, inconsistent naming, minor duplication, extractable common method |
 
-**判断原则**：如果不确定是「必须修复」还是「建议」，问自己：**这个问题上线后会不会导致 bug 或事故？** 会 → 必须修复。不会 → 建议。
+**Judgment principle**: If unsure whether it's must-fix or suggestion, ask yourself: **Will this issue cause a bug or incident in production?** Yes → must-fix. No → suggestion.
 
-## 风险等级行为差异
+## Risk Level Behavior Differences
 
-| 风险 | 执行范围 | 说明 |
-|------|---------|------|
-| **P0** | Round 1-4 全部（必须） | 全量验证，不可跳过 |
-| **P1** | Round 1-3（必须），Round 4 推荐 | 正确性必查，质量推荐 |
-| **P2** | Round 1（推荐），可手动跳过 | 至少做需求追踪 |
-| **P3** | 跳过 | 无需求/plan 文档可对照，直接走 hook |
-| **Bug** | Round 1 变体 | 验证修复逻辑是否正确解决报告的问题，不引入回归 |
+| Risk | Execution Scope | Details |
+|------|----------------|---------|
+| **P0** | Rounds 1-4 all (mandatory) | Full verification, cannot skip |
+| **P1** | Rounds 1-3 (mandatory), Round 4 recommended | Correctness mandatory, quality recommended |
+| **P2** | Round 1 (recommended), can be manually skipped | At least do requirement tracing |
+| **P3** | Skip | No requirement/plan documents to cross-reference; go directly to hook |
+| **Bug** | Round 1 variant | Verify fix logic correctly resolves the reported issue without introducing regression |
 
-**Bug 修复的 Round 1 变体**：
-- A→B：Bug 描述中的问题 → 修复代码是否确实解决了？
-- B→A：修复代码是否只改了需要改的，没有引入无关变更？
-- 追加：在 bug 涉及的代码路径上，检查是否有其他潜在的类似问题
+**Bug fix Round 1 variant**:
+- A→B: Bug description issue → Does fix code actually resolve it?
+- B→A: Does fix code only change what needs changing, without introducing unrelated changes?
+- Additional: On the code path involved in the bug, check for other potential similar issues
 
-## 输出格式
+## Output Format
 
-每轮输出：
+Per-round output:
 
 ```markdown
-### Impl-Verify Round {N} — {维度名称}
+### Impl-Verify Round {N} — {dimension name}
 
-**检查范围**：{对照的产物 + 代码文件列表}
+**Check scope**: {cross-referenced artifacts + code file list}
 
-**发现**：
+**Findings**:
 
-| # | 类型 | 对照源 | 代码位置 | 偏差描述 | 严重度 |
-|---|------|--------|---------|---------|--------|
-| 1 | 状态机偏差 | requirements: "A→B→C" | FooService.java:142 | 代码允许 A→C 跳转，缺少 B 状态 | 必须修复 |
-| 2 | 方法过长 | 工程标准 | BarService.java:60 | issue() 方法 50+ 行，混合了校验和业务逻辑 | 建议 |
+| # | Type | Reference Source | Code Location | Deviation Description | Severity |
+|---|------|-----------------|--------------|----------------------|----------|
+| 1 | State machine deviation | requirements: "A→B→C" | FooService.java:142 | Code allows A→C jump, missing state B | must-fix |
+| 2 | Method too long | Engineering standards | BarService.java:60 | issue() method 50+ lines, mixes validation and business logic | suggestion |
 
-**本轮发现 {X} 个必须修复 + {Y} 个建议。**
+**This round: {X} must-fix + {Y} suggestions.**
 ```
 
-零「必须修复」时输出：
+Zero must-fix output:
 
 ```markdown
-### Impl-Verify Round {N} — {维度名称}
+### Impl-Verify Round {N} — {dimension name}
 
-**检查范围**：{对照的产物 + 代码文件列表}
+**Check scope**: {cross-referenced artifacts + code file list}
 
-**发现**：无必须修复项。{Y} 条建议（不阻塞）。
+**Findings**: No must-fix items. {Y} suggestions (non-blocking).
 
-**本轮零必须修复，验证通过。**
+**This round zero must-fix, verification passed.**
 ```
 
-最终通过时输出总结：
+Final pass summary:
 
 ```markdown
-## Impl-Verify 验证通过
+## Impl-Verify Verification Passed
 
-经过 {N} 轮验证（修复了 {X} 个必须修复问题），实现正确性检查通过。
+After {N} rounds of verification (fixed {X} must-fix issues), implementation correctness check passed.
 
-**各维度结果**：
-- Round 1（需求↔代码）：{发现数} 必须修复，已解决
-- Round 2（领域知识↔代码）：{发现数} 必须修复，已解决
-- Round 3（Plan↔代码）：{发现数} 必须修复，已解决
-- Round 4（工程标准↔代码）：{发现数} 必须修复，已解决
-- Round {M}（修复复验）：零必须修复 ✓
+**Per-dimension results**:
+- Round 1 (Requirements↔Code): {count} must-fix, resolved
+- Round 2 (Domain Knowledge↔Code): {count} must-fix, resolved
+- Round 3 (Plan↔Code): {count} must-fix, resolved
+- Round 4 (Engineering Standards↔Code): {count} must-fix, resolved
+- Round {M} (Fix re-verification): Zero must-fix ✓
 
-**未处理的建议**（{数量} 条，不阻塞）：
-| # | 位置 | 建议内容 |
-|---|------|---------|
+**Unaddressed suggestions** ({count}, non-blocking):
+| # | Location | Suggestion Content |
+|---|----------|--------------------|
 | 1 | ... | ... |
 
-验证通过，可以标记任务完成。
+Verification passed. Task can be marked as complete.
 
-**下一步**（从 `.claude/ecw/session-state.md` 读取风险等级；如果文件不存在或缺少风险等级字段，用 AskUserQuestion 询问用户当前风险等级）：
-- P0/P1 变更 → **立即**使用 Skill 工具 invoke `ecw:biz-impact-analysis`，分析代码变更的业务影响。
-- P2 变更 → **建议**执行 `ecw:biz-impact-analysis`（非强制，可由用户决定跳过）。
-- P3 / 纯格式变更 → 无需 biz-impact-analysis。
+**Next step** (read risk level from `.claude/ecw/session-state.md`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
+- P0/P1 change → **Immediately** use Skill tool to invoke `ecw:biz-impact-analysis` to analyze business impact of code changes.
+- P2 change → **Suggested** to run `ecw:biz-impact-analysis` (not mandatory; user may decide to skip).
+- P3 / pure formatting change → No biz-impact-analysis needed.
 
-如果 TaskList 中有 pending 的 "ecw:biz-impact-analysis" Task，标记 impl-verify Task 为 completed 后该 Task 自动解除阻塞。
+If TaskList has a pending "ecw:biz-impact-analysis" Task, marking impl-verify Task as completed will automatically unblock that Task.
 ```
 
-## 输出约束
+## Output Constraints
 
-### 会话内输出限制
+### In-Session Output Limits
 
-每轮（Round）findings 表：
-- **≤ 5 条 must-fix**：直接输出完整 findings 表
-- **> 5 条 must-fix**：会话内输出摘要（统计数 + top 3 最严重项），完整 findings 写入 `.claude/ecw/impl-verify-findings.md`
-- **零 must-fix**：使用简化输出格式（`### Impl-Verify Round {N} — {维度}` + `**发现**：无必须修复项。{Y} 条建议（不阻塞）。` + `**本轮零必须修复，验证通过。**`），不超过 3 行
+Per-round findings table:
+- **≤ 5 must-fix**: Output full findings table directly
+- **> 5 must-fix**: Output summary in session (count + top 3 most severe items); write full findings to `.claude/ecw/impl-verify-findings.md`
+- **Zero must-fix**: Use simplified output format (`### Impl-Verify Round {N} — {dimension}` + `**Findings**: No must-fix items. {Y} suggestions (non-blocking).` + `**This round zero must-fix, verification passed.**`), no more than 3 lines
 
-最终通过摘要：
-- 总结不超过 **15 行**（各 Round 一行结果 + 未处理建议列表 max 5 条）
-- 如有被跳过的建议（suggestion），仅列出数量，不列明细
+Final pass summary:
+- Summary no more than **15 lines** (one line per Round result + unaddressed suggestion list max 5 items)
+- If there are skipped suggestions, list only the count, not details
 
-### 修复复验轮
+### Fix Re-Verification Rounds
 
-修复后的复验轮（Round N+）仅输出：
-- 复验的 must-fix 编号 + pass/fail 结果（表格形式，一行一条）
-- 新发现（如有）
-- **不重复输出已通过的 Round 结果**
+Fix re-verification rounds (Round N+) output only:
+- Re-verified must-fix IDs + pass/fail result (table format, one item per line)
+- New findings (if any)
+- **Do not repeat already-passed Round results**
 
-## 常见合理化 — 你正在绕过验证
+## Common Rationalizations — You Are Bypassing Verification
 
-以下想法出现时，**停下来**，你正在合理化跳过或弱化验证：
+When these thoughts occur, **stop** — you are rationalizing skipping or weakening verification:
 
-| 你的想法 | 现实 |
-|---------|------|
-| "这是合理的实现细节，不算偏差" | 如果需求明确规定了行为，实现差异就是偏差。标 ⚠️ 不标 ✅ |
-| "需求写得不清楚，所以不算缺失" | 标注为 ❓ 需确认，不是忽略。模糊需求是风险，不是免责 |
-| "这个 must-fix 其实影响不大，标 suggestion 吧" | 回到严重度定义：上线后会导致 bug 或事故？会 → must-fix。不要降级 |
-| "Round 4 都是建议级的，跳过吧" | Round 4 也能发现资源泄漏、分层违反这类 must-fix。必须执行 |
-| "前面几轮都没问题，后面轮次走个形式" | 每轮维度不同。Round 1 通过不代表 Round 2 会通过 |
-| "修复太多了，先标通过下次再修" | 收敛条件是零 must-fix，不是"差不多了"。这条不可商量 |
-| "这段代码不是我改的，不需要验证" | git diff 中出现的都验。你的修改可能破坏了周边代码的假设 |
-| "测试都过了，逻辑肯定没问题" | 测试通过 ≠ 逻辑正确。测试可能没覆盖该路径。impl-verify 验的是逻辑，不是测试结果 |
+| Your Thought | Reality |
+|-------------|---------|
+| "This is a reasonable implementation detail, not a deviation" | If the requirement explicitly specifies behavior, implementation differences are deviations. Tag ⚠️ not ✅ |
+| "The requirement was unclear, so it's not a miss" | Tag as ❓ needs confirmation, not ignore. Ambiguous requirements are risk, not exemption |
+| "This must-fix doesn't really have much impact, let me tag it suggestion" | Return to severity definition: Will it cause a bug or incident in production? Yes → must-fix. Do not downgrade |
+| "Round 4 is all suggestion-level, let me skip it" | Round 4 can also find resource leaks, layering violations — these are must-fix. Must execute |
+| "Previous rounds were clean, later rounds are just formality" | Each round covers different dimensions. Round 1 passing does not mean Round 2 will pass |
+| "Too many fixes, let me mark as passed and fix next time" | Convergence condition is zero must-fix, not "close enough." This is non-negotiable |
+| "I didn't change this code, no need to verify" | Everything in git diff gets verified. Your changes may break assumptions of surrounding code |
+| "Tests all pass, logic must be fine" | Tests passing ≠ logic correct. Tests may not cover that path. impl-verify checks logic, not test results |
 
-**铁律：收敛条件（零 must-fix）不可由验证者自行降级达成。只有修复代码才能达成收敛。**
+**Iron law: Convergence condition (zero must-fix) cannot be achieved by the verifier self-downgrading severity. Only fixing code achieves convergence.**
 
-## 约束
+## Constraints
 
-- **循环上限**：最多 5 轮。超过 5 轮仍有「必须修复」，输出所有未解决项并建议用户介入。
-- **可跳过场景**：P3 变更；纯格式/注释变更；无任何需求/plan/知识文件可对照的退化场景（警告后跳过）。
-- **不做的事**：
-  - 不检查文件间结构一致性（ecw:cross-review 的职责，手动可选）
-  - 不检查编译/引用/知识同步（verify-completion hook 的职责）
-  - 不分析业务影响范围（ecw:biz-impact-analysis 的职责）
-  - 不评审方案设计（ecw:spec-challenge 的职责，方案阶段而非实现阶段）
+- **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention.
+- **Skippable scenarios**: P3 changes; pure formatting/comment changes; degraded scenarios with no requirement/plan/knowledge files to cross-reference (skip with warning).
+- **Out of scope**:
+  - Does not check inter-file structural consistency (ecw:cross-review's responsibility, manual optional)
+  - Does not check compilation/references/knowledge sync (verify-completion hook's responsibility)
+  - Does not analyze business impact scope (ecw:biz-impact-analysis's responsibility)
+  - Does not review plan design (ecw:spec-challenge's responsibility, plan phase not implementation phase)
 
-## 常见实现偏差模式
+## Common Implementation Deviation Patterns
 
-供各 Round 重点关注：
+For focused attention in each Round:
 
-| 模式 | Round | 示例 |
-|------|-------|------|
-| **状态机转换缺失** | 1, 2 | 需求定义 A→B→C，代码允许 A→C 直接跳转 |
-| **验证规则遗漏** | 1, 2 | 需求要求"数量必须为正"，代码无校验 |
-| **错误处理不符** | 1, 3 | Plan 说"失败时回滚"，代码吞异常 |
-| **计算公式错误** | 1 | 需求 price × qty - discount，代码写成 (price - discount) × qty |
-| **范围蔓延** | 1 | 代码新增了需求未要求的功能 |
-| **幂等性缺失** | 2 | 新增 MQ 消费者未做去重，违反 business-rules.md 幂等章节 |
-| **跨域契约违反** | 2 | 代码直接调用跨域内部方法，未走文档定义的 Facade |
-| **复用决策未遵循** | 3 | Plan 指定复用已有方法，代码重新实现了一遍 |
-| **测试场景遗漏** | 3 | Plan 列了正常/异常/边界 3 个测试场景，只写了正常场景的测试 |
-| **断言缺失** | 3 | Plan 要求验证返回失败，测试只 println 结果没有 assert |
-| **Mock 滥用** | 3 | Mock 了被测逻辑本身的依赖输出，测试在测 Mock 行为而非真实代码 |
-| **分层违反** | 4 | Controller 直接调用 Mapper 绕过 Service 层 |
-| **资源泄漏** | 4 | 数据库连接/文件句柄未在 finally 中关闭 |
-| **严重重复** | 4 | 与另一个类有 50+ 行相同逻辑，应抽取公共方法 |
+| Pattern | Round | Example |
+|---------|-------|---------|
+| **State machine transition missing** | 1, 2 | Requirement defines A→B→C, code allows direct A→C jump |
+| **Validation rule omitted** | 1, 2 | Requirement says "quantity must be positive", code has no check |
+| **Error handling mismatch** | 1, 3 | Plan says "rollback on failure", code swallows exception |
+| **Calculation formula error** | 1 | Requirement: price × qty - discount, code: (price - discount) × qty |
+| **Scope creep** | 1 | Code adds functionality not required by requirements |
+| **Idempotency missing** | 2 | New MQ consumer has no deduplication, violating business-rules.md idempotency section |
+| **Cross-domain contract violation** | 2 | Code directly calls cross-domain internal method, not going through document-defined Facade |
+| **Reuse decision not followed** | 3 | Plan specifies reusing existing method, code re-implements it |
+| **Test scenario omitted** | 3 | Plan lists normal/exception/boundary 3 test scenarios, only normal scenario test written |
+| **Assertion missing** | 3 | Plan requires verifying failure return, test only prints result with no assert |
+| **Mock abuse** | 3 | Mocked the output of the dependency being tested — test is testing Mock behavior, not real code |
+| **Layering violation** | 4 | Controller directly calls Mapper, bypassing Service layer |
+| **Resource leak** | 4 | Database connection/file handle not closed in finally |
+| **Severe duplication** | 4 | 50+ lines of identical logic with another class — should extract common method |

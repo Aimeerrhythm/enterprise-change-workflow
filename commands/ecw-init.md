@@ -4,24 +4,24 @@ description: Initialize Enterprise Change Workflow configuration for your projec
 argument-hint: [--skip-scanners]
 ---
 
-# ECW Init — 项目初始化向导
+# ECW Init — Project Initialization Wizard
 
-你正在执行 `/ecw-init` 命令。你的任务是检测项目的现有文档状态，选择合适的初始化模式，然后生成 ECW 配置文件。严格按以下步骤顺序执行，不要跳步。
+You are executing the `/ecw-init` command. Your task is to detect the project's existing documentation state, select the appropriate initialization mode, then generate ECW configuration files. Follow the steps below strictly in order — do not skip steps.
 
-**重要：** 此 skill 属于 `enterprise-change-workflow` 插件。下文引用的所有模板文件位于该插件的 `templates/` 目录。读取模板时，使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
+**Important:** This skill belongs to the `enterprise-change-workflow` plugin. All template files referenced below are located in the plugin's `templates/` directory. When reading templates, use the Read tool from the plugin installation path (i.e., `templates/` under the parent directory containing this `commands/` folder).
 
 ---
 
-## Step 0：智能发现 + 模式选择
+## Step 0: Smart Discovery + Mode Selection
 
-### 0a：扫描现有文档
+### 0a: Scan Existing Documents
 
-扫描 **两个信息源** 以检测已有的知识文档：
+Scan **two information sources** to detect existing knowledge documents:
 
-**来源 A — `.claude/` 目录结构：**
+**Source A — `.claude/` directory structure:**
 
 ```bash
-# 列出 .claude/ 下所有 .md 文件，排除已知的配置目录
+# List all .md files under .claude/, excluding known config directories
 find .claude/ -name "*.md" -type f \
   -not -path ".claude/ecw/*" \
   -not -path ".claude/rules/*" \
@@ -34,171 +34,175 @@ find .claude/ -name "*.md" -type f \
   -not -name "index.md" \
   2>/dev/null | sort
 
-# 列出 .claude/ 下的一级目录
+# List first-level directories under .claude/
 find .claude/ -mindepth 1 -maxdepth 1 -type d 2>/dev/null
 ```
 
-统计候选知识目录数量（包含 ≥ 2 个 `.md` 文件且不在排除集合 `ecw/`、`rules/`、`guides/`、`project/`、`specs/`、`plans/`、`plugins/` 中的目录）。
+Count candidate knowledge directories (directories containing ≥ 2 `.md` files that are not in the exclusion set `ecw/`, `rules/`, `guides/`, `project/`, `specs/`, `plans/`, `plugins/`).
 
-**来源 B — `CLAUDE.md` 内容：**
+**Source B — `CLAUDE.md` content:**
 
-如果项目根目录存在 `CLAUDE.md`：
-- 用 Read 工具读取内容
-- 搜索匹配 `.claude/knowledge/`、`.claude/docs/`、`knowledge/` 等路径引用，以及任何指向文档的 `.claude/{something}/` 引用
-- 搜索域路由表（包含域名和路径的 markdown 表格）
-- 搜索域关键词或业务领域描述
+If `CLAUDE.md` exists at project root:
+- Read its content with the Read tool
+- Search for path references matching `.claude/knowledge/`, `.claude/docs/`, `knowledge/`, and any `.claude/{something}/` references pointing to documentation
+- Search for domain routing tables (markdown tables containing domain names and paths)
+- Search for domain keywords or business domain descriptions
 
-### 0b：选择模式
+### 0b: Select Mode
 
-根据扫描结果，展示以下场景之一：
+Based on scan results, present one of the following scenarios:
 
-**场景 A — 发现知识目录：**
+**Scenario A — Knowledge directories found:**
 
-使用 `AskUserQuestion`：
-
-```
-检测到 .claude/ 下已有 {N} 个知识目录、{M} 个 .md 文件。
-
-- Attach（推荐）— 基于已有文档生成 ECW 配置，不动已有文件
-- Manual — 我自己指定知识目录路径和域信息
-- Scaffold — 忽略已有文件，从零创建全部配置 + 知识模板
-```
-
-将 "Attach" 标记为推荐选项。
-
-**场景 B — 未发现知识目录：**
-
-使用 `AskUserQuestion`：
+Use `AskUserQuestion`:
 
 ```
-未检测到已有知识文档结构。
+Detected {N} knowledge directories and {M} .md files under .claude/.
 
-- Scaffold（推荐）— 从零创建全部配置 + 知识模板
-- Manual — 我有知识文档但不在 .claude/ 下，手动指定路径
-- Attach — 强制扫描（可能漏检了）
+- Attach (Recommended) — Generate ECW configuration based on existing docs, no changes to existing files
+- Manual — I will specify knowledge directory paths and domain info myself
+- Scaffold — Ignore existing files, create all configuration + knowledge templates from scratch
 ```
 
-将 "Scaffold" 标记为推荐选项。
+Mark "Attach" as the recommended option.
 
-### 0c：路由到对应模式
+**Scenario B — No knowledge directories found:**
 
-- **Attach** → 跳转到 "Attach 模式" 章节
-- **Manual** → 跳转到 "Manual 模式" 章节
-- **Scaffold** → 跳转到 "Scaffold 模式" 章节
+Use `AskUserQuestion`:
+
+```
+No existing knowledge document structure detected.
+
+- Scaffold (Recommended) — Create all configuration + knowledge templates from scratch
+- Manual — I have knowledge docs but not under .claude/, will specify paths manually
+- Attach — Force scan (may have missed something)
+```
+
+Mark "Scaffold" as the recommended option.
+
+### 0c: Route to Corresponding Mode
+
+- **Attach** → Jump to "Attach Mode" section
+- **Manual** → Jump to "Manual Mode" section
+- **Scaffold** → Jump to "Scaffold Mode" section
 
 ---
 
-# Attach 模式
+# Attach Mode
 
-适用于已有文档的项目。扫描发现后由用户确认，仅生成 ECW 配置。
+For projects with existing documentation. Scan to discover, user confirms, generate ECW configuration only.
 
-## Attach Step 1：深度扫描与结构发现
+## Attach Step 1: Deep Scan & Structure Discovery
 
-构建现有文档结构的完整画像：
+Build a complete picture of the existing documentation structure:
 
 ```
-1. 根据 Step 0 的扫描结果，按父目录对 .md 文件分组。
+1. Based on Step 0 scan results, group .md files by parent directory.
 
-2. 识别"知识根目录"——包含多个子目录且每个子目录含 .md 文件的目录。
-   常见模式：
-   - .claude/knowledge/  (包含 inbound/、outbound/、task/ 等)
-   - .claude/docs/       (包含 order/、payment/ 等)
-   - docs/               (.claude/ 外部)
+2. Identify the "knowledge root" — a directory containing multiple subdirectories,
+   each with .md files.
+   Common patterns:
+   - .claude/knowledge/  (containing inbound/, outbound/, task/, etc.)
+   - .claude/docs/       (containing order/, payment/, etc.)
+   - docs/               (outside .claude/)
    
-   启发式规则：包含 ≥ 3 个含 .md 文件的子目录的最深公共祖先目录。
+   Heuristic: The deepest common ancestor directory containing ≥ 3 subdirectories
+   with .md files.
 
-3. 在知识根目录下，对每个子目录分类：
-   - "域候选"：包含某个业务领域相关的 .md 文件
-   - "公共/共享"：名为 common/、shared/，或包含跨域文档
-   - "其他"：不属于以上类别
+3. Under the knowledge root, classify each subdirectory:
+   - "Domain candidate": Contains .md files related to a specific business domain
+   - "Common/shared": Named common/, shared/, or contains cross-domain documentation
+   - "Other": Does not fit above categories
 
-4. 对每个域候选统计：
-   - .md 文件总数（递归）
-   - 是否存在 00-index.md
-   - 是否存在 business-rules.md 或 data-model.md（递归搜索，记录相对路径，如 `common/business-rules.md`、`checkstock/common/business-rules.md`）
+4. For each domain candidate, count:
+   - Total .md file count (recursive)
+   - Whether 00-index.md exists
+   - Whether business-rules.md or data-model.md exists (recursive search,
+     record relative paths, e.g., `common/business-rules.md`,
+     `checkstock/common/business-rules.md`)
 
-5. 同时检查 CLAUDE.md 获取额外线索：
-   - 如果 CLAUDE.md 中有域路由表，提取域名和路径
-   - 如果 CLAUDE.md 引用的路径在文件系统扫描中未找到，标注出来
+5. Also check CLAUDE.md for additional clues:
+   - If CLAUDE.md has a domain routing table, extract domain names and paths
+   - If CLAUDE.md references paths not found in filesystem scan, flag them
 ```
 
-## Attach Step 2：展示并确认
+## Attach Step 2: Present & Confirm
 
-使用 `AskUserQuestion`（自由文本）展示发现结果并收集域信息：
+Use `AskUserQuestion` (free text) to present findings and collect domain info:
 
 ```
-扫描发现以下文档结构：
+Scan discovered the following documentation structure:
 
-知识根目录（推测）：{detected_knowledge_root}
-{对每个子目录展示:}
-  ├── {dirname}/          ({file_count} files) {— 公共知识 if common/shared}
+Knowledge root (inferred): {detected_knowledge_root}
+{for each subdirectory:}
+  |- {dirname}/          ({file_count} files) {— common knowledge if common/shared}
   ...
 
-{如果 CLAUDE.md 中有域路由表:}
-此外，CLAUDE.md 中引用了以下域路径：
-  - {domain_name} → {path}
+{if CLAUDE.md has domain routing table:}
+Additionally, CLAUDE.md references the following domain paths:
+  - {domain_name} -> {path}
   ...
 
-请确认并补充：
-1. 知识根目录路径是否正确？如果不对，请告知实际路径
-2. 哪些是业务域？对每个域补充信息：
-   目录名 | 域ID | 显示名称 | 描述 | 代码根目录
-3. 哪些目录要跳过？标注 "→ 跳过"
+Please confirm and supplement:
+1. Is the knowledge root path correct? If not, provide the actual path
+2. Which are business domains? For each domain provide:
+   dirname | domain ID | display name | description | code root
+3. Which directories to skip? Mark with "-> skip"
 
-示例格式：
-  inbound | inbound | 入库 | 入库全链路管理 | service/biz/inbound/
-  common → 跳过（公共知识）
+Example format:
+  inbound | inbound | Inbound | Full inbound chain management | service/biz/inbound/
+  common -> skip (common knowledge)
 ```
 
-解析用户回复，提取：
-- 确认后的知识根目录路径（可能与检测值不同）
-- 域列表，每个域包含：`id`、`display_name`、`description`、`code_root`、`knowledge_path`（知识根目录下的完整路径）
-- 排除的目录
+Parse user reply, extract:
+- Confirmed knowledge root path (may differ from detected value)
+- Domain list, each with: `id`, `display_name`, `description`, `code_root`, `knowledge_path` (full path under knowledge root)
+- Excluded directories
 
-## Attach Step 3：检测语言和组件类型
+## Attach Step 3: Detect Language and Component Types
 
-与 Scaffold Step 1 + Step 2c 相同：
+Same as Scaffold Step 1 + Step 2c:
 
-1. **检测项目语言**，扫描构建文件：
+1. **Detect project language** by scanning build files:
 
 ```bash
 ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requirements.txt 2>/dev/null
 ```
 
-| 检测到的文件 | 语言 | 项目类型 |
-|-------------|------|---------|
-| `pom.xml` | java | java-monolith（多模块则为 java-microservice） |
+| Detected File | Language | Project Type |
+|--------------|----------|-------------|
+| `pom.xml` | java | java-monolith (java-microservice if multi-module) |
 | `build.gradle` / `build.gradle.kts` | java/kotlin | java-monolith/microservice |
 | `package.json` | typescript | node |
 | `go.mod` | go | go-monolith |
 | `pyproject.toml` / `requirements.txt` | python | python |
 
-对 Java 项目，检查是否多模块：`find . -name "pom.xml" -maxdepth 3 | head -20`
+For Java projects, check if multi-module: `find . -name "pom.xml" -maxdepth 3 | head -20`
 
-2. **向用户确认**，使用 `AskUserQuestion`：
+2. **Confirm with user** using `AskUserQuestion`:
 
 ```
-检测到：Language = {language}, Type = {type}
-是否正确？如需修改请说明。
-组件类型使用默认还是自定义？（输入 "use defaults" 使用默认）
+Detected: Language = {language}, Type = {type}
+Is this correct? If not, please specify.
+Use default component types or custom? (Enter "use defaults" for defaults)
 ```
 
-3. 如选择 "use defaults"，为检测到的语言生成标准组件类型。
+3. If "use defaults" selected, generate standard component types for the detected language.
 
-## Attach Step 4：生成 ECW 配置
+## Attach Step 4: Generate ECW Configuration
 
-创建 `.claude/ecw/` 目录：`mkdir -p .claude/ecw`
+Create `.claude/ecw/` directory: `mkdir -p .claude/ecw`
 
-### 4a：生成 `ecw.yml`
+### 4a: Generate `ecw.yml`
 
-读取 `templates/ecw.yml` 模板。填入：
-- `project.name`、`project.type`、`project.language`（来自 Step 3）
-- `component_types`（来自 Step 3）
-- `scan_patterns`：保留与检测语言匹配的默认值
+Read `templates/ecw.yml` template. Fill in:
+- `project.name`, `project.type`, `project.language` (from Step 3)
+- `component_types` (from Step 3)
+- `scan_patterns`: Keep defaults matching the detected language
 
-### 4b：生成 `domain-registry.md`
+### 4b: Generate `domain-registry.md`
 
-读取 `templates/domain-registry.md` 模板。为每个确认的域生成一个区块，使用 **实际路径**：
+Read `templates/domain-registry.md` template. Generate one block per confirmed domain using **actual paths**:
 
 ```markdown
 ### {N}. {domain-id} — {display_name}
@@ -216,32 +220,32 @@ ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requ
 **Responsibilities:** {description}
 ```
 
-与 Scaffold 的关键区别：`Knowledge Root` 使用用户确认的 **实际路径**（如 `.claude/knowledge/inbound/`），而非模板占位符。
+Key difference from Scaffold: `Knowledge Root` uses user-confirmed **actual paths** (e.g., `.claude/knowledge/inbound/`), not template placeholders.
 
-`Business Rules` 和 `Data Model` 的确定（使用 Step 1 的扫描结果）：
-- 如果域目录中递归找到 `business-rules.md` → 使用相对于域知识根目录的路径（如 `common/business-rules.md`、`checkstock/common/business-rules.md`）
-- 如果找到多个 → 全部列出，用逗号分隔并标注子模块名（如 `checkstock/common/business-rules.md`（盘点）, `move/common/business-rules.md`（移库））
-- 如果未找到 → 标注"无独立文件"
-- `Data Model` 同理
+`Business Rules` and `Data Model` determination (using Step 1 scan results):
+- If `business-rules.md` found recursively in domain directory → Use path relative to domain knowledge root (e.g., `common/business-rules.md`, `checkstock/common/business-rules.md`)
+- If multiple found → List all, comma-separated with submodule names (e.g., `checkstock/common/business-rules.md` (stocktake), `move/common/business-rules.md` (transfer))
+- If not found → Note "no standalone file"
+- `Data Model` follows same logic
 
-`Entry Document` 的确定：
-- 如果域目录中存在 `00-index.md` → 使用它
-- 否则 → 使用该目录下第一个 `.md` 文件（按字母排序）
-- 如果目录为空 → 使用 `00-index.md (待创建)`
+`Entry Document` determination:
+- If `00-index.md` exists in domain directory → Use it
+- Otherwise → Use the first `.md` file in the directory (alphabetical order)
+- If directory is empty → Use `00-index.md (to be created)`
 
-### 4c：复制 `change-risk-classification.md`
+### 4c: Copy `change-risk-classification.md`
 
-读取 `templates/change-risk-classification.md` 模板。原样写入 `.claude/ecw/change-risk-classification.md`。
+Read `templates/change-risk-classification.md` template. Write as-is to `.claude/ecw/change-risk-classification.md`.
 
-### 4c2：复制 `calibration-log.md`
+### 4c2: Copy `calibration-log.md`
 
-读取 `templates/calibration-log.md` 模板。原样写入 `.claude/ecw/calibration-log.md`。此文件用于积累 Phase 3 校准记录。
+Read `templates/calibration-log.md` template. Write as-is to `.claude/ecw/calibration-log.md`. This file accumulates Phase 3 calibration records.
 
-### 4d：生成 `ecw-path-mappings.md`
+### 4d: Generate `ecw-path-mappings.md`
 
-读取 `templates/ecw-path-mappings.md` 模板。自动发现项目目录结构：
+Read `templates/ecw-path-mappings.md` template. Auto-discover project directory structure:
 
-对 Java 项目：
+For Java projects:
 ```bash
 find . -type d -name "biz" -path "*/main/java/*" | head -5
 ls <detected_biz_root>/ 2>/dev/null
@@ -250,206 +254,207 @@ find . -type d \( -name "interfaces" -o -name "controller" \) -path "*/main/java
 find . -type d -name "mapper" -path "*/resources/*" | head -5
 ```
 
-将发现的子目录映射到已确认的域。
+Map discovered subdirectories to confirmed domains.
 
-## Attach Step 5：跳过知识目录创建
+## Attach Step 5: Skip Knowledge Directory Creation
 
-**不要创建、修改或覆盖任何已有文档文件。** 这是与 Scaffold 模式的核心区别。用户的现有知识文件原样保留。
+**Do not create, modify, or overwrite any existing documentation files.** This is the core difference from Scaffold mode. User's existing knowledge files are preserved as-is.
 
-## Attach Step 6：生成 CLAUDE.md 代码片段
+## Attach Step 6: Generate CLAUDE.md Snippet
 
-读取 `templates/CLAUDE.md.snippet` 模板。
+Read `templates/CLAUDE.md.snippet` template.
 
-使用用户确认的 **实际路径** 填写域路由表：
+Fill the domain routing table using user-confirmed **actual paths**:
 
 ```markdown
-| 关键词 | 域 | 入口文档 |
-|--------|-----|---------|
+| Keywords | Domain | Entry Document |
+|----------|--------|---------------|
 | {keywords} | {display_name} | `{actual_knowledge_path}/{entry_file}` |
 ```
 
-`{keywords}` 的生成：从域显示名称 + 描述中提取关键词，用 `/` 分隔。
+`{keywords}` generation: Extract keywords from domain display name + description, separated by `/`.
 
-入口文件路径：
-- 如果存在 `00-index.md` → 使用它
-- 如果不存在 → 使用目录中第一个 `.md` 文件
-- 如果目录为空 → 标记 `(待创建)`
+Entry file path:
+- If `00-index.md` exists → Use it
+- If not → Use the first `.md` file in the directory
+- If directory is empty → Mark `(to be created)`
 
-通过 `AskUserQuestion` 向用户展示代码片段：
-- "追加到 CLAUDE.md" / "保存为 .claude/ecw/CLAUDE.md.snippet" / "跳过"
+Present snippet to user via `AskUserQuestion`:
+- "Append to CLAUDE.md" / "Save as .claude/ecw/CLAUDE.md.snippet" / "Skip"
 
-## Attach Step 7：可选代码扫描器（仅 Java）
+## Attach Step 7: Optional Code Scanners (Java only)
 
-如果语言不是 Java 或传入了 `--skip-scanners`，则跳过。
+Skip if language is not Java or `--skip-scanners` was passed.
 
-与 Scaffold Step 6 相同：提供运行 `scripts/java/` 下 Java 扫描脚本的选项。
+Same as Scaffold Step 6: Offer to run Java scan scripts under `scripts/java/`.
 
-## Attach Step 8：输出总结
+## Attach Step 8: Output Summary
 
-输出结构化总结（格式与 Scaffold Step 7 相同），区别如下：
-- 标题："ECW 初始化完成（Attach 模式）"
-- 知识文件部分显示："已有 — 未修改"（每个域目录）
-- 公共知识部分显示：文件存在则 "已有 — 未修改"，不存在则 "未检测到"
+Output structured summary (same format as Scaffold Step 7), with these differences:
+- Title: "ECW Initialization Complete (Attach Mode)"
+- Knowledge files section shows: "Existing — not modified" (per domain directory)
+- Common knowledge section shows: "Existing — not modified" if files exist, "Not detected" if not
 
 ---
 
-# Manual 模式
+# Manual Mode
 
-适用于自动扫描未找到文档，或文档在 `.claude/` 外部的情况。
+For cases where auto-scan did not find docs, or docs are outside `.claude/`.
 
-## Manual Step 1：用户指定路径
+## Manual Step 1: User Specifies Paths
 
-使用 `AskUserQuestion`（自由文本）：
+Use `AskUserQuestion` (free text):
 
 ```
-请提供你的知识文档信息：
+Please provide your knowledge documentation info:
 
-1. 知识根目录路径（可以是任何位置，例如 .claude/knowledge/、docs/、wiki/ 等）
-2. 域列表，每行一个：
-   目录名 | 域ID | 显示名称 | 描述 | 代码根目录
+1. Knowledge root directory path (can be any location, e.g., .claude/knowledge/, docs/, wiki/)
+2. Domain list, one per line:
+   dirname | domain ID | display name | description | code root
 
-示例：
-  知识根目录：docs/domains/
+Example:
+  Knowledge root: docs/domains/
   
-  order | order | 订单 | 订单全生命周期 | src/main/java/com/biz/order/
-  payment | payment | 支付 | 支付退款对账 | src/main/java/com/biz/payment/
-  logistics | logistics | 物流 | 配送运费 | src/main/java/com/biz/logistics/
+  order | order | Order | Full order lifecycle | src/main/java/com/biz/order/
+  payment | payment | Payment | Payment, refund, reconciliation | src/main/java/com/biz/payment/
+  logistics | logistics | Logistics | Delivery and shipping | src/main/java/com/biz/logistics/
 
-如果还没有知识文档，只想先生成 ECW 配置，可以只提供域列表（不含知识根目录），后续再创建文档。
+If you don't have knowledge docs yet and just want to generate ECW config first,
+you can provide only the domain list (no knowledge root) and create docs later.
 ```
 
-解析用户回复，提取：
-- 知识根目录路径（可选——用户可能还没有文档）
-- 域列表，每个域包含：`id`、`display_name`、`description`、`code_root`
+Parse user reply, extract:
+- Knowledge root path (optional — user may not have docs yet)
+- Domain list, each with: `id`, `display_name`, `description`, `code_root`
 
-## Manual Step 2：验证路径
+## Manual Step 2: Validate Paths
 
-对用户提供的每个路径，验证是否存在：
+For each user-provided path, validate existence:
 
 ```bash
 ls {knowledge_root}/ 2>/dev/null
 ls {knowledge_root}/{domain_dir}/ 2>/dev/null
 ```
 
-如果有路径不存在，使用 `AskUserQuestion`：
+If any path does not exist, use `AskUserQuestion`:
 
 ```
-以下路径不存在：
+The following paths do not exist:
 {list of missing paths}
 
-- 继续 — 不存在的路径保留在配置中，你可以后续创建目录和文件
-- 修改 — 重新输入路径
+- Continue — Non-existent paths will be kept in config; you can create directories and files later
+- Modify — Re-enter paths
 ```
 
-如用户选择 "继续"，按原路径继续。缺失路径的域条目中 `Entry Document = 00-index.md (待创建)`。
+If user selects "Continue", proceed with original paths. Missing-path domain entries get `Entry Document = 00-index.md (to be created)`.
 
-## Manual Step 3：检测语言和组件类型
+## Manual Step 3: Detect Language and Component Types
 
-与 Attach Step 3 相同。
+Same as Attach Step 3.
 
-## Manual Step 4：生成 ECW 配置
+## Manual Step 4: Generate ECW Configuration
 
-与 Attach Step 4 相同，使用用户指定的路径。
+Same as Attach Step 4, using user-specified paths.
 
-对知识目录不存在的域：
-- `domain-registry.md` 中的 `Knowledge Root`：使用用户指定的路径（即使不存在）
-- `Entry Document`：`00-index.md (待创建)`
+For domains with non-existent knowledge directories:
+- `domain-registry.md` `Knowledge Root`: Use user-specified path (even if non-existent)
+- `Entry Document`: `00-index.md (to be created)`
 
-## Manual Step 5：跳过知识目录创建
+## Manual Step 5: Skip Knowledge Directory Creation
 
-与 Attach Step 5 相同 — 不要创建知识文件。用户准备好后自行创建。
+Same as Attach Step 5 — do not create knowledge files. User creates them when ready.
 
-例外：如果用户在 Step 1 的 AskUserQuestion 中明确要求创建知识目录（如 "也帮我创建知识目录骨架"），则按 Scaffold Step 4 的方式创建目录结构和模板文件。
+Exception: If user explicitly requests knowledge directory creation in Step 1's AskUserQuestion (e.g., "also create a knowledge directory skeleton for me"), then create directory structure and template files following Scaffold Step 4's approach.
 
-## Manual Step 6：生成 CLAUDE.md 代码片段
+## Manual Step 6: Generate CLAUDE.md Snippet
 
-与 Attach Step 6 相同，使用用户指定的路径。
+Same as Attach Step 6, using user-specified paths.
 
-## Manual Step 7-8：扫描器 + 总结
+## Manual Step 7-8: Scanners + Summary
 
-与 Attach Step 7-8 相同。总结标题："ECW 初始化完成（Manual 模式）"。
+Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)".
 
 ---
 
-# Scaffold 模式
+# Scaffold Mode
 
-适用于没有现有文档的全新项目。从零创建所有内容。
+For brand new projects with no existing documentation. Creates everything from scratch.
 
-**此模式保留了原始 `/ecw-init` 的完整流程。** 唯一区别是通过 Step 0 的模式选择进入，而非作为默认模式。
+**This mode preserves the original `/ecw-init` full workflow.** The only difference is entering via Step 0's mode selection rather than as the default mode.
 
-## Scaffold Step 1：检测项目语言
+## Scaffold Step 1: Detect Project Language
 
-扫描项目根目录的构建文件以检测语言和项目类型：
+Scan project root for build files to detect language and project type:
 
-| 检测到的文件 | 语言 | 项目类型 |
-|-------------|------|---------|
-| `pom.xml` | java | java-monolith（子模块下有多个 `pom.xml` 则为 java-microservice） |
-| `build.gradle` 或 `build.gradle.kts` | java（或 kotlin） | java-monolith（或 java-microservice） |
+| Detected File | Language | Project Type |
+|--------------|----------|-------------|
+| `pom.xml` | java | java-monolith (java-microservice if multiple `pom.xml` under subdirectories) |
+| `build.gradle` or `build.gradle.kts` | java (or kotlin) | java-monolith (or java-microservice) |
 | `package.json` | typescript | node |
 | `go.mod` | go | go-monolith |
-| `pyproject.toml` 或 `requirements.txt` | python | python |
+| `pyproject.toml` or `requirements.txt` | python | python |
 
-使用 Bash 检查：`ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requirements.txt 2>/dev/null`
+Check via Bash: `ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requirements.txt 2>/dev/null`
 
-如检测到多个构建系统，选择主要的（如即使存在 `package.json` 用于前端工具，Java 项目仍以 `pom.xml` 为准）。
+If multiple build systems detected, select the primary one (e.g., Java project with `pom.xml` takes precedence even if `package.json` exists for frontend tooling).
 
-对 Java 项目，额外检查是否为多模块项目：
-- Bash：`find . -name "pom.xml" -maxdepth 3 | head -20` — 如果子目录中有多个 pom.xml，则很可能是多模块项目。
+For Java projects, additionally check if multi-module:
+- Bash: `find . -name "pom.xml" -maxdepth 3 | head -20` — If multiple pom.xml files exist under subdirectories, likely a multi-module project.
 
-保存检测到的 `language` 和 `project_type` 供后续使用。
+Save detected `language` and `project_type` for later use.
 
-## Scaffold Step 2：通过 AskUserQuestion 收集项目信息
+## Scaffold Step 2: Collect Project Info via AskUserQuestion
 
-### 2a：确认项目基本信息
+### 2a: Confirm Project Basics
 
-使用 `AskUserQuestion` 展示检测信息并收集：
-
-```
-检测到以下项目配置：
-- 语言：{detected_language}
-- 项目类型：{detected_project_type}
-
-请提供：
-1. 项目名称（用于 Agent 提示词的上下文）
-2. 项目简介（1-2 句）
-3. 检测到的语言/类型是否正确？如需修改请说明。
-```
-
-解析用户回复，提取项目名称、描述、确认后的语言/类型。
-
-### 2b：收集域列表
-
-使用 `AskUserQuestion`：
+Use `AskUserQuestion` to present detected info and collect:
 
 ```
-请列出你的业务域。每个域需要提供：
-- 域 ID（英文、小写、连字符，如 "order-management"）
-- 中文名称或显示名称
-- 一句话描述
-- 代码根目录
+Detected project configuration:
+- Language: {detected_language}
+- Project type: {detected_project_type}
 
-示例：
-1. order | 订单 | 订单从创建到完成的全生命周期管理 | src/main/java/com/example/biz/order/
-2. payment | 支付 | 支付、退款、对账 | src/main/java/com/example/biz/payment/
-
-请列出所有域（每行一个）：
+Please provide:
+1. Project name (used for context in Agent prompts)
+2. Project description (1-2 sentences)
+3. Is the detected language/type correct? If not, please specify.
 ```
 
-解析为结构化列表：`id`、`display_name`、`description`、`code_root`。
+Parse user reply, extract project name, description, confirmed language/type.
 
-### 2c：收集组件类型
+### 2b: Collect Domain List
 
-使用 `AskUserQuestion`：
+Use `AskUserQuestion`:
 
 ```
-你的项目使用了哪些代码组件类别？
+Please list your business domains. For each domain provide:
+- Domain ID (lowercase English, hyphenated, e.g., "order-management")
+- Display name
+- One-sentence description
+- Code root directory
 
-每种组件类型需要提供：
-- 名称（如 Service、Repository、Controller、Manager）
-- 代码中的 grep 匹配模式（用 {name} 作为占位符）
-- 搜索路径
+Example:
+1. order | Order | Full order lifecycle management from creation to completion | src/main/java/com/example/biz/order/
+2. payment | Payment | Payment, refund, reconciliation | src/main/java/com/example/biz/payment/
 
-各语言常见默认值：
+List all domains (one per line):
+```
+
+Parse into structured list: `id`, `display_name`, `description`, `code_root`.
+
+### 2c: Collect Component Types
+
+Use `AskUserQuestion`:
+
+```
+What code component categories does your project use?
+
+For each component type provide:
+- Name (e.g., Service, Repository, Controller, Manager)
+- Grep match pattern in code (use {name} as placeholder)
+- Search path
+
+Common defaults per language:
 
 Java/Spring:
   BizService  | class {name}     | src/main/java/**/biz/
@@ -463,20 +468,20 @@ Go:
   Repository  | type {name} struct | internal/repo/
   Service     | type {name} struct | internal/service/
 
-输入 "use defaults" 使用你所用语言的标准组件集：
+Enter "use defaults" to use the standard component set for your language:
 ```
 
-## Scaffold Step 3：生成配置文件
+## Scaffold Step 3: Generate Configuration Files
 
 `mkdir -p .claude/ecw`
 
-### 3a：生成 `ecw.yml`
+### 3a: Generate `ecw.yml`
 
-读取 `templates/ecw.yml`。填入项目信息、组件类型、检测语言对应的扫描模式。
+Read `templates/ecw.yml`. Fill in project info, component types, scan patterns for detected language.
 
-### 3b：生成 `domain-registry.md`
+### 3b: Generate `domain-registry.md`
 
-读取 `templates/domain-registry.md`。为每个域生成一个区块：
+Read `templates/domain-registry.md`. Generate one block per domain:
 
 ```markdown
 ### {N}. {domain-id} — {display_name}
@@ -494,29 +499,29 @@ Go:
 **Responsibilities:** {description}
 ```
 
-保留模板的头部/尾部、"新增域指南" 区块、关键词匹配规则、跨域数据源章节。
+Preserve template header/footer, "Adding New Domains" block, keyword matching rules, cross-domain data source sections.
 
-### 3c：复制 `change-risk-classification.md`
+### 3c: Copy `change-risk-classification.md`
 
-读取并原样复制 `templates/change-risk-classification.md`。
+Read and copy `templates/change-risk-classification.md` as-is.
 
-### 3c2：复制 `calibration-log.md`
+### 3c2: Copy `calibration-log.md`
 
-读取并原样复制 `templates/calibration-log.md` 到 `.claude/ecw/calibration-log.md`。
+Read and copy `templates/calibration-log.md` as-is to `.claude/ecw/calibration-log.md`.
 
-### 3d：生成 `ecw-path-mappings.md`
+### 3d: Generate `ecw-path-mappings.md`
 
-读取 `templates/ecw-path-mappings.md`。扫描项目目录结构，生成映射表。
+Read `templates/ecw-path-mappings.md`. Scan project directory structure, generate mapping table.
 
-## Scaffold Step 4：创建知识目录骨架
+## Scaffold Step 4: Create Knowledge Directory Skeleton
 
-### 4a：公共知识
+### 4a: Common Knowledge
 
 ```bash
 mkdir -p .claude/knowledge/common
 ```
 
-读取并复制 `templates/knowledge/common/` 下的 6 个模板：
+Read and copy the 6 templates under `templates/knowledge/common/`:
 1. `cross-domain-rules.md`
 2. `cross-domain-calls.md`
 3. `e2e-paths.md`
@@ -524,96 +529,96 @@ mkdir -p .claude/knowledge/common
 5. `mq-topology.md`
 6. `shared-resources.md`
 
-### 4b：域级知识
+### 4b: Domain-Level Knowledge
 
-对每个域：
+For each domain:
 
 ```bash
 mkdir -p .claude/knowledge/{domain-id}/common/nodes
 ```
 
-读取并复制 `templates/knowledge/domain/` 下的 3 个模板：
+Read and copy the 3 templates under `templates/knowledge/domain/`:
 1. `00-index.md` → `.claude/knowledge/{domain-id}/00-index.md`
 2. `business-rules.md` → `.claude/knowledge/{domain-id}/common/business-rules.md`
 3. `data-model.md` → `.claude/knowledge/{domain-id}/common/data-model.md`
 
-将 `{{Domain Name}}` 替换为显示名称，`{{DATE}}` 替换为当天日期。
+Replace `{{Domain Name}}` with display name, `{{DATE}}` with today's date.
 
-## Scaffold Step 5：生成 CLAUDE.md 代码片段
+## Scaffold Step 5: Generate CLAUDE.md Snippet
 
-读取 `templates/CLAUDE.md.snippet`。填写域路由表：
+Read `templates/CLAUDE.md.snippet`. Fill the domain routing table:
 
 ```markdown
 | {keywords} | {display_name} | `.claude/knowledge/{domain-id}/00-index.md` |
 ```
 
-向用户展示："追加到 CLAUDE.md" / "保存为单独文件" / "跳过"
+Present to user: "Append to CLAUDE.md" / "Save as separate file" / "Skip"
 
-## Scaffold Step 6：可选代码扫描器（仅 Java）
+## Scaffold Step 6: Optional Code Scanners (Java only)
 
-如果语言不是 Java 或传入了 `--skip-scanners`，则跳过。
+Skip if language is not Java or `--skip-scanners` was passed.
 
-询问用户："运行所有扫描器" / "跳过扫描器"
+Ask user: "Run all scanners" / "Skip scanners"
 
-如运行：检查 `scripts/java/` 下的扫描脚本，存在则执行。
+If running: Check for scan scripts under `scripts/java/`; execute if present.
 
-## Scaffold Step 7：输出总结
+## Scaffold Step 7: Output Summary
 
 ```markdown
-## ECW 初始化完成（Scaffold 模式）
+## ECW Initialization Complete (Scaffold Mode)
 
-### 项目配置
-- **项目名称：** {project_name}
-- **语言：** {language}
-- **类型：** {project_type}
-- **域数量：** {count} 个域已注册
+### Project Configuration
+- **Project Name:** {project_name}
+- **Language:** {language}
+- **Type:** {project_type}
+- **Domain Count:** {count} domains registered
 
-### 已创建文件
+### Created Files
 
-#### 配置文件（.claude/ecw/）
-| 文件 | 状态 |
-|------|------|
-| `ecw.yml` | 已创建 |
-| `domain-registry.md` | 已创建 |
-| `change-risk-classification.md` | 已创建 |
-| `ecw-path-mappings.md` | 已创建 |
-| `calibration-log.md` | 已创建 |
+#### Configuration Files (.claude/ecw/)
+| File | Status |
+|------|--------|
+| `ecw.yml` | Created |
+| `domain-registry.md` | Created |
+| `change-risk-classification.md` | Created |
+| `ecw-path-mappings.md` | Created |
+| `calibration-log.md` | Created |
 
-#### 知识文件 — 公共（.claude/knowledge/common/）
-| 文件 | 状态 |
-|------|------|
-| `cross-domain-rules.md` | 已创建 |
-| `cross-domain-calls.md` | 已创建 |
-| `e2e-paths.md` | 已创建 |
-| `external-systems.md` | 已创建 |
-| `mq-topology.md` | 已创建 |
-| `shared-resources.md` | 已创建 |
+#### Knowledge Files — Common (.claude/knowledge/common/)
+| File | Status |
+|------|--------|
+| `cross-domain-rules.md` | Created |
+| `cross-domain-calls.md` | Created |
+| `e2e-paths.md` | Created |
+| `external-systems.md` | Created |
+| `mq-topology.md` | Created |
+| `shared-resources.md` | Created |
 
-#### 知识文件 — 域级
-| 目录 | 文件 | 状态 |
-|------|------|------|
-| `.claude/knowledge/{domain-id}/` | 00-index.md, common/business-rules.md, common/data-model.md | 已创建 |
+#### Knowledge Files — Domain-Level
+| Directory | Files | Status |
+|-----------|-------|--------|
+| `.claude/knowledge/{domain-id}/` | 00-index.md, common/business-rules.md, common/data-model.md | Created |
 
-#### CLAUDE.md 集成
-| 操作 | 状态 |
-|------|------|
-| 域路由代码片段 | {已追加 / 已保存 / 已跳过} |
+#### CLAUDE.md Integration
+| Action | Status |
+|--------|--------|
+| Domain routing snippet | {Appended / Saved / Skipped} |
 
-### 后续步骤
+### Next Steps
 
-1. **检查 `ecw.yml`**：自定义 `scan_patterns` 和 `component_types`。
-2. **检查 `ecw-path-mappings.md`**：验证目录到域的映射。修正所有 `?` 条目。
-3. **定制 `change-risk-classification.md`**：替换 `{your_...}` 占位符。
-4. **填充域知识文件**：每个域的模板文件包含 `{{...}}` 占位符。
-5. **填充公共知识文件**：填入跨域集成数据。
-6. **完善 CLAUDE.md 关键词**：添加域专属术语。
-7. **验证**：运行 `/ecw-validate-config` 检查配置完整性。
+1. **Review `ecw.yml`**: Customize `scan_patterns` and `component_types`.
+2. **Review `ecw-path-mappings.md`**: Verify directory-to-domain mappings. Fix all `?` entries.
+3. **Customize `change-risk-classification.md`**: Replace `{your_...}` placeholders.
+4. **Populate domain knowledge files**: Each domain's template files contain `{{...}}` placeholders.
+5. **Populate common knowledge files**: Fill in cross-domain integration data.
+6. **Refine CLAUDE.md keywords**: Add domain-specific terms.
+7. **Validate**: Run `/ecw-validate-config` to check configuration completeness.
 ```
 
 ---
 
-# 错误处理
+# Error Handling
 
-- 如果任何 Write 操作失败，报告错误后继续处理剩余文件。
-- 如果用户输入有歧义，追问澄清而非猜测。
-- 如果无法从插件目录读取模板文件，报告："无法读取模板文件 {path}。插件安装可能不完整。"
+- If any Write operation fails, report the error then continue processing remaining files.
+- If user input is ambiguous, ask for clarification rather than guessing.
+- If template files cannot be read from the plugin directory, report: "Cannot read template file {path}. Plugin installation may be incomplete."
