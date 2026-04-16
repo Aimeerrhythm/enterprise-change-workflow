@@ -15,7 +15,9 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 ## Scope Boundary
 
-**ecw:tdd executes the Red-Green(-Refactor) cycle per Task from the Plan. It does NOT own design decisions.**
+**ecw:tdd executes the Red-Green(-Refactor) cycle. It does NOT own design decisions.**
+
+### Requirement changes (Plan exists)
 
 Before writing any test, **read the Plan file** (`.claude/plans/<name>.md`). All file paths, method signatures, test scenarios, error codes, and data formats are specified there.
 
@@ -35,6 +37,19 @@ Before writing any test, **read the Plan file** (`.claude/plans/<name>.md`). All
 - One verification Read is allowed to confirm the error is real (not a typo in your code)
 - If confirmed, note the discrepancy in output, adapt minimally to make the test compile, and continue
 - Do NOT use this as a loophole for general exploration — one targeted Read per error, not open-ended searching
+
+### Bug fixes (no Plan — input from systematic-debugging)
+
+Bug fixes skip writing-plans. The input is the root cause analysis from `ecw:systematic-debugging`, not a Plan file.
+
+**What this skill MUST do:**
+- Write a failing test that **reproduces the bug** (RED)
+- Fix the code minimally to make the test pass (GREEN)
+- Run full test suite to verify no regressions
+
+**What this skill MUST NOT do:**
+- Redesign or refactor surrounding code beyond the fix scope
+- Skip the reproduction test ("I already know the fix" is not an excuse)
 
 ## Risk-Aware Enforcement
 
