@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.4.2] - 2026-04-16
+
+### 新增
+
+- **三层提示词验证体系** — 完整的测试套件，覆盖 11 个 SKILL.md 的结构完整性和 risk-classifier 的路由决策正确性
+  - **Layer 1**：Python 静态扫描（14 项检查，<3s，$0）— frontmatter、互引完整性、产出物路径、路由 DAG、锚点关键词、session-state 合约、路由矩阵验证等
+  - **Layer 1b**：pytest Hook 单元测试（56 用例，<10s，$0）— 覆盖 `verify-completion.py` 全部公开函数
+  - **Layer 2**：promptfoo + Claude API 行为 Eval（15 场景，~25s，~$0.20）— tool_use 结构化输出，验证 risk-classifier 路由决策
+- **routing_matrix.yaml** — 13 条路由 golden fixture，覆盖 {P0-P3} × {单域/跨域} × {需求/Bug/紧急} 组合，区分高危 Bug（P0/P1 含 biz-impact-analysis）和低危 Bug（P2/P3）
+- **classify_result tool schema** — 带 routing enum 约束的结构化输出工具定义，将 LLM 路由名限定为 9 个有效 ECW skill 名
+- **anchor_keywords.yaml** — 11 个 skill 的锚点关键词 fixture
+- **Makefile** — `make lint` / `make test-hook` / `make eval-quick` / `make eval-full` / `make all` / `make clean`
+- **tests/README.md** — 设计思路 + 维护手册，含 6 个维护场景的操作指南和 CI 集成示例
+
 ## [0.4.1] - 2026-04-16
 
 ### 性能优化
@@ -157,6 +171,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.4.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.2
 [0.4.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.3.2
