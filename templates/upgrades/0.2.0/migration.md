@@ -19,7 +19,6 @@
 - **占位符处理**:
   - `{{base_test_class}}` — 通过 AskUserQuestion 收集。Java 默认建议 "BaseUnitTest"，Go 建议 "TestSuite"，其他留空
 - **幂等检查**: 读取 ecw.yml，搜索 `tdd:` 顶级键。如果已存在，跳过并输出："ecw.yml 已包含 tdd 配置，跳过迁移 A"
-- **额外操作**: 在 `project:` 节后追加 `ecw_version: "0.2.0"` 字段（如果不存在）
 
 ### 迁移 B: CLAUDE.md 核心约定更新
 

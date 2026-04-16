@@ -116,9 +116,9 @@ cat .claude/ecw/ecw.yml
 
 ---
 
-## Step 5b：模板版本同步检查
+## Step 5b：模板结构同步检查
 
-检查项目的 ECW 配置文件是否与当前插件模板保持同步。模板更新后已接入项目的配置不会自动升级，此步骤检测漂移。
+检查项目的 ECW 配置文件是否与当前插件模板保持结构一致。模板更新后已接入项目的配置不会自动升级，此步骤检测结构性漂移。
 
 **重要：** 读取模板时，使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
 
@@ -199,7 +199,7 @@ cat .claude/ecw/ecw.yml
 | domain-registry.md | {pass/warn/fail} |
 | ecw-path-mappings.md | {pass/warn/fail} |
 | change-risk-classification.md | {pass/warn/fail} |
-| 模板版本同步 | {pass/warn/fail} |
+| 模板结构同步 | {pass/warn/fail} |
 | 知识文件结构 | {pass/warn/fail} |
 
 ### 问题清单

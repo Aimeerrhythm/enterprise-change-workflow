@@ -35,13 +35,6 @@ v0.4.0 移除了对 `superpowers` 插件的依赖。ECW 现在自包含所有 Sk
 - **操作**: 提示用户可以卸载 superpowers 插件（如无其他用途）
 - **注意**: 这是建议而非强制。superpowers 可能被其他项目使用
 
-## 版本更新
-
-```yaml
-# ecw.yml
-ecw_version: "0.4.0"
-```
-
 ## 验证
 
 迁移完成后运行 `/ecw-validate-config` 确认配置正确。

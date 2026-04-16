@@ -9,6 +9,7 @@
 ### Breaking Change
 
 - **移除 superpowers 依赖** — ECW 现在完全自包含，无需安装 superpowers 插件。所有 `superpowers:*` 引用替换为 `ecw:*` 自有 Skill
+- **移除 `ecw_version` 字段** — ecw.yml 不再需要 `ecw_version` 字段。`/ecw-upgrade` 改为纯幂等迁移：扫描所有迁移步骤并通过幂等检查判断是否已应用，无需版本号追踪。插件更新后无需手动同步版本号
 
 ### 新增
 
@@ -116,7 +117,7 @@
 - **`/ecw-upgrade` 升级命令** — 版本化项目配置升级，支持版本检测、迁移列表、逐步执行、幂等保护
 - **版本化迁移模板体系** — `templates/upgrades/{version}/` 目录结构，每个版本包含 migration.md + snippet 模板
 - **ecw.yml `tdd` 配置节** — 控制 TDD 流程行为（enabled / check_test_files / base_test_class）
-- **ecw.yml `ecw_version` 字段** — 跟踪项目 ECW 配置版本，`/ecw-upgrade` 基于此判断升级状态
+- **ecw.yml `ecw_version` 字段** — ~~跟踪项目 ECW 配置版本~~ 已在 v0.4.0 移除，改为纯幂等迁移
 
 ### 增强
 

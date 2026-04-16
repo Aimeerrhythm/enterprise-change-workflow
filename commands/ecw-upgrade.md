@@ -1,21 +1,19 @@
 ---
 name: ecw-upgrade
-description: Upgrade ECW configuration in your project to the latest plugin version. Detects version gap, lists pending migrations, and applies changes with user confirmation.
+description: Upgrade ECW configuration in your project. Scans all migrations, applies pending ones via idempotent checks, with user confirmation.
 ---
 
 # ECW Upgrade — 项目配置升级
 
-你正在执行 `/ecw-upgrade` 命令。你的任务是检测当前项目的 ECW 配置版本与插件版本之间的差异，列出待执行的迁移，逐步应用变更。严格按以下步骤顺序执行，不要跳步。
+你正在执行 `/ecw-upgrade` 命令。你的任务是扫描所有可用迁移，通过幂等检查判断哪些已应用、哪些待执行，然后逐步应用待执行的变更。严格按以下步骤顺序执行，不要跳步。
 
 **重要：** 此命令属于 `enterprise-change-workflow` 插件。下文引用的所有模板和迁移文件位于该插件的 `templates/` 目录。读取时使用 Read 工具从插件安装路径读取（即包含此 `commands/` 文件夹的上级目录下的 `templates/`）。
 
 ---
 
-## Step 0：版本检测
+## Step 0：前置检查
 
-### 0a：读取项目 ECW 版本
-
-读取 `.claude/ecw/ecw.yml`。如果文件不存在：
+检查 `.claude/ecw/ecw.yml` 是否存在。如果不存在：
 
 ```
 ECW 未初始化。请先运行 /ecw-init 初始化项目配置。
@@ -23,85 +21,53 @@ ECW 未初始化。请先运行 /ecw-init 初始化项目配置。
 
 然后停止。
 
-从 ecw.yml 提取 `ecw_version` 字段。如果字段不存在，视为 `0.1.0`（首版不含版本字段）。
-
-记录为 `current_version`。
-
-### 0b：读取插件版本
-
-读取插件目录下的 `package.json`，提取 `version` 字段。
-
-记录为 `plugin_version`。
-
-### 0c：版本比较
-
-如果 `current_version` == `plugin_version`：
-
-```markdown
-## ECW 配置已是最新版本
-
-当前版本：{current_version}
-插件版本：{plugin_version}
-
-无需升级。
-```
-
-然后停止。
-
-如果 `current_version` > `plugin_version`：
-
-```markdown
-## 版本异常
-
-项目 ECW 版本（{current_version}）高于插件版本（{plugin_version}）。
-请检查是否安装了正确的插件版本。
-```
-
-然后停止。
-
 ---
 
-## Step 1：扫描待执行的迁移
+## Step 1：扫描迁移并检测待执行项
 
-### 1a：列出可用迁移
+### 1a：列出所有迁移
 
-扫描插件 `templates/upgrades/` 目录，列出所有子目录名（每个子目录名即版本号）。
+扫描插件 `templates/upgrades/` 目录，列出所有子目录名（每个子目录名即版本号）。按版本号升序排列。
 
 ```bash
 ls templates/upgrades/
 ```
 
-筛选出版本号 > `current_version` 且 <= `plugin_version` 的迁移。按版本号升序排列。
+### 1b：逐版本幂等检测
 
-如果无待执行迁移：
+对每个迁移版本（升序），读取 `templates/upgrades/{version}/migration.md`，提取每个迁移步骤的**幂等检查**逻辑并执行：
 
-```
-未找到待执行的迁移文件。插件版本已更新但无配置变更，将直接更新版本号。
-```
+- 幂等检查通过（条件已满足） → 标记为"已应用"
+- 幂等检查未通过（条件不满足） → 标记为"待执行"
+- 步骤有前置条件不满足 → 标记为"不适用"
 
-跳转到 Step 3 更新版本号，再跳转到 Step 4 输出总结。
+### 1c：汇总结果
 
-### 1b：读取迁移摘要
+统计所有迁移步骤的状态。
 
-对每个待执行的迁移版本，读取 `templates/upgrades/{version}/migration.md`，提取 `## 概述` 章节内容。
-
-### 1c：展示迁移列表并确认
-
-使用 `AskUserQuestion` 向用户展示：
+**全部为"已应用"或"不适用"** → 输出：
 
 ```
-ECW 配置升级：{current_version} → {plugin_version}
+ECW 配置已是最新，所有迁移均已应用，无需操作。
+```
 
-待执行的迁移：
+然后停止。
+
+**有"待执行"的步骤** → 使用 `AskUserQuestion` 展示：
+
+```
+ECW 配置升级 — 检测到待执行的迁移：
 
 {version_1}:
   {概述内容}
+  待执行步骤：{列出待执行的步骤摘要}
+  已跳过步骤：{列出已应用的步骤}
 
 {version_2}（如有）:
-  {概述内容}
+  ...
 
 选项：
-  1. "执行升级（推荐）" — 逐步执行所有迁移，每步确认
+  1. "执行升级（推荐）" — 逐步执行待执行的迁移步骤
   2. "仅查看详情" — 显示详细迁移内容但不执行
   3. "跳过" — 不执行升级
 ```
@@ -161,51 +127,23 @@ ECW 配置升级：{current_version} → {plugin_version}
 
 ---
 
-## Step 3：更新版本号
+## Step 3：验证与总结
 
-**前置条件**：Step 2 中所有迁移步骤的最终状态均为"成功"或"跳过"（幂等命中）。如果有任何步骤状态为"失败"，**不更新版本号**，输出：
-
-```markdown
-## 部分迁移失败
-
-以下步骤执行失败：
-{失败步骤列表}
-
-版本号未更新（仍为 {current_version}）。修复问题后重新运行 `/ecw-upgrade`。
-已成功的步骤有幂等保护，重跑时会自动跳过。
-```
-
-然后跳转到 Step 4b 输出总结（不执行版本号更新）。
-
-**全部成功或跳过时**，更新 `.claude/ecw/ecw.yml` 中的 `ecw_version` 字段：
-
-- 如果已有 `ecw_version` 字段 → 用 Edit 工具替换为新版本
-- 如果没有 `ecw_version` 字段 → 在 `project:` 节的最后一行之后插入：
-  ```yaml
-  ecw_version: "{plugin_version}"
-  ```
-
----
-
-## Step 4：验证与总结
-
-### 4a：运行配置验证
+### 3a：运行配置验证
 
 提示用户可运行 `/ecw-validate-config` 验证升级后的配置完整性。
 
-### 4b：输出升级总结
+### 3b：输出升级总结
 
 ```markdown
 ## ECW 配置升级完成
-
-**版本变更：** {current_version} → {plugin_version}
 
 ### 已执行的迁移
 
 | 版本 | 步骤 | 状态 | 说明 |
 |------|------|------|------|
-| {version} | 迁移 A: {描述} | {成功/跳过(已存在)/跳过(条件不满足)/失败} | {详情} |
-| {version} | 迁移 B: {描述} | {成功/跳过(已存在)/跳过(条件不满足)/失败} | {详情} |
+| {version} | 迁移 A: {描述} | {成功/跳过(已应用)/跳过(不适用)/失败} | {详情} |
+| {version} | 迁移 B: {描述} | {成功/跳过(已应用)/跳过(不适用)/失败} | {详情} |
 | ... | ... | ... | ... |
 
 ### 已变更的文件
@@ -226,5 +164,4 @@ ECW 配置升级：{current_version} → {plugin_version}
 
 - 如果 ecw.yml 无法解析，报告错误并停止（不执行任何迁移）
 - 如果某个迁移步骤失败，记录错误后继续执行后续步骤
-- 如果所有步骤都被跳过（全部幂等检查命中），仅更新版本号并输出 "配置已是最新，仅更新了版本号"
 - 如果 snippet 模板无法读取，报告 "无法读取迁移模板 {path}。插件安装可能不完整。" 并跳过该步骤
