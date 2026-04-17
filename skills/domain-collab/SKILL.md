@@ -401,6 +401,15 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 
 ---
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Round 1/2 domain Agent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: mark domain as `[analysis unavailable]` and continue with remaining domains |
+| All domain Agents fail in a Round | Notify user: "Domain analysis agents failed. Provide manual domain impact assessment or retry." Do not proceed to next Round |
+| Knowledge file missing (`domain-registry.md`, `cross-domain-rules.md`, per-domain knowledge) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. If `domain-registry.md` missing: halt and ask user to run `/ecw-init` |
+| Report file write failure (`domain-collab-report.md`, `knowledge-summary.md`) | Retry once → still fails: output full report content in conversation so downstream skills can reference it |
+
 ## Notes
 
 - Each round of Agent dispatch uses Agent tool's parallel calls (multiple Agent tool calls in a single message)

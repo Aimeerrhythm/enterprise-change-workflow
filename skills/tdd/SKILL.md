@@ -255,6 +255,15 @@ Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix 
 
 Never fix bugs without a test. This integrates with `ecw:systematic-debugging` Phase 4.
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Plan file missing or unreadable | For requirement changes: halt and notify user — TDD cannot proceed without a Plan. For bug fixes: proceed using systematic-debugging output as input |
+| `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level |
+| Subagent delegation failure (≥ 6 files mode) | Record failure → retry once → still fails: fall back to direct TDD execution in coordinator context |
+| Test command fails with environment error (not test failure) | Report environment issue to user — do not count as TDD cycle failure. Fix environment first, then resume |
+
 ## Verification Checklist
 
 Before marking work complete:

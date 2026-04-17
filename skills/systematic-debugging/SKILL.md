@@ -167,6 +167,14 @@ When error is deep in call stack:
 
    **Use AskUserQuestion to discuss with user before more fixes.**
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `cross-domain-calls.md`, etc.) | Log `[Warning: {file} not found, cross-reference degraded]` → continue with available files. If all knowledge files missing: skip Step 5 (domain cross-reference) entirely, rely on code-level investigation only |
+| `session-state.md` unavailable (risk level unknown) | Use simplified check (P2/P3 level) for Step 5 cross-reference depth |
+| Bug not reproducible after Step 2 | Do not skip to Phase 3 — gather more data first. Log `[Not reproducible: need additional evidence]` and ask user for more context |
+
 ## Red Flags - STOP and Follow Process
 
 If you catch yourself thinking:

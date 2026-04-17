@@ -97,6 +97,15 @@ After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent L
 
 Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Biz-impact-analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: business impact analysis unavailable]` and suggest manual assessment |
+| `ecw-path-mappings.md` missing | Agent cannot map files to domains → output `[Warning: path mappings not found, domain identification degraded]` and proceed with file-path-based heuristic grouping |
+| Knowledge files missing (cross-domain-calls.md, mq-topology.md, etc.) | Agent logs `[Warning: {file} not found]` per missing file → analysis continues with available data, "Analysis Coverage" section in report reflects gaps |
+| `git diff` returns empty | No changes to analyze → notify user and exit without dispatching agent |
+
 ## Notes
 
 - Analysis results depend on dependency graph data quality under ecw.yml `paths.knowledge_common`

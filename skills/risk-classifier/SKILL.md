@@ -602,6 +602,17 @@ In addition to automatic triggering, the following manual scenarios are supporte
 
 ---
 
+## Error Handling
+
+**Standard ECW error recovery patterns applicable to this skill:**
+
+| Scenario | Handling |
+|----------|---------|
+| Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
+| Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
+| `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
+| `phase2-assessment.md` / `calibration-log.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
+
 ## Common Mistakes
 
 | Mistake | Consequence | Correction |

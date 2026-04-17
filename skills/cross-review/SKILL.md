@@ -104,6 +104,13 @@ Final pass summary:
 After {N} rounds of verification (fixed {M} issues), cross-file consistency check passed for all changed files.
 ```
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| `git diff --name-only` returns empty | No changed files to review → notify user and exit |
+| File listed in diff no longer exists (deleted after diff) | Skip that file in cross-comparison, note `[Skipped: {file} deleted]` |
+
 ## Constraints
 
 - **Loop cap**: Maximum 5 rounds. If findings remain after 5 rounds, output all unresolved items and suggest user intervention.

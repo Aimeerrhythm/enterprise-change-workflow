@@ -180,6 +180,15 @@ If issues found → implementer fixes → re-review.
 1. Invoke `ecw:impl-verify` — this is the post-implementation quality gate
 2. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Implementer subagent fails or returns empty | Record `FAILED` in Subagent Ledger → retry once with same model → still fails: escalate model (sonnet→opus) → still fails: notify user and mark task BLOCKED |
+| Spec reviewer returns empty or malformed | Retry once → still fails: coordinator performs simplified spec check inline (verify file changes match task requirements) |
+| Code quality reviewer fails (P0 only) | Retry once → still fails: skip code quality review for this task with `[Warning: code quality review unavailable for Task N]`, continue to next task. impl-verify Round 4 will catch quality issues |
+| Implementer returns BLOCKED status | 1. Context problem → provide more context, re-dispatch 2. Task too complex → escalate model 3. Plan issue → AskUserQuestion to discuss with user. Max 2 re-dispatches per task, then escalate to user |
+
 ## Never Rules
 
 - Start implementation on main/master without explicit user consent

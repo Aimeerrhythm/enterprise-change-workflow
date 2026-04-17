@@ -234,6 +234,15 @@ If you find issues, fix them inline.
 
 **Context management**: After the Plan is written to `.claude/plans/{feature}.md`, suggest to the user: "Implementation plan is complete and saved to file. Consider running `/compact` before proceeding to implementation — the Plan file contains all necessary context." Only suggest if the plan generation involved reading 3+ knowledge files.
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Subagent dispatch fails or returns incomplete plan | Record `FAILED` in Subagent Ledger → retry once → still fails: fall back to Direct mode (coordinator generates plan itself) |
+| Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
+| Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
+| `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level before proceeding |
+
 ## Downstream Handoff
 
 After saving the plan, determine and persist implementation strategy, then route to next step:

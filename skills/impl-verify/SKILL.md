@@ -327,6 +327,17 @@ Fix re-verification rounds (Round N+) output only:
 - New findings (if any)
 - **Do not repeat already-passed Round results**
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Round subagent returns empty or malformed YAML | Record `FAILED` in findings → retry once with explicit output format instructions → still fails: coordinator executes that Round inline (fallback to non-subagent mode for that Round only) |
+| All 4 Round subagents fail | Notify user: `[DEGRADED: automated verification unavailable]` → suggest manual code review or retry |
+| Knowledge file missing (Round 2: `business-rules.md`, `data-model.md`, `knowledge-summary.md`) | Skip Round 2 with `[Warning: domain knowledge files not found, Round 2 skipped]` → continue with Rounds 1, 3, 4 |
+| Requirement/Plan file missing | Skip corresponding Round (1 or 3) with warning → execute remaining Rounds |
+| `impl-verify-findings.md` write failure | Retry once → still fails: output findings in conversation to preserve for convergence tracking |
+| `git diff` command failure | Verify git state with `git status` → if not in a git repo or no changes: notify user and exit |
+
 ## Common Rationalizations — You Are Bypassing Verification
 
 When these thoughts occur, **stop** — you are rationalizing skipping or weakening verification:

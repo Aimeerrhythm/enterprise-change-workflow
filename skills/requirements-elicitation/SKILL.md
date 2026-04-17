@@ -271,6 +271,13 @@ Wait for user confirmation. After confirmation:
 - **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`
 - **Fallback**: If Phase 2 not needed, invoke `ecw:writing-plans` directly
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Synthesis analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: skip synthesis, present Q&A findings directly to user with `[Warning: automated synthesis unavailable, manual review recommended]` |
+| `requirements-summary.md` write failure | Retry once → still fails: output full requirement summary in conversation (ensures downstream skills can still reference it) |
+
 ## Common Mistakes
 
 | Mistake | Correction |

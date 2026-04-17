@@ -162,6 +162,14 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 - Document has been updated to reflect all "agree to modify" and "adopted" changes
 - **User final confirmation** on response summary — review passed
 
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Spec-challenge Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: adversarial review unavailable]` and ask whether to proceed without review or retry manually |
+| Agent returns unstructured text (no F/I items) | Treat entire response as a single improvement suggestion (I1) and present to user for confirmation |
+| `spec-challenge-report.md` write failure | Retry once → still fails: output full report in conversation and continue with user confirmation flow |
+
 ## Workflow Integration
 
 ### Auto-Trigger Scenarios
