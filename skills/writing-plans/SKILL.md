@@ -259,17 +259,18 @@ After saving the plan, determine and persist implementation strategy, then route
 
 **1. Spec Challenge needed?** (P0; P1 cross-domain only)
 → "Plan saved. Next: `ecw:spec-challenge` for adversarial review before implementation."
+→ **Auto-proceed**: Immediately invoke `ecw:spec-challenge` — do NOT use AskUserQuestion or wait for user confirmation. Skip steps 2-4 below; execution choice is handled by spec-challenge's Post-Review section after review completes.
 
-**2. TDD phase?** (P0-P2 when `tdd.enabled: true`)
+**2. TDD phase?** (P0-P2 when `tdd.enabled: true`, and spec-challenge NOT needed)
 → Remind that implementation should follow `ecw:tdd`.
 
-**3. Implementation strategy routing:**
+**3. Implementation strategy routing:** (when spec-challenge NOT needed)
 
 | Strategy | Handoff |
 |----------|---------|
 | `subagent-driven` | "Plan saved. Recommend using `ecw:impl-orchestration` to execute task-by-task with per-task review." |
 | `direct` | "Plan saved. Implement tasks sequentially, following ecw:tdd for each." |
 
-**4. Offer execution choice via AskUserQuestion:**
+**4. Offer execution choice via AskUserQuestion:** (when spec-challenge NOT needed)
 - "Subagent-Driven (Recommended)" — dispatch fresh subagent per task via ecw:impl-orchestration
 - "Direct Implementation" — implement tasks sequentially in current session
