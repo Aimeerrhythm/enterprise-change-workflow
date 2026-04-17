@@ -29,7 +29,7 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    4. Fill above results into Agent prompt, replacing full diff
 
 > **Knowledge file robustness**: If `ecw-path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
-3. **Dispatch biz-impact-analysis agent** (`model: sonnet` — business impact analysis requires understanding domain relationships and dependency graphs) — Pass in preprocessed results, await impact analysis report
+3. **Dispatch biz-impact-analysis agent** (`model: opus` — business impact analysis is the final safety net; missed impact goes straight to production incidents) — Pass in preprocessed results, await impact analysis report
 4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
    - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
    - Retry once with the same model

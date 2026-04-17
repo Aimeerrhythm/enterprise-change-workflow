@@ -3,7 +3,7 @@ name: domain-negotiator
 description: |
   Domain negotiation agent for multi-domain collaboration Round 2.
   Assesses whether other domains' change plans affect this domain.
-model: sonnet
+model: opus
 tools:
   - Read
   - Grep

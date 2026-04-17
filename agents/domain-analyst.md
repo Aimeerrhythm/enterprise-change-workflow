@@ -4,7 +4,7 @@ description: |
   Domain-specific analysis agent for multi-domain collaboration.
   Dispatched by domain-collab Round 1 (independent analysis) and Round 2 (negotiation).
   Each instance focuses on a single domain's impact assessment.
-model: sonnet
+model: opus
 tools:
   - Read
   - Grep

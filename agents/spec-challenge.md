@@ -5,7 +5,7 @@ description: |
   Dispatched after a spec or design document is produced, reviews it from an independent
   context (only sees the document + project knowledge, not the author's reasoning).
   Outputs structured issues with severity and worst-case consequences.
-model: sonnet
+model: opus
 ---
 
 # Role

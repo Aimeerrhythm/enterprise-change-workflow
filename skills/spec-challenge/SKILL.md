@@ -62,7 +62,7 @@ When dispatching the spec-challenge agent, Coordinator first determines `{affect
 - **Auto-trigger**: Get domain list from current session's domain-collab report or risk-classifier output
 - **Manual trigger**: Extract domain keywords from document content, match against project CLAUDE.md domain routing table; if undeterminable, set to "please infer involved domains from document content"
 
-**Model selection**: `model: sonnet` (adversarial review requires critical thinking and deep understanding of plan logic, but does not need Opus-level creativity).
+**Model selection**: `model: opus` (adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design).
 
 Use the following prompt structure:
 

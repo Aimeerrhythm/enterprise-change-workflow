@@ -70,7 +70,7 @@ digraph domain_collab {
 
 Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general-purpose`).
 
-**Model selection**: `model: sonnet` (domain analysis requires deep understanding of business rules and knowledge files). Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` for that domain to reduce cost.
+**Model selection**: `model: opus` (domain analysis requires deep understanding of business rules, state machines, and cross-domain dependencies — errors here cascade to all downstream workflow). Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` for that domain to reduce cost.
 
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
@@ -162,7 +162,7 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 3. Specifically flag: other domains' `cross_domain_risks` where `target` points to this domain ("another domain specifically noted you may be affected")
 4. Dispatch new round of domain agents in parallel
 
-**Model selection**: `model: sonnet` (negotiation requires understanding other domains' changes and assessing cross-domain impact). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
+**Model selection**: `model: opus` (negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
 **Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills the template variables with Round 1 results and other domains' change summaries.
 
