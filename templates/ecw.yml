@@ -113,3 +113,4 @@ paths:
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
   knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识
   calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史
+  calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）

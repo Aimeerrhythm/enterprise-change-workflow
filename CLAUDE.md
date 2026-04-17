@@ -60,6 +60,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/session-data/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
 | `.claude/ecw/session-data/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
 | `.claude/ecw/session-data/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |
+| `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Structured calibration records for Phase 1 prediction reference |
 
 ### Knowledge Files (populate as needed)
 

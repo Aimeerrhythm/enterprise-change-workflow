@@ -182,6 +182,13 @@ Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domai
 
 > Full three-dimensional factor definitions (Impact Scope / Change Type / Business Sensitivity) are in the file specified by ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses only the first two dimensions for quick assessment; Phase 2 uses all three.
 
+**Calibration history reference**: Before finalizing, check `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). If the file exists and contains entries matching current keywords:
+- Scan the **last 10 entries** for keyword overlap with this change
+- If a pattern shows the same keywords were previously over-predicted or under-predicted, adjust the composite level accordingly (±1 level max)
+- Log the adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history: {matching record summary}]`
+
+> **Robustness**: If the file does not exist or is empty, skip silently. Calibration history is an enhancement, not a requirement.
+
 If information is insufficient to determine, **default to P2** (better to over-process than under-process).
 
 Look up "Total Risk + Cross-Domain determination" in the Skill Interaction routing table to determine downstream workflow.
@@ -586,6 +593,36 @@ Append format:
 
 > If file does not exist, first copy initial template from `templates/calibration-log.md` (or create an empty file with header).
 
+#### Step 5: Append Calibration History Record
+
+After appending to `calibration-log.md`, also write a concise structured record to `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). This file is optimized for Phase 1 to read and reference in future sessions.
+
+If the file does not exist, create it with header:
+
+```markdown
+# Calibration History
+
+> Auto-appended by Phase 3. Phase 1 reads recent entries as prediction reference.
+
+---
+```
+
+Append format:
+
+```markdown
+### {YYYY-MM-DD HH:mm} — {change summary}
+
+- **Predicted**: P{x}
+- **Actual**: P{z}
+- **Determination**: {Accurate / Over-alert / Missed / Minor deviation}
+- **Cause**: {one-line deviation cause; "—" if accurate}
+- **Keywords**: {Phase 1 keywords that triggered original classification}
+
+---
+```
+
+> **Write failure handling**: Retry once → still fails: output content in conversation and continue workflow. This file is supplementary; failure does not block Phase 3.
+
 ### Notes
 
 - Phase 3 **does not auto-modify any configuration files**, only outputs suggestions
@@ -617,7 +654,7 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
 | Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
 | `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
-| `phase2-assessment.md` / `calibration-log.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
+| `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
 ## Common Mistakes
 
