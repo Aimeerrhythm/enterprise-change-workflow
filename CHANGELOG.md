@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.6] - 2026-04-17
+
+### 修复
+
+- **subagent timeout prevention** — spec-challenge 增加 10 文件读取上限防止 2400s 超时；writing-plans/spec-challenge 超时后先重试 subagent 再降级 Direct 模式
+- **implementer runaway prevention** — Fact-Forcing Gate 改为仅分析主域引用（跨域仅计数），100 tool call 硬停，自审改为单次
+- **P0 downstream auto-routing** — writing-plans 完成后自动进入 spec-challenge，不再 AskUserQuestion
+- **verify-completion runtime paths** — 跳过 `state/` 和 `session-data/` 目录的 broken reference 检查
+
+### 改进
+
+- **context compression UX** — pre-compact hook 注入自动继续指令；stop-persist hook 检测阶段转换写入 context-health advisory
+- **session-data 路径隔离** — session-state.md、knowledge-summary.md、domain-collab-report.md、spec-challenge-report.md 迁移至 `session-data/{workflow-id}/`，防止多需求并行时互相覆盖。更新 11 个 SKILL.md + 3 个 hook + agent + 文档
+
 ## [0.6.5] - 2026-04-17
 
 ### 移除
@@ -321,6 +335,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.6]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.6
 [0.6.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.5
 [0.6.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.4
 [0.6.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.3
