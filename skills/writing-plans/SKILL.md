@@ -73,6 +73,8 @@ Coordinator constructs the subagent prompt with the following inputs — **does 
 
 ### Subagent Responsibilities
 
+**Source code reading limits** (prevent timeout): Read at most **10 source files** total. For each file, prefer Grep with limited context (`-A 5`) over full Read. Only Read full files for core interfaces or classes that directly participate in the change. Do NOT read complete implementations of large service classes — read class signatures and method signatures only.
+
 The subagent executes the full Plan generation pipeline in its own context:
 
 1. Read all knowledge files from the paths provided by coordinator
@@ -238,7 +240,7 @@ After writing the complete plan, review with fresh eyes:
 
 If you find issues, fix them inline.
 
-**Context management**: After the Plan is written to `.claude/plans/{feature}.md`, suggest to the user: "Implementation plan is complete and saved to file. Consider running `/compact` before proceeding to implementation — the Plan file contains all necessary context." Only suggest if the plan generation involved reading 3+ knowledge files.
+**Context management**: The Plan file contains all necessary context for downstream skills. After the Plan is written and self-review is complete, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
 
 ## Error Handling
 

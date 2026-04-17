@@ -118,16 +118,16 @@ class TestWritingPlansSubagentDispatch:
             "Must specify that single domain or < 3 knowledge files stays in direct mode"
 
     def test_model_selection(self):
-        """AC: Subagent must use sonnet model for plan generation.
+        """AC: Subagent must specify model for plan generation.
 
-        The skill must specify that subagents use the sonnet model (not opus
-        or haiku) for cost/quality balance in plan generation.
+        The skill must specify that subagents use opus model for plan
+        generation — plan quality drives all downstream implementation.
         """
         lower = self.content.lower()
-        has_sonnet = bool(re.search(r'sonnet', lower))
+        has_opus = bool(re.search(r'model.*opus|opus.*model', lower))
         has_subagent = bool(re.search(r'sub-?agent', lower))
-        assert has_sonnet and has_subagent, \
-            "Must specify sonnet model for subagent plan generation"
+        assert has_opus and has_subagent, \
+            "Must specify opus model for subagent plan generation"
 
     def test_existing_plan_structure_preserved(self):
         """Regression: Plan Document Header and Task Structure rules must still exist.

@@ -175,12 +175,17 @@ def check_broken_references(cwd, filepath):
     if not filepath.endswith(text_exts):
         return issues
 
+    # 运行时自动生成的目录 — 文件可能尚未创建，跳过存在性检查
+    runtime_dirs = (".claude/ecw/state/", ".claude/ecw/session-data/")
+
     try:
         with open(full_path, encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         # 匹配 .claude/ 开头的文件路径引用（带扩展名）
         for ref in re.findall(r"\.claude/[\w\-/]+\.[\w]+", content):
+            if any(ref.startswith(d) for d in runtime_dirs):
+                continue
             if not os.path.exists(os.path.join(cwd, ref)):
                 issues.append(_MESSAGES["broken_ref"].format(filepath=filepath, ref=ref))
 

@@ -421,7 +421,7 @@ P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plan
 P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
 ```
 
-**Context management**: After Round 3 output is complete and files are written, suggest to the user: "domain-collab analysis is complete and saved to files. Consider running `/compact` to free context for the next phase (writing-plans)." This is a suggestion, not a requirement — only output it if the analysis was complex (3+ domains or Round 2 had conflicts).
+**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
 
 ---
 

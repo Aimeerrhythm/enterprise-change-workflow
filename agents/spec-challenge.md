@@ -123,6 +123,18 @@ During review you will receive:
 
 You will **not** receive the plan author's reasoning process. This is intentional — you need to judge whether the plan is internally consistent from the document itself, not be persuaded by the author's arguments.
 
+## Source Code Reading Limits
+
+To prevent timeout, strictly follow these limits when verifying plan accuracy against source code:
+
+- Read at most **10 source files** total during the entire review
+- For each file, prefer **Grep with limited context** (`-A 5`) over full Read
+- Only **Read full files** for core interfaces or classes that directly participate in the change
+- Do **NOT** read complete implementations of large service classes — read class signatures and method signatures only
+- Knowledge files (business-rules.md, cross-domain-rules.md, etc.) do NOT count toward the 10-file limit
+
+If you need to verify more than 10 source files, prioritize by risk: focus on files involved in cross-domain calls, state machine transitions, and shared resources.
+
 ## Important Constraints
 
 - You only review — no implementation. Do not write code or modify files.

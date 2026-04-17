@@ -96,6 +96,19 @@ def _extract_risk_level(state_path):
     return None
 
 
+def _extract_current_phase(state_path):
+    """Extract current phase from session-state.md."""
+    try:
+        with open(state_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read(2048)
+        m = re.search(r'\*\*Current Phase\*\*:\s*(.+)', content)
+        if m:
+            return m.group(1).strip()
+    except Exception:
+        pass
+    return None
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
@@ -122,9 +135,11 @@ def main():
     if state_path:
         rel_state = os.path.relpath(state_path, cwd)
         risk = _extract_risk_level(state_path)
+        phase = _extract_current_phase(state_path)
         risk_info = f" (risk: {risk})" if risk else ""
         parts.append(f"\n1. **Workflow state**: `{rel_state}`{risk_info}")
     else:
+        phase = None
         parts.append("\n1. No active session-state.md found")
 
     if checkpoint_files:
@@ -139,6 +154,17 @@ def main():
         "\n4. Check `.claude/ecw/state/modified-files.txt` for files "
         "modified before compaction"
     )
+
+    # Auto-continue instruction
+    parts.append(
+        "\n5. **IMPORTANT: Auto-continue** — After restoring context, "
+        "immediately resume the ECW workflow from where it left off. "
+        "Read session-state.md Routing and Current Phase to determine "
+        "the next step, then execute it WITHOUT asking the user for "
+        "confirmation. Do NOT wait for user input to continue."
+    )
+    if phase:
+        parts.append(f"   Current phase before compaction: `{phase}`")
 
     msg = "\n".join(parts)
     result = {"result": "continue", "systemMessage": msg}

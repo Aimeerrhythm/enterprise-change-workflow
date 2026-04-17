@@ -84,6 +84,10 @@ Cross-domain call relationships are recorded in `cross-domain-rules.md` under ec
 Domains involved in the plan: {affected_domains}
 Read relevant knowledge files for the above domains as needed to verify plan accuracy. Do not read all knowledge files at once.
 
+## Source Code Reading Limits (CRITICAL — prevent timeout)
+
+Read at most **10 source files** total. For each file, prefer Grep with limited context (`-A 5`) over full Read. Only Read full files for core interfaces or classes that directly participate in the change. Do NOT read complete implementations of large service classes — read class signatures and method signatures only. Knowledge files do not count toward this limit.
+
 ## Review Requirements
 
 Review each dimension (accuracy, information quality, boundaries & blind spots, robustness) one by one.
