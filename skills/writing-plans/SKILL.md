@@ -85,7 +85,7 @@ The subagent executes the full Plan generation pipeline in its own context:
    - Total Task count
    - One-sentence description per Task
    - Full list of files to create/modify
-   - Implementation Strategy (direct / subagent-driven, per "Implementation Strategy Selection" rules)
+   - Implementation Strategy (direct if Tasks ≤ 3 + files ≤ 5; subagent-driven if Tasks > 8 or P0/P1 with 4+ Tasks)
 
 ### Coordinator Post-Processing
 
@@ -145,7 +145,7 @@ This structure informs the task decomposition.
 ---
 ```
 
-**Implementation Strategy** is read from `session-state.md` `实现策略` field. If TBD or unavailable, determine by risk-classifier's "实现策略选择" rules (Task count x risk level).
+**Implementation Strategy** is read from `session-state.md` `实现策略` field. If TBD or unavailable, determine by risk-classifier's "Implementation Strategy Selection" rules: Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven.
 
 ## Task Structure
 
@@ -253,7 +253,7 @@ If you find issues, fix them inline.
 
 After saving the plan, determine and persist implementation strategy, then route to next step:
 
-**Update session-state.md:** Count tasks in the plan. Per risk-classifier "实现策略选择" rules, determine strategy (direct / subagent-driven) and update `.claude/ecw/session-state.md` `实现策略` field. If spec-challenge will follow (P0; P1 cross-domain), spec-challenge may refine this — write the initial value now.
+**Update session-state.md:** Count tasks in the plan. Per risk-classifier "Implementation Strategy Selection" rules (Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven), determine strategy and update `.claude/ecw/session-state.md` `实现策略` field. If spec-challenge will follow (P0; P1 cross-domain), spec-challenge may refine this — write the initial value now.
 
 **1. Spec Challenge needed?** (P0; P1 cross-domain only)
 → "Plan saved. Next: `ecw:spec-challenge` for adversarial review before implementation."

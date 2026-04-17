@@ -102,7 +102,7 @@ tdd:
   check_test_files: false
   # 测试基类（供参考，不影响逻辑）。
   # Java: "BaseUnitTest" | Go: "TestSuite" | Node: 留空
-  # base_test_class: "BaseUnitTest"
+  base_test_class: ""
 
 # 规则配置
 # 控制项目适用的工程规范规则集。规则安装到 .claude/ecw/rules/ 目录，始终生效。

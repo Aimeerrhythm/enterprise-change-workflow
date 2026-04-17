@@ -4,6 +4,47 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.0] - 2026-04-17
+
+### 架构升级 — ECC 对标全面改进
+
+基于 [everything-claude-code](https://github.com/affaan-m/everything-claude-code) 最佳实践，对 ECW 插件进行 4 波次 9 类 34 项系统性改进。
+
+#### Wave 1 — 基座层
+
+- **Hook 调度器模式 (B-1~B-3)** — `hooks/dispatcher.py` 统一 PreToolUse 入口，子模块通过注册表串联；风险等级 Profile 门控（P0→strict, P1/P2→standard, P3→minimal）；`post-edit-check.py` PostToolUse 反模式检测
+- **工程规则层 (F-1~F-2)** — `templates/rules/common/` 5 个通用规则文件（coding-style/security/testing/performance/design-patterns）；Java/Go 语言专项规则
+- **代码质量工具链 (I-1, I-3)** — markdownlint + ruff 集成；CONTRIBUTING.md + TROUBLESHOOTING.md
+
+#### Wave 2 — 核心层
+
+- **Session 生命周期 (A-1~A-4)** — SessionStart 自动注入 session-state/checkpoint/ecw.yml 上下文；Stop hook marker-based 状态持久化；PreCompact 压缩恢复引导增强；SessionEnd 清理
+- **Agent 架构 (G-1~G-4)** — 全部 SKILL.md subagent dispatch 指定 model（haiku/sonnet/opus）；7 个 agent 文件独立化提取（implementer/spec-reviewer/impl-verifier/domain-analyst/domain-negotiator/biz-impact-analysis/spec-challenge）；impl-orchestration 最大迭代 + 熔断；subagent 返回值 schema 检查 + 重试 + 降级
+- **配置文件保护 (C-1)** — config-protect 子模块阻止 AI 修改 ecw.yml/domain-registry 等关键配置
+
+#### Wave 3 — 深化层
+
+- **Skill 内部质量 (H-1~H-6)** — 11 个 SKILL.md 统一错误处理（失败→Ledger记录→重试→降级）；全部 subagent dispatch 增加 timeout；交互循环终止条件（最大轮次 + 无改善升级）；systematic-debugging/tdd/requirements-elicitation/domain-collab 增加 session-data 检查点；知识文件存在性检查 + 降级标注；impl-verify Diff Read Strategy 矛盾修复
+- **Context 管理 (E-1~E-3)** — `compact-suggest.py` tool-call 计数器主动压缩建议；`marker_utils.py` 共享幂等更新模块；session-state 工作模式声明（analysis/planning/implementation/verification）
+- **安全加固 (C-2~C-5)** — `secret-scan.py` 敏感数据检测（AWS/JWT/GitHub Token/Private Key/Generic Secret）；`bash-preflight.py` 危险命令预检（--no-verify/push --force/rm -rf）；Fact-Forcing Gate 实现者事实溯源门控；Subagent Ledger 增加 Started/Duration 列治理审计
+
+#### Wave 4 — 增值层
+
+- **持续学习 (D-1~D-3)** — Phase 3 校准历史持久化（calibration-history.md）；Instinct 注入框架（confidence > 0.7 由 SessionStart 注入）；session-data 按 workflow-id 隔离
+- **测试覆盖扩展 (I-2)** — domain-collab（6 场景）、tdd（7 场景）、impl-verify（6 场景）promptfoo eval 套件
+- **语言硬编码清理 (H-7)** — verify-completion/post-edit-check/bash-preflight/secret-scan 中文提示语提取为 `_MESSAGES` 字典
+
+### 数据
+
+| 指标 | v0.5.0 | v0.6.0 | 变化 |
+|------|--------|--------|------|
+| Hook 模块 | 3 | 10 | +7 |
+| Agent 文件 | 2 | 7 | +5 |
+| SKILL.md 总 token | ~43K | ~44.5K | +3.5% |
+| 单元测试 | 204 | 301 | +97 |
+| Eval 套件 | 1 (risk-classifier) | 4 (+domain-collab/tdd/impl-verify) | +3 |
+| Lint warnings | 3 | 0 | -3 |
+
 ## [0.5.0] - 2026-04-17
 
 ### 性能优化

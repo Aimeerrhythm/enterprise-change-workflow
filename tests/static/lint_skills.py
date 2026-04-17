@@ -515,6 +515,11 @@ def check_ecw_yml_keys(result: LintResult):
                     continue
                 if ref_key not in checked_refs:
                     checked_refs.add(ref_key)
+                    # Skip file extensions mistaken for config keys
+                    if re.search(r'\.\w{1,4}$', ref_key) and ref_key.split('.')[-1] in (
+                        'md', 'py', 'yml', 'yaml', 'json', 'js', 'ts', 'java', 'go'
+                    ):
+                        continue
                     if ref_key not in all_valid_keys:
                         result.warn(
                             f"[ecw-yml] {rel_path}: references config key '{ref_key}' "
