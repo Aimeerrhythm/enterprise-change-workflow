@@ -104,18 +104,21 @@ When requirements span multiple business domains, use `ecw:domain-collab` (multi
 
 ### Implementation Strategy Selection
 
-The "Implementation(GREEN)" in routing tables requires choosing implementation approach based on Plan Task count and risk level:
+The "Implementation(GREEN)" in routing tables requires choosing implementation approach based on three dimensions: Task count, file count, and domain count:
 
 | Condition | Strategy | Rationale |
 |-----------|----------|-----------|
-| Plan Tasks ≤ 3 | **Direct implementation** (complete sequentially in main session) | Few tasks; subagent dispatch overhead not worthwhile |
+| Plan Tasks ≤ 3, involved files ≤ 5, single domain | **Direct implementation** (complete sequentially in main session) | Few tasks + few files; subagent dispatch overhead not worthwhile |
+| Plan Tasks ≤ 3, but involved files ≥ 6 | **`ecw:impl-orchestration`** | File operations intensive; coordinator context will overflow |
+| Plan Tasks ≤ 3, but ≥ 2 domains' code modifications | **`ecw:impl-orchestration`** | Cross-domain file spread increases context consumption |
 | Plan Tasks 4-8, P0/P1 | **`ecw:impl-orchestration`** | Many complex tasks; subagent parallelism adds value |
 | Plan Tasks 4-8, P2 | **Direct implementation** | Medium risk; parallelization overhead unnecessary |
 | Plan Tasks > 8, P0/P1 | **`ecw:impl-orchestration`**, merge simple Tasks | Avoid subagent count explosion |
 | P3 | **Direct implementation** | Low risk, no Plan |
-| Bug fix | **Direct implementation** | Usually single-point fix, no parallelism needed |
+| Bug fix, involved files ≤ 5 | **Direct implementation** | Usually single-point fix, no parallelism needed |
+| Bug fix, involved files ≥ 6 | **`ecw:impl-orchestration`** | Complex bug fix spanning many files |
 
-**Implementation strategy is determined after ecw:writing-plans completes, before entering implementation.** Based on Task list count in the Plan file.
+**Implementation strategy is determined after ecw:writing-plans completes, before entering implementation.** Based on three dimensions from the Plan file: (1) Task count, (2) total unique files involved across all Tasks, (3) number of domains whose code is modified. Scan all Tasks in the Plan to count files: aggregate `file_path` references in each Task, deduplicate, and count unique files. Count domains by mapping file paths through `ecw-path-mappings.md`.
 
 **Rules for merging simple Tasks** (when Plan Tasks > 8):
 - **Mergeable** (batch to 1-2 subagents): Single-file changes with no conditional branching — enum/constant definitions, DTO/VO new fields, Mapper single methods, config changes, doc sync
@@ -335,7 +338,7 @@ Append to Phase 1 output:
 
 | Item | Details |
 |------|---------|
-| **Who executes** | risk-classifier itself (no agent dispatch) |
+| **Who executes** | risk-classifier dispatches a subagent (`model: sonnet`) to query dependency graph; coordinator holds only structured YAML result |
 | **When** | After ecw:requirements-elicitation / ecw:domain-collab completes, before ecw:writing-plans |
 | **Applicable** | P0/P1 (have requirement analysis artifacts) |
 | **Not applicable** | P2 (Phase 1 lightweight check already covered), P3, Bug fixes (skip requirement analysis, go directly to systematic-debugging) |
@@ -348,7 +351,7 @@ Append to Phase 1 output:
 
 ### Execution Steps
 
-#### Step 1: Extract Changed Component List from Requirement Analysis
+#### [Subagent] Step 1: Extract Changed Component List from Requirement Analysis
 
 Extract all components to be modified from requirement analysis results:
 - ecw:requirements-elicitation → Extract entities/components from "Data Changes" and "Workflow" sections of requirement summary
@@ -356,7 +359,45 @@ Extract all components to be modified from requirement analysis results:
 
 > Information granularity is class-level (not method-level), sufficient for dependency graph queries.
 
-#### Step 2: Full Dependency Graph Query
+### Subagent Dispatch
+
+Coordinator dispatches a single subagent to execute Steps 1-4:
+
+**Coordinator constructs prompt with:**
+- Requirement summary + changed component list (from requirements-elicitation or domain-collab conclusion)
+- Phase 1 pre-assessment result (P level + domains, from session-state.md)
+- 5 knowledge file paths: cross-domain-calls.md, mq-topology.md, shared-resources.md, external-systems.md, e2e-paths.md (read paths from ecw.yml `paths.knowledge_common`)
+- knowledge-summary.md path (if exists, subagent uses it to reduce original file reads)
+- Risk factor file path (from ecw.yml `paths.risk_factors`)
+
+**Subagent executes** Steps 1-4 internally and returns structured YAML:
+
+```yaml
+risk_level: P{X}
+phase1_level: P{Y}
+level_change: upgraded | downgraded | unchanged
+affected_domains: [domain1, domain2]
+classification_factors:
+  impact_scope: {level: P{X}, details: "..."}
+  change_type: {level: P{X}, details: "..."}
+  business_sensitivity: {level: P{X}, details: "..."}
+dependency_graph:
+  cross_domain_calls: [{from: X, to: Y, method: Z}]
+  mq_impacts: [{topic: T, publishers: [...], consumers: [...]}]
+  shared_resources: [{resource: R, consumers: [...]}]
+  external_impacts: [{system: S, direction: inbound|outbound, interface: I}]
+  e2e_paths: [{path_name: P, affected_step: S}]
+upgrade_reason: "..."  # if upgraded
+```
+
+**Coordinator receives YAML**, then:
+- Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
+- Output Phase 2 report in the defined format
+- Write checkpoint to `.claude/ecw/session-data/phase2-assessment.md`
+
+**Model**: `model: sonnet` (dependency graph query is rule-based lookup, not creative reasoning)
+
+#### [Subagent] Step 2: Full Dependency Graph Query
 
 **Knowledge summary priority read**: If `.claude/ecw/knowledge-summary.md` exists (generated by domain-collab), read cross-domain dependency info from that file first. Only read original knowledge files when summary file does not exist or has insufficient information.
 
@@ -370,7 +411,7 @@ For each affected class/method:
 | External systems | §4 `external-systems.md` | Inbound/outbound interface impact |
 | End-to-end paths | §5 `e2e-paths.md` | Which path, which step affected |
 
-#### Step 3: Change Type Analysis
+#### [Subagent] Step 3: Change Type Analysis
 
 Analyze change patterns described in the plan:
 - Does it involve state machine changes?
@@ -378,7 +419,7 @@ Analyze change patterns described in the plan:
 - Does it modify method signatures?
 - Does it involve SQL write-operation changes?
 
-#### Step 4: Re-assess Risk Level
+#### [Subagent] Step 4: Re-assess Risk Level
 
 ```
 Phase 2 Level = max(Impact Scope, Change Type, Business Sensitivity)

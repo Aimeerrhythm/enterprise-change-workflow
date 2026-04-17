@@ -56,7 +56,10 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/plans/domain-collab-report.md` | After domain-collab Round 3 completes | Full multi-domain collaboration analysis report |
 | `.claude/ecw/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
 | `.claude/ecw/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
-| `.claude/ecw/impl-verify-findings.md` | When impl-verify finds >5 must-fix | Fix checklist (only summary output in session) |
+| `.claude/ecw/impl-verify-findings.md` | Deprecated — see `session-data/impl-verify-findings.md` | — |
+| `.claude/ecw/session-data/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
+| `.claude/ecw/session-data/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
+| `.claude/ecw/session-data/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |
 
 ### Knowledge Files (populate as needed)
 

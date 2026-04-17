@@ -131,7 +131,7 @@ export ANTHROPIC_API_KEY=your-key
 make -C tests lint        # 静态检查（<3s, $0）
 make -C tests test-hook   # Hook 单元测试（<10s, $0）
 make -C tests eval-quick  # P0 场景 eval（~2min, ~$0.50）
-make -C tests eval-full   # 全部 15 场景（~5min, ~$1.50）
+make -C tests eval-full   # 全部 21 场景（~5min, ~$1.50）
 make -C tests all         # lint + test-hook + eval-quick
 make -C tests clean       # 清理缓存
 ```
@@ -194,7 +194,7 @@ python3 tests/static/lint_skills.py --quiet  # 仅输出错误
 
 **文件**: `eval/promptfooconfig.yaml` + `eval/scenarios/*.yaml` | **耗时**: 2-5min | **成本**: $0.50-1.50 | **可靠性**: 80-90%
 
-15 个场景，验证 risk-classifier 的路由决策：
+21 个场景，验证 risk-classifier 的路由决策：
 
 **P0 场景（阻塞发布）— 8 个：**
 
@@ -211,7 +211,16 @@ python3 tests/static/lint_skills.py --quiet  # 仅输出错误
 
 **P1 场景（尽快补充）— 5 个：** S9 (P2 跨域含 writing-plans + impl-verify)、S10 (P3 跨域)、S11 (非变更请求)、S12 (信息不足→P2/P3)、S13 (敏感词触发)
 
-**P2 场景（后续完善）— 2 个：** S14 Bug 风险差异、S15 手动覆盖
+**P2 场景（后续完善）— 4 个：** S14 Bug 风险差异、S15 手动覆盖、S16 P2 Bug、S17 P3 Bug
+
+**上下文压缩专项 — 4 个（v0.5.0 新增，tdd 路由覆盖 0→4）：**
+
+| # | 场景 | 输入（中文） | 关键断言 |
+|---|------|-------------|---------|
+| S18 | P0 4域密集场景 | 入库签收到货数量不符，跨库存/物流/订单/用户4域 | risk_level=P0, mode=cross-domain, domains≥3, routing 含 domain-collab + spec-challenge + **tdd** + impl-verify + biz-impact-analysis |
+| S19 | P1 跨域含 tdd | 取消订单触发库存释放和物流拦截 | routing 含 domain-collab + spec-challenge + **tdd** + impl-verify + biz-impact-analysis |
+| S20 | P2 单域含 tdd | 订单列表按时间筛选 | routing 含 writing-plans + **tdd** + impl-verify，不含 spec-challenge/biz-impact-analysis |
+| S21 | Bug 排除 tdd | 修改地址后物流未更新 | change_type=bug, routing 含 systematic-debugging + impl-verify，**不含 tdd** |
 
 查看 eval 结果报告：
 
@@ -429,7 +438,7 @@ make -C tests test-hook  # 所有测试应通过
 
 假设需要测试"共享资源变更自动升级到 P1"的行为。
 
-**Step 1 — 创建场景文件 `eval/scenarios/s16-shared-resource-upgrade.yaml`：**
+**Step 1 — 创建场景文件 `eval/scenarios/s22-shared-resource-upgrade.yaml`：**
 
 ```yaml
 # S16: Shared Resource Upgrade
@@ -570,9 +579,9 @@ LLM 输出有固有随机性。单次失败不代表有问题。
 
 `hooks/verify-completion.py` 有改动。测试依赖具体实现细节，hook 代码变更后需同步更新 `static/test_verify_completion.py`。
 
-**`make lint` 报 2 个 warning（正常）**
+**`make lint` 报 3 个 warning（正常）**
 
-当前有 2 个已知的合理 warning：
+当前有 3 个已知的合理 warning：
 1. `[consistency] Implementation Strategy thresholds differ` — 跨 skill 的阈值定义不完全一致，已知但暂未修复
 2. `[ecw-yml] tdd.base_test_class not found` — tdd skill 引用了 ecw.yml 中未定义的配置键，用户自定义时补充
 
@@ -587,7 +596,14 @@ tests/
 │   ├── routing_matrix.yaml           # 路由 golden fixture（13 条规则）
 │   ├── anchor_keywords.yaml          # 锚点关键词（11 个 skill）
 │   ├── conftest.py                   # pytest fixtures
-│   └── test_verify_completion.py     # Layer 1b: 56 个 hook 单元测试
+│   ├── test_verify_completion.py     # Layer 1b: 56 个 hook 单元测试
+│   ├── test_strategy_selection.py    # v0.5.0: 三维度策略表验证（11 tests）
+│   ├── test_impl_verify_subagent.py  # v0.5.0: impl-verify 并行 subagent 验证（10 tests）
+│   ├── test_writing_plans_subagent.py # v0.5.0: writing-plans subagent 验证（10 tests）
+│   ├── test_phase2_subagent.py       # v0.5.0: Phase 2 subagent 验证（10 tests）
+│   ├── test_pre_compact.py           # v0.5.0: PreCompact hook 验证（6 tests）
+│   ├── test_session_data_checkpoints.py # v0.5.0: session-data checkpoint 验证（6 tests）
+│   └── test_hooks_json.py            # v0.5.0: hooks.json 注册验证（5 tests）
 └── eval/
     ├── promptfooconfig.yaml          # promptfoo 主配置
     ├── tools/
@@ -596,5 +612,9 @@ tests/
         ├── s01-p0-single-domain.yaml
         ├── s02-p1-cross-domain.yaml
         ├── ...
-        └── s15-manual-override.yaml
+        ├── s17-p3-bug.yaml
+        ├── s18-p0-4domain-dense.yaml      # v0.5.0: WMS-like P0 4域密集场景
+        ├── s19-p1-cross-domain-tdd.yaml   # v0.5.0: P1 跨域含 tdd
+        ├── s20-p2-requirement-tdd.yaml    # v0.5.0: P2 含 tdd 不含 spec-challenge
+        └── s21-bug-excludes-tdd.yaml      # v0.5.0: Bug 排除 tdd
 ```

@@ -265,6 +265,8 @@ After synthesis analysis completes and user has made decisions on findings, prod
 [Questions still unresolved]
 ```
 
+**Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (Phase 2, writing-plans) without depending on conversation history.
+
 Wait for user confirmation. After confirmation:
 - **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`
 - **Fallback**: If Phase 2 not needed, invoke `ecw:writing-plans` directly

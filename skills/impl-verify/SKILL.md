@@ -68,9 +68,44 @@ Before execution, locate input materials in the following order:
 3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes; do not re-read full diff
 4. **Changed file table cache**: The changed file list (filename + change type + changed line count) produced in Round 1 serves as index for subsequent Rounds; no need to regenerate
 
+### Subagent Dispatch Architecture
+
+To prevent context overflow in the coordinator, each verification Round is dispatched as an independent subagent. The coordinator only holds the lightweight change summary and aggregated findings.
+
+**Coordinator responsibilities:**
+1. Execute `git diff --name-only` to get the changed file list (lightweight)
+2. Dispatch Round 1-4 as **parallel** subagents (4 Agent tool calls in a single message)
+3. Collect structured findings YAML from each subagent
+4. Merge findings, present to user, handle convergence loop
+
+**Each Round subagent receives:**
+- Changed file list (from coordinator)
+- Round-specific reference material paths (not content — the subagent reads them)
+- Verification checklist for that Round
+- Output format specification
+
+**Each Round subagent returns** structured findings:
+```yaml
+round: 1  # or 2, 3, 4
+findings:
+  - file: "path/to/file.java"
+    line: 42
+    severity: must-fix  # or suggestion
+    dimension: "requirements-tracing"  # or domain-rules, plan-decisions, engineering-standards
+    description: "Description of the finding"
+    expected: "What was expected"
+    actual: "What was found"
+status: pass  # or has-findings
+summary: "One-line summary of this round"
+```
+
+**Parallel dispatch**: Rounds 1-4 verify independent dimensions and do not depend on each other's results. They MUST be dispatched in parallel (multiple Agent tool calls in a single assistant message) for efficiency.
+
+**Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
+
 ## Execution Protocol
 
-### Round 1 — Requirements ↔ Code (Bidirectional Tracing)
+### Round 1 — Requirements ↔ Code (Bidirectional Tracing) [Subagent]
 
 **Goal**: Every requirement is correctly implemented; every code change has requirement backing.
 
@@ -96,7 +131,7 @@ Before execution, locate input materials in the following order:
    - ✅ Has backing — maps to specific requirement item
    - ❓ No backing — no corresponding item in requirement document → **needs confirmation** (may be scope creep, or may be a reasonable implementation detail)
 
-### Round 2 — Domain Knowledge ↔ Code (Rule Alignment)
+### Round 2 — Domain Knowledge ↔ Code (Rule Alignment) [Subagent]
 
 > Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
@@ -119,7 +154,7 @@ Before execution, locate input materials in the following order:
 
 4. Tag inconsistencies: deviation description + severity (**must-fix** or **suggestion**)
 
-### Round 3 — Plan ↔ Code (Decision Verification)
+### Round 3 — Plan ↔ Code (Decision Verification) [Subagent]
 
 > Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
@@ -142,7 +177,7 @@ Before execution, locate input materials in the following order:
 
 3. Tag deviations → **must-fix** (test-first is **suggestion** level, does not block convergence)
 
-### Round 4 — Engineering Standards ↔ Code (Quality Review)
+### Round 4 — Engineering Standards ↔ Code (Quality Review) [Subagent]
 
 > Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
 
@@ -177,12 +212,15 @@ Before execution, locate input materials in the following order:
 3. If this round still has must-fix findings, continue fixing and trigger next round
 4. If user also addressed suggestion-level issues, re-verification covers those changes too (ensure no new issues introduced)
 
+**Incremental re-verification**: When dispatching Round N+, only dispatch subagents for Rounds that had must-fix findings. Pass only the files involved in fixes (incremental diff), not the full change set. This reduces subagent context consumption during convergence.
+
 ### Convergence Condition
 
 **Most recent round has zero must-fix findings → exit, output verification passed report.**
 
 - Suggestion-level findings do not block convergence; recorded in final report for reference
 - **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention
+- **Context savings**: By dispatching Rounds as subagents, the coordinator holds only the changed file list (~500 tokens) plus aggregated findings YAML (~200 tokens per finding). In the WMS P0 session, this would have reduced coordinator context from ~49 file reads to ~4 YAML summaries.
 
 ## Severity Definitions
 
@@ -274,7 +312,8 @@ If TaskList has a pending "ecw:biz-impact-analysis" Task, marking impl-verify Ta
 
 Per-round findings table:
 - **≤ 5 must-fix**: Output full findings table directly
-- **> 5 must-fix**: Output summary in session (count + top 3 most severe items); write full findings to `.claude/ecw/impl-verify-findings.md`
+- **> 5 must-fix**: Output summary in session (count + top 3 most severe items)
+- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/impl-verify-findings.md` regardless of count. This ensures findings survive context compaction during multi-round convergence.
 - **Zero must-fix**: Use simplified output format (`### Impl-Verify Round {N} — {dimension}` + `**Findings**: No must-fix items. {Y} suggestions (non-blocking).` + `**This round zero must-fix, verification passed.**`), no more than 3 lines
 
 Final pass summary:

@@ -1,0 +1,66 @@
+# S19: P1 Cross-Domain Requirement with TDD
+# P1 cross-domain should include tdd in routing (P0-P2 requirement rule).
+# Also verifies the full cross-domain pipeline: domain-collab + spec-challenge + tdd.
+- vars:
+    input: "用户取消订单后需要自动触发库存释放和物流拦截，恢复可用库存数量"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // "库存" keyword → at least P1
+        return result.risk_level === 'P0' || result.risk_level === 'P1';
+      metric: risk_level_p0_or_p1
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.mode === 'cross-domain';
+      metric: mode_cross_domain
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('domain-collab');
+      metric: routing_includes_domain_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P1 cross-domain must include spec-challenge
+        return routing.includes('spec-challenge');
+      metric: routing_includes_spec_challenge
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P0-P2 requirement must include tdd (context compression: tdd routing)
+        return routing.includes('tdd');
+      metric: routing_includes_tdd
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('writing-plans');
+      metric: routing_includes_writing_plans
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('impl-verify');
+      metric: routing_includes_impl_verify
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P0/P1 requirement must include biz-impact-analysis
+        return routing.includes('biz-impact-analysis');
+      metric: routing_includes_biz_impact_analysis

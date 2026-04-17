@@ -32,6 +32,8 @@ Read `.claude/ecw/session-state.md` for risk level and affected domains. If unav
 
 ## Domain Context Injection
 
+> **Note**: When Subagent Dispatch is active (≥ 2 domains or ≥ 3 knowledge files), these steps are executed inside the subagent, not by the coordinator. The coordinator only passes file paths.
+
 Before writing the plan:
 
 1. Read `.claude/ecw/ecw-path-mappings.md` to understand code path → domain mappings
@@ -39,6 +41,59 @@ Before writing the plan:
 3. If `knowledge-summary.md` exists (from domain-collab), read it for cross-domain dependency context
 
 Ensure design decisions respect domain rules. A plan that violates a state machine constraint or concurrency rule will fail at impl-verify.
+
+## Subagent Dispatch Architecture
+
+When the Plan generation workload is significant, delegate to a subagent to keep the coordinator context lean.
+
+### Trigger Condition
+
+Subagent dispatch activates when **either** condition is met:
+- Affected domains ≥ 2 (cross-domain requirement)
+- Knowledge files to read ≥ 3 (ecw-path-mappings + business-rules per domain + knowledge-summary, etc.)
+
+When **both** conditions are false (single domain AND knowledge files < 3), use **Direct mode** — current behavior unchanged, no subagent overhead.
+
+### Coordinator Responsibilities (lightweight)
+
+Coordinator constructs the subagent prompt with the following inputs — **does not read knowledge file contents itself**:
+
+1. **Requirement summary path**: `session-state.md` or `domain-collab-report.md` (subagent reads the file)
+2. **Phase 2 assessment path**: `.claude/ecw/session-data/phase2-assessment.md` (if exists)
+3. **Knowledge file path list**:
+   - `.claude/ecw/ecw-path-mappings.md`
+   - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)
+   - `.claude/ecw/knowledge-summary.md` (if exists)
+4. **Plan output target path**: `.claude/plans/{feature}.md`
+5. **Risk level + Plan detail requirements**: From `session-state.md` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
+
+### Subagent Responsibilities
+
+The subagent executes the full Plan generation pipeline in its own context:
+
+1. Read all knowledge files from the paths provided by coordinator
+2. Execute **Domain Context Injection** (code path mappings, business rules, cross-domain dependencies)
+3. Execute **Scope Check** (suggest splitting if multiple independent subsystems)
+4. Execute **Design Completeness Check** (resolve open design questions via AskUserQuestion)
+5. Execute **Self-Review** (spec coverage, placeholder scan, type consistency, TDD readiness)
+6. Generate the complete Plan and **Write** it to `.claude/plans/{feature}.md`
+7. Return to coordinator: **Plan summary (≤ 500 tokens)** containing:
+   - Total Task count
+   - One-sentence description per Task
+   - Full list of files to create/modify
+   - Implementation Strategy (direct / subagent-driven, per "Implementation Strategy Selection" rules)
+
+### Coordinator Post-Processing
+
+After receiving the subagent's summary:
+
+1. Update `session-state.md` with Plan summary and implementation strategy
+2. Display summary to user for confirmation
+3. Execute **Downstream Handoff** (spec-challenge routing, TDD reminder, implementation strategy routing — see below)
+
+### Model
+
+`model: sonnet` — Plan generation is creative writing with dense rule constraints; sonnet provides the best cost-performance balance.
 
 ## Scope Check
 
@@ -176,6 +231,8 @@ After writing the complete plan, review with fresh eyes:
 **4. TDD readiness:** Could the TDD phase write tests from this Plan without reading any additional source files beyond the ones listed in each Task's **Files** and **Test Context** sections? If not, add the missing file paths, interface signatures, and import context.
 
 If you find issues, fix them inline.
+
+**Context management**: After the Plan is written to `.claude/plans/{feature}.md`, suggest to the user: "Implementation plan is complete and saved to file. Consider running `/compact` before proceeding to implementation — the Plan file contains all necessary context." Only suggest if the plan generation involved reading 3+ knowledge files.
 
 ## Downstream Handoff
 

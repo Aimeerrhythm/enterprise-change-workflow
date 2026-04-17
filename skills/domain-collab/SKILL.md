@@ -397,6 +397,8 @@ P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plan
 P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
 ```
 
+**Context management**: After Round 3 output is complete and files are written, suggest to the user: "domain-collab analysis is complete and saved to files. Consider running `/compact` to free context for the next phase (writing-plans)." This is a suggestion, not a requirement — only output it if the analysis was complex (3+ domains or Round 2 had conflicts).
+
 ---
 
 ## Notes

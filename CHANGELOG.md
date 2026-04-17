@@ -4,6 +4,60 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.5.0] - 2026-04-17
+
+### 性能优化
+
+- **上下文压缩问题系统性治理** — 基于 WMS 项目 P0 跨 4 域实际 session 数据（6 次压缩、169 次文件读取），定位 5 大上下文消耗瓶颈并逐一优化。理论上 6/6 次压缩均可避免
+
+#### Issue #1: 实现策略多维度化 (Critical)
+
+- **risk-classifier 策略表升级** — Implementation Strategy Selection 从单维度（Task 数量，6 行）改为三维度决策矩阵（Task 数 × 文件数 × 域数，9 行），新增 `涉及文件 ≥ 6` 和 `≥ 2 域代码修改` 两个 impl-orchestration 触发条件
+- **TDD Subagent Delegation** — tdd SKILL.md 新增 "Subagent Delegation for Heavy TDD" 段落：strategy=subagent-driven 时 TDD 在 impl-orchestration subagent 中执行；strategy=direct 但文件 ≥ 6 时每个 RED-GREEN cycle 封装为独立 subagent
+
+#### Issue #2: impl-verify 并行 Subagent 化 (High)
+
+- **4 轮并行 subagent 派发** — impl-verify 的 Round 1-4 验证从 coordinator 顺序执行改为 4 个并行 subagent（model: sonnet），每轮返回结构化 YAML findings，coordinator 只持有变更文件列表和合并后的 findings
+- **增量收敛循环** — must-fix 修复后只重新 dispatch 有 must-fix 的轮次的 subagent（增量 diff），不重跑全部 4 轮
+
+#### Issue #3: writing-plans Subagent 化 (High)
+
+- **Subagent Dispatch Architecture** — writing-plans 新增 subagent 派发架构：触发条件（≥ 2 域或 ≥ 3 知识文件）时 coordinator 只传文件路径，subagent 在自己的上下文中读取知识文件、生成 Plan、直接 Write 文件，返回 ≤ 500 tokens 摘要（model: sonnet）
+- **domain-collab 下游读取声明强化** — 明确下游 skill 必须从 `domain-collab-report.md` 和 `knowledge-summary.md` 文件读取，不依赖对话历史中的 agent 中间结果
+
+#### Issue #4: Phase 2 Subagent 化 (Medium)
+
+- **Phase 2 依赖图查询下沉** — risk-classifier Phase 2 的 5 类知识文件查询（cross-domain-calls、mq-topology、shared-resources、external-systems、e2e-paths）从 coordinator inline 执行改为 subagent 派发（model: sonnet），Steps 1-4 标记 `[Subagent]`，Step 5（升降级决策）保留 coordinator
+- **knowledge-summary 优先使用** — Phase 2 subagent 在 knowledge-summary.md 存在时优先读取，减少原始知识文件重复读取
+
+#### Issue #5: 主动压缩策略 (Medium)
+
+- **PreCompact hook** — 新增 `hooks/pre-compact.py`，在上下文压缩前注入 systemMessage 引导 Claude 从 session-state.md 恢复工作流状态
+- **session-data checkpoints** — 新增 `.claude/ecw/session-data/` 目录，3 个 checkpoint 文件确保压缩后下游 skill 可冷启动：
+  - `requirements-summary.md`（requirements-elicitation 完成后写入）
+  - `phase2-assessment.md`（Phase 2 完成后写入）
+  - `impl-verify-findings.md`（每次 impl-verify 后始终写入，移除 >5 条阈值）
+- **阶段边界 compact 建议** — domain-collab Round 3 和 writing-plans 完成后建议用户 `/compact`
+
+### 新增
+
+- **7 个上下文压缩测试文件**（58 个测试函数）
+  - `test_strategy_selection.py` — 11 tests，验证三维度策略表完整性和回归
+  - `test_impl_verify_subagent.py` — 10 tests，验证 4 轮并行 subagent 架构
+  - `test_writing_plans_subagent.py` — 10 tests，验证 writing-plans subagent 派发 + domain-collab 下游声明
+  - `test_phase2_subagent.py` — 10 tests，验证 Phase 2 subagent 标记和结构
+  - `test_pre_compact.py` — 6 tests，验证 PreCompact hook 行为
+  - `test_session_data_checkpoints.py` — 6 tests，验证 3 个 checkpoint 文件的写入声明
+  - `test_hooks_json.py` — 5 tests，验证 hooks.json 注册完整性
+- **4 个 eval 场景**（tdd 路由覆盖 0 → 4）
+  - `s18-p0-4domain-dense.yaml` — WMS-like P0 4 域密集场景，复现分析报告原始场景
+  - `s19-p1-cross-domain-tdd.yaml` — P1 跨域含 tdd 路由验证
+  - `s20-p2-requirement-tdd.yaml` — P2 单域含 tdd 但排除 spec-challenge/biz-impact-analysis
+  - `s21-bug-excludes-tdd.yaml` — Bug 排除 tdd 反面验证
+- **promptfooconfig.yaml tdd 路由规则** — 系统 prompt 新增 4 条 tdd 路由约束（P0-P2 requirement MUST include tdd；P3/bug/fast-track 不包含 tdd）
+
+> 与 v0.3.0-v0.3.1 合计效果（INPUT 优化 + OUTPUT 优化 + subagent 架构 + 压缩策略）：P0 跨域工作流理论上可从 6 次压缩降至 0 次。需在实际项目验证。
+
 ## [0.4.2] - 2026-04-16
 
 ### 新增
@@ -176,6 +230,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.5.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.5.0
 [0.4.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.2
 [0.4.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.0

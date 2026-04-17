@@ -85,6 +85,24 @@ When risk level is P2, apply these concrete constraints:
 5. **Compile failure limit**: If the same compilation error recurs 3 times after attempted fixes, stop and report to the user instead of retrying.
 6. **No design questions**: Do not use AskUserQuestion for design decisions (data format, field naming, storage approach). These were resolved during writing-plans. If you discover a genuine gap, note it in your output and proceed with the Plan's specification.
 
+## Subagent Delegation for Heavy TDD
+
+When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e., `ecw:impl-orchestration` will be used), **TDD does not execute in the coordinator**. Instead:
+
+1. Each implementer subagent dispatched by `ecw:impl-orchestration` executes its own TDD cycle within its isolated context
+2. The coordinator only receives cycle summaries (pass/fail + modified file list), not file contents
+3. This skill's protocol (Iron Law, risk-aware enforcement, cycle rules) still applies — it is injected into each implementer's prompt by `ecw:impl-orchestration`
+
+When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 unique files**:
+
+1. Each RED-GREEN cycle is dispatched as an independent subagent via the Agent tool
+2. The subagent receives: current cycle's test scenario from the Plan, relevant file paths, and TDD protocol rules
+3. The subagent executes: write test → compile → implement → compile → verify
+4. The subagent returns: cycle result summary (pass/fail, files created/modified, test output snippet ≤ 10 lines)
+5. The coordinator tracks cycle progress but does NOT read implementation file contents
+
+**Rationale**: In the WMS P0 cross-domain task, TDD executed 107 file reads in the coordinator, causing 3 context compressions. Delegating cycles to subagents keeps coordinator context lean.
+
 ## The Iron Law
 
 ```
