@@ -240,6 +240,28 @@ class TestDispatcherRouting:
                         # verify-completion should have been called even at minimal
                         mock_mod.check.assert_called_once()
 
+    def test_profile_injected_into_config(self, dispatcher, tmp_path):
+        """Dispatcher must inject _runtime_profile into config for sub-hooks."""
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_path),
+        }
+        mock_mod = MagicMock()
+        mock_mod.check.return_value = ("continue", "")
+
+        with patch.dict(os.environ, {"ECW_RISK_LEVEL": "P0"}):
+            with patch("json.load", return_value=input_data):
+                with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+                    with patch("builtins.print"):
+                        with pytest.raises(SystemExit):
+                            dispatcher.main()
+
+                        # Verify config passed to check() has _runtime_profile
+                        call_args = mock_mod.check.call_args
+                        config_arg = call_args[0][1]
+                        assert config_arg["_runtime_profile"] == "strict"
+
     def test_empty_message_gives_continue_result(self, dispatcher, tmp_path):
         """Sub-hook returning empty message → result: continue."""
         input_data = {

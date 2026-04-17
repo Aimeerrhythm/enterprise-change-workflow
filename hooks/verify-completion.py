@@ -32,7 +32,7 @@ def check(input_data, config=None):
 
     Args:
         input_data: Hook input dict (must contain "cwd")
-        config: Optional pre-loaded ecw.yml config (unused; sub-functions read independently)
+        config: Optional dict with ecw.yml config + _runtime_profile from dispatcher
 
     Returns:
         (action, message) tuple:
@@ -42,6 +42,8 @@ def check(input_data, config=None):
     cwd = input_data.get("cwd", "")
     if not cwd:
         return ("continue", "")
+
+    profile = (config or {}).get("_runtime_profile", "standard")
 
     issues = []
     modified, deleted = get_changed_files(cwd)
@@ -65,8 +67,13 @@ def check(input_data, config=None):
         test_issues, test_warnings = check_java_tests(cwd, modified)
         issues.extend(test_issues)
 
-    knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
-    test_reminders = check_test_coverage(cwd, modified)
+    # Non-essential reminders: skip at "minimal" profile (P3)
+    knowledge_reminders = []
+    test_reminders = []
+    if profile != "minimal":
+        knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
+        test_reminders = check_test_coverage(cwd, modified)
+
     all_warnings = (compile_warnings or []) + (test_warnings or [])
 
     if issues:

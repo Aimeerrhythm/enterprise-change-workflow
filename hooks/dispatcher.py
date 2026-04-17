@@ -148,6 +148,7 @@ def main():
     cwd = input_data.get("cwd", "")
     profile = get_profile(cwd)
     config = _read_ecw_config(cwd) if cwd else {}
+    config["_runtime_profile"] = profile
 
     system_messages = []
 

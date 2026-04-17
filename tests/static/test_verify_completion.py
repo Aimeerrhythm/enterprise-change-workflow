@@ -640,8 +640,154 @@ class TestCheckTestCoverage:
 
 
 # ══════════════════════════════════════════════════════
-# Output Format
+# Profile-Aware Behavior (B-2)
 # ══════════════════════════════════════════════════════
+
+class TestProfileAwareness:
+    """Tests for risk-level-driven check skipping via check()."""
+
+    def test_minimal_profile_skips_knowledge_reminders(self, hook_module, tmp_project):
+        """P3 (minimal) profile skips knowledge doc freshness checks."""
+        # Set up: business code changed, knowledge docs not updated
+        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
+        domain_dir.mkdir(parents=True)
+        (domain_dir / "business-rules.md").write_text("# Rules\n")
+
+        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "minimal"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["order-biz/src/OrderService.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "知识文档同步提醒" not in message
+
+    def test_standard_profile_includes_knowledge_reminders(self, hook_module, tmp_project):
+        """P1 (standard) profile includes knowledge doc freshness checks."""
+        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
+        domain_dir.mkdir(parents=True)
+        (domain_dir / "business-rules.md").write_text("# Rules\n")
+
+        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "standard"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["order-biz/src/OrderService.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "知识文档同步提醒" in message
+
+    def test_minimal_profile_skips_test_coverage(self, hook_module, tmp_project):
+        """P3 (minimal) profile skips TDD test coverage checks."""
+        # Enable tdd.check_test_files in ecw.yml
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "verification:\n  run_tests: false\n"
+            "tdd:\n  check_test_files: true\n"
+            "paths:\n  knowledge_root: .claude/knowledge/\n"
+        )
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "minimal"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["src/main/java/OrderBizServiceImpl.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "TDD 测试覆盖提醒" not in message
+
+    def test_strict_profile_includes_all_checks(self, hook_module, tmp_project):
+        """P0 (strict) profile runs all checks including reminders."""
+        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
+        domain_dir.mkdir(parents=True)
+        (domain_dir / "business-rules.md").write_text("# Rules\n")
+
+        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "strict"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["order-biz/src/OrderService.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "知识文档同步提醒" in message
+
+    def test_no_config_defaults_to_standard(self, hook_module, tmp_project):
+        """check() without config defaults to standard profile."""
+        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
+        domain_dir.mkdir(parents=True)
+        (domain_dir / "business-rules.md").write_text("# Rules\n")
+
+        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["order-biz/src/OrderService.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data)  # No config
+                    assert action == "continue"
+                    assert "知识文档同步提醒" in message
+
+    def test_blocking_checks_run_at_minimal(self, hook_module, tmp_project):
+        """P3 (minimal) still runs blocking checks (broken refs, compilation)."""
+        # Create a file with broken reference
+        test_file = tmp_project / "test.md"
+        test_file.write_text("See .claude/ecw/nonexistent-file.md for details\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "minimal"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["test.md"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "block"
+                    assert "不存在的路径" in message
 
 class TestOutputFormat:
     """Tests for output_fail and output_pass JSON format."""
