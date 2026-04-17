@@ -83,7 +83,7 @@ THEN investigate that specific component
 
 **Step 5: Domain Knowledge Cross-Reference**
 
-Read `.claude/ecw/session-state.md` for risk level. Scale cross-reference depth by risk:
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. Scale cross-reference depth by risk:
 
 **P0/P1 — Full cross-domain tracing:**
 
@@ -110,7 +110,7 @@ When error is deep in call stack:
 - Keep tracing up until you find the source
 - Fix at source, not at symptom
 
-**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/{workflow-id}/debug-evidence.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/debug-evidence.md` if absent):
+**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/{workflow-id}/debug-evidence.md`:
 ```markdown
 # Debug Evidence (Phase 1)
 ## Error: {error message summary}

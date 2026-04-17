@@ -21,7 +21,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 ## Risk-Aware Detail Level
 
-Read `.claude/ecw/session-state.md` for risk level and affected domains. If unavailable, use AskUserQuestion.
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable, use AskUserQuestion.
 
 | Risk Level | Plan Detail | Task Granularity |
 |-----------|-------------|-----------------|
@@ -63,11 +63,11 @@ When **both** conditions are false (single domain AND knowledge files < 3), use 
 Coordinator constructs the subagent prompt with the following inputs — **does not read knowledge file contents itself**:
 
 1. **Requirement summary path**: `session-state.md` or `domain-collab-report.md` (subagent reads the file)
-2. **Phase 2 assessment path**: `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/phase2-assessment.md` if absent)
+2. **Phase 2 assessment path**: `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md`
 3. **Knowledge file path list**:
    - `.claude/ecw/ecw-path-mappings.md`
    - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)
-   - `.claude/ecw/knowledge-summary.md` (if exists)
+   - `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` (if exists)
 4. **Plan output target path**: `.claude/plans/{feature}.md`
 5. **Risk level + Plan detail requirements**: From `session-state.md` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
 
@@ -256,7 +256,7 @@ If you find issues, fix them inline.
 
 After saving the plan, determine and persist implementation strategy, then route to next step:
 
-**Update session-state.md:** Count tasks in the plan. Per risk-classifier "Implementation Strategy Selection" rules (Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven), determine strategy and update `.claude/ecw/session-state.md` `实现策略` field. If spec-challenge will follow (P0; P1 cross-domain), spec-challenge may refine this — write the initial value now.
+**Update session-state.md:** Count tasks in the plan. Per risk-classifier "Implementation Strategy Selection" rules (Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven), determine strategy and update `.claude/ecw/session-data/{workflow-id}/session-state.md` `实现策略` field. If spec-challenge will follow (P0; P1 cross-domain), spec-challenge may refine this — write the initial value now.
 
 **1. Spec Challenge needed?** (P0; P1 cross-domain only)
 → "Plan saved. Next: `ecw:spec-challenge` for adversarial review before implementation."

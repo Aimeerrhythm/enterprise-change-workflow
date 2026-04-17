@@ -52,10 +52,10 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 
 | File | Write Timing | Purpose |
 |------|-------------|---------|
-| `.claude/ecw/session-state.md` | After risk-classifier Phase 1 output | ECW workflow state record + Subagent Ledger, for new session recovery |
-| `.claude/plans/domain-collab-report.md` | After domain-collab Round 3 completes | Full multi-domain collaboration analysis report |
-| `.claude/ecw/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
-| `.claude/ecw/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
+| `.claude/ecw/session-data/{workflow-id}/session-state.md` | After risk-classifier Phase 1 output | ECW workflow state record + Subagent Ledger, for new session recovery |
+| `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md` | After domain-collab Round 3 completes | Full multi-domain collaboration analysis report |
+| `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
+| `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
 | `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
 | `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
 | `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |

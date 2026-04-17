@@ -29,7 +29,7 @@ Don't use when:
 
 ## Risk-Aware Review Depth
 
-Read `.claude/ecw/session-state.md` for risk level. If unavailable, use AskUserQuestion to ask the user for risk level (P0 or P1).
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. If unavailable, use AskUserQuestion to ask the user for risk level (P0 or P1).
 
 | Risk Level | Per-task Spec Review | Per-task Code Quality Review | Post-impl |
 |-----------|---------------------|----------------------------|-----------|

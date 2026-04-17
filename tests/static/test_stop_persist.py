@@ -108,7 +108,7 @@ class TestStopPersistMain:
 
     def test_updates_existing_state(self, stop_persist, tmp_path):
         """With session-state.md → updates with markers."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
         state_file.write_text("# ECW Session State\n- **Risk Level**: P0\n")
@@ -128,7 +128,7 @@ class TestStopPersistMain:
 
     def test_skips_ended_session(self, stop_persist, tmp_path):
         """Session with Status: ended → no update."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
         original = "# ECW\n- **Status**: ended\n"

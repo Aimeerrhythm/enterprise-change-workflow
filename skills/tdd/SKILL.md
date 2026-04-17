@@ -55,7 +55,7 @@ Bug fixes skip writing-plans. The input is the root cause analysis from `ecw:sys
 
 ## Risk-Aware Enforcement
 
-Read `.claude/ecw/session-state.md` for current risk level. If unavailable, use AskUserQuestion to ask the user.
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for current risk level. If unavailable, use AskUserQuestion to ask the user.
 
 | Risk Level | TDD Mode | Details |
 |-----------|----------|---------|
@@ -202,7 +202,7 @@ Keep tests green. Don't add behavior.
               REFACTOR: <what changed or "none">
 ```
 
-**P0 Checkpoint**: After each cycle, also append the verification log to `.claude/ecw/session-data/{workflow-id}/tdd-cycles.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/tdd-cycles.md` if absent). This ensures cycle history survives context compaction during long TDD sessions (P0 may have 10+ cycles).
+**P0 Checkpoint**: After each cycle, also append the verification log to `.claude/ecw/session-data/{workflow-id}/tdd-cycles.md`. This ensures cycle history survives context compaction during long TDD sessions (P0 may have 10+ cycles).
 
 ### Repeat
 

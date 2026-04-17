@@ -53,7 +53,7 @@ Before execution, locate input materials in the following order:
 | **Project patterns** | Existing code's naming/layering/error-handling conventions | Round 4 |
 
 **Knowledge file read priority** (Round 2):
-1. First check if `.claude/ecw/knowledge-summary.md` exists and covers domains affected by this change
+1. First check if `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` exists and covers domains affected by this change
 2. If summary file is sufficient (contains state machine, validation rules, data model sections), execute Round 2 based on summary
 3. If summary does not exist or is insufficient, read full domain knowledge files
 
@@ -312,7 +312,7 @@ After {N} rounds of verification (fixed {X} must-fix issues), implementation cor
 
 Verification passed. Task can be marked as complete.
 
-**Next step** (read risk level from `.claude/ecw/session-state.md`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
+**Next step** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
 - P0/P1 change → **Immediately** use Skill tool to invoke `ecw:biz-impact-analysis` to analyze business impact of code changes.
 - P2 change → **Suggested** to run `ecw:biz-impact-analysis` (not mandatory; user may decide to skip).
 - P3 / pure formatting change → No biz-impact-analysis needed.
@@ -327,7 +327,7 @@ If TaskList has a pending "ecw:biz-impact-analysis" Task, marking impl-verify Ta
 Per-round findings table:
 - **≤ 5 must-fix**: Output full findings table directly
 - **> 5 must-fix**: Output summary in session (count + top 3 most severe items)
-- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/impl-verify-findings.md` if absent) regardless of count. This ensures findings survive context compaction during multi-round convergence.
+- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` regardless of count. This ensures findings survive context compaction during multi-round convergence.
 - **Zero must-fix**: Use simplified output format (`### Impl-Verify Round {N} — {dimension}` + `**Findings**: No must-fix items. {Y} suggestions (non-blocking).` + `**This round zero must-fix, verification passed.**`), no more than 3 lines
 
 Final pass summary:

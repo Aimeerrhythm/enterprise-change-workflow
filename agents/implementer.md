@@ -32,7 +32,7 @@ You are implementing a single task from an implementation plan.
 - **Domain:** {domain name}
 - **Domain Knowledge:** {path to domain knowledge dir}
 - **Business Rules:** Read {domain}/business-rules.md before implementing if task touches business logic
-- **Cross-Domain Knowledge:** If task involves cross-domain calls, read `.claude/ecw/knowledge-summary.md` for dependency context
+- **Cross-Domain Knowledge:** If task involves cross-domain calls, read `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` for dependency context
 - **TDD Required:** {yes/no per ecw.yml tdd.enabled and risk level}
 - **Test Base Class:** {from ecw.yml tdd.base_test_class, if set}
 

@@ -122,7 +122,7 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Symptom**: Session state file has garbled content or conflicting sections.
 
 **Fix**:
-1. Delete `.claude/ecw/session-state.md` — it will be regenerated when the next workflow starts
+1. Delete `session-state.md` from the active session-data subdirectory (`.claude/ecw/session-data/{workflow-id}/`) — it will be regenerated when the next workflow starts
 2. If session-data checkpoint files exist (under `.claude/ecw/session-data/`), they can be used to resume
 3. This typically happens when a session was interrupted during a write operation
 

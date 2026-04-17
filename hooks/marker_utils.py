@@ -76,12 +76,26 @@ def read_marker_section(content, name):
 def find_session_state(cwd):
     """Find session-state.md file. Returns path or None.
 
-    Checks two candidate locations:
-    1. .claude/ecw/state/session-state.md (current)
-    2. .claude/ecw/session-state.md (legacy)
+    Checks session-data/{workflow-id}/ subdirectories first (most recent),
+    then falls back to legacy paths.
     """
+    # New convention: session-state.md in session-data/{workflow-id}/
+    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
+    if os.path.isdir(session_data_dir):
+        try:
+            subdirs = sorted(
+                [d for d in os.listdir(session_data_dir)
+                 if os.path.isdir(os.path.join(session_data_dir, d))],
+                reverse=True,
+            )
+            for d in subdirs:
+                candidate = os.path.join(session_data_dir, d, "session-state.md")
+                if os.path.exists(candidate):
+                    return candidate
+        except Exception:
+            pass
+    # Legacy fallback
     candidates = [
-        os.path.join(cwd, ".claude", "ecw", "state", "session-state.md"),
         os.path.join(cwd, ".claude", "ecw", "session-state.md"),
     ]
     for path in candidates:

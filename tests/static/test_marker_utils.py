@@ -128,7 +128,7 @@ class TestReadMarkerSection:
 
 class TestFindSessionState:
     def test_finds_state_dir_path(self, marker_utils, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text("# ECW")
 
@@ -154,7 +154,7 @@ class TestFindSessionState:
 
 class TestUpdateSessionStateSection:
     def test_updates_existing_file(self, marker_utils, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
         state_file.write_text(

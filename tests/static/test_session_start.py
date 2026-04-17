@@ -42,8 +42,8 @@ class TestReadSessionState:
     """Tests for _read_session_state function."""
 
     def test_reads_state_dir_path(self, session_start, tmp_path):
-        """Detects session-state.md in .claude/ecw/state/ directory."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        """Detects session-state.md in .claude/ecw/session-data/{workflow-id}/ directory."""
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
         state_file.write_text("# ECW Session State\n- **Risk Level**: P1\n")
@@ -154,7 +154,7 @@ class TestSessionStartMain:
 
     def test_active_state_injects_context(self, session_start, tmp_path):
         """Active session-state → additionalContext includes state content."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text(
             "# ECW Session State\n- **Risk Level**: P1\n- **Current Phase**: phase1-complete\n"
@@ -171,7 +171,7 @@ class TestSessionStartMain:
 
     def test_ended_session_no_recovery(self, session_start, tmp_path):
         """Session with Status: ended → no recovery hint."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text(
             "# ECW Session State\n- **Risk Level**: P1\n- **Status**: ended\n"

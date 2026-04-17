@@ -145,11 +145,11 @@ notes: "Other things to note"
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
+6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
-**Round 1 Checkpoint**: After collecting all Round 1 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r1.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/domain-collab-r1.md` if absent) (one YAML block per domain). This ensures Round 1 results survive context compaction before Round 2 begins.
+**Round 1 Checkpoint**: After collecting all Round 1 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r1.md` (one YAML block per domain). This ensures Round 1 results survive context compaction before Round 2 begins.
 
 ### Round 2: Inter-Domain Negotiation (parallel)
 
@@ -228,11 +228,11 @@ negotiation_result:
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
+5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 
-**Round 2 Checkpoint**: After collecting all Round 2 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r2.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/domain-collab-r2.md` if absent). This ensures negotiation results survive context compaction before Round 3 cross-validation.
+**Round 2 Checkpoint**: After collecting all Round 2 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r2.md`. This ensures negotiation results survive context compaction before Round 3 cross-validation.
 
 **Round 2 skip rule**: If a domain returned `impact_level: none` in Round 1 AND no other domain's `cross_domain_risks` points to it, **skip Round 2 Agent dispatch for that domain**. That domain is unaffected and no other domain flagged it as potentially affected — Round 2 negotiation would not produce new findings. Note in Round 3 cross-validation: "Domain X had no impact in Round 1 and no inbound risks; Round 2 skipped."
 
@@ -282,7 +282,7 @@ For each `cross_domain_risk`:
 
 **3e. Output Report**
 
-1. **Write full report to file** `.claude/plans/domain-collab-report.md` (using the full report template below)
+1. **Write full report to file** `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md` (using the full report template below)
 2. **Output only summary version in conversation** (no more than 30 lines), including:
    - Domain overview table (domain name + level + changed component count + one-line summary)
    - Inter-domain conflicts (if any)
@@ -369,7 +369,7 @@ Detailed per-domain analysis, code verification results, negotiation findings, e
 
 **3f. Write Knowledge Summary File**
 
-Write key information from knowledge files read during this analysis to `.claude/ecw/knowledge-summary.md` for reuse by downstream skills (risk-classifier Phase 2, impl-verify Round 2), reducing redundant reads of original knowledge files:
+Write key information from knowledge files read during this analysis to `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` for reuse by downstream skills (risk-classifier Phase 2, impl-verify Round 2), reducing redundant reads of original knowledge files:
 
 ```markdown
 # Knowledge Summary (extracted during domain-collab analysis)

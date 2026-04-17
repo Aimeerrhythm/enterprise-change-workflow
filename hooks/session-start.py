@@ -28,19 +28,37 @@ CHECKPOINT_PREVIEW_BYTES = 512
 
 def _read_session_state(cwd):
     """Read session-state.md content. Returns (content, path) or (None, None)."""
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "state", "session-state.md"),
-        os.path.join(cwd, ".claude", "ecw", "session-state.md"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                with open(path, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                if content.strip():
-                    return content, path
-            except Exception:
-                pass
+    # New convention: session-state.md lives in session-data/{workflow-id}/
+    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
+    if os.path.isdir(session_data_dir):
+        try:
+            subdirs = sorted(
+                [d for d in os.listdir(session_data_dir)
+                 if os.path.isdir(os.path.join(session_data_dir, d))],
+                reverse=True,
+            )
+            for d in subdirs:
+                candidate = os.path.join(session_data_dir, d, "session-state.md")
+                if os.path.exists(candidate):
+                    try:
+                        with open(candidate, encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+                        if content.strip():
+                            return content, candidate
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+    # Legacy fallback path
+    legacy = os.path.join(cwd, ".claude", "ecw", "session-state.md")
+    if os.path.exists(legacy):
+        try:
+            with open(legacy, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if content.strip():
+                return content, legacy
+        except Exception:
+            pass
     return None, None
 
 

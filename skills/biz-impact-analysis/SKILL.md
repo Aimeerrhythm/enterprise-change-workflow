@@ -89,7 +89,7 @@ When `ecw:impl-verify` completes:
 
 After biz-impact-analysis report is output:
 
-1. If current change is **P0/P1** (read risk level from `.claude/ecw/session-state.md`), **immediately execute Phase 3 calibration** — use Skill tool to invoke `ecw:risk-classifier` with argument `--phase3`
+1. If current change is **P0/P1** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`), **immediately execute Phase 3 calibration** — use Skill tool to invoke `ecw:risk-classifier` with argument `--phase3`
 2. If current change is **P2**, suggest executing Phase 3 (not mandatory; user decides)
 3. Phase 3 no longer needs manual trigger — automatically chains after biz-impact-analysis completes
 
@@ -97,7 +97,7 @@ If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysi
 
 ## Subagent Ledger Update
 
-After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table:
+After Agent returns, append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table:
 
 ```
 | biz-impact-analysis | analyst | ecw:biz-impact-analysis | large | {HH:mm} | {duration} |

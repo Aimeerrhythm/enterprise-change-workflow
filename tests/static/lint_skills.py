@@ -194,7 +194,7 @@ def check_artifact_paths(result: LintResult):
     claude_content = CLAUDE_MD.read_text(encoding="utf-8")
 
     # Extract artifact paths from CLAUDE.md "ECW Artifact Files" table
-    # Format: | `.claude/ecw/session-state.md` | ... |
+    # Format: | `.claude/ecw/session-data/{workflow-id}/session-state.md` | ... |
     artifact_pattern = re.compile(r"\|\s*`([^`]+)`\s*\|")
     claude_artifacts = set()
     in_artifact_section = False

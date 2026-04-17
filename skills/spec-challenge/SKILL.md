@@ -108,8 +108,8 @@ After spec-challenge agent returns:
    - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
-2. **Ledger update**: Append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
-2. Write the full review report to `.claude/ecw/spec-challenge-report.md`.
+2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
+2. Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`.
 3. **Present verbatim** the full review report to user. No responses, no judgments.
 
 ### Step 2: Per-Item Fatal Flaw Confirmation
@@ -216,11 +216,11 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 After spec-challenge completes and user confirms review results (Plan updated), output split recommendation for **P0 and P1 cross-domain changes**:
 
 At this point, all analysis phase artifacts have been persisted:
-- domain-collab report → `.claude/plans/domain-collab-report.md`
+- domain-collab report → `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md`
 - Plan file → `.claude/plans/` directory
-- Spec-challenge record → `.claude/ecw/spec-challenge-report.md`
-- ECW state → `.claude/ecw/session-state.md`
-- Knowledge summary → `.claude/ecw/knowledge-summary.md`
+- Spec-challenge record → `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`
+- ECW state → `.claude/ecw/session-data/{workflow-id}/session-state.md`
+- Knowledge summary → `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md`
 
 Use AskUserQuestion:
 
@@ -240,7 +240,7 @@ Also output implementation strategy recommendation (based on Task count in Plan;
 - Plan Tasks > 8, P0/P1 → "Recommend using `ecw:impl-orchestration`, merge simple Tasks (see Implementation Strategy Selection section)"
 - Plan Tasks 4+, P2 → "Recommend direct implementation (medium risk, parallelization overhead unnecessary)"
 
-Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-state.md`.
+Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-data/{workflow-id}/session-state.md`.
 
 ### Manual Trigger
 
