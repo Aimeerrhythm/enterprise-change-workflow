@@ -194,6 +194,7 @@ If issues found → implementer fixes → re-review.
 - Let self-review replace actual review (both needed)
 - **Start code quality review before spec compliance passes** (wrong order)
 - Move to next task while review has open issues
+- **Skip fact-forcing gate** — implementers must quote task requirements before editing and check cross-domain file ownership
 
 ## Task Merging
 
