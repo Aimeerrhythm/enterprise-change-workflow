@@ -105,9 +105,14 @@ Use `./implementer-prompt.md` template. Inject:
 Use Agent tool with `subagent_type: "general-purpose"`.
 
 **Model selection:**
-- Mechanical tasks (1-2 files, clear spec) → `model: "sonnet"`
-- Integration tasks (multi-file, judgment needed) → default model
-- Architecture/design tasks → `model: "opus"`
+
+| Task Type | Model | Criteria |
+|-----------|-------|----------|
+| Mechanical tasks | `model: "haiku"` | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
+| Integration/design tasks | `model: "sonnet"` | Multi-file coordination, judgment needed, business logic |
+| Architecture tasks | `model: "opus"` | Cross-module structural decisions, complex state machines, deep reasoning required |
+
+Default to `model: "sonnet"` when classification is ambiguous.
 
 ### 2. Handle Implementer Status
 
@@ -131,6 +136,8 @@ Use `./spec-reviewer-prompt.md` template. Inject:
 - Full task requirements
 - Implementer's report
 
+**Model selection**: `model: "sonnet"` (spec compliance review requires understanding requirements and comparing against code — pattern-matching, not creative reasoning).
+
 The reviewer reads actual code and verifies:
 - Missing requirements
 - Extra/unneeded work
@@ -140,7 +147,7 @@ If issues found → implementer fixes → re-review. Repeat until approved.
 
 ### 4. Code Quality Review (P0 Only)
 
-For P0 risk level, after spec compliance passes, dispatch a code quality review:
+For P0 risk level, after spec compliance passes, dispatch a code quality review (`model: "sonnet"` — quality review is pattern-matching against engineering standards):
 
 ```
 Agent(description: "Code quality review for Task N"):

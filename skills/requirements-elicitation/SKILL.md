@@ -103,7 +103,7 @@ Ask **3-5 questions** per round. Each answer may trigger follow-ups. Use the che
 
 ### Step 4: Synthesis Analysis
 
-After all Q&A rounds complete, use the Agent tool to launch **one agent**:
+After all Q&A rounds complete, use the Agent tool to launch **one agent** (`model: sonnet` — synthesis requires cross-referencing multiple Q&A rounds and identifying contradictions):
 
 **Prompt:**
 ```

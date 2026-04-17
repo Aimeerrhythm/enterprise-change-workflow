@@ -95,7 +95,7 @@ When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e
 
 When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 unique files**:
 
-1. Each RED-GREEN cycle is dispatched as an independent subagent via the Agent tool
+1. Each RED-GREEN cycle is dispatched as an independent subagent via the Agent tool (`model: sonnet` — TDD cycles require understanding test frameworks and business logic)
 2. The subagent receives: current cycle's test scenario from the Plan, relevant file paths, and TDD protocol rules
 3. The subagent executes: write test → compile → implement → compile → verify
 4. The subagent returns: cycle result summary (pass/fail, files created/modified, test output snippet ≤ 10 lines)

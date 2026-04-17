@@ -25,7 +25,7 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    2. Run `git diff --name-only {diff_range}` to get file list
    3. Read `ecw-path-mappings.md`, map file list to domains
    4. Fill above results into Agent prompt, replacing full diff
-3. **Dispatch biz-impact-analysis agent** — Pass in preprocessed results, await impact analysis report
+3. **Dispatch biz-impact-analysis agent** (`model: sonnet` — business impact analysis requires understanding domain relationships and dependency graphs) — Pass in preprocessed results, await impact analysis report
 4. **Present analysis report** — Output the agent's formatted report directly; if unregistered cross-domain calls are found, remind to update dependency graph
 
 ## Agent Dispatch Prompt Template

@@ -68,6 +68,8 @@ digraph domain_collab {
 
 Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general-purpose`).
 
+**Model selection**: `model: sonnet` (domain analysis requires deep understanding of business rules and knowledge files). Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` for that domain to reduce cost.
+
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
 **All domain Agents use a unified prompt template:**
@@ -149,6 +151,8 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 2. For each domain, generate an "other domains' changes summary" — aggregate all other domains' `affected_components`, `state_changes`, `cross_domain_risks`
 3. Specifically flag: other domains' `cross_domain_risks` where `target` points to this domain ("another domain specifically noted you may be affected")
 4. Dispatch new round of domain agents in parallel
+
+**Model selection**: `model: sonnet` (negotiation requires understanding other domains' changes and assessing cross-domain impact). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
 **Round 2 domain Agent unified prompt template:**
 
