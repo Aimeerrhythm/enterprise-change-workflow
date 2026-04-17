@@ -93,6 +93,8 @@ Read `.claude/ecw/session-state.md` for risk level. Scale cross-reference depth 
 4. Query `mq-topology.md` (§2) — check if affected code publishes/consumes messages; trace message flow
 5. Query `shared-resources.md` (§3) — check if bug involves a shared service/component; list all consumers
 
+> **Knowledge file robustness**: Verify each file exists before reading. For any missing file, log `[Warning: {file} not found, skipping this cross-reference dimension]` and continue with available files. If `ecw-path-mappings.md` is missing, use directory-based heuristic to infer domain (e.g., `src/main/java/{domain}/` path pattern).
+
 **P2/P3 — Simplified check:**
 1. Locate domain from `ecw-path-mappings.md`
 2. Read domain's `business-rules.md`

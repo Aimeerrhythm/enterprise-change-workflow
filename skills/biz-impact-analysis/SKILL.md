@@ -25,6 +25,8 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    2. Run `git diff --name-only {diff_range}` to get file list
    3. Read `ecw-path-mappings.md`, map file list to domains
    4. Fill above results into Agent prompt, replacing full diff
+
+> **Knowledge file robustness**: If `ecw-path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
 3. **Dispatch biz-impact-analysis agent** — Pass in preprocessed results, await impact analysis report
 4. **Present analysis report** — Output the agent's formatted report directly; if unregistered cross-domain calls are found, remind to update dependency graph
 

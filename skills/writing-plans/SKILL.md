@@ -40,6 +40,8 @@ Before writing the plan:
 2. For each affected domain, read its `business-rules.md` to understand constraints (state machines, validation rules, concurrency controls)
 3. If `knowledge-summary.md` exists (from domain-collab), read it for cross-domain dependency context
 
+> **Knowledge file robustness**: Verify each file exists before reading. If `ecw-path-mappings.md` is missing, skip domain context injection and note `[Warning: path mappings not found, plan lacks domain-aware file grouping]` in plan header. If a domain's `business-rules.md` is missing, note `[Warning: {domain} business-rules.md not found, domain constraints may be incomplete]` in the affected Tasks. Continue plan generation with available data.
+
 Ensure design decisions respect domain rules. A plan that violates a state machine constraint or concurrency rule will fail at impl-verify.
 
 ## Subagent Dispatch Architecture

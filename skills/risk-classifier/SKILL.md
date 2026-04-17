@@ -165,6 +165,8 @@ Extract from user's requirement description:
 
 Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`, check whether classes/methods mentioned by user appear in the shared resources table.
 
+> **Knowledge file robustness**: Before reading, verify the file exists. If `shared-resources.md` or the risk factors file does not exist, log `[Warning: {file} not found, skipping shared resource check]` and continue with keyword-based assessment only. Do not halt Phase 1 for missing knowledge files.
+
 → Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Factor 1: Impact Scope for the domain dependency count→risk level threshold mapping.
 
 **Note:** Phase 1 checks §3 (shared resources) + §2 (MQ topology, only check if user-mentioned keywords involve MQ Topics). Does not check §1/§4/§5 (deferred to Phase 2).
@@ -369,6 +371,8 @@ Coordinator dispatches a single subagent to execute Steps 1-4:
 - 5 knowledge file paths: cross-domain-calls.md, mq-topology.md, shared-resources.md, external-systems.md, e2e-paths.md (read paths from ecw.yml `paths.knowledge_common`)
 - knowledge-summary.md path (if exists, subagent uses it to reduce original file reads)
 - Risk factor file path (from ecw.yml `paths.risk_factors`)
+
+> **Knowledge file robustness (subagent)**: Pass all paths to the subagent. The subagent must verify each file exists before reading. For any missing file, subagent logs `[Warning: {file} not found]` in the corresponding `classification_factors` detail and continues with available data. Missing files reduce analysis precision but do not block Phase 2.
 
 **Subagent executes** Steps 1-4 internally and returns structured YAML:
 

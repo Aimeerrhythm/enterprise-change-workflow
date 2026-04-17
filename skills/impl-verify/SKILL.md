@@ -55,6 +55,8 @@ Before execution, locate input materials in the following order:
 2. If summary file is sufficient (contains state machine, validation rules, data model sections), execute Round 2 based on summary
 3. If summary does not exist or is insufficient, read full domain knowledge files
 
+> **Knowledge file robustness (Round 2)**: Before reading any domain knowledge file, verify it exists. If `business-rules.md` or `data-model.md` for a domain is missing, log `[Warning: {domain}/{file} not found, Round 2 checks for this domain degraded]` in the Round 2 findings. The subagent should still check available files and report what dimensions could not be verified.
+
 **Degradation handling**:
 - No requirement document (P3 or degraded scenario) → Skip Round 1, warn user
 - No domain knowledge files → Skip Round 2, warn user
