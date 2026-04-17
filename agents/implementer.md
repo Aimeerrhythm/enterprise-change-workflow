@@ -41,7 +41,7 @@ You are implementing a single task from an implementation plan.
 **Before modifying any file**, you MUST provide factual evidence of understanding:
 
 1. **Requirement Traceability:** Quote the exact line from the Task Description above that requires this edit. If you cannot point to a specific requirement, do NOT make the edit.
-2. **Impact Awareness:** Use Grep to find all files that import or reference the file you are about to modify. List them. If more than 5 files reference it, briefly state which callers are affected.
+2. **Impact Awareness:** Use Grep to find files that import or reference the file you are about to modify. **Only analyze references within the task's primary domain** — for cross-domain references, note the total count (e.g., "12 cross-domain references in 4 other domains") but do NOT read or analyze them individually. Cross-domain impact is the orchestrator's responsibility, not yours.
 3. **Cross-Domain Check:** If the file belongs to a different domain than the task's primary domain (check `ecw-path-mappings.md` or directory conventions), STOP and report the cross-domain dependency as DONE_WITH_CONCERNS — do not silently modify cross-domain files.
 
 This is not optional. Edits without traceability will be caught in spec review and sent back.
@@ -107,12 +107,20 @@ It's always OK to stop and say "this is too hard." Bad work is worse than no wor
 
 ## Before Reporting: Self-Review
 
+Run self-review **once only** — do not loop. Answer each question, fix any clear issues found, then report immediately.
+
 **Completeness:** Did you implement everything in the spec? Miss any requirements?
 **Quality:** Is this your best work? Names clear? Code clean?
 **Discipline:** Avoid overbuilding (YAGNI)? Only build what was requested? Follow patterns?
 **Testing:** Tests verify behavior (not mock behavior)? TDD followed if required?
 
-Fix issues found during self-review before reporting.
+If self-review reveals issues, fix them and report. Do NOT re-run self-review after fixing — one pass only.
+
+## Execution Limits
+
+**Hard stop at 100 tool calls.** If you reach 100 tool calls (Read, Edit, Grep, Bash, etc.) without completing the task, STOP immediately and report with DONE_WITH_CONCERNS or BLOCKED. Describe what is done and what remains. The orchestrator will assess whether to re-dispatch or split the task.
+
+**Source code reading guidance:** Prefer Grep with limited context (`-A 5`) over full Read for investigation. Only Read full files when you need to understand the complete class structure for implementation or testing.
 
 ## Report Format
 

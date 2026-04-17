@@ -116,6 +116,8 @@ Use Agent tool with `subagent_type: "general-purpose"`.
 
 Default to `model: "sonnet"` when classification is ambiguous.
 
+**Agent-side execution limits** (enforced inside implementer.md): Implementer hard-stops at 100 tool calls and 15 source file reads. If a task is too large for these limits, split it before dispatching — do not rely on coordinator-side timeout alone.
+
 If implementer times out, terminate and re-dispatch with simplified task scope or escalate model (see Error Handling).
 
 ### 2. Handle Implementer Status
