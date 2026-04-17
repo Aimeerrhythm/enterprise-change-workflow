@@ -81,9 +81,9 @@
 ## Wave 4 — 增值层
 
 ### Session 4-a: D (持续学习) — branch: `wave4/learning`
-- [ ] D-1 Phase 3 校准持久化
-- [ ] D-2 Instinct 注入框架
-- [ ] D-3 文件产出隔离
+- [x] D-1 Phase 3 校准持久化 (`459b808`)
+- [x] D-2 Instinct 注入框架 (`9e76369`)
+- [x] D-3 文件产出隔离 (`c8dda93`)
 
 ### Session 4-b: I 剩余 — branch: `wave4/test-notify`
 - [ ] I-2 测试覆盖扩展 — domain-collab/tdd/impl-verify eval
