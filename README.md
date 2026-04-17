@@ -378,6 +378,12 @@ A: Two common causes: (1) Keyword mappings in `change-risk-classification.md` ar
 
 A: Knowledge file quality directly determines analysis quality. For Java/Spring projects, use the scanning scripts under `scripts/java/` for automated extraction first, then review and supplement manually. Other tech stacks require manual population.
 
+For more troubleshooting scenarios, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development conventions, testing requirements, and the review checklist.
+
 ## Dependencies
 
 - **Claude Code CLI** — ECW is a Claude Code plugin, requires CLI environment

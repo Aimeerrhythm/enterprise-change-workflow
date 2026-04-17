@@ -47,6 +47,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/domain-registry.md` | Domain registry (domain definitions, knowledge directories, code directories) |
 | `.claude/ecw/change-risk-classification.md` | Risk factor calibration (keyword→level mapping, sensitivity definitions) |
 | `.claude/ecw/ecw-path-mappings.md` | Code path→domain mapping (used by biz-impact-analysis) |
+| `.claude/ecw/rules/` | Engineering rules directory (installed by ecw-init, always-active standards) |
 
 ### ECW Artifact Files (auto-generated)
 
