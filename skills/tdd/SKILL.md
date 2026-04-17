@@ -200,6 +200,8 @@ Keep tests green. Don't add behavior.
               REFACTOR: <what changed or "none">
 ```
 
+**P0 Checkpoint**: After each cycle, also append the verification log to `.claude/ecw/session-data/tdd-cycles.md`. This ensures cycle history survives context compaction during long TDD sessions (P0 may have 10+ cycles).
+
 ### Repeat
 
 Next failing test for next behavior.

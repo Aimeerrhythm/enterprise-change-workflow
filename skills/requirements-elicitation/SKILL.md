@@ -101,6 +101,16 @@ Ask **3-5 questions** per round. Each answer may trigger follow-ups. Use the che
 
 **Key: Do not stop after one round.** Continue asking until all relevant dimensions have been explored. Every user answer opens new questions.
 
+**Per-round checkpoint**: After each Q&A round completes (user answers all questions), append the round summary to `.claude/ecw/session-data/requirements-summary.md`:
+```markdown
+### Round {N} — {covered dimensions}
+**Questions**: {list of questions asked}
+**Answers**: {summary of user answers}
+**Follow-ups identified**: {list, or "none"}
+**Dimensions remaining**: {uncovered dimensions}
+```
+This incremental append ensures Q&A history survives context compaction during long elicitation sessions.
+
 ### Step 4: Synthesis Analysis
 
 After all Q&A rounds complete, use the Agent tool to launch **one agent**:

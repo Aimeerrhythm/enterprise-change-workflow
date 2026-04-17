@@ -108,6 +108,18 @@ When error is deep in call stack:
 - Keep tracing up until you find the source
 - Fix at source, not at symptom
 
+**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/debug-evidence.md`:
+```markdown
+# Debug Evidence (Phase 1)
+## Error: {error message summary}
+## Reproduction: {steps or "not reproducible"}
+## Recent Changes: {relevant git diff summary}
+## Domain Cross-Reference: {findings from Step 5, or "skipped"}
+## Data Flow Trace: {source of bad value, or "N/A"}
+## Working Hypothesis: {initial hypothesis for Phase 2}
+```
+This ensures Phase 1 evidence survives context compaction during long debugging sessions.
+
 ### Phase 2: Pattern Analysis
 
 **Find the pattern before fixing:**
