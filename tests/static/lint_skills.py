@@ -586,15 +586,18 @@ def check_template_references(result: LintResult):
             elif "name" not in fm:
                 result.error(f"[template] agents/{md.name}: frontmatter missing 'name' field")
 
-    # Check impl-orchestration subprompts
+    # Check impl-orchestration agent references
     impl_orch = SKILLS_DIR / "impl-orchestration"
     if impl_orch.exists():
-        expected_subprompts = ["implementer-prompt.md", "spec-reviewer-prompt.md"]
-        for filename in expected_subprompts:
-            if not (impl_orch / filename).exists():
+        impl_orch_content = (impl_orch / "SKILL.md").read_text(encoding="utf-8")
+        # Extract agent file references from SKILL.md
+        agent_refs = re.findall(r"`?(agents/[\w-]+\.md)`?", impl_orch_content)
+        for agent_ref in agent_refs:
+            agent_path = ROOT / agent_ref
+            if not agent_path.exists():
                 result.error(
-                    f"[template] skills/impl-orchestration/{filename} does not exist "
-                    f"(required by impl-orchestration skill)"
+                    f"[template] {agent_ref} does not exist "
+                    f"(referenced by impl-orchestration skill)"
                 )
 
     # Check hooks reference
