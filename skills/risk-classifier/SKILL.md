@@ -229,6 +229,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 ```markdown
 # ECW Session State
 
+<!-- ECW:STATUS:START -->
 - **Risk Level**: P{X}
 - **Domains**: {domain list}
 - **Mode**: {single-domain/cross-domain}
@@ -237,11 +238,18 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 - **Created**: {YYYY-MM-DD HH:mm}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
+<!-- ECW:STATUS:END -->
 
+<!-- ECW:MODE:START -->
+- **Working Mode**: analysis
+<!-- ECW:MODE:END -->
+
+<!-- ECW:LEDGER:START -->
 ## Subagent Ledger
 
 | Phase | Agent | Type | Est. Scale |
 |-------|-------|------|-----------|
+<!-- ECW:LEDGER:END -->
 ```
 
 This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. Purposes:
@@ -249,6 +257,8 @@ This file serves as the sole persistence carrier for ECW workflow state. Each sk
 - User can view current ECW workflow state
 - Manual recovery after compression (user says "read ECW state")
 - Monitoring scripts to assess subagent consumption
+
+> **Marker-based updates**: session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent table), `STOP` (auto-updated by Stop hook).
 
 > **Session advisory — context management**:
 >
