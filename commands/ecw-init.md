@@ -256,11 +256,15 @@ find . -type d -name "mapper" -path "*/resources/*" | head -5
 
 Map discovered subdirectories to confirmed domains.
 
-## Attach Step 5: Skip Knowledge Directory Creation
+## Attach Step 5: Install Rule Files
+
+Same as Scaffold Step 4c — install common rules and language-specific rules (if available for the detected language) to `.claude/ecw/rules/`.
+
+## Attach Step 6: Skip Knowledge Directory Creation
 
 **Do not create, modify, or overwrite any existing documentation files.** This is the core difference from Scaffold mode. User's existing knowledge files are preserved as-is.
 
-## Attach Step 6: Generate CLAUDE.md Snippet
+## Attach Step 7: Generate CLAUDE.md Snippet
 
 Read `templates/CLAUDE.md.snippet` template.
 
@@ -282,13 +286,13 @@ Entry file path:
 Present snippet to user via `AskUserQuestion`:
 - "Append to CLAUDE.md" / "Save as .claude/ecw/CLAUDE.md.snippet" / "Skip"
 
-## Attach Step 7: Optional Code Scanners (Java only)
+## Attach Step 8: Optional Code Scanners (Java only)
 
 Skip if language is not Java or `--skip-scanners` was passed.
 
 Same as Scaffold Step 6: Offer to run Java scan scripts under `scripts/java/`.
 
-## Attach Step 8: Output Summary
+## Attach Step 9: Output Summary
 
 Output structured summary (same format as Scaffold Step 7), with these differences:
 - Title: "ECW Initialization Complete (Attach Mode)"
@@ -360,19 +364,23 @@ For domains with non-existent knowledge directories:
 - `domain-registry.md` `Knowledge Root`: Use user-specified path (even if non-existent)
 - `Entry Document`: `00-index.md (to be created)`
 
-## Manual Step 5: Skip Knowledge Directory Creation
+## Manual Step 5: Install Rule Files
 
-Same as Attach Step 5 — do not create knowledge files. User creates them when ready.
+Same as Scaffold Step 4c — install common rules and language-specific rules (if available for the detected language) to `.claude/ecw/rules/`.
+
+## Manual Step 6: Skip Knowledge Directory Creation
+
+Same as Attach Step 6 — do not create knowledge files. User creates them when ready.
 
 Exception: If user explicitly requests knowledge directory creation in Step 1's AskUserQuestion (e.g., "also create a knowledge directory skeleton for me"), then create directory structure and template files following Scaffold Step 4's approach.
 
-## Manual Step 6: Generate CLAUDE.md Snippet
+## Manual Step 7: Generate CLAUDE.md Snippet
 
-Same as Attach Step 6, using user-specified paths.
+Same as Attach Step 7, using user-specified paths.
 
-## Manual Step 7-8: Scanners + Summary
+## Manual Step 8-9: Scanners + Summary
 
-Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)".
+Same as Attach Step 8-9. Summary title: "ECW Initialization Complete (Manual Mode)".
 
 ---
 
@@ -544,6 +552,29 @@ Read and copy the 3 templates under `templates/knowledge/domain/`:
 
 Replace `{{Domain Name}}` with display name, `{{DATE}}` with today's date.
 
+## Scaffold Step 4c: Install Rule Files
+
+Install engineering rule templates to the project's rules directory:
+
+```bash
+mkdir -p .claude/ecw/rules/common
+```
+
+Read and copy all files from `templates/rules/common/` to `.claude/ecw/rules/common/`:
+1. `security.md`
+2. `testing.md`
+3. `coding-style.md`
+4. `performance.md`
+5. `design-patterns.md`
+
+If a language-specific rule set exists for the detected language (e.g., `templates/rules/java/` for Java projects):
+
+```bash
+mkdir -p .claude/ecw/rules/{language}
+```
+
+Copy all files from `templates/rules/{language}/` to `.claude/ecw/rules/{language}/`.
+
 ## Scaffold Step 5: Generate CLAUDE.md Snippet
 
 Read `templates/CLAUDE.md.snippet`. Fill the domain routing table:
@@ -603,6 +634,12 @@ If running: Check for scan scripts under `scripts/java/`; execute if present.
 | Action | Status |
 |--------|--------|
 | Domain routing snippet | {Appended / Saved / Skipped} |
+
+#### Engineering Rules (.claude/ecw/rules/)
+| Directory | Files | Status |
+|-----------|-------|--------|
+| `common/` | security.md, testing.md, coding-style.md, performance.md, design-patterns.md | Created |
+| `{language}/` (if applicable) | coding-style.md | Created |
 
 ### Next Steps
 

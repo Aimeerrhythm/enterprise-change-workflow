@@ -104,6 +104,22 @@ tdd:
   # Java: "BaseUnitTest" | Go: "TestSuite" | Node: 留空
   # base_test_class: "BaseUnitTest"
 
+# 规则配置
+# 控制项目适用的工程规范规则集。规则安装到 .claude/ecw/rules/ 目录，始终生效。
+# 详见 templates/rules/README.md。
+rules:
+  # 启用的通用规则（适用于所有语言）
+  common:
+    - security          # 安全规范：无硬编码密钥、输入验证、SQL 注入防护
+    - testing           # 测试规范：AAA 模式、边界覆盖、反模式检查
+    - coding-style      # 代码风格：函数长度、嵌套深度、命名约定
+    - performance       # 性能规范：N+1 防护、分页、资源释放
+    - design-patterns   # 设计模式：分层、DTO 边界、错误传播
+  # 语言专项规则（覆盖通用规则中的语言特定部分）
+  # 取消注释适用于你项目语言的行：
+  # language: java      # Java: records, Optional, Stream 操作上限, Spring 约定
+  # language: go        # Go: gofmt, error wrapping, interface 设计, goroutine 安全
+
 # 路径配置
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。
 paths:
@@ -113,3 +129,4 @@ paths:
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
   knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识
   calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史
+  rules_dir: ".claude/ecw/rules/"                              # 规则文件安装目录
