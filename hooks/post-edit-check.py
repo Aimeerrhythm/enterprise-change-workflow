@@ -16,6 +16,19 @@ import re
 import sys
 
 
+# ── User-visible messages (locale: zh-CN) ──
+# All user-facing strings are collected here for future i18n.
+
+_MESSAGES = {
+    "empty_catch": "空 catch 块 — 异常被吞没，考虑至少记录日志",
+    "hardcoded_secret": "疑似硬编码凭据 — 应使用环境变量或配置中心",
+    "aws_key": "疑似 AWS Access Key — 不应提交到代码仓库",
+    "private_key": "私钥内容 — 不应提交到代码仓库",
+    "todo_comment": "新增 TODO/FIXME 注释 — 确认是否需要创建跟踪任务",
+    "quality_gate_header": "**[ECW Quality Gate]** 编辑后检测到以下注意事项：\n\n",
+    "more_items": "...还有 {n} 项",
+}
+
 # ── Anti-pattern definitions ──
 # (pattern, description, file_extensions_to_check)
 
@@ -23,31 +36,31 @@ ANTI_PATTERNS = [
     # Empty catch blocks (Java/JS/TS)
     (
         r'catch\s*\([^)]*\)\s*\{\s*\}',
-        "空 catch 块 — 异常被吞没，考虑至少记录日志",
+        _MESSAGES["empty_catch"],
         {".java", ".js", ".ts", ".jsx", ".tsx"},
     ),
     # Hardcoded secrets
     (
         r'(?:password|passwd|secret|api_key|apikey|token|access_key)\s*[=:]\s*["\'][^"\']{8,}["\']',
-        "疑似硬编码凭据 — 应使用环境变量或配置中心",
+        _MESSAGES["hardcoded_secret"],
         None,  # Check all file types
     ),
     # AWS access keys
     (
         r'(?:AKIA|ASIA)[A-Z0-9]{16}',
-        "疑似 AWS Access Key — 不应提交到代码仓库",
+        _MESSAGES["aws_key"],
         None,
     ),
     # Private keys
     (
         r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----',
-        "私钥内容 — 不应提交到代码仓库",
+        _MESSAGES["private_key"],
         None,
     ),
     # TODO/FIXME/HACK comments (informational, not warning)
     (
         r'(?://|#)\s*(?:TODO|FIXME|HACK|XXX)\b',
-        "新增 TODO/FIXME 注释 — 确认是否需要创建跟踪任务",
+        _MESSAGES["todo_comment"],
         None,
     ),
 ]
@@ -156,10 +169,10 @@ def check(input_data, config=None):
     if not warnings:
         return ("continue", "")
 
-    msg = "**【ECW 质量门禁】** 编辑后检测到以下注意事项：\n\n"
+    msg = _MESSAGES["quality_gate_header"]
     msg += "\n".join(f"- {w}" for w in warnings[:5])
     if len(warnings) > 5:
-        msg += f"\n- ...还有 {len(warnings) - 5} 项"
+        msg += f"\n- {_MESSAGES['more_items'].format(n=len(warnings) - 5)}"
 
     return ("continue", msg)
 

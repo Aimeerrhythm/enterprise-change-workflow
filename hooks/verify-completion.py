@@ -24,6 +24,38 @@ except ImportError:
     yaml = None
 
 
+# ── User-visible messages (locale: zh-CN) ──
+# All user-facing strings are collected here for future i18n.
+
+_MESSAGES = {
+    "broken_ref": "`{filepath}` 引用了不存在的路径: `{ref}`",
+    "stale_ref": "`{ref_file}` 仍引用已删除的文件 `{deleted_file}`",
+    "compile_fail": "Java 编译失败:\n{errors}",
+    "compile_timeout": "Java 编译超时（>120s），编译结果未验证，请手动执行 `mvn compile` 检查",
+    "test_fail": "Java 测试失败:\n{errors}",
+    "test_timeout": "Java 测试超时（>{timeout}s），测试结果未验证，请手动执行 `mvn test` 检查",
+    "knowledge_sync": (
+        "域 `{domain}` 的业务代码有变更，但知识文档未更新。"
+        "请检查以下文档是否需要同步：\n{file_list}"
+    ),
+    "test_coverage": (
+        "`{class_name}` 有代码变更但未找到对应测试文件 `{test_file}`。"
+        "TDD 流程要求新增/修改的 BizService 和 Manager 需有对应测试。"
+    ),
+    "fail_header": "**[ECW Verify]** 实现结果存在技术问题，请修复后重试：**\n\n",
+    "fail_more": "...还有 {n} 个问题",
+    "pass_header": (
+        "**[ECW Verify]** 技术检查通过"
+        "（{modified} 个修改文件、{deleted} 个删除文件，无断裂引用）。\n\n"
+        "**语义验证**：如果尚未执行 `ecw:impl-verify`，"
+        "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
+    ),
+    "warnings_header": "\n\n---\n\n**[注意事项]**\n\n",
+    "knowledge_header": "\n\n---\n\n**[知识文档同步提醒]** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n",
+    "tdd_header": "\n\n---\n\n**[TDD 测试覆盖提醒]** 以下业务组件有代码变更但缺少对应测试：\n\n",
+}
+
+
 def check(input_data, config=None):
     """Dispatcher sub-hook entry point.
 
@@ -150,7 +182,7 @@ def check_broken_references(cwd, filepath):
         # 匹配 .claude/ 开头的文件路径引用（带扩展名）
         for ref in re.findall(r"\.claude/[\w\-/]+\.[\w]+", content):
             if not os.path.exists(os.path.join(cwd, ref)):
-                issues.append(f"`{filepath}` 引用了不存在的路径: `{ref}`")
+                issues.append(_MESSAGES["broken_ref"].format(filepath=filepath, ref=ref))
 
     except Exception:
         pass
@@ -190,7 +222,7 @@ def check_stale_references(cwd, deleted_file):
             if any(ref_file.startswith(d) for d in skip_dirs):
                 continue
             issues.append(
-                f"`{ref_file}` 仍引用已删除的文件 `{deleted_file}`"
+                _MESSAGES["stale_ref"].format(ref_file=ref_file, deleted_file=deleted_file)
             )
     except Exception:
         pass
@@ -220,9 +252,9 @@ def check_java_compilation(cwd, modified):
         if r.returncode != 0:
             errors = [l for l in r.stdout.split("\n") + r.stderr.split("\n")
                       if "[ERROR]" in l][:5]
-            return ["Java 编译失败:\n" + "\n".join(errors)], []
+            return [_MESSAGES["compile_fail"].format(errors="\n".join(errors))], []
     except subprocess.TimeoutExpired:
-        return [], ["Java 编译超时（>120s），编译结果未验证，请手动执行 `mvn compile` 检查"]
+        return [], [_MESSAGES["compile_timeout"]]
     except FileNotFoundError:
         return [], []  # mvn 不在 PATH 中，跳过
 
@@ -260,9 +292,9 @@ def check_java_tests(cwd, modified):
         if r.returncode != 0:
             errors = [l for l in r.stdout.split("\n") + r.stderr.split("\n")
                       if "[ERROR]" in l or "FAILURE" in l.upper()][:8]
-            return ["Java 测试失败:\n" + "\n".join(errors)], []
+            return [_MESSAGES["test_fail"].format(errors="\n".join(errors))], []
     except subprocess.TimeoutExpired:
-        return [], [f"Java 测试超时（>{timeout}s），测试结果未验证，请手动执行 `mvn test` 检查"]
+        return [], [_MESSAGES["test_timeout"].format(timeout=timeout)]
     except FileNotFoundError:
         return [], []  # mvn 不在 PATH 中，跳过
 
@@ -377,8 +409,7 @@ def check_knowledge_doc_freshness(cwd, modified):
             f"  - {os.path.relpath(p, cwd)}" for p in md_files
         )
         reminders.append(
-            f"域 `{domain}` 的业务代码有变更，但知识文档未更新。"
-            f"请检查以下文档是否需要同步：\n{file_list}"
+            _MESSAGES["knowledge_sync"].format(domain=domain, file_list=file_list)
         )
 
     return reminders
@@ -408,8 +439,7 @@ def check_test_coverage(cwd, modified):
         if not os.path.exists(os.path.join(cwd, test_file)):
             class_name = os.path.basename(biz_file).replace("Impl.java", "")
             reminders.append(
-                f"`{class_name}` 有代码变更但未找到对应测试文件 `{test_file}`。"
-                f"TDD 流程要求新增/修改的 BizService 和 Manager 需有对应测试。"
+                _MESSAGES["test_coverage"].format(class_name=class_name, test_file=test_file)
             )
 
     return reminders
@@ -417,30 +447,25 @@ def check_test_coverage(cwd, modified):
 
 def _format_fail_message(issues):
     """Format technical check failure message."""
-    msg = "**【ECW 完成验证】实现结果存在技术问题，请修复后重试：**\n\n"
+    msg = _MESSAGES["fail_header"]
     msg += "\n".join(f"- {i}" for i in issues[:10])
     if len(issues) > 10:
-        msg += f"\n- ...还有 {len(issues) - 10} 个问题"
+        msg += f"\n- {_MESSAGES['fail_more'].format(n=len(issues) - 10)}"
     return msg
 
 
 def _format_pass_message(modified_count, deleted_count, warnings=None,
                          knowledge_reminders=None, test_reminders=None):
     """Format technical check pass message with optional reminders."""
-    msg = (
-        f"**【ECW 完成验证】** 技术检查通过"
-        f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
-        "**语义验证**：如果尚未执行 `ecw:impl-verify`，"
-        "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
-    )
+    msg = _MESSAGES["pass_header"].format(modified=modified_count, deleted=deleted_count)
     if warnings:
-        msg += "\n\n---\n\n**【注意事项】**\n\n"
+        msg += _MESSAGES["warnings_header"]
         msg += "\n".join(f"- {w}" for w in warnings)
     if knowledge_reminders:
-        msg += "\n\n---\n\n**【知识文档同步提醒】** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n"
+        msg += _MESSAGES["knowledge_header"]
         msg += "\n\n".join(f"- {r}" for r in knowledge_reminders)
     if test_reminders:
-        msg += "\n\n---\n\n**【TDD 测试覆盖提醒】** 以下业务组件有代码变更但缺少对应测试：\n\n"
+        msg += _MESSAGES["tdd_header"]
         msg += "\n".join(f"- {r}" for r in test_reminders)
     return msg
 

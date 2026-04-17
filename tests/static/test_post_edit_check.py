@@ -162,7 +162,7 @@ class TestCheckFunction:
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
-        assert "质量门禁" in message
+        assert "ECW Quality Gate" in message
         assert "catch" in message
 
     def test_write_with_secret(self, post_edit, tmp_path):
@@ -259,7 +259,7 @@ class TestCheckFunction:
         action, message = post_edit.check(input_data)
         assert action == "continue"
         # Should have warnings (exact count depends on regex overlap)
-        assert "质量门禁" in message
+        assert "ECW Quality Gate" in message
 
 
 # ══════════════════════════════════════════════════════
