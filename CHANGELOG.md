@@ -4,6 +4,16 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.4] - 2026-04-17
+
+### 改进
+
+- **ecw-upgrade 重写为纯幂等模式** — 去除版本目录遍历，改为 7 项独立幂等检查（A-G）。新增 CLAUDE.md ECW 入口注入、ecw.yml 结构同步、术语更新、域路由检查。升级完成后自动执行 `/ecw-validate-config`
+
+### 修复
+
+- **risk-classifier 自动触发** — skill description 改用 BLOCKING 前置 + folded 格式确保可见；CLAUDE.md 触发指令强化为 BLOCKING RULE。配合 ecw-upgrade Check A 注入项目级触发指令，三层保障自动触发
+
 ## [0.6.3] - 2026-04-17
 
 ### 修复
@@ -305,6 +315,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.4
 [0.6.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.3
 [0.6.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.2
 [0.6.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.1
