@@ -181,6 +181,7 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 | Scenario | Handling |
 |----------|---------|
 | Spec-challenge Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: adversarial review unavailable]` and ask whether to proceed without review or retry manually |
+| Spec-challenge Agent timeout (300s exceeded) | Record `TIMEOUT` in Subagent Ledger → **retry subagent once** (source code reading limits already enforced) → still times out: notify user and offer retry manually or proceed without review |
 | Agent returns unstructured text (no F/I items) | Treat entire response as a single improvement suggestion (I1) and present to user for confirmation |
 | `spec-challenge-report.md` write failure | Retry once → still fails: output full report in conversation and continue with user confirmation flow |
 

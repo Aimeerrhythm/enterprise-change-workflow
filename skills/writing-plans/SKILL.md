@@ -101,7 +101,7 @@ After receiving the subagent's summary:
 
 `model: opus` — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
 
-**Timeout**: 300s (plan generation reads multiple knowledge files and produces substantial output). If subagent has not returned, terminate and fall back to Direct mode (see Error Handling).
+**Timeout**: 300s (plan generation reads multiple knowledge files and produces substantial output). If subagent has not returned, terminate and retry once (see Error Handling). Do NOT fall back to Direct mode on first timeout — Direct mode causes all source file reads to enter coordinator context, bloating the main context window.
 
 ## Scope Check
 
@@ -247,6 +247,7 @@ If you find issues, fix them inline.
 | Scenario | Handling |
 |----------|---------|
 | Subagent dispatch fails or returns incomplete plan | Record `FAILED` in Subagent Ledger → retry once → still fails: fall back to Direct mode (coordinator generates plan itself) |
+| Subagent timeout (300s exceeded) | Record `TIMEOUT` in Subagent Ledger → **retry subagent once** (source code reading limits already enforced) → still times out: fall back to Direct mode. **Never fall back to Direct mode on first timeout** — retry is cheap, Direct mode bloats coordinator context |
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
 | `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level before proceeding |
