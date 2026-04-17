@@ -41,11 +41,11 @@
 - [x] C-1 配置文件保护 — config-protect 子模块
 
 **Wave 2 merge checklist:**
-- [ ] `git merge wave2/session-hooks` 无冲突
-- [ ] `git merge wave2/agent-arch` 无冲突
-- [ ] `git merge wave2/config-protect` 无冲突
-- [ ] `make lint` 通过
-- [ ] `make test-hook` 通过
+- [x] `git merge wave2/session-hooks` — merged, 无冲突
+- [x] `git merge wave2/agent-arch` — merged, wave-progress 自动合并
+- [x] `git merge wave2/config-protect` — merged, Makefile test-hook 行冲突已解决 (`dd50b0e`)
+- [x] `make lint` 通过 — 3 warnings, all checks passed
+- [x] `make test-hook` 通过 — 204 passed in 0.44s
 
 ---
 
