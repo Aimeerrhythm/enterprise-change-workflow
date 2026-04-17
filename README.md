@@ -106,12 +106,17 @@ User proposes requirement / change / bug
 | `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
 | `ecw:cross-review` | Manual only (`/ecw:cross-review`) | Cross-file structural consistency verification for document-heavy changes (optional tool) |
 
-### Agents (2)
+### Agents (7)
 
 | Component | Dispatcher | Description |
 |-----------|-----------|-------------|
 | `biz-impact-analysis` | `ecw:biz-impact-analysis` | 5-step analysis: diff parsing → dependency graph queries → code scanning → external system evaluation → report generation |
 | `spec-challenge` | `ecw:spec-challenge` | 4-dimension review: accuracy / information quality / boundaries & blind spots / robustness → fatal flaws + improvement suggestions |
+| `domain-analyst` | `ecw:domain-collab` | R1 independent domain analysis — each domain agent analyzes impact in isolation |
+| `domain-negotiator` | `ecw:domain-collab` | R2 cross-domain negotiation — domains evaluate each other's proposals |
+| `implementer` | `ecw:impl-orchestration` | Per-task implementation with Fact-Forcing Gate traceability |
+| `spec-reviewer` | `ecw:impl-orchestration` | Per-task spec compliance review |
+| `impl-verifier` | `ecw:impl-verify` | Parallel 4-round verification (requirements/domain rules/plan/engineering standards) |
 
 ### Commands (3)
 
@@ -121,20 +126,34 @@ User proposes requirement / change / bug
 | `/ecw-validate-config` | Validate ECW configuration completeness (7-step check, outputs pass/warn/fail report) |
 | `/ecw-upgrade` | Upgrade project ECW configuration to latest plugin version (idempotent migrations, partial failure protection) |
 
-### Hook (1)
+### Hooks (6 event points, dispatcher architecture)
 
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| `verify-completion` | PreToolUse auto-intercepts TaskUpdate(completed) | 4 hard blocks + 1 soft reminder |
+ECW uses a unified dispatcher pattern for hooks. `hooks.json` registers 6 event points:
 
-**Hard blocks (failure → prevents completion):**
+| Event | File | Description |
+|-------|------|-------------|
+| `SessionStart` | `session-start.py` | Auto-inject session-state / checkpoint / ecw.yml context + instincts |
+| `Stop` | `stop-persist.py` | Marker-based state persistence on session stop |
+| `PreToolUse` | `dispatcher.py` | Unified dispatcher with 5 sub-modules (see below) |
+| `PostToolUse` | `post-edit-check.py` | Anti-pattern detection on Edit/Write |
+| `PreCompact` | `pre-compact.py` | Recovery guidance injection before context compaction |
+| `SessionEnd` | `session-end.py` | Session cleanup |
+
+**Dispatcher sub-modules** (risk-level Profile gating: P0→strict, P1/P2→standard, P3→minimal):
+
+| Sub-module | Profiles | Description |
+|------------|----------|-------------|
+| `verify-completion` | minimal, standard, strict | 4 hard blocks + 1 soft reminder before task completion |
+| `config-protect` | minimal, standard, strict | Block AI from modifying critical ECW config files |
+| `compact-suggest` | minimal, standard, strict | Proactive context compaction suggestion based on tool-call count |
+| `secret-scan` | standard, strict | Detect sensitive data (AWS keys, JWT, GitHub tokens, private keys) |
+| `bash-preflight` | standard, strict | Dangerous command pre-check (--no-verify, push --force, rm -rf) |
+
+**verify-completion hard blocks (failure → prevents completion):**
 1. Broken reference check — modified files reference non-existent `.claude/` paths
 2. Stale reference check — deleted files still referenced elsewhere
 3. Java compilation check — auto-runs `mvn compile` when `.java` files are modified
 4. Java test check — auto-runs `mvn test` when `.java` files are modified (controlled by `ecw.yml` `verification.run_tests`)
-
-**Soft reminder (non-blocking, injects systemMessage):**
-5. Knowledge doc sync reminder — business code changed but corresponding domain knowledge docs not updated
 
 ## Installation
 
@@ -299,16 +318,32 @@ enterprise-change-workflow/
 │   ├── impl-verify/             # Implementation correctness verification (multi-round convergence, up to 5 rounds)
 │   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
 │   └── biz-impact-analysis/     # Business impact analysis (5-step structured)
-├── agents/
+├── agents/                      # 7 agent definitions
 │   ├── biz-impact-analysis.md   # Impact analysis agent
-│   └── spec-challenge.md       # Adversarial review agent
+│   ├── spec-challenge.md        # Adversarial review agent
+│   ├── domain-analyst.md        # Domain-collab R1 independent analysis agent
+│   ├── domain-negotiator.md     # Domain-collab R2 cross-domain negotiation agent
+│   ├── implementer.md           # Impl-orchestration per-task implementation agent
+│   ├── spec-reviewer.md         # Impl-orchestration spec review agent
+│   └── impl-verifier.md         # Impl-verify parallel verification agent
 ├── commands/
 │   ├── ecw-init.md              # Project initialization wizard
 │   ├── ecw-validate-config.md   # Configuration validation command
 │   └── ecw-upgrade.md           # Configuration upgrade command (versioned migrations)
-├── hooks/
-│   ├── hooks.json               # Hook registration (PreToolUse → TaskUpdate)
-│   └── verify-completion.py     # Completion verification hook (5 checks: 4 hard blocks + 1 soft reminder)
+├── hooks/                       # 6 event-point hook architecture
+│   ├── hooks.json               # Hook registration (6 events: SessionStart/Stop/PreToolUse/PostToolUse/PreCompact/SessionEnd)
+│   ├── dispatcher.py            # PreToolUse unified dispatcher (5 sub-modules, profile-gated)
+│   ├── verify-completion.py     # Sub-module: completion verification (4 hard blocks + 1 soft reminder)
+│   ├── config-protect.py        # Sub-module: config file protection
+│   ├── compact-suggest.py       # Sub-module: proactive compaction suggestion
+│   ├── secret-scan.py           # Sub-module: sensitive data detection
+│   ├── bash-preflight.py        # Sub-module: dangerous command pre-check
+│   ├── post-edit-check.py       # PostToolUse anti-pattern detection
+│   ├── session-start.py         # SessionStart context injection + instinct loading
+│   ├── stop-persist.py          # Stop marker-based state persistence
+│   ├── pre-compact.py           # PreCompact recovery guidance
+│   ├── session-end.py           # SessionEnd cleanup
+│   └── marker_utils.py          # Shared idempotent marker update utilities
 ├── templates/                   # Config and knowledge file templates
 │   ├── ecw.yml                  # Project config template
 │   ├── domain-registry.md       # Domain registry template
@@ -316,15 +351,27 @@ enterprise-change-workflow/
 │   ├── calibration-log.md       # Calibration history template
 │   ├── ecw-path-mappings.md     # Path mapping template
 │   ├── CLAUDE.md.snippet        # CLAUDE.md integration snippet
-│   └── knowledge/               # Knowledge file templates
-│       ├── common/              # Cross-domain common knowledge (6 files)
-│       └── domain/              # Domain-level knowledge (3 files)
+│   ├── knowledge/               # Knowledge file templates
+│   │   ├── common/              # Cross-domain common knowledge (6 files)
+│   │   └── domain/              # Domain-level knowledge (3 files)
+│   └── rules/                   # Engineering rule templates
+│       ├── common/              # Universal rules (security, testing, coding-style, performance, design-patterns)
+│       ├── java/                # Java-specific rules
+│       └── go/                  # Go-specific rules
 ├── scripts/
 │   ├── java/                    # Java/Spring project scanners (3 scripts)
 │   └── README.md                # Scanner output format specification
+├── tests/                       # Three-layer test suite
+│   ├── Makefile                 # lint / test-hook / eval-* targets
+│   ├── static/                  # Layer 1: Python static lint (14 checks) + pytest hook unit tests (301 cases)
+│   └── eval/                    # Layer 2: promptfoo behavioral eval (4 suites: risk-classifier/domain-collab/tdd/impl-verify)
 ├── CLAUDE.md                    # Plugin-level guidance
 ├── CHANGELOG.md                 # Version history
+├── CONTRIBUTING.md              # Development conventions and review checklist
+├── TROUBLESHOOTING.md           # Troubleshooting guide
 ├── package.json                 # Version info
+├── ruff.toml                    # Python linting config
+├── .markdownlint.json           # Markdown linting config
 ├── LICENSE                      # MIT License
 ├── README.md
 └── README.zh-CN.md              # Chinese documentation
