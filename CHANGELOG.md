@@ -10,6 +10,10 @@
 
 - **risk-classifier description 被截断** — skills list 对 `|` 多行格式只显示第一行，导致 BLOCKING 指令不可见。改用 `>` 折叠格式，BLOCKING 置于首位，控制在 170 字符内确保完整显示
 
+### 改进
+
+- **ecw-upgrade 重写为纯幂等模式** — 去除版本目录遍历（`templates/upgrades/{version}/migration.md`），改为 7 项独立幂等检查（A-G），可重复执行。新增 Check A（CLAUDE.md ECW 入口注入）、Check C（ecw.yml 结构同步 — 补缺失字段/删废弃字段）、Check F（术语更新）、Check G（域路由表检查）。升级完成后自动执行 `/ecw-validate-config`
+
 ## [0.6.2] - 2026-04-17
 
 ### 修复
