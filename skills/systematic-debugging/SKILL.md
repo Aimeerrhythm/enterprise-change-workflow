@@ -93,6 +93,8 @@ Read `.claude/ecw/session-state.md` for risk level. Scale cross-reference depth 
 4. Query `mq-topology.md` (§2) — check if affected code publishes/consumes messages; trace message flow
 5. Query `shared-resources.md` (§3) — check if bug involves a shared service/component; list all consumers
 
+> **Knowledge file robustness**: Verify each file exists before reading. For any missing file, log `[Warning: {file} not found, skipping this cross-reference dimension]` and continue with available files. If `ecw-path-mappings.md` is missing, use directory-based heuristic to infer domain (e.g., `src/main/java/{domain}/` path pattern).
+
 **P2/P3 — Simplified check:**
 1. Locate domain from `ecw-path-mappings.md`
 2. Read domain's `business-rules.md`
@@ -107,6 +109,18 @@ When error is deep in call stack:
 - What called this with bad value?
 - Keep tracing up until you find the source
 - Fix at source, not at symptom
+
+**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/debug-evidence.md`:
+```markdown
+# Debug Evidence (Phase 1)
+## Error: {error message summary}
+## Reproduction: {steps or "not reproducible"}
+## Recent Changes: {relevant git diff summary}
+## Domain Cross-Reference: {findings from Step 5, or "skipped"}
+## Data Flow Trace: {source of bad value, or "N/A"}
+## Working Hypothesis: {initial hypothesis for Phase 2}
+```
+This ensures Phase 1 evidence survives context compaction during long debugging sessions.
 
 ### Phase 2: Pattern Analysis
 
@@ -166,6 +180,14 @@ When error is deep in call stack:
    - Suggest `ecw:risk-classifier --recheck` to re-evaluate risk level
 
    **Use AskUserQuestion to discuss with user before more fixes.**
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `cross-domain-calls.md`, etc.) | Log `[Warning: {file} not found, cross-reference degraded]` → continue with available files. If all knowledge files missing: skip Step 5 (domain cross-reference) entirely, rely on code-level investigation only |
+| `session-state.md` unavailable (risk level unknown) | Use simplified check (P2/P3 level) for Step 5 cross-reference depth |
+| Bug not reproducible after Step 2 | Do not skip to Phase 3 — gather more data first. Log `[Not reproducible: need additional evidence]` and ask user for more context |
 
 ## Red Flags - STOP and Follow Process
 

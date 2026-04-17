@@ -24,6 +24,8 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/domain-registry.md`) to get domain definitions
 2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_common`
 
+> **Knowledge file robustness**: If `domain-registry.md` does not exist, halt and notify user: "Domain registry not found. Run `/ecw-init` to initialize." If `cross-domain-rules.md` does not exist, log `[Warning: cross-domain-rules.md not found, Round 3 cross-validation will be degraded]` and continue — Round 3 §3c will skip rule validation for missing files.
+
 ## Workflow Overview
 
 ```dot
@@ -145,6 +147,10 @@ notes: "Other things to note"
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
 6. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium.
 
+**Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
+
+**Round 1 Checkpoint**: After collecting all Round 1 YAML results, write them to `.claude/ecw/session-data/domain-collab-r1.md` (one YAML block per domain). This ensures Round 1 results survive context compaction before Round 2 begins.
+
 ### Round 2: Inter-Domain Negotiation (parallel)
 
 After Round 1 independent analysis completes, Coordinator distributes each domain's change plan to others, letting each domain assess whether **other domains' changes** affect them.
@@ -224,6 +230,10 @@ negotiation_result:
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
 5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small |`. Domain negotiation R2 is typically small.
 
+**Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
+
+**Round 2 Checkpoint**: After collecting all Round 2 YAML results, write them to `.claude/ecw/session-data/domain-collab-r2.md`. This ensures negotiation results survive context compaction before Round 3 cross-validation.
+
 **Round 2 skip rule**: If a domain returned `impact_level: none` in Round 1 AND no other domain's `cross_domain_risks` points to it, **skip Round 2 Agent dispatch for that domain**. That domain is unaffected and no other domain flagged it as potentially affected — Round 2 negotiation would not produce new findings. Note in Round 3 cross-validation: "Domain X had no impact in Round 1 and no inbound risks; Round 2 skipped."
 
 ---
@@ -252,6 +262,8 @@ Read the following files for final validation (read as needed, not all at once):
 - `cross-domain-calls.md` → Verify whether direct call relationships mentioned by each domain are registered
 - `mq-topology.md` → Verify whether MQ relationships mentioned by each domain are registered
 - `shared-resources.md` → Check for overlooked shared resource impacts
+
+> **Knowledge file robustness**: For each file, verify existence before reading. If a file is missing, skip that dimension's validation and note `[Warning: {file} not found, {dimension} validation skipped]` in the report. Do not halt Round 3 for missing knowledge files.
 
 **3d. Code Verification**
 
@@ -412,6 +424,15 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 **Context management**: After Round 3 output is complete and files are written, suggest to the user: "domain-collab analysis is complete and saved to files. Consider running `/compact` to free context for the next phase (writing-plans)." This is a suggestion, not a requirement — only output it if the analysis was complex (3+ domains or Round 2 had conflicts).
 
 ---
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Round 1/2 domain Agent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: mark domain as `[analysis unavailable]` and continue with remaining domains |
+| All domain Agents fail in a Round | Notify user: "Domain analysis agents failed. Provide manual domain impact assessment or retry." Do not proceed to next Round |
+| Knowledge file missing (`domain-registry.md`, `cross-domain-rules.md`, per-domain knowledge) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. If `domain-registry.md` missing: halt and ask user to run `/ecw-init` |
+| Report file write failure (`domain-collab-report.md`, `knowledge-summary.md`) | Retry once → still fails: output full report content in conversation so downstream skills can reference it |
 
 ## Notes
 

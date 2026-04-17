@@ -101,6 +101,16 @@ Ask **3-5 questions** per round. Each answer may trigger follow-ups. Use the che
 
 **Key: Do not stop after one round.** Continue asking until all relevant dimensions have been explored. Every user answer opens new questions.
 
+**Per-round checkpoint**: After each Q&A round completes (user answers all questions), append the round summary to `.claude/ecw/session-data/requirements-summary.md`:
+```markdown
+### Round {N} — {covered dimensions}
+**Questions**: {list of questions asked}
+**Answers**: {summary of user answers}
+**Follow-ups identified**: {list, or "none"}
+**Dimensions remaining**: {uncovered dimensions}
+```
+This incremental append ensures Q&A history survives context compaction during long elicitation sessions.
+
 ### Step 4: Synthesis Analysis
 
 After all Q&A rounds complete, use the Agent tool to launch **one agent** (`model: sonnet` — synthesis requires cross-referencing multiple Q&A rounds and identifying contradictions):
@@ -126,6 +136,8 @@ List findings from both perspectives separately. Tag each finding with severity 
 - Include: All Q&A context, existing code/documentation findings
 
 **Ledger update**: After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | medium |`.
+
+**Timeout**: 180s. If synthesis Agent has not returned, terminate and present Q&A findings directly to user (see Error Handling).
 
 **Return value validation**: Verify the agent's response contains findings tagged with severity (critical/important/suggestion). If the response lacks structured findings:
 1. Log to Ledger: `[FAILED: synthesis-analysis, reason: unstructured output]`
@@ -235,6 +247,18 @@ Stop only when ALL of these are true:
 - You can write a complete requirement summary without guessing
 - User confirms the summary is accurate
 
+### Termination Limits
+
+To prevent unbounded questioning, enforce these hard caps by risk level:
+
+| Risk Level | Max Question Rounds | Max Total Questions |
+|-----------|--------------------|--------------------|
+| P0 | 15 | 75 |
+| P1 | 10 | 50 |
+| P2 (fallback) | 5 | 25 |
+
+When hitting the cap: stop questioning, proceed to synthesis analysis with available information. Output `[Termination: max rounds reached, proceeding with collected information]`.
+
 ## Output: Requirement Summary
 
 After synthesis analysis completes and user has made decisions on findings, produce the final summary:
@@ -275,6 +299,13 @@ After synthesis analysis completes and user has made decisions on findings, prod
 Wait for user confirmation. After confirmation:
 - **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`
 - **Fallback**: If Phase 2 not needed, invoke `ecw:writing-plans` directly
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Synthesis analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: skip synthesis, present Q&A findings directly to user with `[Warning: automated synthesis unavailable, manual review recommended]` |
+| `requirements-summary.md` write failure | Retry once → still fails: output full requirement summary in conversation (ensures downstream skills can still reference it) |
 
 ## Common Mistakes
 

@@ -92,6 +92,8 @@ Strictly follow the prescribed output format for the review report.
 Please output the review report in Chinese.
 ```
 
+**Timeout**: 300s (adversarial review reads plan + multiple knowledge files). If Agent has not returned, terminate and offer retry (see Error Handling).
+
 ## User Confirmation Flow Details
 
 ### Step 1: Present Review Report
@@ -117,6 +119,8 @@ Options:
   - "Disagree" — Keep original plan; AI will draft technical rebuttal for your confirmation
   - "Needs discussion" — Enter discussion; you can provide additional context before deciding
 ```
+
+**"Needs discussion" termination**: If user selects "Needs discussion" for the same flaw 3 times without reaching a decision, force closure: present the two options (agree/disagree) without the discussion option. Output `[Discussion limit reached for F{n}, forcing decision]`.
 
 **Multiple fatal flaws can be combined into one AskUserQuestion (one question per flaw, max 4 per group).**
 
@@ -167,6 +171,14 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 - User has selected which improvement suggestions to adopt/defer
 - Document has been updated to reflect all "agree to modify" and "adopted" changes
 - **User final confirmation** on response summary — review passed
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Spec-challenge Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: adversarial review unavailable]` and ask whether to proceed without review or retry manually |
+| Agent returns unstructured text (no F/I items) | Treat entire response as a single improvement suggestion (I1) and present to user for confirmation |
+| `spec-challenge-report.md` write failure | Retry once → still fails: output full report in conversation and continue with user confirmation flow |
 
 ## Workflow Integration
 

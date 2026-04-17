@@ -25,6 +25,8 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    2. Run `git diff --name-only {diff_range}` to get file list
    3. Read `ecw-path-mappings.md`, map file list to domains
    4. Fill above results into Agent prompt, replacing full diff
+
+> **Knowledge file robustness**: If `ecw-path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
 3. **Dispatch biz-impact-analysis agent** (`model: sonnet` — business impact analysis requires understanding domain relationships and dependency graphs) — Pass in preprocessed results, await impact analysis report
 4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
    - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
@@ -100,6 +102,17 @@ After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent L
 ```
 
 Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
+
+**Timeout**: 300s (agent reads multiple knowledge files and scans code). If Agent has not returned, terminate and offer retry (see Error Handling).
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Biz-impact-analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: business impact analysis unavailable]` and suggest manual assessment |
+| `ecw-path-mappings.md` missing | Agent cannot map files to domains → output `[Warning: path mappings not found, domain identification degraded]` and proceed with file-path-based heuristic grouping |
+| Knowledge files missing (cross-domain-calls.md, mq-topology.md, etc.) | Agent logs `[Warning: {file} not found]` per missing file → analysis continues with available data, "Analysis Coverage" section in report reflects gaps |
+| `git diff` returns empty | No changes to analyze → notify user and exit without dispatching agent |
 
 ## Notes
 

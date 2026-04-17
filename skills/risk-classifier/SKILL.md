@@ -165,6 +165,8 @@ Extract from user's requirement description:
 
 Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`, check whether classes/methods mentioned by user appear in the shared resources table.
 
+> **Knowledge file robustness**: Before reading, verify the file exists. If `shared-resources.md` or the risk factors file does not exist, log `[Warning: {file} not found, skipping shared resource check]` and continue with keyword-based assessment only. Do not halt Phase 1 for missing knowledge files.
+
 → Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Factor 1: Impact Scope for the domain dependency count→risk level threshold mapping.
 
 **Note:** Phase 1 checks §3 (shared resources) + §2 (MQ topology, only check if user-mentioned keywords involve MQ Topics). Does not check §1/§4/§5 (deferred to Phase 2).
@@ -370,6 +372,8 @@ Coordinator dispatches a single subagent to execute Steps 1-4:
 - knowledge-summary.md path (if exists, subagent uses it to reduce original file reads)
 - Risk factor file path (from ecw.yml `paths.risk_factors`)
 
+> **Knowledge file robustness (subagent)**: Pass all paths to the subagent. The subagent must verify each file exists before reading. For any missing file, subagent logs `[Warning: {file} not found]` in the corresponding `classification_factors` detail and continues with available data. Missing files reduce analysis precision but do not block Phase 2.
+
 **Subagent executes** Steps 1-4 internally and returns structured YAML:
 
 ```yaml
@@ -401,6 +405,8 @@ upgrade_reason: "..."  # if upgraded
 - Write checkpoint to `.claude/ecw/session-data/phase2-assessment.md`
 
 **Model**: `model: sonnet` (dependency graph query is rule-based lookup, not creative reasoning)
+
+**Timeout**: 180s. If subagent has not returned within this time, terminate and fall back to Phase 1 level (see Error Handling).
 
 #### [Subagent] Step 2: Full Dependency Graph Query
 
@@ -606,6 +612,17 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | `/risk-classify --phase3` | Execute Phase 3 calibration (use after biz-impact-analysis report is produced) |
 
 ---
+
+## Error Handling
+
+**Standard ECW error recovery patterns applicable to this skill:**
+
+| Scenario | Handling |
+|----------|---------|
+| Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
+| Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
+| `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
+| `phase2-assessment.md` / `calibration-log.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
 ## Common Mistakes
 

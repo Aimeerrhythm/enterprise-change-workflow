@@ -52,12 +52,12 @@
 ## Wave 3 — 深化层
 
 ### Session 3-a: H (Skill 内部质量) — branch: `wave3/skill-quality`
-- [ ] H-1 统一错误处理 — 所有 SKILL.md 关键步骤增加错误处理
-- [ ] H-2 Timeout 规范 — 所有 subagent dispatch 增加 timeout
-- [ ] H-3 循环终止条件 — requirements-elicitation/spec-challenge/cross-review
-- [ ] H-4 状态检查点 — systematic-debugging/tdd/domain-collab
-- [ ] H-5 知识文件健壮性 — 存在性检查 + 降级标注
-- [ ] H-6 impl-verify 矛盾修复
+- [x] H-1 统一错误处理 — 所有 SKILL.md 关键步骤增加错误处理 (`5899e0f`)
+- [x] H-2 Timeout 规范 — 所有 subagent dispatch 增加 timeout (`f83be43`)
+- [x] H-3 循环终止条件 — requirements-elicitation/spec-challenge/impl-verify/cross-review (`113884f`)
+- [x] H-4 状态检查点 — systematic-debugging/tdd/requirements-elicitation/domain-collab (`a1dea11`)
+- [x] H-5 知识文件健壮性 — 存在性检查 + 降级标注 (`5563399`)
+- [x] H-6 impl-verify 矛盾修复 (`d0c3900`)
 
 ### Session 3-b: E (Context 管理) — branch: `wave3/context-mgmt`
 - [ ] E-1 主动压缩建议 — tool-call 计数器

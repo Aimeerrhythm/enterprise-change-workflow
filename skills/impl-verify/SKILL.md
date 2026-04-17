@@ -55,6 +55,8 @@ Before execution, locate input materials in the following order:
 2. If summary file is sufficient (contains state machine, validation rules, data model sections), execute Round 2 based on summary
 3. If summary does not exist or is insufficient, read full domain knowledge files
 
+> **Knowledge file robustness (Round 2)**: Before reading any domain knowledge file, verify it exists. If `business-rules.md` or `data-model.md` for a domain is missing, log `[Warning: {domain}/{file} not found, Round 2 checks for this domain degraded]` in the Round 2 findings. The subagent should still check available files and report what dimensions could not be verified.
+
 **Degradation handling**:
 - No requirement document (P3 or degraded scenario) → Skip Round 1, warn user
 - No domain knowledge files → Skip Round 2, warn user
@@ -63,10 +65,10 @@ Before execution, locate input materials in the following order:
 
 ### Diff Read Strategy (Reduce Redundancy)
 
-1. **Before Round 1**: Execute `git diff --name-only` and `git diff` once, record as "baseline diff"
-2. **Rounds 2-4**: Do not re-execute `git diff`. Cross-reference against diff content already read in Round 1. If specific file change details are needed, use `git diff -- {specific file}` instead of full diff
-3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes; do not re-read full diff
-4. **Changed file table cache**: The changed file list (filename + change type + changed line count) produced in Round 1 serves as index for subsequent Rounds; no need to regenerate
+1. **Coordinator pre-processing**: Execute `git diff --name-only` once to get the changed file list. Pass this list (not full diff content) to all Round subagents
+2. **Round 1-4 subagents (parallel)**: Each subagent independently reads code changes for its verification needs. Use targeted `git diff -- {specific file}` for files relevant to that Round's dimension, rather than reading full `git diff` for all files. This keeps each subagent's context lean
+3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes. Do not re-read the full baseline diff
+4. **Changed file table cache**: The changed file list from coordinator pre-processing serves as the index for all Rounds; each subagent receives it as input
 
 ### Subagent Dispatch Architecture
 
@@ -110,6 +112,8 @@ summary: "One-line summary of this round"
 
 **Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
 
+**Timeout per Round subagent**: 180s. If a Round subagent has not returned within this time, terminate it and fall back to coordinator inline execution for that Round (see Error Handling).
+
 ## Execution Protocol
 
 ### Round 1 — Requirements ↔ Code (Bidirectional Tracing) [Subagent]
@@ -140,7 +144,7 @@ summary: "One-line summary of this round"
 
 ### Round 2 — Domain Knowledge ↔ Code (Rule Alignment) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Code implementation is consistent with domain-level business rules and data model.
 
@@ -163,7 +167,7 @@ summary: "One-line summary of this round"
 
 ### Round 3 — Plan ↔ Code (Decision Verification) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Every design decision in the Plan is followed in code.
 
@@ -186,7 +190,7 @@ summary: "One-line summary of this round"
 
 ### Round 4 — Engineering Standards ↔ Code (Quality Review) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Code quality meets project engineering standards. Absorbs code-reviewer responsibilities.
 
@@ -227,6 +231,7 @@ summary: "One-line summary of this round"
 
 - Suggestion-level findings do not block convergence; recorded in final report for reference
 - **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention
+- **Stall detection**: If must-fix count does not decrease for 2 consecutive rounds (Round N and N+1 have equal or higher must-fix count), stop iterating and escalate to user: `[Stall detected: must-fix count not decreasing after {N} rounds. Remaining {X} must-fix items require manual intervention.]`
 - **Context savings**: By dispatching Rounds as subagents, the coordinator holds only the changed file list (~500 tokens) plus aggregated findings YAML (~200 tokens per finding). In the WMS P0 session, this would have reduced coordinator context from ~49 file reads to ~4 YAML summaries.
 
 ## Severity Definitions
@@ -333,6 +338,17 @@ Fix re-verification rounds (Round N+) output only:
 - Re-verified must-fix IDs + pass/fail result (table format, one item per line)
 - New findings (if any)
 - **Do not repeat already-passed Round results**
+
+## Error Handling
+
+| Scenario | Handling |
+|----------|---------|
+| Round subagent returns empty or malformed YAML | Record `FAILED` in findings → retry once with explicit output format instructions → still fails: coordinator executes that Round inline (fallback to non-subagent mode for that Round only) |
+| All 4 Round subagents fail | Notify user: `[DEGRADED: automated verification unavailable]` → suggest manual code review or retry |
+| Knowledge file missing (Round 2: `business-rules.md`, `data-model.md`, `knowledge-summary.md`) | Skip Round 2 with `[Warning: domain knowledge files not found, Round 2 skipped]` → continue with Rounds 1, 3, 4 |
+| Requirement/Plan file missing | Skip corresponding Round (1 or 3) with warning → execute remaining Rounds |
+| `impl-verify-findings.md` write failure | Retry once → still fails: output findings in conversation to preserve for convergence tracking |
+| `git diff` command failure | Verify git state with `git status` → if not in a git repo or no changes: notify user and exit |
 
 ## Common Rationalizations — You Are Bypassing Verification
 
