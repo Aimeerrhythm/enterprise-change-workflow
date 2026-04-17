@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.5] - 2026-04-17
+
+### 移除
+
+- **rules 系统** — `.claude/ecw/rules/` 路径下的规则文件不会被 Claude Code 自动加载（仅 `.claude/rules/*.mdc` 生效），整个 rules 安装机制是无效的。移除 `templates/rules/` 模板目录、ecw-init 的规则安装步骤、ecw-upgrade 的 rules 跳过引用、CLAUDE.md 的 rules 表行
+
 ## [0.6.4] - 2026-04-17
 
 ### 改进
@@ -315,6 +321,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.5
 [0.6.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.4
 [0.6.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.3
 [0.6.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.2
