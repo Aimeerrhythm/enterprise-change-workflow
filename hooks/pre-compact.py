@@ -81,8 +81,9 @@ def main():
 
     if not cwd:
         msg = (
-            "Context compaction occurred. Read `.claude/ecw/state/session-state.md` "
-            "and check TaskList to restore context."
+            "**Context compaction occurred.** Read `.claude/ecw/state/session-state.md` "
+            "and checkpoint files under `.claude/ecw/session-data/` to restore context. "
+            "Check TaskList for pending work."
         )
         print(json.dumps({"result": "continue", "systemMessage": msg}))
         return
