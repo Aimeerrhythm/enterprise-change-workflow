@@ -103,6 +103,8 @@ summary: "One-line summary of this round"
 
 **Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
 
+**Timeout per Round subagent**: 180s. If a Round subagent has not returned within this time, terminate it and fall back to coordinator inline execution for that Round (see Error Handling).
+
 ## Execution Protocol
 
 ### Round 1 — Requirements ↔ Code (Bidirectional Tracing) [Subagent]

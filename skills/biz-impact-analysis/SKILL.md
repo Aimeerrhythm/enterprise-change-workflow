@@ -97,6 +97,8 @@ After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent L
 
 Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
 
+**Timeout**: 300s (agent reads multiple knowledge files and scans code). If Agent has not returned, terminate and offer retry (see Error Handling).
+
 ## Error Handling
 
 | Scenario | Handling |

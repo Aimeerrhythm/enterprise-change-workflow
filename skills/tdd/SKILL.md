@@ -101,6 +101,8 @@ When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 uniqu
 4. The subagent returns: cycle result summary (pass/fail, files created/modified, test output snippet ≤ 10 lines)
 5. The coordinator tracks cycle progress but does NOT read implementation file contents
 
+**Timeout per cycle subagent**: 180s. If a cycle subagent times out, terminate and fall back to direct execution for that cycle.
+
 **Rationale**: In the WMS P0 cross-domain task, TDD executed 107 file reads in the coordinator, causing 3 context compressions. Delegating cycles to subagents keeps coordinator context lean.
 
 ## The Iron Law

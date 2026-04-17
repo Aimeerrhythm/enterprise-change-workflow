@@ -104,10 +104,12 @@ Use `./implementer-prompt.md` template. Inject:
 
 Use Agent tool with `subagent_type: "general-purpose"`.
 
-**Model selection:**
-- Mechanical tasks (1-2 files, clear spec) → `model: "sonnet"`
-- Integration tasks (multi-file, judgment needed) → default model
-- Architecture/design tasks → `model: "opus"`
+**Model selection and timeout:**
+- Mechanical tasks (1-2 files, clear spec) → `model: "sonnet"`, timeout: 180s
+- Integration tasks (multi-file, judgment needed) → default model, timeout: 300s
+- Architecture/design tasks → `model: "opus"`, timeout: 300s
+
+If implementer times out, terminate and re-dispatch with simplified task scope or escalate model (see Error Handling).
 
 ### 2. Handle Implementer Status
 
@@ -137,6 +139,8 @@ The reviewer reads actual code and verifies:
 - Misunderstandings
 
 If issues found → implementer fixes → re-review. Repeat until approved.
+
+**Spec reviewer timeout**: 120s. If reviewer times out, coordinator performs simplified spec check inline.
 
 ### 4. Code Quality Review (P0 Only)
 

@@ -95,6 +95,8 @@ After receiving the subagent's summary:
 
 `model: sonnet` — Plan generation is creative writing with dense rule constraints; sonnet provides the best cost-performance balance.
 
+**Timeout**: 300s (plan generation reads multiple knowledge files and produces substantial output). If subagent has not returned, terminate and fall back to Direct mode (see Error Handling).
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, suggest breaking into separate plans — one per subsystem. Each plan should produce working, testable software on its own.

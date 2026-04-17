@@ -90,6 +90,8 @@ Strictly follow the prescribed output format for the review report.
 Please output the review report in Chinese.
 ```
 
+**Timeout**: 300s (adversarial review reads plan + multiple knowledge files). If Agent has not returned, terminate and offer retry (see Error Handling).
+
 ## User Confirmation Flow Details
 
 ### Step 1: Present Review Report
