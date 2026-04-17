@@ -13,6 +13,8 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 **Announce at start:** "Using ecw:writing-plans to create the implementation plan."
 
+**Mode switch**: Update session-state.md MODE marker to `planning`.
+
 ## Plan Mode — Do Not Use
 
 **Do NOT call `EnterPlanMode` or `ExitPlanMode`.** This skill writes plans directly to `.claude/plans/` via the Write tool. Claude Code's built-in plan mode is a separate mechanism not used by ECW. After writing the plan file, use **AskUserQuestion** to confirm with the user (see Downstream Handoff).

@@ -23,21 +23,9 @@ import re
 import sys
 from datetime import datetime
 
-
-MARKER_START = "<!-- ECW:STOP:START -->"
-MARKER_END = "<!-- ECW:STOP:END -->"
-
-
-def _find_session_state(cwd):
-    """Find session-state.md. Returns path or None."""
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "state", "session-state.md"),
-        os.path.join(cwd, ".claude", "ecw", "session-state.md"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
+# Import shared marker utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state, update_marker_section  # noqa: E402
 
 
 def _extract_activity_summary(input_data):
@@ -78,24 +66,14 @@ def _build_stop_section(input_data):
     activity = _extract_activity_summary(input_data)
 
     return (
-        f"{MARKER_START}\n"
         f"- **Last Updated**: {now}\n"
-        f"- **Activity**: {activity}\n"
-        f"{MARKER_END}"
+        f"- **Activity**: {activity}"
     )
 
 
-def _update_with_markers(content, new_section):
-    """Replace marker-enclosed section, or append if markers not found."""
-    pattern = re.compile(
-        re.escape(MARKER_START) + r".*?" + re.escape(MARKER_END),
-        re.DOTALL,
-    )
-    if pattern.search(content):
-        return pattern.sub(new_section, content)
-    else:
-        # Append after the first heading block
-        return content.rstrip() + "\n\n" + new_section + "\n"
+def _update_with_markers(content, new_inner):
+    """Replace STOP marker section, or append if markers not found."""
+    return update_marker_section(content, "STOP", new_inner)
 
 
 def main():
@@ -106,7 +84,7 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
-    state_path = _find_session_state(cwd)
+    state_path = find_session_state(cwd)
     if not state_path:
         # No active session-state — nothing to persist
         print(json.dumps({"result": "continue"}))

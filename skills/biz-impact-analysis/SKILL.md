@@ -11,6 +11,8 @@ description: |
 
 After code changes are complete, dispatch the `biz-impact-analysis` agent to analyze the impact of changes on business processes.
 
+**Mode switch**: Update session-state.md MODE marker to `verification`.
+
 ## Trigger
 
 - **Manual**: `/biz-impact-analysis` — Analyze all changes on current branch vs master

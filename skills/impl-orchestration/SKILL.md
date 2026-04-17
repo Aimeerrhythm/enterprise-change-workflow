@@ -13,6 +13,8 @@ Execute plan by dispatching fresh subagent per task, with risk-aware review gate
 
 **Announce at start:** "Using ecw:impl-orchestration to execute the plan task-by-task."
 
+**Mode switch**: Update session-state.md MODE marker to `implementation`.
+
 ## When to Use
 
 Use when:

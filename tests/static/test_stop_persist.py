@@ -70,12 +70,11 @@ class TestExtractActivitySummary:
 # ══════════════════════════════════════════════════════
 
 class TestMarkerUpdates:
-    """Tests for _update_with_markers function."""
+    """Tests for _update_with_markers function (delegates to marker_utils)."""
 
     def test_appends_when_no_markers(self, stop_persist):
         content = "# ECW Session State\n- **Risk Level**: P1\n"
-        new_section = "<!-- ECW:STOP:START -->\n- **Last Updated**: now\n<!-- ECW:STOP:END -->"
-        result = stop_persist._update_with_markers(content, new_section)
+        result = stop_persist._update_with_markers(content, "- **Last Updated**: now")
         assert "ECW:STOP:START" in result
         assert "Risk Level" in result  # Original content preserved
 
@@ -85,8 +84,7 @@ class TestMarkerUpdates:
             "<!-- ECW:STOP:START -->\n- **Last Updated**: old\n<!-- ECW:STOP:END -->\n"
             "## Ledger\n"
         )
-        new_section = "<!-- ECW:STOP:START -->\n- **Last Updated**: new\n<!-- ECW:STOP:END -->"
-        result = stop_persist._update_with_markers(content, new_section)
+        result = stop_persist._update_with_markers(content, "- **Last Updated**: new")
         assert "old" not in result
         assert "new" in result
         assert "Ledger" in result  # Content after marker preserved

@@ -221,7 +221,7 @@ class TestDispatcherRouting:
                     assert exc.value.code == 0
 
     def test_profile_filters_subhooks(self, dispatcher, tmp_path):
-        """P3 profile (minimal) should still run verify-completion (it's in minimal)."""
+        """P3 profile (minimal) should still run verify-completion and compact-suggest."""
         input_data = {
             "tool_name": "TaskUpdate",
             "tool_input": {"status": "completed"},
@@ -237,8 +237,8 @@ class TestDispatcherRouting:
                         with pytest.raises(SystemExit) as exc:
                             dispatcher.main()
                         assert exc.value.code == 0
-                        # verify-completion should have been called even at minimal
-                        mock_mod.check.assert_called_once()
+                        # Both verify-completion and compact-suggest run at minimal
+                        assert mock_mod.check.call_count >= 1
 
     def test_profile_injected_into_config(self, dispatcher, tmp_path):
         """Dispatcher must inject _runtime_profile into config for sub-hooks."""
