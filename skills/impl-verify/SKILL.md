@@ -103,6 +103,11 @@ summary: "One-line summary of this round"
 
 **Parallel dispatch**: Rounds 1-4 verify independent dimensions and do not depend on each other's results. They MUST be dispatched in parallel (multiple Agent tool calls in a single assistant message) for efficiency.
 
+**Return value validation**: For each Round subagent, verify the YAML contains required fields (`round`, `findings`, `status`, `summary`). For each finding, verify `file`, `severity`, and `description` exist. If validation fails:
+1. Log to Ledger: `[FAILED: impl-verify Round {N}, reason: invalid return format]`
+2. Retry once with the same model
+3. If retry also fails: mark that Round as `[incomplete: Round {N}]` in the output, continue with findings from other Rounds. Do not block convergence — but warn user that one verification dimension was skipped.
+
 **Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
 
 ## Execution Protocol

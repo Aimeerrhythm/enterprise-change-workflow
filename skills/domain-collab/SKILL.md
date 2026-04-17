@@ -139,7 +139,11 @@ notes: "Other things to note"
 2. Fill the template above with variables to generate a prompt for each domain
 3. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
 4. Collect all Agent YAML results
-5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium.
+5. **Return value validation**: For each domain agent, verify the YAML contains required fields (`domain`, `impact_level`, `summary`). If a domain agent returns invalid format:
+   - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
+   - Retry once with the same model
+   - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
+6. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium.
 
 ### Round 2: Inter-Domain Negotiation (parallel)
 
@@ -214,7 +218,11 @@ negotiation_result:
 1. Fill the template above with variables to generate Round 2 prompt for each domain
 2. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
 3. Collect all Agent YAML results
-4. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small |`. Domain negotiation R2 is typically small.
+4. **Return value validation**: For each domain agent, verify the YAML contains required fields (`domain`, `negotiation_result.revised_impact_level`). If a domain agent returns invalid format:
+   - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
+   - Retry once with the same model
+   - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
+5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small |`. Domain negotiation R2 is typically small.
 
 **Round 2 skip rule**: If a domain returned `impact_level: none` in Round 1 AND no other domain's `cross_domain_risks` points to it, **skip Round 2 Agent dispatch for that domain**. That domain is unaffected and no other domain flagged it as potentially affected — Round 2 negotiation would not produce new findings. Note in Round 3 cross-validation: "Domain X had no impact in Round 1 and no inbound risks; Round 2 skipped."
 

@@ -98,7 +98,11 @@ Please output the review report in Chinese.
 
 After spec-challenge agent returns:
 
-1. **Ledger update**: Append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large.
+1. **Return value validation**: Verify the report contains the required structure (## Fatal Flaws, ## Improvement Suggestions, ## Conclusion). If the report is missing critical sections:
+   - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
+   - Retry once with the same model
+   - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
+2. **Ledger update**: Append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large.
 2. Write the full review report to `.claude/ecw/spec-challenge-report.md`.
 3. **Present verbatim** the full review report to user. No responses, no judgments.
 

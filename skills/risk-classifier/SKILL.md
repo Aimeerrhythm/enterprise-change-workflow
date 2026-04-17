@@ -390,6 +390,11 @@ dependency_graph:
 upgrade_reason: "..."  # if upgraded
 ```
 
+**Return value validation**: Coordinator verifies required fields (`risk_level`, `phase1_level`, `level_change`, `affected_domains`, `classification_factors`) exist in the YAML. If validation fails:
+1. Log to Ledger: `[FAILED: phase2-subagent, reason: invalid return format]`
+2. Retry once with the same model
+3. If retry also fails: use Phase 1 level as final level, mark Phase 2 as `[degraded: format error]`, continue to writing-plans
+
 **Coordinator receives YAML**, then:
 - Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
 - Output Phase 2 report in the defined format
