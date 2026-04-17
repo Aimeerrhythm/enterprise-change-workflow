@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.1] - 2026-04-17
+
+### 优化
+
+- **高判断力 Agent 升级 Opus** — 按认知需求和错误代价差异化分配模型，5 个关键 Agent/Subagent 从 sonnet 升级为 opus：
+  - `spec-challenge`：对抗性审查需要最强推理找方案盲区
+  - `biz-impact-analysis`：最终安全网，遗漏影响面直接导致生产事故
+  - `domain-analyst`：域级分析需要深度理解业务规则和状态机
+  - `domain-negotiator`：跨域冲突检测和 companion change 推理
+  - `writing-plans` subagent：Plan 质量驱动全部下游实现
+- **保持 sonnet 的组件** — impl-verifier（规则对照）、spec-reviewer（规格匹配）、risk-classifier Phase 2（结构化查询）、tdd cycles（测试编写）
+- **保持三级分层的组件** — implementer（haiku/sonnet/opus 按 Task 复杂度自动选择）
+
+### 修复
+
+- **package.json 版本同步** — 从 0.4.2 补齐到 0.6.1（v0.6.0 时遗漏）
+
 ## [0.6.0] - 2026-04-17
 
 ### 架构升级 — ECC 对标全面改进
@@ -271,6 +288,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.5.0
 [0.4.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.4.2
