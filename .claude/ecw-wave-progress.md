@@ -86,12 +86,13 @@
 - [x] D-2 Instinct 注入框架 (`9e76369`)
 - [x] D-3 文件产出隔离 (`c8dda93`)
 
-### Session 4-b: I 剩余 — branch: `wave4/test-notify`
+### Session 4-b: I 剩余 — branch: `wave3/context-mgmt` (复用)
 - [x] I-2 测试覆盖扩展 — domain-collab/tdd/impl-verify eval (`cf404c3`)
 - [ ] I-4 桌面通知 (skipped)
 - [x] H-7 语言硬编码清理 (`ea3229c`)
 
 **Wave 4 merge checklist:**
-- [ ] 两个分支 merge 无冲突
-- [ ] `make all` 通过（完整测试）
-- [ ] 版本号更新
+- [x] `git merge wave4/learning` — ecw.yml 冲突已解决 (`714d45a`)
+- [x] `git merge wave3/context-mgmt` (4-b 增量) — 无冲突，自动合并
+- [x] `make lint` 通过 — 4 warnings, all checks passed
+- [x] `make test-hook` 通过 — 301 passed in 0.52s
