@@ -232,6 +232,18 @@ Stop only when ALL of these are true:
 - You can write a complete requirement summary without guessing
 - User confirms the summary is accurate
 
+### Termination Limits
+
+To prevent unbounded questioning, enforce these hard caps by risk level:
+
+| Risk Level | Max Question Rounds | Max Total Questions |
+|-----------|--------------------|--------------------|
+| P0 | 15 | 75 |
+| P1 | 10 | 50 |
+| P2 (fallback) | 5 | 25 |
+
+When hitting the cap: stop questioning, proceed to synthesis analysis with available information. Output `[Termination: max rounds reached, proceeding with collected information]`.
+
 ## Output: Requirement Summary
 
 After synthesis analysis completes and user has made decisions on findings, produce the final summary:

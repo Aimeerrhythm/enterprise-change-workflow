@@ -114,6 +114,8 @@ Options:
   - "Needs discussion" — Enter discussion; you can provide additional context before deciding
 ```
 
+**"Needs discussion" termination**: If user selects "Needs discussion" for the same flaw 3 times without reaching a decision, force closure: present the two options (agree/disagree) without the discussion option. Output `[Discussion limit reached for F{n}, forcing decision]`.
+
 **Multiple fatal flaws can be combined into one AskUserQuestion (one question per flaw, max 4 per group).**
 
 ### Step 3: Batch Confirm Improvement Suggestions

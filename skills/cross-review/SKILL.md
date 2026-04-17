@@ -65,6 +65,9 @@ The same concept described in different sections of the same file or across mult
 
 **Most recent round has zero findings → exit, output verification passed report.**
 
+- **Loop cap**: Maximum 5 rounds. If findings remain after 5 rounds, output all unresolved items and suggest user intervention.
+- **Recurring inconsistency detection**: If the same inconsistency (same File A + File B + same concept) appears in 2 consecutive rounds, mark it as `[Known issue: persists after fix attempt]` and exclude from convergence blocking. This prevents infinite loops from inconsistencies that resist automated fixing.
+
 ## Output Format
 
 Per-round output:
