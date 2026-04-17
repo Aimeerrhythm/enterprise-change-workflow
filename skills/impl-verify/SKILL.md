@@ -327,7 +327,7 @@ If TaskList has a pending "ecw:biz-impact-analysis" Task, marking impl-verify Ta
 Per-round findings table:
 - **≤ 5 must-fix**: Output full findings table directly
 - **> 5 must-fix**: Output summary in session (count + top 3 most severe items)
-- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/impl-verify-findings.md` regardless of count. This ensures findings survive context compaction during multi-round convergence.
+- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/impl-verify-findings.md` if absent) regardless of count. This ensures findings survive context compaction during multi-round convergence.
 - **Zero must-fix**: Use simplified output format (`### Impl-Verify Round {N} — {dimension}` + `**Findings**: No must-fix items. {Y} suggestions (non-blocking).` + `**This round zero must-fix, verification passed.**`), no more than 3 lines
 
 Final pass summary:

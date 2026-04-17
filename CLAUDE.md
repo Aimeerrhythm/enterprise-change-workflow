@@ -58,9 +58,11 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
 | `.claude/ecw/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
 | `.claude/ecw/impl-verify-findings.md` | Deprecated — see `session-data/impl-verify-findings.md` | — |
-| `.claude/ecw/session-data/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
-| `.claude/ecw/session-data/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
-| `.claude/ecw/session-data/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |
+| `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
+| `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
+| `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |
+| `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Structured calibration records for Phase 1 prediction reference |
+| `.claude/ecw/state/instincts.md` | After Phase 3 calibration | Learned heuristic rules, injected by SessionStart when confidence > 0.7 |
 
 ### Knowledge Files (populate as needed)
 

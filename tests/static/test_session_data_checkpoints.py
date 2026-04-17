@@ -34,20 +34,20 @@ class TestSessionDataCheckpoints:
 
     def test_requirements_elicitation_has_checkpoint(self):
         """requirements-elicitation SKILL.md must instruct writing
-        session-data/requirements-summary.md after completing elicitation."""
+        session-data/.../requirements-summary.md after completing elicitation."""
         content = _read_skill("requirements-elicitation")
-        assert "session-data/requirements-summary.md" in content, (
+        assert "session-data/" in content and "requirements-summary.md" in content, (
             "requirements-elicitation SKILL.md must contain a directive to write "
-            "'session-data/requirements-summary.md' as a checkpoint artifact"
+            "'requirements-summary.md' under session-data/ as a checkpoint artifact"
         )
 
     def test_risk_classifier_phase2_has_checkpoint(self):
         """risk-classifier SKILL.md must instruct writing
-        session-data/phase2-assessment.md after Phase 2 assessment."""
+        session-data/.../phase2-assessment.md after Phase 2 assessment."""
         content = _read_skill("risk-classifier")
-        assert "session-data/phase2-assessment.md" in content, (
+        assert "session-data/" in content and "phase2-assessment.md" in content, (
             "risk-classifier SKILL.md must contain a directive to write "
-            "'session-data/phase2-assessment.md' as a checkpoint artifact"
+            "'phase2-assessment.md' under session-data/ as a checkpoint artifact"
         )
 
     def test_impl_verify_always_writes_findings(self):
@@ -73,9 +73,9 @@ class TestSessionDataCheckpoints:
                 )
 
         # Must reference the new session-data location
-        assert "session-data/impl-verify-findings.md" in content, (
+        assert "session-data/" in content and "impl-verify-findings.md" in content, (
             "impl-verify SKILL.md must write findings to "
-            "'session-data/impl-verify-findings.md' (always, not conditionally)"
+            "'impl-verify-findings.md' under session-data/ (always, not conditionally)"
         )
 
 
@@ -117,11 +117,11 @@ class TestClaudeMdArtifactTable:
         assert CLAUDE_MD.exists(), "CLAUDE.md must exist at project root"
         content = CLAUDE_MD.read_text(encoding="utf-8")
 
-        assert "session-data/requirements-summary" in content, (
+        assert "session-data/" in content and "requirements-summary" in content, (
             "CLAUDE.md artifact table must document "
-            "'session-data/requirements-summary' checkpoint"
+            "'requirements-summary' checkpoint under session-data/"
         )
-        assert "session-data/phase2-assessment" in content, (
+        assert "session-data/" in content and "phase2-assessment" in content, (
             "CLAUDE.md artifact table must document "
-            "'session-data/phase2-assessment' checkpoint"
+            "'phase2-assessment' checkpoint under session-data/"
         )

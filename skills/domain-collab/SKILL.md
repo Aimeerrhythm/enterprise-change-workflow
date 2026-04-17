@@ -149,7 +149,7 @@ notes: "Other things to note"
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
-**Round 1 Checkpoint**: After collecting all Round 1 YAML results, write them to `.claude/ecw/session-data/domain-collab-r1.md` (one YAML block per domain). This ensures Round 1 results survive context compaction before Round 2 begins.
+**Round 1 Checkpoint**: After collecting all Round 1 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r1.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/domain-collab-r1.md` if absent) (one YAML block per domain). This ensures Round 1 results survive context compaction before Round 2 begins.
 
 ### Round 2: Inter-Domain Negotiation (parallel)
 
@@ -232,7 +232,7 @@ negotiation_result:
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 
-**Round 2 Checkpoint**: After collecting all Round 2 YAML results, write them to `.claude/ecw/session-data/domain-collab-r2.md`. This ensures negotiation results survive context compaction before Round 3 cross-validation.
+**Round 2 Checkpoint**: After collecting all Round 2 YAML results, write them to `.claude/ecw/session-data/{workflow-id}/domain-collab-r2.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/domain-collab-r2.md` if absent). This ensures negotiation results survive context compaction before Round 3 cross-validation.
 
 **Round 2 skip rule**: If a domain returned `impact_level: none` in Round 1 AND no other domain's `cross_domain_risks` points to it, **skip Round 2 Agent dispatch for that domain**. That domain is unaffected and no other domain flagged it as potentially affected — Round 2 negotiation would not produce new findings. Note in Round 3 cross-validation: "Domain X had no impact in Round 1 and no inbound risks; Round 2 skipped."
 

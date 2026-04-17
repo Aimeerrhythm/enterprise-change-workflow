@@ -63,7 +63,7 @@ When **both** conditions are false (single domain AND knowledge files < 3), use 
 Coordinator constructs the subagent prompt with the following inputs — **does not read knowledge file contents itself**:
 
 1. **Requirement summary path**: `session-state.md` or `domain-collab-report.md` (subagent reads the file)
-2. **Phase 2 assessment path**: `.claude/ecw/session-data/phase2-assessment.md` (if exists)
+2. **Phase 2 assessment path**: `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/phase2-assessment.md` if absent)
 3. **Knowledge file path list**:
    - `.claude/ecw/ecw-path-mappings.md`
    - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)

@@ -6,6 +6,7 @@ On each new session, detects and injects:
 2. session-data/ checkpoints — latest checkpoint files summary
 3. ecw.yml key config — project name, language, risk level
 4. Pending task recovery hint
+5. High-confidence instincts from Phase 3 calibration
 
 Output is additionalContext injected into the session system prompt.
 """
@@ -63,17 +64,39 @@ def _extract_state_fields(content):
 
 
 def _get_checkpoint_files(cwd):
-    """List session-data/ checkpoint files sorted by mtime (newest first)."""
+    """List session-data/ checkpoint files sorted by mtime (newest first).
+
+    Supports workflow-id subdirectories (D-3 isolation): scans the most recent
+    subdirectory first. Falls back to root session-data/ for backward compat.
+    """
     session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
     if not os.path.isdir(session_data_dir):
         return []
 
     files = []
     try:
+        # Check for workflow-id subdirectories first
+        subdirs = []
+        root_files = []
         for name in os.listdir(session_data_dir):
             full = os.path.join(session_data_dir, name)
-            if os.path.isfile(full) and name.endswith(".md"):
-                files.append((full, os.path.getmtime(full), name))
+            if os.path.isdir(full):
+                subdirs.append((full, os.path.getmtime(full), name))
+            elif os.path.isfile(full) and name.endswith(".md"):
+                root_files.append((full, os.path.getmtime(full), name))
+
+        if subdirs:
+            # Use the most recent subdirectory
+            subdirs.sort(key=lambda x: x[1], reverse=True)
+            latest_dir = subdirs[0][0]
+            subdir_name = subdirs[0][2]
+            for name in os.listdir(latest_dir):
+                full = os.path.join(latest_dir, name)
+                if os.path.isfile(full) and name.endswith(".md"):
+                    files.append((full, os.path.getmtime(full), name))
+        else:
+            # Backward compat: scan root session-data/
+            files = root_files
     except Exception:
         return []
 
@@ -130,6 +153,57 @@ def _check_modified_files(cwd):
                 return files
         except Exception:
             pass
+    return []
+
+
+# Minimum confidence threshold for instinct injection
+INSTINCT_CONFIDENCE_THRESHOLD = 0.7
+
+
+def _read_instincts(cwd):
+    """Read instincts.md and return entries with confidence > threshold.
+
+    Returns a list of dicts with keys: pattern, action, confidence, source.
+    """
+    candidates = [
+        os.path.join(cwd, ".claude", "ecw", "state", "instincts.md"),
+    ]
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+        except Exception:
+            continue
+
+        instincts = []
+        # Split by INSTINCT markers
+        blocks = content.split("<!-- INSTINCT -->")
+        for block in blocks[1:]:  # skip header before first marker
+            entry = {}
+            for line in block.splitlines():
+                line = line.strip()
+                if line.startswith("- **Pattern**:"):
+                    entry["pattern"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Action**:"):
+                    entry["action"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Confidence**:"):
+                    try:
+                        entry["confidence"] = float(
+                            line.split(":", 1)[1].strip()
+                        )
+                    except ValueError:
+                        entry["confidence"] = 0.0
+                elif line.startswith("- **Source**:"):
+                    entry["source"] = line.split(":", 1)[1].strip()
+            if (
+                entry.get("pattern")
+                and entry.get("action")
+                and entry.get("confidence", 0) >= INSTINCT_CONFIDENCE_THRESHOLD
+            ):
+                instincts.append(entry)
+        return instincts
     return []
 
 
@@ -208,6 +282,22 @@ def main():
             file_list += f"\n- ...and {len(prev_modified) - 10} more"
         sections.append(
             f"# [ECW] Previously modified files\n\n{file_list}"
+        )
+
+    # 6. High-confidence instincts from Phase 3 calibration
+    instincts = _read_instincts(cwd)
+    if instincts:
+        lines = []
+        for inst in instincts:
+            conf = inst.get("confidence", 0)
+            lines.append(
+                f"- [{conf:.1f}] {inst['pattern']} → {inst['action']}"
+            )
+        sections.append(
+            "# [ECW] Risk classification instincts (learned from Phase 3)\n\n"
+            "These heuristics are derived from past calibration. "
+            "Consider them during Phase 1 risk assessment.\n\n"
+            + "\n".join(lines)
         )
 
     if not sections:

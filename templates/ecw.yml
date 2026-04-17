@@ -130,3 +130,5 @@ paths:
   knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识
   calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史
   rules_dir: ".claude/ecw/rules/"                              # 规则文件安装目录
+  calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）
+  instincts: ".claude/ecw/state/instincts.md"                      # Phase 3 提取的 instinct（SessionStart 注入）

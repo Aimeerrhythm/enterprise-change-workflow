@@ -182,6 +182,13 @@ Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domai
 
 > Full three-dimensional factor definitions (Impact Scope / Change Type / Business Sensitivity) are in the file specified by ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses only the first two dimensions for quick assessment; Phase 2 uses all three.
 
+**Calibration history reference**: Before finalizing, check `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). If the file exists and contains entries matching current keywords:
+- Scan the **last 10 entries** for keyword overlap with this change
+- If a pattern shows the same keywords were previously over-predicted or under-predicted, adjust the composite level accordingly (±1 level max)
+- Log the adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history: {matching record summary}]`
+
+> **Robustness**: If the file does not exist or is empty, skip silently. Calibration history is an enhancement, not a requirement.
+
 If information is insufficient to determine, **default to P2** (better to over-process than under-process).
 
 Look up "Total Risk + Cross-Domain determination" in the Skill Interaction routing table to determine downstream workflow.
@@ -238,6 +245,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 - **Routing**: {full routing chain}
 - **Current Phase**: phase1-complete
 - **Created**: {YYYY-MM-DD HH:mm}
+- **Workflow ID**: {YYYYMMDD-HHmm}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 <!-- ECW:STATUS:END -->
@@ -256,6 +264,16 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 
 This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. **Record timestamps** for governance audit: note the time before dispatch (`Started`, HH:mm format) and compute elapsed time after return (`Duration`, e.g. "2m", "45s"). Purposes:
 - Restore context when continuing work in a new session
+
+### Session Data Path Convention
+
+All skills write checkpoint files to `.claude/ecw/session-data/{workflow-id}/` where `{workflow-id}` is the `Workflow ID` field from session-state.md (same as `Created` timestamp in `YYYYMMDD-HHmm` format). This isolates artifacts from different change requests, preventing overwrite when multiple workflows run sequentially.
+
+**Path resolution rule** (applies to all skills):
+1. Read `Workflow ID` from `.claude/ecw/session-state.md`
+2. If present: write to / read from `session-data/{workflow-id}/{filename}`
+3. If absent (legacy workflow or no session-state): fall back to `session-data/{filename}`
+4. Create the subdirectory on first write if it does not exist
 - User can view current ECW workflow state
 - Manual recovery after compression (user says "read ECW state")
 - Monitoring scripts to assess subagent consumption
@@ -423,7 +441,7 @@ upgrade_reason: "..."  # if upgraded
 **Coordinator receives YAML**, then:
 - Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
 - Output Phase 2 report in the defined format
-- Write checkpoint to `.claude/ecw/session-data/phase2-assessment.md`
+- Write checkpoint to `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (see Session Data Path Convention for path resolution)
 
 **Model**: `model: sonnet` (dependency graph query is rule-based lookup, not creative reasoning)
 
@@ -612,10 +630,83 @@ Append format:
 
 > If file does not exist, first copy initial template from `templates/calibration-log.md` (or create an empty file with header).
 
+#### Step 5: Append Calibration History Record
+
+After appending to `calibration-log.md`, also write a concise structured record to `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). This file is optimized for Phase 1 to read and reference in future sessions.
+
+If the file does not exist, create it with header:
+
+```markdown
+# Calibration History
+
+> Auto-appended by Phase 3. Phase 1 reads recent entries as prediction reference.
+
+---
+```
+
+Append format:
+
+```markdown
+### {YYYY-MM-DD HH:mm} — {change summary}
+
+- **Predicted**: P{x}
+- **Actual**: P{z}
+- **Determination**: {Accurate / Over-alert / Missed / Minor deviation}
+- **Cause**: {one-line deviation cause; "—" if accurate}
+- **Keywords**: {Phase 1 keywords that triggered original classification}
+
+---
+```
+
+> **Write failure handling**: Retry once → still fails: output content in conversation and continue workflow. This file is supplementary; failure does not block Phase 3.
+
+#### Step 6: Extract Instinct
+
+Based on calibration result, extract or update an instinct in `.claude/ecw/state/instincts.md` (path configurable via ecw.yml `paths.instincts`). Instincts are lightweight heuristic rules that SessionStart hook injects into future sessions when confidence is high enough.
+
+**Extraction rules:**
+
+| Determination | Instinct Extraction |
+|---------------|-------------------|
+| **Missed** (under-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider raising level by 1" → base confidence: 0.5 |
+| **Over-alert** (over-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider lowering level by 1" → base confidence: 0.5 |
+| **Accurate** | If a matching instinct exists (same keywords), increase confidence by 0.1 (cap 1.0) |
+| **Minor deviation** | No instinct extraction |
+
+**Update rules:**
+- Before writing a new instinct, scan existing entries for keyword overlap (≥50% keyword match = same instinct)
+- If a matching instinct exists: increase confidence by 0.15 (cap 1.0), update `Updated` date
+- New instinct starts at confidence 0.5
+
+**File format** (if file does not exist, create with header):
+
+```markdown
+# Risk Classification Instincts
+
+> Auto-managed by Phase 3. SessionStart injects entries with confidence > 0.7.
+> Do not edit manually — scores are calibrated by repeated observations.
+
+---
+```
+
+Each instinct entry:
+
+```markdown
+<!-- INSTINCT -->
+- **Pattern**: {when these keywords/modules appear}
+- **Action**: {consider raising/lowering level by 1}
+- **Confidence**: {0.0-1.0}
+- **Source**: {YYYY-MM-DD calibration: {determination} — {one-line cause}}
+- **Updated**: {YYYY-MM-DD}
+```
+
+> **Robustness**: If the file cannot be written, skip silently. Instinct extraction is best-effort and does not block Phase 3.
+
 ### Notes
 
 - Phase 3 **does not auto-modify any configuration files**, only outputs suggestions
 - Calibration records are auto-appended to `calibration-log.md`; accumulated records can be used to identify systematic deviation patterns
+- Instincts are auto-extracted to `instincts.md`; high-confidence instincts (>0.7) are injected by SessionStart hook to influence future Phase 1 assessments
 - Fast Track post-hoc biz-impact-analysis also triggers Phase 3
 
 ---
@@ -643,7 +734,7 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
 | Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
 | `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
-| `phase2-assessment.md` / `calibration-log.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
+| `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` / `instincts.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
 ## Common Mistakes
 
