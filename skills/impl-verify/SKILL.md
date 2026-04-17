@@ -65,10 +65,10 @@ Before execution, locate input materials in the following order:
 
 ### Diff Read Strategy (Reduce Redundancy)
 
-1. **Before Round 1**: Execute `git diff --name-only` and `git diff` once, record as "baseline diff"
-2. **Rounds 2-4**: Do not re-execute `git diff`. Cross-reference against diff content already read in Round 1. If specific file change details are needed, use `git diff -- {specific file}` instead of full diff
-3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes; do not re-read full diff
-4. **Changed file table cache**: The changed file list (filename + change type + changed line count) produced in Round 1 serves as index for subsequent Rounds; no need to regenerate
+1. **Coordinator pre-processing**: Execute `git diff --name-only` once to get the changed file list. Pass this list (not full diff content) to all Round subagents
+2. **Round 1-4 subagents (parallel)**: Each subagent independently reads code changes for its verification needs. Use targeted `git diff -- {specific file}` for files relevant to that Round's dimension, rather than reading full `git diff` for all files. This keeps each subagent's context lean
+3. **Round N+ (fix re-verification)**: Only execute `git diff HEAD~1 -- {file}` for files involved in fixes to get incremental changes. Do not re-read the full baseline diff
+4. **Changed file table cache**: The changed file list from coordinator pre-processing serves as the index for all Rounds; each subagent receives it as input
 
 ### Subagent Dispatch Architecture
 
@@ -137,7 +137,7 @@ summary: "One-line summary of this round"
 
 ### Round 2 — Domain Knowledge ↔ Code (Rule Alignment) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Code implementation is consistent with domain-level business rules and data model.
 
@@ -160,7 +160,7 @@ summary: "One-line summary of this round"
 
 ### Round 3 — Plan ↔ Code (Decision Verification) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Every design decision in the Plan is followed in code.
 
@@ -183,7 +183,7 @@ summary: "One-line summary of this round"
 
 ### Round 4 — Engineering Standards ↔ Code (Quality Review) [Subagent]
 
-> Uses diff content already read in Round 1; does not re-execute full `git diff`. Only reads specific file changes as needed.
+> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
 
 **Goal**: Code quality meets project engineering standards. Absorbs code-reviewer responsibilities.
 
