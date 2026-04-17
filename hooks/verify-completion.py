@@ -24,6 +24,58 @@ except ImportError:
     yaml = None
 
 
+def check(input_data, config=None):
+    """Dispatcher sub-hook entry point.
+
+    Called by dispatcher.py when tool_name=TaskUpdate, status=completed.
+    Also usable directly for testing.
+
+    Args:
+        input_data: Hook input dict (must contain "cwd")
+        config: Optional pre-loaded ecw.yml config (unused; sub-functions read independently)
+
+    Returns:
+        (action, message) tuple:
+        - ("block", reason): technical check failed, deny completion
+        - ("continue", text): checks passed, text contains reminders (may be empty)
+    """
+    cwd = input_data.get("cwd", "")
+    if not cwd:
+        return ("continue", "")
+
+    issues = []
+    modified, deleted = get_changed_files(cwd)
+
+    if not modified and not deleted:
+        return ("continue", _format_pass_message(0, 0))
+
+    ecw_configured = os.path.exists(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
+    if ecw_configured:
+        for filepath in modified:
+            issues.extend(check_broken_references(cwd, filepath))
+        for filepath in deleted:
+            issues.extend(check_stale_references(cwd, filepath))
+
+    compile_issues, compile_warnings = check_java_compilation(cwd, modified)
+    issues.extend(compile_issues)
+
+    test_issues, test_warnings = [], []
+    if not compile_issues:
+        test_issues, test_warnings = check_java_tests(cwd, modified)
+        issues.extend(test_issues)
+
+    knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
+    test_reminders = check_test_coverage(cwd, modified)
+    all_warnings = (compile_warnings or []) + (test_warnings or [])
+
+    if issues:
+        return ("block", _format_fail_message(issues))
+    return ("continue", _format_pass_message(
+        len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders
+    ))
+
+
 def main():
     input_data = json.load(sys.stdin)
 
@@ -34,61 +86,21 @@ def main():
     if tool_input.get("status") != "completed":
         sys.exit(0)
 
-    cwd = input_data.get("cwd", "")
-    if not cwd:
-        sys.exit(0)
+    action, message = check(input_data)
 
-    issues = []
-
-    # ── 获取本次变更的文件列表 ──
-    modified, deleted = get_changed_files(cwd)
-
-    # 没有变更文件时跳过技术检查，只做语义提醒
-    if not modified and not deleted:
-        output_pass(0, 0)
-        sys.exit(0)
-
-    # ── 判断是否在已配置的 ECW 项目中 ──
-    # .claude/ecw/ecw.yml 仅在目标项目执行 /ecw-init 后才存在。
-    # 插件仓库本身没有此文件，其 SKILL.md / 模板中的 .claude/ 路径
-    # 引用的是目标项目的结构，不应被视为断裂引用。
-    ecw_configured = os.path.exists(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
-
-    # ── 技术检查 1: 修改的文件中是否有断裂引用 ──
-    if ecw_configured:
-        for filepath in modified:
-            broken = check_broken_references(cwd, filepath)
-            issues.extend(broken)
-
-    # ── 技术检查 2: 被删除的文件是否还被引用 ──
-    if ecw_configured:
-        for filepath in deleted:
-            stale = check_stale_references(cwd, filepath)
-            issues.extend(stale)
-
-    # ── 技术检查 3: Java 编译 ──
-    compile_issues, compile_warnings = check_java_compilation(cwd, modified)
-    issues.extend(compile_issues)
-
-    # ── 技术检查 4: Java 测试（编译通过才执行，避免重复报错） ──
-    test_issues, test_warnings = [], []
-    if not compile_issues:
-        test_issues, test_warnings = check_java_tests(cwd, modified)
-        issues.extend(test_issues)
-
-    # ── 非阻止性提醒（分类传递，避免混淆标题） ──
-    knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
-    test_reminders = check_test_coverage(cwd, modified)
-
-    # 合并所有警告
-    all_warnings = (compile_warnings or []) + (test_warnings or [])
-
-    # ── 输出结果 ──
-    if issues:
-        output_fail(issues)
+    if action == "block":
+        result = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny"
+            },
+            "systemMessage": message
+        }
+        print(json.dumps(result, ensure_ascii=False))
         sys.exit(2)
     else:
-        output_pass(len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders)
+        if message:
+            print(json.dumps({"systemMessage": message}, ensure_ascii=False))
         sys.exit(0)
 
 
@@ -396,45 +408,53 @@ def check_test_coverage(cwd, modified):
     return reminders
 
 
-def output_fail(issues):
-    """技术检查失败 → 阻止完成"""
+def _format_fail_message(issues):
+    """Format technical check failure message."""
     msg = "**【ECW 完成验证】实现结果存在技术问题，请修复后重试：**\n\n"
     msg += "\n".join(f"- {i}" for i in issues[:10])
     if len(issues) > 10:
         msg += f"\n- ...还有 {len(issues) - 10} 个问题"
-
-    result = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny"
-        },
-        "systemMessage": msg
-    }
-    print(json.dumps(result, ensure_ascii=False))
+    return msg
 
 
-def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None, test_reminders=None):
-    """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒 + TDD 测试覆盖提醒"""
+def _format_pass_message(modified_count, deleted_count, warnings=None,
+                         knowledge_reminders=None, test_reminders=None):
+    """Format technical check pass message with optional reminders."""
     msg = (
         f"**【ECW 完成验证】** 技术检查通过"
         f"（{modified_count} 个修改文件、{deleted_count} 个删除文件，无断裂引用）。\n\n"
         "**语义验证**：如果尚未执行 `ecw:impl-verify`，"
         "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
     )
-
     if warnings:
         msg += "\n\n---\n\n**【注意事项】**\n\n"
         msg += "\n".join(f"- {w}" for w in warnings)
-
     if knowledge_reminders:
         msg += "\n\n---\n\n**【知识文档同步提醒】** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n"
         msg += "\n\n".join(f"- {r}" for r in knowledge_reminders)
-
     if test_reminders:
         msg += "\n\n---\n\n**【TDD 测试覆盖提醒】** 以下业务组件有代码变更但缺少对应测试：\n\n"
         msg += "\n".join(f"- {r}" for r in test_reminders)
+    return msg
 
-    result = {"systemMessage": msg}
+
+def output_fail(issues):
+    """技术检查失败 → 阻止完成"""
+    result = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny"
+        },
+        "systemMessage": _format_fail_message(issues)
+    }
+    print(json.dumps(result, ensure_ascii=False))
+
+
+def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None, test_reminders=None):
+    """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒 + TDD 测试覆盖提醒"""
+    result = {"systemMessage": _format_pass_message(
+        modified_count, deleted_count, warnings, knowledge_reminders, test_reminders
+    )}
     print(json.dumps(result, ensure_ascii=False))
 
 

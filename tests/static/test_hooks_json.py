@@ -106,31 +106,71 @@ class TestPreCompactHookConfig:
 # ══════════════════════════════════════════════════════
 
 class TestExistingHooksRegression:
-    """Verify that adding PreCompact does not break existing hook entries."""
+    """Verify that the dispatcher pattern preserves completion verification."""
 
-    def test_verify_completion_still_exists(self, hooks_data):
-        """PreToolUse → TaskUpdate → verify-completion.py must still be configured
-        (regression guard — Issue #5 changes should not remove existing hooks)."""
+    def test_dispatcher_registered_for_pre_tool_use(self, hooks_data):
+        """PreToolUse must use dispatcher.py as the unified entry point."""
         hooks = hooks_data.get("hooks", {})
         assert "PreToolUse" in hooks, (
-            "hooks.json must still contain 'PreToolUse' event "
-            "(verify-completion hook must not be removed)"
+            "hooks.json must contain 'PreToolUse' event"
         )
 
         pre_tool_entries = hooks["PreToolUse"]
-        found_verify = False
+        found_dispatcher = False
         for entry in pre_tool_entries:
-            matcher = entry.get("matcher", "")
-            if matcher == "TaskUpdate":
-                for hook in entry.get("hooks", []):
-                    cmd = hook.get("command", "")
-                    if "verify-completion.py" in cmd:
-                        found_verify = True
-                        break
-            if found_verify:
+            for hook in entry.get("hooks", []):
+                cmd = hook.get("command", "")
+                if "dispatcher.py" in cmd:
+                    found_dispatcher = True
+                    break
+            if found_dispatcher:
                 break
 
-        assert found_verify, (
-            "PreToolUse → TaskUpdate → verify-completion.py must still exist in hooks.json "
-            "(regression check: Issue #5 must not remove existing hooks)"
+        assert found_dispatcher, (
+            "PreToolUse must use dispatcher.py as unified entry point "
+            "(B-1: Hook dispatcher pattern replaces direct hook registration)"
+        )
+
+    def test_dispatcher_uses_wildcard_matcher(self, hooks_data):
+        """Dispatcher must use '*' matcher to receive all PreToolUse events."""
+        hooks = hooks_data.get("hooks", {})
+        pre_tool_entries = hooks.get("PreToolUse", [])
+
+        found_wildcard = False
+        for entry in pre_tool_entries:
+            if entry.get("matcher") == "*":
+                for hook in entry.get("hooks", []):
+                    if "dispatcher.py" in hook.get("command", ""):
+                        found_wildcard = True
+                        break
+            if found_wildcard:
+                break
+
+        assert found_wildcard, (
+            "Dispatcher entry must use '*' matcher for routing flexibility"
+        )
+
+    def test_dispatcher_has_timeout(self, hooks_data):
+        """Dispatcher must have a timeout configured."""
+        hooks = hooks_data.get("hooks", {})
+        pre_tool_entries = hooks.get("PreToolUse", [])
+
+        for entry in pre_tool_entries:
+            for hook in entry.get("hooks", []):
+                if "dispatcher.py" in hook.get("command", ""):
+                    timeout = hook.get("timeout")
+                    assert timeout is not None, "Dispatcher must have a timeout"
+                    assert isinstance(timeout, (int, float)) and timeout > 0
+                    return
+
+        pytest.fail("Could not find dispatcher.py entry to verify timeout")
+
+    def test_verify_completion_script_exists(self, hooks_data):
+        """verify-completion.py must exist as a loadable sub-hook
+        (dispatcher loads it at runtime, not via hooks.json)."""
+        from pathlib import Path
+        ROOT = Path(__file__).resolve().parent.parent.parent
+        verify_script = ROOT / "hooks" / "verify-completion.py"
+        assert verify_script.exists(), (
+            "verify-completion.py must still exist as a dispatcher sub-hook"
         )

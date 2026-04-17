@@ -2,11 +2,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "TaskUpdate",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/verify-completion.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/dispatcher.py\"",
             "timeout": 150
           }
         ]
