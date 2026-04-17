@@ -60,9 +60,9 @@
 - [ ] H-6 impl-verify 矛盾修复
 
 ### Session 3-b: E (Context 管理) — branch: `wave3/context-mgmt`
-- [ ] E-1 主动压缩建议 — tool-call 计数器
-- [ ] E-2 工作模式声明 — session-state current_mode 字段
-- [ ] E-3 Marker-Based 幂等更新 — session-state.md marker 机制
+- [x] E-3 Marker-Based 幂等更新 — marker_utils.py 共享模块 + session-state 模板 (`f097ece`)
+- [x] E-1 主动压缩建议 — compact-suggest.py 计数器子模块 (`c26b46d`)
+- [x] E-2 工作模式声明 — session-state MODE 字段 + 5 个 SKILL.md 模式切换 (`ce463f5`)
 
 ### Session 3-c: C-2~5 (安全剩余) — branch: `wave3/security`
 - [ ] C-2 敏感数据扫描
