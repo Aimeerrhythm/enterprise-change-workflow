@@ -623,10 +623,53 @@ Append format:
 
 > **Write failure handling**: Retry once → still fails: output content in conversation and continue workflow. This file is supplementary; failure does not block Phase 3.
 
+#### Step 6: Extract Instinct
+
+Based on calibration result, extract or update an instinct in `.claude/ecw/state/instincts.md` (path configurable via ecw.yml `paths.instincts`). Instincts are lightweight heuristic rules that SessionStart hook injects into future sessions when confidence is high enough.
+
+**Extraction rules:**
+
+| Determination | Instinct Extraction |
+|---------------|-------------------|
+| **Missed** (under-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider raising level by 1" → base confidence: 0.5 |
+| **Over-alert** (over-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider lowering level by 1" → base confidence: 0.5 |
+| **Accurate** | If a matching instinct exists (same keywords), increase confidence by 0.1 (cap 1.0) |
+| **Minor deviation** | No instinct extraction |
+
+**Update rules:**
+- Before writing a new instinct, scan existing entries for keyword overlap (≥50% keyword match = same instinct)
+- If a matching instinct exists: increase confidence by 0.15 (cap 1.0), update `Updated` date
+- New instinct starts at confidence 0.5
+
+**File format** (if file does not exist, create with header):
+
+```markdown
+# Risk Classification Instincts
+
+> Auto-managed by Phase 3. SessionStart injects entries with confidence > 0.7.
+> Do not edit manually — scores are calibrated by repeated observations.
+
+---
+```
+
+Each instinct entry:
+
+```markdown
+<!-- INSTINCT -->
+- **Pattern**: {when these keywords/modules appear}
+- **Action**: {consider raising/lowering level by 1}
+- **Confidence**: {0.0-1.0}
+- **Source**: {YYYY-MM-DD calibration: {determination} — {one-line cause}}
+- **Updated**: {YYYY-MM-DD}
+```
+
+> **Robustness**: If the file cannot be written, skip silently. Instinct extraction is best-effort and does not block Phase 3.
+
 ### Notes
 
 - Phase 3 **does not auto-modify any configuration files**, only outputs suggestions
 - Calibration records are auto-appended to `calibration-log.md`; accumulated records can be used to identify systematic deviation patterns
+- Instincts are auto-extracted to `instincts.md`; high-confidence instincts (>0.7) are injected by SessionStart hook to influence future Phase 1 assessments
 - Fast Track post-hoc biz-impact-analysis also triggers Phase 3
 
 ---
@@ -654,7 +697,7 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
 | Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
 | `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
-| `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
+| `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` / `instincts.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
 ## Common Mistakes
 

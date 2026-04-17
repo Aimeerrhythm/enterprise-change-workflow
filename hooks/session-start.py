@@ -6,6 +6,7 @@ On each new session, detects and injects:
 2. session-data/ checkpoints — latest checkpoint files summary
 3. ecw.yml key config — project name, language, risk level
 4. Pending task recovery hint
+5. High-confidence instincts from Phase 3 calibration
 
 Output is additionalContext injected into the session system prompt.
 """
@@ -132,6 +133,57 @@ def _check_modified_files(cwd):
     return []
 
 
+# Minimum confidence threshold for instinct injection
+INSTINCT_CONFIDENCE_THRESHOLD = 0.7
+
+
+def _read_instincts(cwd):
+    """Read instincts.md and return entries with confidence > threshold.
+
+    Returns a list of dicts with keys: pattern, action, confidence, source.
+    """
+    candidates = [
+        os.path.join(cwd, ".claude", "ecw", "state", "instincts.md"),
+    ]
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+        except Exception:
+            continue
+
+        instincts = []
+        # Split by INSTINCT markers
+        blocks = content.split("<!-- INSTINCT -->")
+        for block in blocks[1:]:  # skip header before first marker
+            entry = {}
+            for line in block.splitlines():
+                line = line.strip()
+                if line.startswith("- **Pattern**:"):
+                    entry["pattern"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Action**:"):
+                    entry["action"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Confidence**:"):
+                    try:
+                        entry["confidence"] = float(
+                            line.split(":", 1)[1].strip()
+                        )
+                    except ValueError:
+                        entry["confidence"] = 0.0
+                elif line.startswith("- **Source**:"):
+                    entry["source"] = line.split(":", 1)[1].strip()
+            if (
+                entry.get("pattern")
+                and entry.get("action")
+                and entry.get("confidence", 0) >= INSTINCT_CONFIDENCE_THRESHOLD
+            ):
+                instincts.append(entry)
+        return instincts
+    return []
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
@@ -205,6 +257,22 @@ def main():
             file_list += f"\n- ...and {len(prev_modified) - 10} more"
         sections.append(
             f"# [ECW] Previously modified files\n\n{file_list}"
+        )
+
+    # 6. High-confidence instincts from Phase 3 calibration
+    instincts = _read_instincts(cwd)
+    if instincts:
+        lines = []
+        for inst in instincts:
+            conf = inst.get("confidence", 0)
+            lines.append(
+                f"- [{conf:.1f}] {inst['pattern']} → {inst['action']}"
+            )
+        sections.append(
+            "# [ECW] Risk classification instincts (learned from Phase 3)\n\n"
+            "These heuristics are derived from past calibration. "
+            "Consider them during Phase 1 risk assessment.\n\n"
+            + "\n".join(lines)
         )
 
     if not sections:
