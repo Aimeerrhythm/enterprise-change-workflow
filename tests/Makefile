@@ -6,9 +6,9 @@ PYTHON ?= python3
 lint:
 	$(PYTHON) static/lint_skills.py
 
-# Layer 1b: verify-completion.py 单元测试（<10s, $0）
+# Layer 1b: hook 单元测试（<10s, $0）
 test-hook:
-	$(PYTHON) -m pytest static/test_verify_completion.py -v
+	$(PYTHON) -m pytest static/test_verify_completion.py static/test_dispatcher.py static/test_post_edit_check.py static/test_hooks_json.py -v
 
 # Layer 2: P0 场景行为 Eval（~2min, ~$0.50）
 eval-quick: _check-api-key
