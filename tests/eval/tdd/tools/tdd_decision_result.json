@@ -1,0 +1,41 @@
+{
+  "name": "tdd_decision_result",
+  "description": "Report the TDD workflow decision in structured format. Call this tool to record your TDD plan.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "risk_level": {
+        "type": "string",
+        "enum": ["P0", "P1", "P2", "P3", "Bug", "Emergency"],
+        "description": "The risk level driving TDD behavior"
+      },
+      "tdd_mode": {
+        "type": "string",
+        "enum": ["mandatory-with-log", "mandatory", "simplified", "recommended", "mandatory-reproduction", "skip"],
+        "description": "The TDD enforcement mode for this risk level"
+      },
+      "cycle_type": {
+        "type": "string",
+        "enum": ["red-green-refactor", "red-green-only", "red-green-reproduction", "none"],
+        "description": "The TDD cycle type to use"
+      },
+      "max_cycles": {
+        "type": "integer",
+        "description": "Maximum number of Red-Green cycles allowed (0 = unlimited, 5 = P2 limit)"
+      },
+      "skip_allowed": {
+        "type": "boolean",
+        "description": "Whether skipping TDD is allowed for this scenario"
+      },
+      "reads_plan_first": {
+        "type": "boolean",
+        "description": "Whether the Plan file must be read before writing tests"
+      },
+      "subagent_delegation": {
+        "type": "boolean",
+        "description": "Whether TDD cycles should be delegated to subagents"
+      }
+    },
+    "required": ["risk_level", "tdd_mode", "cycle_type", "skip_allowed"]
+  }
+}

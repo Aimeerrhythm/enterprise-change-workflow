@@ -1,0 +1,50 @@
+{
+  "name": "impl_verify_result",
+  "description": "Report the impl-verify execution plan in structured format. Call this tool to record your verification strategy.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "risk_level": {
+        "type": "string",
+        "enum": ["P0", "P1", "P2", "P3", "Bug"],
+        "description": "The risk level driving verification depth"
+      },
+      "rounds_to_execute": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "enum": [1, 2, 3, 4]
+        },
+        "description": "Which verification rounds to execute (1=Requirements, 2=Domain Knowledge, 3=Plan, 4=Engineering Standards)"
+      },
+      "mandatory_rounds": {
+        "type": "array",
+        "items": {"type": "integer"},
+        "description": "Rounds that are mandatory (cannot be skipped)"
+      },
+      "skippable": {
+        "type": "boolean",
+        "description": "Whether the entire verification can be skipped"
+      },
+      "parallel_dispatch": {
+        "type": "boolean",
+        "description": "Whether rounds should be dispatched as parallel subagents"
+      },
+      "convergence_target": {
+        "type": "string",
+        "enum": ["zero-must-fix", "not-applicable"],
+        "description": "The convergence exit condition"
+      },
+      "max_rounds": {
+        "type": "integer",
+        "description": "Maximum convergence rounds before escalation"
+      },
+      "next_step": {
+        "type": "string",
+        "enum": ["biz-impact-analysis-mandatory", "biz-impact-analysis-suggested", "none"],
+        "description": "What follows after impl-verify passes"
+      }
+    },
+    "required": ["risk_level", "rounds_to_execute", "skippable", "convergence_target"]
+  }
+}

@@ -1,0 +1,57 @@
+# S01: P0 — All 4 Rounds Mandatory
+# P0 must execute all verification rounds, cannot skip any
+- vars:
+    input: "Risk level: P0. Implementation complete for a payment gateway integration. Requirement doc, domain knowledge, Plan file, and code diff are all available. What verification strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P0';
+      metric: risk_level_p0
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const rounds = result.rounds_to_execute || [];
+        return rounds.includes(1) && rounds.includes(2) && rounds.includes(3) && rounds.includes(4);
+      metric: all_4_rounds
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const mandatory = result.mandatory_rounds || [];
+        return mandatory.includes(1) && mandatory.includes(2) && mandatory.includes(3) && mandatory.includes(4);
+      metric: all_4_mandatory
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skippable === false;
+      metric: not_skippable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.parallel_dispatch === true;
+      metric: parallel_dispatch
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.convergence_target === 'zero-must-fix';
+      metric: convergence_zero_must_fix
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.max_rounds === 5;
+      metric: max_rounds_5
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.next_step === 'biz-impact-analysis-mandatory';
+      metric: next_biz_impact_mandatory

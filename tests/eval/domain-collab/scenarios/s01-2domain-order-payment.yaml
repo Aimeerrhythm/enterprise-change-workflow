@@ -1,0 +1,26 @@
+# S01: 2-Domain Cross-Domain Requirement
+# Order + Payment domains — should proceed with collab analysis
+- vars:
+    input: "订单模块需要新增退款功能，退款时需要调用 payment 域进行资金退回，同时更新订单状态"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count >= 2;
+      metric: domain_count_gte_2
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const domains = result.matched_domains || [];
+        return domains.includes('order') && domains.includes('payment');
+      metric: matched_order_and_payment
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'proceed-collab';
+      metric: action_proceed_collab

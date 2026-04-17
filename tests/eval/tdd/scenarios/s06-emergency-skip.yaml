@@ -1,0 +1,31 @@
+# S06: Emergency Fix — Skip TDD
+# Emergency/hotfix skips TDD entirely; speed-first
+- vars:
+    input: "Risk level: Emergency. Change type: fast-track hotfix. Production is down. Fix first, process later. What TDD mode should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'Emergency';
+      metric: risk_level_emergency
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.tdd_mode === 'skip';
+      metric: tdd_mode_skip
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.cycle_type === 'none';
+      metric: cycle_none
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skip_allowed === true;
+      metric: skip_allowed

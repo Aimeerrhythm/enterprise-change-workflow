@@ -1,0 +1,26 @@
+# S03: Single-Domain Redirect
+# Only payment domain matched — should redirect to requirements-elicitation
+- vars:
+    input: "支付网关需要新增微信支付渠道，增加一个新的支付方式"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count === 1;
+      metric: domain_count_1
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const domains = result.matched_domains || [];
+        return domains.includes('payment');
+      metric: matched_payment_only
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'redirect-requirements-elicitation';
+      metric: action_redirect

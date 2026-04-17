@@ -1,0 +1,43 @@
+# S03: P2 Requirement — Simplified Mode
+# P2 uses Red-Green only (no Refactor), max 5 cycles, max 50 turns
+- vars:
+    input: "Risk level: P2. Change type: requirement. A Plan file exists with 2 Tasks and 3 files. Implementation strategy: direct. What TDD mode should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P2';
+      metric: risk_level_p2
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.tdd_mode === 'simplified';
+      metric: tdd_mode_simplified
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.cycle_type === 'red-green-only';
+      metric: cycle_red_green_only
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.max_cycles === 5;
+      metric: max_cycles_5
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skip_allowed === false;
+      metric: skip_not_allowed
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.reads_plan_first === true;
+      metric: reads_plan_first

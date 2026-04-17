@@ -1,0 +1,34 @@
+# S06: Degraded — No Requirement Doc, No Knowledge, No Plan
+# When no reference materials are available, only Round 4 (engineering standards) runs
+- vars:
+    input: "Risk level: P1. Implementation complete but operating in degraded mode: no requirement document available, no domain knowledge files, no Plan file. Only the code diff is available. What verification strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const rounds = result.rounds_to_execute || [];
+        return rounds.includes(4);
+      metric: round_4_included
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const rounds = result.rounds_to_execute || [];
+        // In fully degraded mode, only Round 4 should be executable
+        return rounds.length <= 2;
+      metric: limited_rounds
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skippable === false;
+      metric: not_skippable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.convergence_target === 'zero-must-fix';
+      metric: convergence_still_applies

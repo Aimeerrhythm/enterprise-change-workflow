@@ -1,0 +1,32 @@
+# ECW TDD Behavioral Evaluation
+# Verifies TDD mode selection, cycle type, skip rules per risk level.
+#
+# Usage:
+#   cd tests/eval/tdd && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+
+description: "ECW TDD Workflow Decision Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 2000
+      tools:
+        - file://tools/tdd_decision_result.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: tdd
+    raw: |
+      [{"role": "system", "content": "{{skill_content}}\n\nIMPORTANT EVAL INSTRUCTION: After your analysis, you MUST call the tdd_decision_result tool to report your structured TDD decision.\n\nYou are evaluating the ecw:tdd skill's decision logic. Given a scenario with a risk level and change type, determine:\n1. risk_level: The risk level from the scenario\n2. tdd_mode: mandatory-with-log (P0), mandatory (P1/Bug), simplified (P2), recommended (P3), mandatory-reproduction (Bug), skip (Emergency)\n3. cycle_type: red-green-refactor (P0/P1), red-green-only (P2), red-green-reproduction (Bug), none (P3 skip/Emergency)\n4. max_cycles: 0 for unlimited, 5 for P2 simplified mode\n5. skip_allowed: false for P0-P2 mandatory, true for P3/Emergency\n6. reads_plan_first: true for requirement changes (Plan exists), false for bugs\n7. subagent_delegation: true when impl strategy is subagent-driven OR plan involves >= 6 unique files"},{"role": "user", "content": "{{input}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  skill_content:
+    type: file
+    path: ../../../skills/tdd/SKILL.md

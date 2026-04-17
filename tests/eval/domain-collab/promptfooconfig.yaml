@@ -1,0 +1,32 @@
+# ECW Domain-Collab Behavioral Evaluation
+# Verifies domain identification, routing, Round 2 skip rules remain correct.
+#
+# Usage:
+#   cd tests/eval/domain-collab && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+
+description: "ECW Domain-Collab Workflow Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 2000
+      tools:
+        - file://tools/domain_collab_result.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: domain-collab
+    raw: |
+      [{"role": "system", "content": "{{skill_content}}\n\nIMPORTANT EVAL INSTRUCTION: After your analysis, you MUST call the domain_collab_result tool to report your structured workflow decision.\n\nYou are evaluating the domain-collab skill's Phase 1 domain identification logic. Given a requirement description and the project context below, determine:\n1. Which domains are matched (using keyword matching)\n2. The action to take (proceed-collab for 2+ domains, redirect-requirements-elicitation for 1, prompt-more-info for 0)\n3. Which domains would be skipped in Round 2 (domains with impact_level: none AND no inbound cross_domain_risks from other domains)\n4. Whether cross-domain risks exist\n5. Suggested implementation order (depended-upon domains first)\n\nProject context for domain matching:\n- Available domains: order, payment, inventory, logistics, user\n- Domain routing keywords:\n  - order: 订单, 下单, 退款, order\n  - payment: 支付, 收款, PCI, payment, 网关\n  - inventory: 库存, 扣减, inventory, 仓储\n  - logistics: 物流, 配送, 发货, logistics\n  - user: 用户, 注册, 登录, user, 手机号"},{"role": "user", "content": "{{input}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  skill_content:
+    type: file
+    path: ../../../skills/domain-collab/SKILL.md

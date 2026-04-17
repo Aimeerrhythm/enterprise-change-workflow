@@ -1,0 +1,40 @@
+# S06: 4-Domain Dense Requirement
+# Order + Payment + Inventory + Logistics — all domains involved, cross-domain risks expected
+- vars:
+    input: "新增预售功能：用户下单后冻结库存，支付成功后扣减库存并触发物流预约配送，支付失败则释放冻结库存并取消订单"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count >= 4;
+      metric: domain_count_gte_4
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const domains = result.matched_domains || [];
+        return domains.includes('order') && domains.includes('payment')
+            && domains.includes('inventory') && domains.includes('logistics');
+      metric: matched_all_4_domains
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'proceed-collab';
+      metric: action_proceed_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_cross_domain_risks === true;
+      metric: has_cross_domain_risks
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const order = result.suggested_impl_order || [];
+        return order.length >= 3;
+      metric: impl_order_has_depth

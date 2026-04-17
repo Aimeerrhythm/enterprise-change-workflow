@@ -1,0 +1,38 @@
+{
+  "name": "domain_collab_result",
+  "description": "Report the domain-collab workflow decision in structured format. Call this tool to record your analysis plan.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "matched_domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "List of domain IDs identified from the requirement"
+      },
+      "domain_count": {
+        "type": "integer",
+        "description": "Number of matched domains"
+      },
+      "action": {
+        "type": "string",
+        "enum": ["proceed-collab", "redirect-requirements-elicitation", "prompt-more-info"],
+        "description": "The action to take based on domain count: proceed-collab (2+), redirect-requirements-elicitation (1), prompt-more-info (0)"
+      },
+      "round2_skip_domains": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Domains to skip in Round 2 (impact_level: none AND no inbound risks)"
+      },
+      "has_cross_domain_risks": {
+        "type": "boolean",
+        "description": "Whether cross-domain risks were identified"
+      },
+      "suggested_impl_order": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Suggested implementation order of domains"
+      }
+    },
+    "required": ["matched_domains", "domain_count", "action"]
+  }
+}

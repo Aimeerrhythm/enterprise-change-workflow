@@ -1,0 +1,33 @@
+# S05: Round 2 Skip Rule
+# 4 domains but user domain is clearly unaffected (no inventory/logistics/payment keywords
+# targeting user) — user domain should appear in round2_skip_domains
+- vars:
+    input: "下单时需要实时扣减库存，如果库存不足则阻止下单，同时通知物流预分配仓位。用户信息不涉及变更。"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count >= 2;
+      metric: domain_count_gte_2
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const domains = result.matched_domains || [];
+        return domains.includes('order') && domains.includes('inventory');
+      metric: matched_core_domains
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'proceed-collab';
+      metric: action_proceed_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_cross_domain_risks === true;
+      metric: has_cross_domain_risks

@@ -1,0 +1,45 @@
+# S02: P1 — Rounds 1-3 Mandatory, Round 4 Recommended
+# P1 correctness is mandatory, quality is recommended but not required
+- vars:
+    input: "Risk level: P1. Implementation complete for an order refund feature. Requirement doc, domain knowledge, and Plan file are all available. What verification strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P1';
+      metric: risk_level_p1
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const rounds = result.rounds_to_execute || [];
+        return rounds.includes(1) && rounds.includes(2) && rounds.includes(3);
+      metric: rounds_1_2_3_included
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const mandatory = result.mandatory_rounds || [];
+        return mandatory.includes(1) && mandatory.includes(2) && mandatory.includes(3);
+      metric: rounds_1_2_3_mandatory
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skippable === false;
+      metric: not_skippable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.convergence_target === 'zero-must-fix';
+      metric: convergence_zero_must_fix
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.next_step === 'biz-impact-analysis-mandatory';
+      metric: next_biz_impact_mandatory
