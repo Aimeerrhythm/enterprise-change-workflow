@@ -26,10 +26,10 @@
 ## Wave 2 — 核心层
 
 ### Session 2-a: A (Session 生命周期) — branch: `wave2/session-hooks`
-- [ ] A-1 SessionStart hook
-- [ ] A-2 Stop hook
-- [ ] A-3 Pre-compact 增强
-- [ ] A-4 SessionEnd hook
+- [x] A-1 SessionStart hook (`ef38541`)
+- [x] A-2 Stop hook (`01deb56`)
+- [x] A-3 Pre-compact 增强 (`7831c30`)
+- [x] A-4 SessionEnd hook (`46e216e`)
 
 ### Session 2-b: G (Agent 架构) — branch: `wave2/agent-arch`
 - [ ] G-1 Model 分层策略 — 所有 SKILL.md 的 subagent dispatch 指定 model
