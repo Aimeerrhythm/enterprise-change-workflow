@@ -36,6 +36,16 @@ You are implementing a single task from an implementation plan.
 - **TDD Required:** {yes/no per ecw.yml tdd.enabled and risk level}
 - **Test Base Class:** {from ecw.yml tdd.base_test_class, if set}
 
+## Fact-Forcing Gate — Investigate Before Editing
+
+**Before modifying any file**, you MUST provide factual evidence of understanding:
+
+1. **Requirement Traceability:** Quote the exact line from the Task Description above that requires this edit. If you cannot point to a specific requirement, do NOT make the edit.
+2. **Impact Awareness:** Use Grep to find all files that import or reference the file you are about to modify. List them. If more than 5 files reference it, briefly state which callers are affected.
+3. **Cross-Domain Check:** If the file belongs to a different domain than the task's primary domain (check `ecw-path-mappings.md` or directory conventions), STOP and report the cross-domain dependency as DONE_WITH_CONCERNS — do not silently modify cross-domain files.
+
+This is not optional. Edits without traceability will be caught in spec review and sent back.
+
 ## Before You Begin
 
 If you have questions about:

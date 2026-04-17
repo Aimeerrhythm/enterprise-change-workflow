@@ -135,7 +135,7 @@ List findings from both perspectives separately. Tag each finding with severity 
 
 - Include: All Q&A context, existing code/documentation findings
 
-**Ledger update**: After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | medium |`.
+**Ledger update**: After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | medium | {HH:mm} | {duration} |`. Note time before dispatch and compute duration after return.
 
 **Timeout**: 180s. If synthesis Agent has not returned, terminate and present Q&A findings directly to user (see Error Handling).
 

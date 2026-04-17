@@ -68,9 +68,8 @@ SUB_HOOKS = [
     ("verify-completion", ["minimal", "standard", "strict"], _is_task_complete),
     ("config-protect",    ["minimal", "standard", "strict"], _is_edit_or_write),
     ("compact-suggest",   ["minimal", "standard", "strict"], _always),
-    # Future sub-hooks (Wave 2+):
-    # ("secret-scan",    ["standard", "strict"],            _is_edit_or_write),
-    # ("bash-preflight", ["standard", "strict"],            _is_bash),
+    ("secret-scan",       ["standard", "strict"],            _is_edit_or_write),
+    ("bash-preflight",    ["standard", "strict"],            _is_bash),
 ]
 
 

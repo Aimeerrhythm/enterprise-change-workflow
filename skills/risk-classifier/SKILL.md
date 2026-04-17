@@ -249,12 +249,12 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 <!-- ECW:LEDGER:START -->
 ## Subagent Ledger
 
-| Phase | Agent | Type | Est. Scale |
-|-------|-------|------|-----------|
+| Phase | Agent | Type | Est. Scale | Started | Duration |
+|-------|-------|------|-----------|---------|----------|
 <!-- ECW:LEDGER:END -->
 ```
 
-This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. Purposes:
+This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. **Record timestamps** for governance audit: note the time before dispatch (`Started`, HH:mm format) and compute elapsed time after return (`Duration`, e.g. "2m", "45s"). Purposes:
 - Restore context when continuing work in a new session
 - User can view current ECW workflow state
 - Manual recovery after compression (user says "read ECW state")

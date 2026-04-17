@@ -145,7 +145,7 @@ notes: "Other things to note"
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium.
+6. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
@@ -228,7 +228,7 @@ negotiation_result:
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small |`. Domain negotiation R2 is typically small.
+5. **Ledger update**: Append records to `.claude/ecw/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 

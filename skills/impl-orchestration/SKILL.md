@@ -180,12 +180,12 @@ If issues found → implementer fixes → re-review (max 2 rounds — see Loop S
 ### 5. Complete Task
 
 - Mark task complete in TaskUpdate
-- Update Subagent Ledger in `session-state.md` (P0 记录全部三行；P1 仅记录 implementer + spec-reviewer，跳过 code-quality)：
+- Update Subagent Ledger in `session-state.md` (P0 记录全部三行；P1 仅记录 implementer + spec-reviewer，跳过 code-quality). Note time before each dispatch and compute duration after return：
 
 ```markdown
-| {task_name} | implementer | {model} | — |
-| {task_name} | spec-reviewer | {model} | — |
-| {task_name} | code-quality | {model} | — |  ← P0 only
+| {task_name} | implementer | {model} | — | {HH:mm} | {duration} |
+| {task_name} | spec-reviewer | {model} | — | {HH:mm} | {duration} |
+| {task_name} | code-quality | {model} | — | {HH:mm} | {duration} |  ← P0 only
 ```
 
 ## Loop Safety Controls
@@ -257,6 +257,7 @@ If a single task consumes **≥ 6 subagent dispatches** (implementation + review
 - Let self-review replace actual review (both needed)
 - **Start code quality review before spec compliance passes** (wrong order)
 - Move to next task while review has open issues
+- **Skip fact-forcing gate** — implementers must quote task requirements before editing and check cross-domain file ownership
 
 ## Task Merging
 
