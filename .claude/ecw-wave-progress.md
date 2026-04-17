@@ -38,7 +38,7 @@
 - [ ] G-4 Subagent 返回值验证 — schema 检查 + 重试 + 降级
 
 ### Session 2-c: C-1 (Config 保护) — branch: `wave2/config-protect`
-- [ ] C-1 配置文件保护 — config-protect 子模块
+- [x] C-1 配置文件保护 — config-protect 子模块
 
 **Wave 2 merge checklist:**
 - [ ] `git merge wave2/session-hooks` 无冲突

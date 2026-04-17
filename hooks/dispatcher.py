@@ -61,8 +61,8 @@ def _is_bash(input_data):
 
 SUB_HOOKS = [
     ("verify-completion", ["minimal", "standard", "strict"], _is_task_complete),
+    ("config-protect",    ["minimal", "standard", "strict"], _is_edit_or_write),
     # Future sub-hooks (Wave 2+):
-    # ("config-protect", ["minimal", "standard", "strict"], _is_edit_or_write),
     # ("secret-scan",    ["standard", "strict"],            _is_edit_or_write),
     # ("bash-preflight", ["standard", "strict"],            _is_bash),
 ]
