@@ -86,9 +86,9 @@
 - [ ] D-3 文件产出隔离
 
 ### Session 4-b: I 剩余 — branch: `wave4/test-notify`
-- [ ] I-2 测试覆盖扩展 — domain-collab/tdd/impl-verify eval
-- [ ] I-4 桌面通知
-- [ ] H-7 语言硬编码清理
+- [x] I-2 测试覆盖扩展 — domain-collab/tdd/impl-verify eval (`cf404c3`)
+- [ ] I-4 桌面通知 (skipped)
+- [x] H-7 语言硬编码清理 (`ea3229c`)
 
 **Wave 4 merge checklist:**
 - [ ] 两个分支 merge 无冲突
