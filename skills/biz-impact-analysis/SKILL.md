@@ -25,8 +25,12 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    2. Run `git diff --name-only {diff_range}` to get file list
    3. Read `ecw-path-mappings.md`, map file list to domains
    4. Fill above results into Agent prompt, replacing full diff
-3. **Dispatch biz-impact-analysis agent** — Pass in preprocessed results, await impact analysis report
-4. **Present analysis report** — Output the agent's formatted report directly; if unregistered cross-domain calls are found, remind to update dependency graph
+3. **Dispatch biz-impact-analysis agent** (`model: sonnet` — business impact analysis requires understanding domain relationships and dependency graphs) — Pass in preprocessed results, await impact analysis report
+4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
+   - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
+   - Retry once with the same model
+   - If retry also fails: output the partial report as-is with `[degraded: incomplete analysis]` header, and warn user that manual impact review may be needed
+5. **Present analysis report** — Output the agent's formatted report directly; if unregistered cross-domain calls are found, remind to update dependency graph
 
 ## Agent Dispatch Prompt Template
 

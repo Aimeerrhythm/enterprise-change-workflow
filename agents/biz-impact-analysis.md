@@ -4,7 +4,7 @@ description: |
   Analyzes business impact of code changes by combining structured dependency graph
   queries with incremental code scanning. Outputs a formatted impact report covering
   affected domains, downstream/upstream flows, external systems, and end-to-end paths.
-model: inherit
+model: sonnet
 ---
 
 # Role

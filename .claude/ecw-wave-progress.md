@@ -32,10 +32,10 @@
 - [x] A-4 SessionEnd hook (`46e216e`)
 
 ### Session 2-b: G (Agent 架构) — branch: `wave2/agent-arch`
-- [ ] G-1 Model 分层策略 — 所有 SKILL.md 的 subagent dispatch 指定 model
-- [ ] G-2 Agent 独立化 — 抽取 impl-orchestration/impl-verify 的 subagent prompt
-- [ ] G-3 循环安全控制 — impl-orchestration 最大迭代 + 熔断
-- [ ] G-4 Subagent 返回值验证 — schema 检查 + 重试 + 降级
+- [x] G-1 Model 分层策略 — 所有 SKILL.md 的 subagent dispatch 指定 model (`216fb73`)
+- [x] G-2 Agent 独立化 — 抽取 impl-orchestration/impl-verify 的 subagent prompt (`7f73d93`)
+- [x] G-3 循环安全控制 — impl-orchestration 最大迭代 + 熔断 (`f077d2e`)
+- [x] G-4 Subagent 返回值验证 — schema 检查 + 重试 + 降级 (`52ad78c`)
 
 ### Session 2-c: C-1 (Config 保护) — branch: `wave2/config-protect`
 - [ ] C-1 配置文件保护 — config-protect 子模块

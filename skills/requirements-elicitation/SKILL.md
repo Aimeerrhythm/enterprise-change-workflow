@@ -103,7 +103,7 @@ Ask **3-5 questions** per round. Each answer may trigger follow-ups. Use the che
 
 ### Step 4: Synthesis Analysis
 
-After all Q&A rounds complete, use the Agent tool to launch **one agent**:
+After all Q&A rounds complete, use the Agent tool to launch **one agent** (`model: sonnet` — synthesis requires cross-referencing multiple Q&A rounds and identifying contradictions):
 
 **Prompt:**
 ```
@@ -126,6 +126,11 @@ List findings from both perspectives separately. Tag each finding with severity 
 - Include: All Q&A context, existing code/documentation findings
 
 **Ledger update**: After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | medium |`.
+
+**Return value validation**: Verify the agent's response contains findings tagged with severity (critical/important/suggestion). If the response lacks structured findings:
+1. Log to Ledger: `[FAILED: synthesis-analysis, reason: unstructured output]`
+2. Retry once with the same model
+3. If retry also fails: proceed without synthesis analysis — present all Q&A results directly to user, mark synthesis step as `[degraded: synthesis unavailable]`
 
 ### Step 5: Present Findings and Produce Summary
 
