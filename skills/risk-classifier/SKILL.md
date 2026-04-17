@@ -260,6 +260,17 @@ This file serves as the sole persistence carrier for ECW workflow state. Each sk
 
 > **Marker-based updates**: session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent table), `STOP` (auto-updated by Stop hook).
 
+> **Working modes**: Each skill sets the `MODE` marker section on entry to declare the current working mode. This helps post-compaction recovery understand the workflow phase. Mode definitions:
+>
+> | Mode | Set by | Behavior |
+> |------|--------|----------|
+> | `analysis` | risk-classifier, requirements-elicitation, domain-collab | Focus on understanding requirements; read broadly before concluding |
+> | `planning` | writing-plans, spec-challenge | Design implementation approach; prioritize cross-file consistency |
+> | `implementation` | impl-orchestration, tdd, systematic-debugging | Write code; keep atomic commits; run tests after each change |
+> | `verification` | impl-verify, biz-impact-analysis | Review completed work; severity-grade findings; do not modify code |
+>
+> **Mode switch**: When entering a skill, update the MODE marker: `<!-- ECW:MODE:START -->\n- **Working Mode**: {mode}\n<!-- ECW:MODE:END -->`
+
 > **Session advisory — context management**:
 >
 > After Plan completion (writing-plans finishes), evaluate whether to continue or start a new session:

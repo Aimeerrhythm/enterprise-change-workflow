@@ -53,6 +53,7 @@ def _extract_state_fields(content):
         "routing": r'\*\*Routing\*\*:\s*(.+)',
         "current_phase": r'\*\*Current Phase\*\*:\s*(.+)',
         "status": r'\*\*Status\*\*:\s*(.+)',
+        "working_mode": r'\*\*Working Mode\*\*:\s*(.+)',
     }
     for key, pattern in patterns.items():
         m = re.search(pattern, content, re.IGNORECASE)
@@ -184,6 +185,8 @@ def main():
             cfg_lines.append(f"- Language: {ecw_cfg['language']}")
         if state_fields.get("risk_level"):
             cfg_lines.append(f"- Active risk level: {state_fields['risk_level']}")
+        if state_fields.get("working_mode"):
+            cfg_lines.append(f"- Working mode: {state_fields['working_mode']}")
         sections.append(
             "# [ECW] Project config\n\n" + "\n".join(cfg_lines)
         )

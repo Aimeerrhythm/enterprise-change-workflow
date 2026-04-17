@@ -13,6 +13,8 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Announce at start:** "Using ecw:tdd to guide test-first implementation."
 
+**Mode switch**: Update session-state.md MODE marker to `implementation`.
+
 ## Scope Boundary
 
 **ecw:tdd executes the Red-Green(-Refactor) cycle. It does NOT own design decisions.**
