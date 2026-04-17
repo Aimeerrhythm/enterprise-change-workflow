@@ -1,0 +1,33 @@
+# S02: 3-Domain Cross-Domain Requirement
+# Order + Inventory + Logistics — should identify all three, suggest impl order
+- vars:
+    input: "用户取消订单后需要自动触发库存释放和物流拦截，恢复可用库存数量并停止发货流程"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count >= 3;
+      metric: domain_count_gte_3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const domains = result.matched_domains || [];
+        return domains.includes('order') && domains.includes('inventory') && domains.includes('logistics');
+      metric: matched_order_inventory_logistics
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'proceed-collab';
+      metric: action_proceed_collab
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const order = result.suggested_impl_order || [];
+        return order.length >= 2;
+      metric: has_impl_order

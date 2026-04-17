@@ -1,0 +1,31 @@
+# S04: P3 — Skip Entirely
+# P3 has no requirement/plan docs to cross-reference; skip verification
+- vars:
+    input: "Risk level: P3. Implementation complete for a log message formatting change. No requirement doc, no Plan file, no domain knowledge. What verification strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P3';
+      metric: risk_level_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skippable === true;
+      metric: skippable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.convergence_target === 'not-applicable';
+      metric: convergence_not_applicable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.next_step === 'none';
+      metric: next_step_none

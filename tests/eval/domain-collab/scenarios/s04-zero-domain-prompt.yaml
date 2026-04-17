@@ -1,0 +1,19 @@
+# S04: Zero-Domain Prompt
+# No recognizable domain keywords — should prompt for more info
+- vars:
+    input: "系统性能需要优化，响应时间太长了"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.domain_count === 0;
+      metric: domain_count_0
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.action === 'prompt-more-info';
+      metric: action_prompt_more_info

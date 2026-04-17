@@ -1,0 +1,43 @@
+# S01: P0 Critical Requirement — Mandatory TDD with Verification Log
+# P0 must use full Red-Green-Refactor with logged output per cycle
+- vars:
+    input: "Risk level: P0. Change type: requirement. A Plan file exists at .claude/plans/payment-gateway.md with 4 Tasks and 8 files. Implementation strategy: subagent-driven. What TDD mode should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P0';
+      metric: risk_level_p0
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.tdd_mode === 'mandatory-with-log';
+      metric: tdd_mode_mandatory_with_log
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.cycle_type === 'red-green-refactor';
+      metric: cycle_red_green_refactor
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skip_allowed === false;
+      metric: skip_not_allowed
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.reads_plan_first === true;
+      metric: reads_plan_first
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.subagent_delegation === true;
+      metric: subagent_delegation

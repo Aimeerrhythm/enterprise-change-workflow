@@ -1,0 +1,32 @@
+# ECW Impl-Verify Behavioral Evaluation
+# Verifies round selection, convergence rules, severity handling per risk level.
+#
+# Usage:
+#   cd tests/eval/impl-verify && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+
+description: "ECW Impl-Verify Strategy Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 2000
+      tools:
+        - file://tools/impl_verify_result.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: impl-verify
+    raw: |
+      [{"role": "system", "content": "{{skill_content}}\n\nIMPORTANT EVAL INSTRUCTION: After your analysis, you MUST call the impl_verify_result tool to report your structured verification strategy.\n\nYou are evaluating the ecw:impl-verify skill's execution planning. Given a scenario with a risk level and change context, determine:\n1. risk_level: The risk level from the scenario\n2. rounds_to_execute: Which rounds to run [1=Requirements↔Code, 2=Domain Knowledge↔Code, 3=Plan↔Code, 4=Engineering Standards↔Code]\n3. mandatory_rounds: Which of those rounds are mandatory (cannot be skipped)\n4. skippable: Whether the entire verification can be skipped (only P3 or pure formatting)\n5. parallel_dispatch: Whether rounds should be dispatched as parallel subagents (true for multi-round)\n6. convergence_target: zero-must-fix (normal) or not-applicable (skipped)\n7. max_rounds: 5 (loop cap)\n8. next_step: biz-impact-analysis-mandatory (P0/P1), biz-impact-analysis-suggested (P2), none (P3/Bug)"},{"role": "user", "content": "{{input}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  skill_content:
+    type: file
+    path: ../../../skills/impl-verify/SKILL.md

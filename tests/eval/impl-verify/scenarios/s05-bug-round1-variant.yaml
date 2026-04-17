@@ -1,0 +1,38 @@
+# S05: Bug Fix — Round 1 Variant
+# Bug fix uses a specialized Round 1 (verify fix resolves the issue, no scope creep)
+- vars:
+    input: "Risk level: Bug (P1). Implementation complete for a bug fix: OrderBizService.cancel() was not releasing inventory locks. The fix adds an inventory release call. Bug report describes the symptom. What verification strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'Bug';
+      metric: risk_level_bug
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const rounds = result.rounds_to_execute || [];
+        return rounds.includes(1);
+      metric: round_1_included
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skippable === false;
+      metric: not_skippable
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.convergence_target === 'zero-must-fix';
+      metric: convergence_zero_must_fix
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.next_step === 'none';
+      metric: next_step_none_for_bug

@@ -1,0 +1,25 @@
+# S04: P3 Requirement — Recommended, Skip Allowed
+# P3 encourages TDD but does not enforce it; user decides
+- vars:
+    input: "Risk level: P3. Change type: requirement. No Plan file. Direct implementation. What TDD mode should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P3';
+      metric: risk_level_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.tdd_mode === 'recommended';
+      metric: tdd_mode_recommended
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skip_allowed === true;
+      metric: skip_allowed

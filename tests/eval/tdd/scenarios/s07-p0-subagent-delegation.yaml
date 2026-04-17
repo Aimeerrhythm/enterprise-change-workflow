@@ -1,0 +1,25 @@
+# S07: P0 with Subagent Delegation
+# When impl strategy is subagent-driven, TDD cycles delegate to subagents
+- vars:
+    input: "Risk level: P0. Change type: requirement. A Plan file exists with 6 Tasks and 12 files across 2 domains. Implementation strategy: subagent-driven (ecw:impl-orchestration). What TDD mode and delegation strategy should be used?"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.tdd_mode === 'mandatory-with-log';
+      metric: tdd_mode_mandatory_with_log
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.subagent_delegation === true;
+      metric: subagent_delegation
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.skip_allowed === false;
+      metric: skip_not_allowed
