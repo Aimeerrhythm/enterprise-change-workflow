@@ -72,7 +72,7 @@ Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general
 
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
-**All domain Agents use a unified prompt template:**
+**All domain Agents use the prompt template defined in `agents/domain-analyst.md`.** Coordinator fills the template variables with domain-registry data.
 
 ```
 You are a {project_name} {domain_name} domain expert Agent. Your task is to analyze the impact of a requirement on your responsible domain.
@@ -154,7 +154,7 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 
 **Model selection**: `model: sonnet` (negotiation requires understanding other domains' changes and assessing cross-domain impact). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
-**Round 2 domain Agent unified prompt template:**
+**Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills the template variables with Round 1 results and other domains' change summaries.
 
 ```
 You are a {project_name} {domain_name} domain expert Agent (negotiation round).

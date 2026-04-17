@@ -95,7 +95,7 @@ digraph process {
 
 ### 1. Dispatch Implementer
 
-Use `./implementer-prompt.md` template. Inject:
+Use `agents/implementer.md` prompt template. Inject:
 - Full task text (don't make subagent read plan file)
 - Scene-setting context (where this fits, dependencies)
 - ECW domain context (domain name, knowledge file paths, risk level)
@@ -132,7 +132,7 @@ Default to `model: "sonnet"` when classification is ambiguous.
 
 ### 3. Spec Compliance Review
 
-Use `./spec-reviewer-prompt.md` template. Inject:
+Use `agents/spec-reviewer.md` prompt template. Inject:
 - Full task requirements
 - Implementer's report
 

@@ -78,6 +78,8 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 3. Collect structured findings YAML from each subagent
 4. Merge findings, present to user, handle convergence loop
 
+**Each Round subagent uses the prompt template defined in `agents/impl-verifier.md`.** Coordinator fills the template variables with round-specific reference material and verification checklist.
+
 **Each Round subagent receives:**
 - Changed file list (from coordinator)
 - Round-specific reference material paths (not content — the subagent reads them)
