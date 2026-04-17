@@ -4,6 +4,13 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.2] - 2026-04-17
+
+### 修复
+
+- **risk-classifier 自动触发失败** — skill description 使用排序建议语气（"Use BEFORE"）而非触发条件格式，导致模型遇到项目 CLAUDE.md 的"先读文档"等指令时优先执行后者，跳过 ECW 入口。改为 TRIGGER when / BLOCKING / DO NOT TRIGGER 三段式，与 biz-impact-analysis、spec-challenge 等已生效 skill 格式一致
+- **CLAUDE.md 触发优先级强化** — Dependencies 段的 "Skill check priority" 改为 "BLOCKING RULE"，明确 "before reading code, before reading documentation, before any analysis"
+
 ## [0.6.1] - 2026-04-17
 
 ### 优化
@@ -288,6 +295,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.2
 [0.6.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.0
 [0.5.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.5.0

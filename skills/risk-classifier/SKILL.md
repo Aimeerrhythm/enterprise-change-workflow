@@ -1,9 +1,13 @@
 ---
 name: risk-classifier
-description: >
-  Use BEFORE any other skill when user proposes a change, feature, requirement,
-  bug fix, or any code modification. MUST run before ecw:requirements-elicitation
-  or ecw:domain-collab — if either would normally trigger, run this first.
+description: |
+  TRIGGER when: user proposes ANY code change, feature request, new requirement,
+  enhancement, refactoring, bug report, or describes a business need that will
+  require code modification.
+  BLOCKING: Invoke BEFORE reading code, exploring files, or running any other
+  ecw skill. Risk classification determines the entire downstream workflow depth.
+  DO NOT TRIGGER: pure questions about existing code, documentation lookup,
+  or informational conversation with no change intent.
 ---
 
 # Risk Classifier

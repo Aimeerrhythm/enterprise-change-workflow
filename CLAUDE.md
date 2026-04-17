@@ -31,7 +31,7 @@ Post-implementation → ecw:impl-verify → ecw:biz-impact-analysis → [P0/P1: 
 ## Dependencies
 
 - **No external plugin dependencies** — ECW is self-contained with all Skills (writing-plans, tdd, systematic-debugging, impl-orchestration, etc.); no other plugins needed.
-- **Skill check priority**: ECW has `ecw:risk-classifier` as the unified entry point for change-type tasks. When receiving change/requirement/bug requests, go directly to ecw:risk-classifier — no additional skill applicability check needed.
+- **BLOCKING RULE — Skill trigger priority**: When user proposes any change, requirement, or bug fix, invoke `ecw:risk-classifier` IMMEDIATELY — before reading code, before reading documentation, before any analysis. This is the unified entry point; all downstream workflow depth is determined by its classification result. Skipping this step means the entire ECW workflow will not activate.
 
 ## Project Configuration
 
