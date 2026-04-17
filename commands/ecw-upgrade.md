@@ -29,7 +29,7 @@ Read each project config file and compare against the current plugin template. F
 
 ### Check A: CLAUDE.md ECW Workflow Entry Point
 
-**Why:** Without this, the model follows project-level instructions and skips the ECW workflow entirely.
+**Why:** The plugin CLAUDE.md has a BLOCKING RULE instruction, but models prioritize project-level CLAUDE.md instructions (e.g., "read docs first") over plugin instructions. A project-level trigger is required to ensure `ecw:risk-classifier` fires automatically.
 
 **Check:** Search project root `CLAUDE.md` for `ecw:risk-classifier`.
 
@@ -42,33 +42,18 @@ Read each project config file and compare against the current plugin template. F
 收到变更需求、功能需求或 Bug 报告时，必须先执行 `ecw:risk-classifier` 进行风险分级，再开始任何分析或编码。
 ```
 
-### Check B: Old superpowers References
+### Check B: ecw.yml Structure Sync
 
-**Check:** Search project `CLAUDE.md` for `superpowers:`.
+**Check:** Read project `.claude/ecw/ecw.yml` and plugin `templates/ecw.yml`. Compare:
 
-- Not found → **ok**
-- Found → **needs-fix**: Replace all occurrences:
-
-| Old | New |
-|-----|-----|
-| `superpowers:writing-plans` | `ecw:writing-plans` |
-| `superpowers:test-driven-development` | `ecw:tdd` |
-| `superpowers:systematic-debugging` | `ecw:systematic-debugging` |
-| `superpowers:subagent-driven-development` | `ecw:impl-orchestration` |
-| `superpowers:executing-plans` | `ecw:impl-orchestration` |
-
-### Check C: ecw.yml Structure Sync
-
-**Check:** Read project `.claude/ecw/ecw.yml` and plugin `templates/ecw.yml`. Compare top-level sections:
-
-1. **Missing sections** — If template has a top-level key (e.g., `tdd:`, `rules:`, `paths:`) that project file lacks, inject the section from template with default values.
-2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.rules_dir`, `paths.calibration_history`, `paths.instincts`) that project file lacks, add them with template defaults.
+1. **Missing sections** — If template has a top-level key (e.g., `tdd:`, `paths:`) that project file lacks, inject the section from template with default values.
+2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.calibration_history`, `paths.instincts`) that project file lacks, add them with template defaults.
 3. **Stale fields** — If project file has fields NOT in the template (e.g., `ecw_version:`), remove them.
 4. **Preserve user values** — Never overwrite fields that exist in both template and project; only add missing ones.
 
 For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire file.
 
-### Check D: CLAUDE.md TDD Reference
+### Check C: CLAUDE.md TDD Reference
 
 **Check:** Search project `CLAUDE.md` for "测试先行" or "TDD".
 
@@ -81,14 +66,7 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 
 If no matching line found, skip.
 
-### Check E: Engineering Rules Directory
-
-**Check:** Check if `.claude/ecw/rules/` exists and contains `.md` or `.mdc` files.
-
-- Exists with files → **ok**
-- Missing or empty → **needs-fix**: Read `ecw.yml` `project.language`, copy from plugin `templates/rules/common/` (always) + `templates/rules/{language}/` (if exists).
-
-### Check F: change-risk-classification.md Terminology
+### Check D: change-risk-classification.md Terminology
 
 **Check:** Read project `.claude/ecw/change-risk-classification.md` and compare skill/tool names against the current plugin template.
 
@@ -96,12 +74,12 @@ If no matching line found, skip.
 - Found stale names → **needs-fix**: Replace with current names.
 - No stale names → **ok**
 
-### Check G: CLAUDE.md.snippet Domain Routing
+### Check E: Domain Routing Table
 
-**Check:** Read plugin `templates/CLAUDE.md.snippet`. Verify that the project `CLAUDE.md` has a domain routing table (a markdown table with columns matching keyword/domain/entry-doc pattern).
+**Check:** Verify that the project `CLAUDE.md` has a domain routing table (a markdown table with columns matching keyword/domain/entry-doc pattern).
 
 - Has routing table → **ok**
-- No routing table → **needs-fix**: Warn that domain routing is missing. Output the snippet template content and instruct the user to fill in their project's domains. (Cannot auto-fix — requires project-specific domain knowledge.)
+- No routing table → **needs-fix**: Read plugin `templates/CLAUDE.md.snippet`, output the template content and instruct the user to fill in their project's domains. (Cannot auto-fix — requires project-specific domain knowledge.)
 
 ---
 
@@ -126,7 +104,7 @@ Auto-fixable:
 {list each needs-fix check that can be auto-fixed, with brief description}
 
 Manual action needed:
-{list checks that need user input, e.g., Check G domain routing}
+{list checks that need user input, e.g., Check E domain routing}
 
 Skipped (already up to date):
 {list ok checks}
