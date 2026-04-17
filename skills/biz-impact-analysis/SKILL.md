@@ -92,8 +92,10 @@ If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysi
 After Agent returns, append one row to `.claude/ecw/session-state.md` Subagent Ledger table:
 
 ```
-| biz-impact-analysis | analyst | ecw:biz-impact-analysis | large |
+| biz-impact-analysis | analyst | ecw:biz-impact-analysis | large | {HH:mm} | {duration} |
 ```
+
+Note time before dispatch and compute duration after Agent return.
 
 Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
 
