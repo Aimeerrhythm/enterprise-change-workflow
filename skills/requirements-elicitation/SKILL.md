@@ -101,7 +101,7 @@ Ask **3-5 questions** per round. Each answer may trigger follow-ups. Use the che
 
 **Key: Do not stop after one round.** Continue asking until all relevant dimensions have been explored. Every user answer opens new questions.
 
-**Per-round checkpoint**: After each Q&A round completes (user answers all questions), append the round summary to `.claude/ecw/session-data/requirements-summary.md`:
+**Per-round checkpoint**: After each Q&A round completes (user answers all questions), append the round summary to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/requirements-summary.md` if absent):
 ```markdown
 ### Round {N} — {covered dimensions}
 **Questions**: {list of questions asked}
@@ -289,7 +289,7 @@ After synthesis analysis completes and user has made decisions on findings, prod
 [Questions still unresolved]
 ```
 
-**Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (Phase 2, writing-plans) without depending on conversation history.
+**Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/requirements-summary.md` if absent) using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (Phase 2, writing-plans) without depending on conversation history.
 
 Wait for user confirmation. After confirmation:
 - **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`

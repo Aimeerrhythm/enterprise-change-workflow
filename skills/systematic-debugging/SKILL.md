@@ -110,7 +110,7 @@ When error is deep in call stack:
 - Keep tracing up until you find the source
 - Fix at source, not at symptom
 
-**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/debug-evidence.md`:
+**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/{workflow-id}/debug-evidence.md` (resolve `{workflow-id}` from session-state.md; fall back to `session-data/debug-evidence.md` if absent):
 ```markdown
 # Debug Evidence (Phase 1)
 ## Error: {error message summary}

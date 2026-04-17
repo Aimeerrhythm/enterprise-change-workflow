@@ -244,6 +244,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 - **Routing**: {full routing chain}
 - **Current Phase**: phase1-complete
 - **Created**: {YYYY-MM-DD HH:mm}
+- **Workflow ID**: {YYYYMMDD-HHmm}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 
@@ -255,6 +256,16 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-state.m
 
 This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. Purposes:
 - Restore context when continuing work in a new session
+
+### Session Data Path Convention
+
+All skills write checkpoint files to `.claude/ecw/session-data/{workflow-id}/` where `{workflow-id}` is the `Workflow ID` field from session-state.md (same as `Created` timestamp in `YYYYMMDD-HHmm` format). This isolates artifacts from different change requests, preventing overwrite when multiple workflows run sequentially.
+
+**Path resolution rule** (applies to all skills):
+1. Read `Workflow ID` from `.claude/ecw/session-state.md`
+2. If present: write to / read from `session-data/{workflow-id}/{filename}`
+3. If absent (legacy workflow or no session-state): fall back to `session-data/{filename}`
+4. Create the subdirectory on first write if it does not exist
 - User can view current ECW workflow state
 - Manual recovery after compression (user says "read ECW state")
 - Monitoring scripts to assess subagent consumption
@@ -404,7 +415,7 @@ upgrade_reason: "..."  # if upgraded
 **Coordinator receives YAML**, then:
 - Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
 - Output Phase 2 report in the defined format
-- Write checkpoint to `.claude/ecw/session-data/phase2-assessment.md`
+- Write checkpoint to `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (see Session Data Path Convention for path resolution)
 
 **Model**: `model: sonnet` (dependency graph query is rule-based lookup, not creative reasoning)
 

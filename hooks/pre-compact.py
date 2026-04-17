@@ -33,18 +33,39 @@ def _find_session_state(cwd):
 
 
 def _get_session_data_files(cwd):
-    """List .md files in session-data/ directory."""
+    """List .md files in session-data/ directory.
+
+    Supports workflow-id subdirectories (D-3 isolation): scans the most recent
+    subdirectory first. Falls back to root session-data/ for backward compat.
+    """
     session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
     if not os.path.isdir(session_data_dir):
         return []
 
     files = []
     try:
+        # Check for workflow-id subdirectories
+        subdirs = []
+        root_files = []
         for name in sorted(os.listdir(session_data_dir)):
             full = os.path.join(session_data_dir, name)
-            if os.path.isfile(full) and name.endswith(".md"):
+            if os.path.isdir(full):
+                subdirs.append((full, os.path.getmtime(full), name))
+            elif os.path.isfile(full) and name.endswith(".md"):
                 rel = os.path.relpath(full, cwd)
-                files.append(rel)
+                root_files.append(rel)
+
+        if subdirs:
+            # Use the most recent subdirectory
+            subdirs.sort(key=lambda x: x[1], reverse=True)
+            latest_dir = subdirs[0][0]
+            for name in sorted(os.listdir(latest_dir)):
+                full = os.path.join(latest_dir, name)
+                if os.path.isfile(full) and name.endswith(".md"):
+                    rel = os.path.relpath(full, cwd)
+                    files.append(rel)
+        else:
+            files = root_files
     except Exception:
         pass
     return files

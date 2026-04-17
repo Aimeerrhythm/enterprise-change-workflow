@@ -63,17 +63,39 @@ def _extract_state_fields(content):
 
 
 def _get_checkpoint_files(cwd):
-    """List session-data/ checkpoint files sorted by mtime (newest first)."""
+    """List session-data/ checkpoint files sorted by mtime (newest first).
+
+    Supports workflow-id subdirectories (D-3 isolation): scans the most recent
+    subdirectory first. Falls back to root session-data/ for backward compat.
+    """
     session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
     if not os.path.isdir(session_data_dir):
         return []
 
     files = []
     try:
+        # Check for workflow-id subdirectories first
+        subdirs = []
+        root_files = []
         for name in os.listdir(session_data_dir):
             full = os.path.join(session_data_dir, name)
-            if os.path.isfile(full) and name.endswith(".md"):
-                files.append((full, os.path.getmtime(full), name))
+            if os.path.isdir(full):
+                subdirs.append((full, os.path.getmtime(full), name))
+            elif os.path.isfile(full) and name.endswith(".md"):
+                root_files.append((full, os.path.getmtime(full), name))
+
+        if subdirs:
+            # Use the most recent subdirectory
+            subdirs.sort(key=lambda x: x[1], reverse=True)
+            latest_dir = subdirs[0][0]
+            subdir_name = subdirs[0][2]
+            for name in os.listdir(latest_dir):
+                full = os.path.join(latest_dir, name)
+                if os.path.isfile(full) and name.endswith(".md"):
+                    files.append((full, os.path.getmtime(full), name))
+        else:
+            # Backward compat: scan root session-data/
+            files = root_files
     except Exception:
         return []
 
