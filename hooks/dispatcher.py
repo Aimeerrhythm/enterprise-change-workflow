@@ -55,12 +55,18 @@ def _is_bash(input_data):
     return input_data.get("tool_name") == "Bash"
 
 
+def _always(input_data):
+    """Match any tool event."""
+    return True
+
+
 # ── Sub-hook registry ──
 # Format: (module_filename, applicable_profiles, matcher_function)
 # Modules are loaded from the same directory as this dispatcher.
 
 SUB_HOOKS = [
     ("verify-completion", ["minimal", "standard", "strict"], _is_task_complete),
+    ("compact-suggest",   ["minimal", "standard", "strict"], _always),
     # Future sub-hooks (Wave 2+):
     # ("config-protect", ["minimal", "standard", "strict"], _is_edit_or_write),
     # ("secret-scan",    ["standard", "strict"],            _is_edit_or_write),
