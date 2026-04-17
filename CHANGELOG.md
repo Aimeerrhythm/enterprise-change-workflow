@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.6.3] - 2026-04-17
+
+### 修复
+
+- **risk-classifier description 被截断** — skills list 对 `|` 多行格式只显示第一行，导致 BLOCKING 指令不可见。改用 `>` 折叠格式，BLOCKING 置于首位，控制在 170 字符内确保完整显示
+
 ## [0.6.2] - 2026-04-17
 
 ### 修复
@@ -295,6 +301,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.6.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.3
 [0.6.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.2
 [0.6.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.1
 [0.6.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.0

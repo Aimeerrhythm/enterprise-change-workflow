@@ -1,13 +1,8 @@
 ---
 name: risk-classifier
-description: |
-  TRIGGER when: user proposes ANY code change, feature request, new requirement,
-  enhancement, refactoring, bug report, or describes a business need that will
-  require code modification.
-  BLOCKING: Invoke BEFORE reading code, exploring files, or running any other
-  ecw skill. Risk classification determines the entire downstream workflow depth.
-  DO NOT TRIGGER: pure questions about existing code, documentation lookup,
-  or informational conversation with no change intent.
+description: >
+  BLOCKING — Invoke IMMEDIATELY when user proposes any code change, requirement,
+  or bug. Run BEFORE reading code/docs. Classifies risk (P0-P3) for downstream workflow.
 ---
 
 # Risk Classifier
