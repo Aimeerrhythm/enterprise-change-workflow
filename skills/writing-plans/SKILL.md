@@ -101,7 +101,7 @@ After receiving the subagent's summary:
 
 `model: opus` — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
 
-**Timeout**: 300s (plan generation reads multiple knowledge files and produces substantial output). If subagent has not returned, terminate and retry once (see Error Handling). Do NOT fall back to Direct mode on first timeout — Direct mode causes all source file reads to enter coordinator context, bloating the main context window.
+**Timeout (dynamic)**: Scale timeout by estimated Task count — **≤5 Tasks: 180s**, **6–10 Tasks: 300s**, **>10 Tasks: 420s**. Estimate Task count before dispatch from requirement scope: single-domain focused change → ≤5; multi-domain (2–3 domains) or medium complexity → 6–10; large cross-domain (4+ domains) or high complexity → >10. If estimate is unavailable, default to 300s. On timeout, **fall back to Direct mode immediately** — do NOT retry (empirically, a timed-out Plan subagent retried under the same conditions times out again, wasting another full timeout window).
 
 ## Scope Check
 
@@ -250,7 +250,7 @@ If you find issues, fix them inline.
 | Scenario | Handling |
 |----------|---------|
 | Subagent dispatch fails or returns incomplete plan | Record `FAILED` in Subagent Ledger → retry once → still fails: fall back to Direct mode (coordinator generates plan itself) |
-| Subagent timeout (300s exceeded) | Record `TIMEOUT` in Subagent Ledger → **retry subagent once** (source code reading limits already enforced) → still times out: fall back to Direct mode. **Never fall back to Direct mode on first timeout** — retry is cheap, Direct mode bloats coordinator context |
+| Subagent timeout (dynamic limit exceeded) | Record `TIMEOUT` in Subagent Ledger → **fall back to Direct mode immediately** (no retry — empirically, retry under same conditions times out again, wasting another full timeout window). Coordinator generates plan itself in Direct mode |
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
 | `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level before proceeding |
