@@ -16,6 +16,24 @@
 
 - **calibration 双文件分工明确化** — `calibration-log.md`（完整维度对比，人工 review 用）与 `calibration-history.md`（简洁索引，Phase 1 自动检索用）。risk-classifier SKILL.md、CLAUDE.md、模板均补充分工说明
 
+## [0.7.0] - 2026-04-18
+
+### 修复
+
+- **impl-orchestration → impl-verify 自动路由** (Issue-6) — 完成所有 Task 后直接执行 impl-verify，不再询问用户确认
+- **impl-verify findings 持久化** (Issue-7) — 每轮验证后将 findings 写入 `session-data/{workflow-id}/impl-verify-findings.md`
+- **Subagent Ledger 完整记录** (Issue-8) — impl-orchestration 每批 Task 完成后更新 session-state Ledger
+- **spec-challenge-report.md 独立生成** (Artifact-1) — findings 在回写 Plan 前先独立持久化到 session-data/
+- **writing-plans/spec-challenge 分裂建议不冲突** — P0/P1 后续有 spec-challenge 时，writing-plans 不提前触发 compact 建议，由 spec-challenge 完成后统一走 new session 分裂点
+- **verify-completion 知识文档白名单** (Issue-5) — `.claude/knowledge/`、`session-data/`、`plans/` 路径跳过编译/测试验证
+- **Plan subagent 动态超时** (Issue-2) — 根据预估 Task 数设置超时（≤5: 180s, 6-10: 300s, >10: 420s），超时后跳过重试直接 fallback Direct
+- **PreCompact auto-continue 前置** (Issue-1) — auto-continue 指令移至 systemMessage 最前，提高 compact 后自动恢复可靠性
+- **知识库跨域调用自动回填** (Warning-3) — biz-impact-analysis 发现未注册跨域调用时自动追加到 cross-domain-calls.md
+
+### 新增
+
+- **impl-orchestration 首 Task 前预检** (Warning-1) — 执行前运行 compile+test 预检，提前暴露基础设施问题。可通过 ecw.yml `impl_orchestration.pre_check` 关闭
+
 ## [0.6.6] - 2026-04-17
 
 ### 修复
