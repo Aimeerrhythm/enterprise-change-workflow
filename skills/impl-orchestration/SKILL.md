@@ -182,7 +182,11 @@ If issues found → implementer fixes → re-review (max 2 rounds — see Loop S
 ### 5. Complete Task
 
 - Mark task complete in TaskUpdate
-- Update Subagent Ledger in `session-state.md` (P0 记录全部三行；P1 仅记录 implementer + spec-reviewer，跳过 code-quality). Note time before each dispatch and compute duration after return：
+- **[MANDATORY] Update Subagent Ledger** in `session-state.md`. This is a required step, not optional. Every dispatched subagent MUST have a Ledger entry. Frequency options:
+  - **Preferred**: Update after each Task completes (ensures no entries are lost if session is interrupted)
+  - **Acceptable**: Batch update every 3-5 Tasks (reduces Edit calls; but if you choose this, flush the batch after the last Task completes — never leave unwritten Ledger entries)
+- P0: record all three lines (implementer + spec-reviewer + code-quality); P1: record implementer + spec-reviewer only (skip code-quality)
+- Note time before each dispatch and compute duration after return：
 
 ```markdown
 | {task_name} | implementer | {model} | — | {HH:mm} | {duration} |
@@ -233,8 +237,16 @@ If a single task consumes **≥ 6 subagent dispatches** (implementation + review
 
 **Do NOT dispatch a final code reviewer.** ECW uses `ecw:impl-verify` (4-Round multi-dimensional verification) which is more comprehensive.
 
-1. Invoke `ecw:impl-verify` — this is the post-implementation quality gate
-2. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
+**Auto-route to impl-verify — do NOT ask user for confirmation:**
+
+1. Call `TaskList` to check for pending tasks
+2. If a pending `ecw:impl-verify` task exists (created by risk-classifier with blockedBy dependency on implementation tasks):
+   - Mark it `in_progress` via TaskUpdate
+   - **Immediately** invoke `ecw:impl-verify` using the Skill tool — no AskUserQuestion, no "shall I continue?"
+3. If no pending impl-verify task exists, invoke `ecw:impl-verify` directly via Skill tool
+4. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
+
+> This mirrors the auto-route pattern used by impl-verify → biz-impact-analysis. The user has already approved the workflow at risk-classifier time; re-asking at each transition wastes turns.
 
 ## Error Handling
 

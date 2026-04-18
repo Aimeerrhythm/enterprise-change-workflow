@@ -240,7 +240,10 @@ After writing the complete plan, review with fresh eyes:
 
 If you find issues, fix them inline.
 
-**Context management**: The Plan file contains all necessary context for downstream skills. After the Plan is written and self-review is complete, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
+**Context management**: The Plan file contains all necessary context for downstream skills. After the Plan is written and self-review is complete:
+
+1. **If spec-challenge follows** (P0 any; P1 cross-domain): **Skip context-health check entirely.** The session split decision belongs to spec-challenge's Post-Review phase — triggering compact here would preempt that split point and cause the implementation phase to run in an already-bloated session.
+2. **Otherwise** (no spec-challenge downstream): Check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
 
 ## Error Handling
 

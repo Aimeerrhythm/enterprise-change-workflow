@@ -109,8 +109,8 @@ After spec-challenge agent returns:
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
 2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
-2. Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`.
-3. **Present verbatim** the full review report to user. No responses, no judgments.
+3. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
+4. **Present verbatim** the full review report to user. No responses, no judgments.
 
 ### Step 2: Per-Item Fatal Flaw Confirmation
 
@@ -213,7 +213,7 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 ### Post-Review: Session Split Recommendation
 
-After spec-challenge completes and user confirms review results (Plan updated), output split recommendation for **P0 and P1 cross-domain changes**:
+After spec-challenge completes and user confirms review results (Plan updated), **ALWAYS** output split recommendation for **P0 and P1 cross-domain changes**. This is the authoritative context management decision point — writing-plans deliberately defers its context-health check when spec-challenge follows, so this recommendation MUST trigger regardless of context-health state.
 
 At this point, all analysis phase artifacts have been persisted:
 - domain-collab report → `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md`
