@@ -15,19 +15,17 @@ import os
 # Matched by os.path.basename() to be path-format agnostic.
 
 PROTECTED_BASENAMES = {
-    # Core ECW config
     "ecw.yml",
     "domain-registry.md",
     "change-risk-classification.md",
     "ecw-path-mappings.md",
-    # Cross-domain knowledge files
-    "cross-domain-rules.md",
-    "cross-domain-calls.md",
-    "mq-topology.md",
-    "shared-resources.md",
-    "external-systems.md",
-    "e2e-paths.md",
 }
+
+EDITABLE_PATH_PREFIXES = (
+    ".claude/knowledge/",
+    ".claude/ecw/session-data/",
+    ".claude/plans/",
+)
 
 BLOCK_MESSAGE_TEMPLATE = (
     "**[ECW Config Protection]** Blocked modification of `{basename}`. "
@@ -55,6 +53,13 @@ def check(input_data, config=None):
 
     file_path = input_data.get("tool_input", {}).get("file_path", "")
     if not file_path:
+        return ("continue", "")
+
+    cwd = input_data.get("cwd", "")
+    rel_path = os.path.relpath(file_path, cwd) if cwd and file_path.startswith(cwd) else file_path
+    rel_path = rel_path.replace(os.sep, "/")
+
+    if any(rel_path.startswith(prefix) for prefix in EDITABLE_PATH_PREFIXES):
         return ("continue", "")
 
     basename = os.path.basename(file_path)

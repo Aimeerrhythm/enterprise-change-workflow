@@ -93,6 +93,28 @@ digraph process {
 2. **Create TaskCreate list** — one Task per plan task, with dependency chain
 3. **Note context** — architectural decisions, domain constraints, file structure
 
+## Pre-flight Check
+
+Before dispatching the first Task, run a build/test pre-flight to catch pre-existing failures early. This prevents wasting multiple Task dispatches before discovering a broken baseline.
+
+**Controlled by** `impl_orchestration.pre_check` in ecw.yml (default: `true`). Set to `false` to skip.
+
+**Steps:**
+
+1. Read ecw.yml to determine project type and verification settings:
+   - Java (`pom.xml` exists): run `mvn compile -q -T 1C`
+   - If `verification.run_tests` is true: also run `mvn test -q -T 1C`
+   - Other project types: skip (no universal pre-flight command)
+2. **Timeout**: 120s for compile, `verification.test_timeout` (default 300s) for tests
+3. **On failure**:
+   - Attempt one auto-fix pass (read error output, fix obvious issues like missing imports or syntax errors)
+   - Re-run the failed check
+   - If still failing: notify user with the error summary via AskUserQuestion — "Pre-flight check failed: {summary}. Continue anyway or fix first?" — then proceed based on user choice
+4. **Record result** in session-state.md: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
+5. On success or user-approved continue: proceed to Per-Task Cycle
+
+**Rationale:** In the WMS P0 session, a pre-existing compilation issue wasn't caught until Task 4, costing 17 min of wasted dispatch+review cycles. Pre-flight catches this at minute 0.
+
 ## Per-Task Cycle
 
 ### 1. Dispatch Implementer

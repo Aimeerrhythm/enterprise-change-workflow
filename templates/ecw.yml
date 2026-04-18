@@ -80,7 +80,6 @@ scan_patterns:
   # db_write: "INSERT|UPDATE|DELETE"             # SQL 写操作。命中说明直接修改数据，需关注事务边界和数据一致性。
   # cache_op: "redisTemplate|RedissonClient"     # 缓存操作。命中说明涉及缓存读写，需关注缓存一致性和过期策略。
   # scheduled: "@Scheduled|@XxlJob"              # 定时任务。命中说明是定时触发逻辑，修改可能影响执行频率和业务时序。
-
 # 完成验证配置
 # verify-completion hook 的行为控制。
 verification:
@@ -89,6 +88,13 @@ verification:
   run_tests: true
   # mvn test 超时秒数。超时不阻止完成，仅输出警告。
   test_timeout: 300
+
+# impl-orchestration 配置
+impl_orchestration:
+  # 首 Task 前是否执行编译/测试预检。
+  # true（默认）：在 dispatch 第一个 Task 前运行项目构建验证，提前暴露 baseline 问题。
+  # false：跳过预检，直接开始 Task 分发。
+  pre_check: true
 
 # TDD 流程配置
 # 控制测试先行流程的行为。与 risk-classifier 路由联动。
