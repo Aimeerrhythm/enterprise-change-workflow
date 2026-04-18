@@ -150,6 +150,59 @@ class TestStopPersistMain:
                 assert output["result"] == "continue"
 
 
+
+
+# ══════════════════════════════════════════════════════
+# _extract_current_phase (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestExtractCurrentPhase:
+    """Tests for _extract_current_phase from session-state content."""
+
+    def test_extracts_phase(self, stop_persist):
+        content = "- **Current Phase**: implementation\n- **Risk Level**: P0\n"
+        assert stop_persist._extract_current_phase(content) == "implementation"
+
+    def test_returns_none_when_missing(self, stop_persist):
+        assert stop_persist._extract_current_phase("no phase here") is None
+
+
+# ══════════════════════════════════════════════════════
+# _build_stop_section (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestBuildStopSection:
+    """Tests for _build_stop_section timestamp + activity formatting."""
+
+    def test_contains_last_updated(self, stop_persist):
+        input_data = {"tool_calls": [{"tool_name": "Read", "tool_input": {}}]}
+        section = stop_persist._build_stop_section(input_data)
+        assert "Last Updated" in section
+        assert "Activity" in section
+
+    def test_contains_tool_summary(self, stop_persist):
+        input_data = {"tool_calls": [
+            {"tool_name": "Edit", "tool_input": {"file_path": "/a/b.py"}},
+            {"tool_name": "Edit", "tool_input": {"file_path": "/a/c.py"}},
+        ]}
+        section = stop_persist._build_stop_section(input_data)
+        assert "Edit(2)" in section
+
+
+# ══════════════════════════════════════════════════════
+# _update_context_advisory (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestUpdateContextAdvisory:
+    """Tests for phase transition detection and context health advisory."""
+
+    def test_no_phase_in_content_does_nothing(self, stop_persist, tmp_path):
+        """No phase field → no advisory written."""
+        advisory_path = tmp_path / ".claude" / "ecw" / "state" / "context-health.txt"
+        stop_persist._update_context_advisory(str(tmp_path), "no phase here")
+        assert not advisory_path.exists()
+
+
 class TestStopPersistScriptExists:
     def test_hook_script_exists(self):
         assert (HOOKS_DIR / "stop-persist.py").exists()

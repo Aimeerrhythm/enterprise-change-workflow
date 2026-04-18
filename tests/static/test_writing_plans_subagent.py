@@ -192,3 +192,38 @@ class TestDomainCollabDownstreamRead:
             "domain-collab must reference downstream skills"
         assert has_file_read, \
             "domain-collab must specify downstream skills read from file, not conversation history"
+
+
+class TestDomainCollabArchitecture:
+    """Verify domain-collab SKILL.md has multi-round collaboration architecture."""
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = _read_skill("domain-collab")
+        self.lower = self.content.lower()
+
+    def test_has_three_round_structure(self):
+        """Must describe 3 rounds: independent analysis, negotiation, cross-validation."""
+        assert "round 1" in self.lower
+        assert "round 2" in self.lower
+        assert "round 3" in self.lower
+
+    def test_has_parallel_agent_dispatch(self):
+        """Must dispatch domain agents in parallel (single message)."""
+        assert re.search(r'parallel|single\s+message', self.lower)
+
+    def test_has_round2_skip_rule(self):
+        """Must describe Round 2 skip rule for impact_level: none domains."""
+        assert "skip" in self.lower and "round 2" in self.lower
+
+    def test_has_knowledge_summary_output(self):
+        """Must produce knowledge-summary.md for downstream reuse."""
+        assert "knowledge-summary.md" in self.content
+
+    def test_has_domain_collab_report_output(self):
+        """Must produce domain-collab-report.md as full report."""
+        assert "domain-collab-report.md" in self.content
+
+    def test_has_model_selection(self):
+        """Must specify model for domain analysis agents (opus)."""
+        assert "opus" in self.lower

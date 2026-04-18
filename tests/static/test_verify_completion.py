@@ -861,3 +861,76 @@ class TestExceptionSafety:
                     hook_module.main()
                 except RuntimeError:
                     pass  # Expected — the actual script wraps this in try/except
+
+
+# ══════════════════════════════════════════════════════
+# ECW Artifact Filtering (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestIsEcwArtifact:
+    """Tests for _is_ecw_artifact and ECW_ARTIFACT_PREFIXES filtering."""
+
+    def test_knowledge_file_is_artifact(self, hook_module):
+        assert hook_module._is_ecw_artifact(".claude/knowledge/order/business-rules.md") is True
+
+    def test_session_data_file_is_artifact(self, hook_module):
+        assert hook_module._is_ecw_artifact(".claude/ecw/session-data/wf-001/session-state.md") is True
+
+    def test_plans_file_is_artifact(self, hook_module):
+        assert hook_module._is_ecw_artifact(".claude/plans/plan-001.md") is True
+
+    def test_state_file_is_artifact(self, hook_module):
+        assert hook_module._is_ecw_artifact(".claude/ecw/state/instincts.md") is True
+
+    def test_source_code_is_not_artifact(self, hook_module):
+        assert hook_module._is_ecw_artifact("src/main/java/com/example/Service.java") is False
+
+    def test_ecw_config_is_not_artifact(self, hook_module):
+        """ecw.yml is under .claude/ecw/ but NOT under any artifact prefix."""
+        assert hook_module._is_ecw_artifact(".claude/ecw/ecw.yml") is False
+
+    def test_artifact_prefixes_completeness(self, hook_module):
+        """ECW_ARTIFACT_PREFIXES must contain exactly the 4 expected prefixes."""
+        expected = {".claude/knowledge/", ".claude/ecw/session-data/",
+                    ".claude/plans/", ".claude/ecw/state/"}
+        assert set(hook_module.ECW_ARTIFACT_PREFIXES) == expected
+
+
+class TestArtifactFilteringInCheck:
+    """Verify that check() filters ECW artifacts before running sub-checks."""
+
+    def test_only_artifacts_changed_skips_reference_checks(self, hook_module, tmp_project):
+        """When only ECW artifacts are modified, reference checks are not triggered."""
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=([".claude/knowledge/order/rules.md",
+                                         ".claude/ecw/session-data/wf1/state.md"], [])):
+            with patch.object(hook_module, "check_broken_references") as mock_ref:
+                with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                    with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                        action, _ = hook_module.check(input_data)
+                        assert action == "continue"
+                        mock_ref.assert_not_called()
+
+    def test_mixed_files_only_checks_source(self, hook_module, tmp_project):
+        """When artifacts and source files are mixed, only source files are checked."""
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=([".claude/knowledge/order/rules.md",
+                                         "src/Main.java"], [])):
+            with patch.object(hook_module, "check_broken_references", return_value=[]) as mock_ref:
+                with patch.object(hook_module, "check_java_compilation", return_value=([], [])) as mock_compile:
+                    with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                        hook_module.check(input_data)
+                        # check_broken_references called only for source file
+                        mock_ref.assert_called_once_with(str(tmp_project), "src/Main.java")
+                        # check_java_compilation receives only source files
+                        mock_compile.assert_called_once_with(str(tmp_project), ["src/Main.java"])
