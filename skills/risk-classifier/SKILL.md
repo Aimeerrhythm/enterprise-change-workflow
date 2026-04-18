@@ -604,6 +604,15 @@ Phase 3 calibration complete: Predicted level P{x} matches actual impact. No adj
 Phase 3 calibration complete: Predicted level P{x}, actual closer to P{y}. Minor deviation within acceptable range.
 ```
 
+> **Two calibration files — distinct roles:**
+>
+> | File | Role | Format | Consumer |
+> |------|------|--------|----------|
+> | `calibration-log.md` | Full-dimension comparison log | Detailed table (Phase 1/2/Actual per dimension) | Human review, pattern analysis |
+> | `calibration-history.md` | Quick-lookup structured index | Concise bullet list (Predicted/Actual/Keywords) | Phase 1 automated reference |
+>
+> `calibration-log.md` is the source of truth; `calibration-history.md` is a derived index optimized for Phase 1 to scan quickly without parsing tables. Both are appended in the same Phase 3 execution — log first, then history.
+
 #### Step 4: Append Calibration Record
 
 After each Phase 3 execution, append calibration results to `.claude/ecw/calibration-log.md` (path configurable via ecw.yml `paths.calibration_log`).

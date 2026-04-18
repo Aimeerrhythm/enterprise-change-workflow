@@ -100,7 +100,7 @@ User proposes requirement / change / bug
 | `ecw:writing-plans` | After requirements analysis (P0-P2) | Risk-aware implementation planning with domain context injection and downstream handoff |
 | `ecw:spec-challenge` | After plan output (P0; P1 cross-domain only) | Dispatches independent agent for adversarial plan review, challenge-response cycles |
 | `ecw:tdd` | Before implementation code (P0-P2) | Risk-differentiated test-driven development with ecw.yml integration |
-| `ecw:impl-orchestration` | Plan execution with 4+ tasks (P0/P1) | Fresh subagent per task + risk-aware review gates, replaces manual task-by-task execution |
+| `ecw:impl-orchestration` | Plan execution with 4+ tasks (P0/P1) | Dependency-graph parallel layers + worktree isolation + risk-aware review gates |
 | `ecw:systematic-debugging` | Bug/test failure/unexpected behavior | Domain-knowledge-driven root cause analysis with cross-domain tracing (§1-§5) |
 | `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit |
 | `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
