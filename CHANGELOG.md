@@ -4,6 +4,18 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.8.0] - 2026-04-18
+
+### 新增
+
+- **impl-orchestration 并行执行** — 依赖图分析 + worktree 隔离并行调度 implementer subagent。串行 N 个 Task 压缩为 L 层并行（WMS 案例: 13 Task 串行 93min → 理论 5 层 ~25min）。含文件级冲突检测、最大并行度控制（默认 3）、合并冲突处理、串行 fallback
+- **ecw.yml `impl_orchestration` 配置段** — 新增 parallel/max_parallelism/pre_check/merge_compile_check 四项配置，ecw-upgrade 自动补充
+- **ecw-monitor 告警扫描** — assistant text content 关键词扫描（超时/timeout/fallback/失控/error/失败/degraded/异常），命中时输出 Alerts section
+
+### 改进
+
+- **calibration 双文件分工明确化** — `calibration-log.md`（完整维度对比，人工 review 用）与 `calibration-history.md`（简洁索引，Phase 1 自动检索用）。risk-classifier SKILL.md、CLAUDE.md、模板均补充分工说明
+
 ## [0.6.6] - 2026-04-17
 
 ### 修复

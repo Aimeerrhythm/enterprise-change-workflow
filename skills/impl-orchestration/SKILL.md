@@ -5,13 +5,13 @@ description: Use when executing implementation plans with independent tasks. Ris
 
 # Implementation Orchestration
 
-Execute plan by dispatching fresh subagent per task, with risk-aware review gates after each.
+Execute plan by dispatching subagents per task in dependency-aware parallel layers, with risk-aware review gates.
 
 **Why subagents:** Delegate tasks to specialized agents with isolated context. Precisely craft their instructions — they never inherit your session context. This preserves your context for coordination work.
 
-**Core principle:** Fresh subagent per task + risk-aware review = high quality, fast iteration.
+**Core principle:** Dependency graph → parallel layers → worktree-isolated dispatch → merge → review = high quality, fast execution.
 
-**Announce at start:** "Using ecw:impl-orchestration to execute the plan task-by-task."
+**Announce at start:** "Using ecw:impl-orchestration to execute the plan with parallel layer dispatch."
 
 **Mode switch**: Update session-state.md MODE marker to `implementation`.
 
@@ -47,42 +47,39 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. I
 digraph process {
     rankdir=TB;
 
-    subgraph cluster_per_task {
-        label="Per Task Cycle";
-        dispatch [label="Dispatch implementer\n(./implementer-prompt.md)"];
-        questions [label="Implementer asks\nquestions?" shape=diamond];
-        answer [label="Answer, provide context"];
-        implement [label="Implementer: implement,\ntest, commit, self-review"];
-        spec_review [label="Dispatch spec reviewer\n(./spec-reviewer-prompt.md)"];
-        spec_ok [label="Spec compliant?" shape=diamond];
-        spec_fix [label="Implementer fixes\nspec gaps"];
-        code_review [label="P0: Code quality\nreview (inline prompt)"];
-        code_ok [label="Quality approved?" shape=diamond];
-        code_fix [label="Implementer fixes\nquality issues"];
-        mark_done [label="Mark task complete\n+ update Subagent Ledger"];
+    subgraph cluster_setup {
+        label="Setup";
+        read_plan [label="Read plan,\nextract tasks"];
+        build_graph [label="Build dependency graph\n(explicit deps + file conflicts)"];
+        show_layers [label="Display execution layers\nto user"];
+        precheck [label="Pre-check:\ncompile + test baseline"];
+        read_plan -> build_graph -> show_layers -> precheck;
     }
 
-    init [label="Read plan, extract tasks,\ncreate TaskCreate list"];
-    more [label="More tasks?" shape=diamond];
+    subgraph cluster_layer {
+        label="Per Layer Cycle";
+        dispatch_parallel [label="Phase 1: Dispatch\nimplementers in parallel\n(worktree-isolated)"];
+        merge [label="Phase 2: Merge\nworktree branches\n(sequential)"];
+        review_parallel [label="Phase 3: Spec review\n(parallel, read-only)"];
+        fix_issues [label="Fix spec issues\n(sequential on main)"];
+        review_ok [label="All spec\napproved?" shape=diamond];
+        code_quality [label="Phase 4: Code quality\nreview (P0, parallel)"];
+        complete_layer [label="Phase 5: Mark tasks\ncomplete + Ledger"];
+
+        dispatch_parallel -> merge -> review_parallel -> review_ok;
+        review_ok -> fix_issues [label="no"];
+        fix_issues -> review_parallel [label="re-review"];
+        review_ok -> code_quality [label="yes\n(P0)"];
+        review_ok -> complete_layer [label="yes\n(P1)"];
+        code_quality -> complete_layer;
+    }
+
+    more [label="More layers?" shape=diamond];
     impl_verify [label="Invoke ecw:impl-verify"];
 
-    init -> dispatch;
-    dispatch -> questions;
-    questions -> answer [label="yes"];
-    answer -> dispatch;
-    questions -> implement [label="no"];
-    implement -> spec_review;
-    spec_review -> spec_ok;
-    spec_ok -> spec_fix [label="no"];
-    spec_fix -> spec_review [label="re-review"];
-    spec_ok -> code_review [label="yes\n(P0 only)"];
-    spec_ok -> mark_done [label="yes\n(P1: skip)"];
-    code_review -> code_ok;
-    code_ok -> code_fix [label="no"];
-    code_fix -> code_review [label="re-review"];
-    code_ok -> mark_done [label="yes"];
-    mark_done -> more;
-    more -> dispatch [label="yes"];
+    precheck -> dispatch_parallel;
+    complete_layer -> more;
+    more -> dispatch_parallel [label="yes\n(next layer)"];
     more -> impl_verify [label="no"];
 }
 ```
@@ -90,8 +87,11 @@ digraph process {
 ## Setup
 
 1. **Read plan file once** — extract all tasks with full text
-2. **Create TaskCreate list** — one Task per plan task, with dependency chain
-3. **Note context** — architectural decisions, domain constraints, file structure
+2. **Build dependency graph** — see Dependency Graph Construction below
+3. **Create TaskCreate list** — one Task per plan task, with dependency chain
+4. **Display execution layers** — show user the parallel execution plan before starting
+5. **Pre-check** — read ecw.yml, run compile + test commands once to establish baseline. Timeout 120s. If pre-check fails: attempt auto-fix → retry → still fails: notify user and continue (don't block)
+6. **Note context** — architectural decisions, domain constraints, file structure
 
 ## Pre-flight Check
 
@@ -111,75 +111,155 @@ Before dispatching the first Task, run a build/test pre-flight to catch pre-exis
    - Re-run the failed check
    - If still failing: notify user with the error summary via AskUserQuestion — "Pre-flight check failed: {summary}. Continue anyway or fix first?" — then proceed based on user choice
 4. **Record result** in session-state.md: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
-5. On success or user-approved continue: proceed to Per-Task Cycle
+5. On success or user-approved continue: proceed to Dependency Graph Construction
 
 **Rationale:** In the WMS P0 session, a pre-existing compilation issue wasn't caught until Task 4, costing 17 min of wasted dispatch+review cycles. Pre-flight catches this at minute 0.
 
-## Per-Task Cycle
+## Dependency Graph Construction
 
-### 1. Dispatch Implementer
+Before dispatching any task, build a dependency graph to determine which tasks can run in parallel.
 
-Use `agents/implementer.md` prompt template. Inject:
-- Full task text (don't make subagent read plan file)
-- Scene-setting context (where this fits, dependencies)
-- ECW domain context (domain name, knowledge file paths, risk level)
-- TDD requirement (if `tdd.enabled` in ecw.yml)
-- Working directory
+### Step 1: Parse Explicit Dependencies
 
-Use Agent tool with `subagent_type: "general-purpose"`.
+Read the plan for dependency declarations:
+- "depends on Task N" / "after Task N" / "requires output from Task N"
+- Plan task ordering often implies sequence — but only enforce when explicitly stated or logically required (e.g., Task creates a class that another Task extends)
 
-**Model selection and timeout:**
+### Step 2: Detect File-Level Conflicts
 
-| Task Type | Model | Timeout | Criteria |
-|-----------|-------|---------|----------|
-| Mechanical tasks | `model: "haiku"` | 60s | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
-| Integration/design tasks | `model: "sonnet"` | 180s | Multi-file coordination, judgment needed, business logic |
-| Architecture tasks | `model: "opus"` | 300s | Cross-module structural decisions, complex state machines, deep reasoning required |
+For each task, identify files it will create or modify (from plan task description). Two tasks that touch **any** of the same files are **mutually exclusive** — add a dependency edge (lower-numbered task first).
 
-Default to `model: "sonnet"` when classification is ambiguous.
+Heuristics:
+- Plan usually lists "Files to create/modify" per task
+- Same module + same class/file → conflict
+- Same configuration file → conflict
+- Uncertain → assume conflict (safe default)
 
-**Agent-side execution limits** (enforced inside implementer.md): Implementer hard-stops at 100 tool calls and 15 source file reads. If a task is too large for these limits, split it before dispatching — do not rely on coordinator-side timeout alone.
+### Step 3: Build Execution Layers
 
-If implementer times out, terminate and re-dispatch with simplified task scope or escalate model (see Error Handling).
+Topological sort on the dependency graph, grouping tasks into layers:
+- **Layer 0**: Tasks with zero inbound dependency edges
+- **Layer N**: Tasks whose dependencies are all satisfied by layers < N
 
-### 2. Handle Implementer Status
+Display layer plan to user:
 
-**DONE:** Proceed to spec review.
+```
+Execution Layers (max parallelism: 3):
+  Layer 0: Task 1                       [1 task, serial]
+  Layer 1: Task 2 | Task 4 | Task 6    [3 parallel]
+  Layer 2: Task 3 | Task 5 | Task 7    [3 parallel]
+  Layer 3: Task 8 | Task 9 | Task 10   [3 parallel]
+  Layer 4: Task 12 | Task 13           [2 parallel]
 
-**DONE_WITH_CONCERNS:** Read concerns. If about correctness/scope, address before review. If observations, note and proceed.
+  Estimated: 5 layers (vs 13 serial tasks)
+```
 
-**NEEDS_CONTEXT:** Provide missing context and re-dispatch.
+### Max Parallelism
 
-**BLOCKED:** Assess:
-1. Context problem → provide more context, re-dispatch
-2. Task too hard → re-dispatch with more capable model
-3. Task too large → break into smaller pieces
-4. Plan wrong → use AskUserQuestion to discuss with user
+Default: **3** concurrent implementer subagents. Configurable via ecw.yml `impl_orchestration.max_parallelism`.
 
-**Re-dispatch limit**: Same task can be re-dispatched at most **2 times** after BLOCKED. If still BLOCKED after 2 re-dispatches, escalate to user via AskUserQuestion with full context of what was tried.
+If a layer has more tasks than max parallelism, split into sub-layers (e.g., 5 tasks with max 3 → sub-layer A: 3 tasks, sub-layer B: 2 tasks).
 
-**Never** ignore escalation or force same model to retry without changes.
+### Serial Fallback
 
-### 3. Spec Compliance Review
+Fall back to fully serial execution (no worktree isolation, original behavior) when:
+- Dependency graph is a single chain (all tasks mutually dependent)
+- Plan has ≤ 3 tasks (parallelism overhead exceeds benefit)
+- User explicitly requests serial execution
+- ecw.yml sets `impl_orchestration.parallel: false`
 
-Use `agents/spec-reviewer.md` prompt template. Inject:
-- Full task requirements
-- Implementer's report
+Announce: "Tasks are interdependent / few enough — using serial execution."
 
-**Model selection**: `model: "sonnet"` (spec compliance review requires understanding requirements and comparing against code — pattern-matching, not creative reasoning).
+## Layer Execution
+
+Execute one layer at a time. Each layer follows a 5-phase cycle.
+
+### Phase 1: Parallel Implementation (worktree-isolated)
+
+Dispatch ALL tasks in the current layer simultaneously. Each implementer runs in an isolated git worktree via the Agent tool's `isolation: "worktree"` parameter.
+
+**Critical**: ALL Agent calls for the same layer MUST be in a **single message** to achieve true parallel execution. Sequential calls defeat the purpose.
+
+```
+# Example: Layer 1 with 3 tasks — single message, 3 Agent calls
+Agent(
+  description: "impl Task 2: Add inventory lock DTO",
+  subagent_type: "ecw:implementer",
+  isolation: "worktree",
+  model: "sonnet",
+  prompt: "<full task prompt with context>"
+)
+Agent(
+  description: "impl Task 4: Add MQ consumer config",
+  subagent_type: "ecw:implementer",
+  isolation: "worktree",
+  model: "haiku",
+  prompt: "<full task prompt with context>"
+)
+Agent(
+  description: "impl Task 6: Add lock service interface",
+  subagent_type: "ecw:implementer",
+  isolation: "worktree",
+  model: "sonnet",
+  prompt: "<full task prompt with context>"
+)
+```
+
+Each implementer:
+- Works in its own worktree (isolated filesystem)
+- Commits changes to its worktree branch
+- Returns: status, changed files list, commit summary
+
+**Single-task layer optimization**: When a layer has only 1 task, skip worktree isolation — dispatch directly on the current branch. Avoids unnecessary merge overhead.
+
+### Phase 2: Sequential Merge
+
+After ALL implementers in the layer complete, merge their worktree branches into the current branch **one by one**:
+
+```bash
+# For each completed worktree branch:
+git merge <worktree-branch> --no-edit
+```
+
+**Merge order**: Merge largest changeset first (more context for subsequent merges).
+
+**Conflict handling:**
+
+| Scenario | Action |
+|----------|--------|
+| Clean merge | Continue to next branch |
+| Conflict in test files only | Auto-resolve: keep both versions, fix imports/duplicates |
+| Conflict in source files | This should be rare (file-conflict detection prevents it). Attempt auto-resolve → if fails: mark task for re-execution in a later serial pass |
+| Merge fails completely | `git merge --abort`, move the failed task to an overflow serial layer at the end |
+
+After all merges succeed, run a quick compile check (if configured in ecw.yml) to verify no integration issues.
+
+### Phase 3: Parallel Spec Review
+
+Dispatch spec reviewers for ALL layer tasks simultaneously. Reviews are read-only — no worktree needed:
+
+```
+# All spec reviews in a single message
+Agent(description: "spec-review Task 2", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
+Agent(description: "spec-review Task 4", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
+Agent(description: "spec-review Task 6", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
+```
 
 The reviewer reads actual code and verifies:
 - Missing requirements
 - Extra/unneeded work
 - Misunderstandings
 
-If issues found → implementer fixes → re-review. Repeat until approved (max 3 rounds — see Loop Safety Controls).
+If issues found for any task:
+1. Fix issues on the current branch (sequential — fixes may touch shared files)
+2. Re-review only the failed tasks
+3. Max 3 rounds per task (see Loop Safety Controls)
 
 **Spec reviewer timeout**: 120s. If reviewer times out, coordinator performs simplified spec check inline.
 
-### 4. Code Quality Review (P0 Only)
+### Phase 4: Code Quality Review (P0 Only)
 
-For P0 risk level, after spec compliance passes, dispatch a code quality review (`model: "sonnet"` — quality review is pattern-matching against engineering standards):
+For P0 risk level, after ALL spec reviews pass, dispatch code quality reviews in parallel:
 
 ```
 Agent(description: "Code quality review for Task N"):
@@ -199,22 +279,67 @@ Agent(description: "Code quality review for Task N"):
   Report: Strengths, Issues (Critical/Important/Minor), Assessment (Approved/Needs Fix)
 ```
 
-If issues found → implementer fixes → re-review (max 2 rounds — see Loop Safety Controls).
+If issues found → fix sequentially on current branch → re-review (max 2 rounds per task).
 
-### 5. Complete Task
+### Phase 5: Complete Layer
 
-- Mark task complete in TaskUpdate
-- **[MANDATORY] Update Subagent Ledger** in `session-state.md`. This is a required step, not optional. Every dispatched subagent MUST have a Ledger entry. Frequency options:
-  - **Preferred**: Update after each Task completes (ensures no entries are lost if session is interrupted)
-  - **Acceptable**: Batch update every 3-5 Tasks (reduces Edit calls; but if you choose this, flush the batch after the last Task completes — never leave unwritten Ledger entries)
-- P0: record all three lines (implementer + spec-reviewer + code-quality); P1: record implementer + spec-reviewer only (skip code-quality)
-- Note time before each dispatch and compute duration after return：
+- Mark all layer tasks complete via TaskUpdate
+- **[MANDATORY] Update Subagent Ledger** in `session-state.md` — batch all layer tasks in a single Edit:
+  - P0: record implementer + spec-reviewer + code-quality per task
+  - P1: record implementer + spec-reviewer per task
+  - Include worktree branch name in notes column for traceability
+- Record layer timing: `Layer {N}: {task_count} tasks, {elapsed}s (parallel), merge {merge_time}s`
+- Proceed to next layer
 
 ```markdown
-| {task_name} | implementer | {model} | — | {HH:mm} | {duration} |
-| {task_name} | spec-reviewer | {model} | — | {HH:mm} | {duration} |
-| {task_name} | code-quality | {model} | — | {HH:mm} | {duration} |  ← P0 only
+| Task 2: Add DTO | implementer | sonnet | — | 14:30 | 45s | worktree: wt-task-2 |
+| Task 2: Add DTO | spec-reviewer | sonnet | — | 14:31 | 20s | |
+| Task 4: MQ config | implementer | haiku | — | 14:30 | 30s | worktree: wt-task-4 |
+| Task 4: MQ config | spec-reviewer | sonnet | — | 14:31 | 18s | |
 ```
+
+## Implementer Prompt Construction
+
+Use `agents/implementer.md` prompt template (via `subagent_type: "ecw:implementer"`). Inject:
+- Full task text (don't make subagent read plan file)
+- Scene-setting context (where this fits, dependencies, what prior layers already built)
+- ECW domain context (domain name, knowledge file paths, risk level)
+- TDD requirement (if `tdd.enabled` in ecw.yml)
+- Working directory
+- **For worktree dispatch**: "You are in an isolated worktree. Implement, test, and commit. Your changes will be merged after review."
+- **Completed layer context**: Briefly list what prior layers implemented (file names + one-line summary), so the implementer understands what already exists
+
+**Model selection and timeout:**
+
+| Task Type | Model | Timeout | Criteria |
+|-----------|-------|---------|----------|
+| Mechanical tasks | `model: "haiku"` | 60s | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
+| Integration/design tasks | `model: "sonnet"` | 180s | Multi-file coordination, judgment needed, business logic |
+| Architecture tasks | `model: "opus"` | 300s | Cross-module structural decisions, complex state machines, deep reasoning required |
+
+Default to `model: "sonnet"` when classification is ambiguous.
+
+**Agent-side execution limits** (enforced inside implementer.md): Implementer hard-stops at 100 tool calls and 15 source file reads. If a task is too large for these limits, split it before dispatching — do not rely on coordinator-side timeout alone.
+
+If implementer times out, terminate and re-dispatch with simplified task scope or escalate model (see Error Handling).
+
+## Handle Implementer Status
+
+**DONE:** Proceed to merge (parallel) or spec review (serial fallback).
+
+**DONE_WITH_CONCERNS:** Read concerns. If about correctness/scope, address before review. If observations, note and proceed.
+
+**NEEDS_CONTEXT:** Provide missing context and re-dispatch (in worktree mode, re-dispatch to same worktree path if possible; otherwise create new worktree).
+
+**BLOCKED:** Assess:
+1. Context problem → provide more context, re-dispatch
+2. Task too hard → re-dispatch with more capable model
+3. Task too large → break into smaller pieces
+4. Plan wrong → use AskUserQuestion to discuss with user
+
+**Re-dispatch limit**: Same task can be re-dispatched at most **2 times** after BLOCKED. If still BLOCKED after 2 re-dispatches, escalate to user via AskUserQuestion with full context of what was tried.
+
+**Never** ignore escalation or force same model to retry without changes.
 
 ## Loop Safety Controls
 
@@ -231,10 +356,12 @@ Guard against infinite loops and runaway subagent costs.
 
 ### Global Budget
 
-**Total subagent dispatches across all tasks: maximum 30.** Count every Agent tool call (implementer, spec-reviewer, code-quality, re-dispatch). When approaching the limit (≥ 25), warn user: "Approaching global dispatch budget ({N}/30). {M} tasks remaining."
+**Total subagent dispatches across all tasks: maximum 50.** Count every Agent tool call (implementer, spec-reviewer, code-quality, re-dispatch). Parallel dispatches in the same message each count as 1.
+
+When approaching the limit (≥ 40), warn user: "Approaching global dispatch budget ({N}/50). {M} tasks remaining."
 
 If budget exhausted before all tasks complete, escalate to user with options:
-1. "Extend budget" — continue with +10 dispatches
+1. "Extend budget" — continue with +15 dispatches
 2. "Switch to direct implementation" — complete remaining tasks without subagents
 3. "Stop here" — mark remaining tasks as pending for next session
 
@@ -254,6 +381,14 @@ Track spec review failure reasons per task. If the **same spec gap** (matching d
 If a single task consumes **≥ 6 subagent dispatches** (implementation + reviews + re-dispatches combined), pause and escalate:
 
 "Task {N} has consumed {count} dispatches without completing. This suggests the task may be too complex or the plan may need revision."
+
+### Layer Timeout
+
+If all implementers in a layer exceed their individual timeouts AND total layer wall-clock time exceeds **600s**, terminate remaining agents:
+1. Collect results from completed agents
+2. Move timed-out tasks to a retry sub-layer
+3. Retry with simplified scope or escalated model
+4. If retry also times out, escalate to user
 
 ## After All Tasks
 
@@ -278,13 +413,16 @@ If a single task consumes **≥ 6 subagent dispatches** (implementation + review
 | Spec reviewer returns empty or malformed | Retry once → still fails: coordinator performs simplified spec check inline (verify file changes match task requirements) |
 | Code quality reviewer fails (P0 only) | Retry once → still fails: skip code quality review for this task with `[Warning: code quality review unavailable for Task N]`, continue to next task. impl-verify Round 4 will catch quality issues |
 | Implementer returns BLOCKED status | 1. Context problem → provide more context, re-dispatch 2. Task too complex → escalate model 3. Plan issue → AskUserQuestion to discuss with user. Max 2 re-dispatches per task, then escalate to user |
+| Worktree merge conflict (unexpected) | Log as dependency graph miss. `git merge --abort`, move conflicting task to overflow serial layer at end |
+| Multiple implementers fail in same layer | Merge successful ones, move failed ones to retry layer |
+| Post-merge compile failure | Identify which merge introduced the issue (bisect last N merges). Fix inline or re-dispatch implementer for the offending task |
+| Layer fully times out | Terminate remaining agents. Retry timed-out tasks with simplified scope. If still failing, escalate to user |
 
 ## Never Rules
 
 - Start implementation on main/master without explicit user consent
 - Skip spec compliance review
 - Proceed with unfixed spec issues
-- Dispatch multiple implementation subagents in parallel (conflicts)
 - Make subagent read plan file (provide full text)
 - Skip scene-setting context
 - Ignore subagent questions
@@ -294,6 +432,8 @@ If a single task consumes **≥ 6 subagent dispatches** (implementation + review
 - **Start code quality review before spec compliance passes** (wrong order)
 - Move to next task while review has open issues
 - **Skip fact-forcing gate** — implementers must quote task requirements before editing and check cross-domain file ownership
+- **Dispatch parallel tasks that share files** — file-conflict detection must prevent this; if missed, merge will fail
+- **Send parallel Agent calls in separate messages** — all same-layer dispatches go in ONE message
 
 ## Task Merging
 
@@ -302,3 +442,17 @@ If plan has many small tasks, consider merging per risk-classifier rules:
 - State machine / cross-domain / multi-file = must stay independent
 
 Reference risk-classifier "实现策略选择" section for authoritative rules. Do not redefine here.
+
+## ecw.yml Configuration
+
+New configuration fields for parallel execution:
+
+```yaml
+impl_orchestration:
+  parallel: true                 # Enable parallel execution (default: true)
+  max_parallelism: 3             # Max concurrent implementer subagents (default: 3)
+  pre_check: true                # Run compile+test before first task (default: true)
+  merge_compile_check: true      # Run compile check after each layer merge (default: true)
+```
+
+When `parallel: false`, the orchestrator uses the serial fallback mode throughout.
