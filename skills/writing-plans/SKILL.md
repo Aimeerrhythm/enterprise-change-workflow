@@ -129,73 +129,11 @@ This structure informs the task decomposition.
 
 ## Plan Document Header
 
-**Save plans to:** `.claude/plans/<feature-name>.md`
-
-**Every plan MUST start with this header:**
-
-```markdown
-# [Feature Name] Implementation Plan
-
-> **Risk Level:** P{N} | **Domains:** {domain list} | **Implementation Strategy:** {direct | subagent-driven}
-
-**Goal:** [One sentence describing what this builds]
-
-**Architecture:** [2-3 sentences about approach]
-
-**Tech Stack:** [Key technologies/libraries]
-
----
-```
-
-**Implementation Strategy** is read from `session-state.md` `实现策略` field. If TBD or unavailable, determine by risk-classifier's "Implementation Strategy Selection" rules: Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven.
+Read `./plan-header-template.md` for the exact header format. Every plan MUST start with this header. Save plans to `.claude/plans/<feature-name>.md`.
 
 ## Task Structure
 
-````markdown
-### Task N: [Component Name]
-
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
-
-**Test Context:**
-- Test framework: {from pom.xml/package.json, e.g., JUnit 5 + MockitoExtension}
-- Base test class: {from ecw.yml tdd.base_test_class, or "none"}
-- Key dependencies for test: {list interfaces/classes the test needs to mock or import, with file paths}
-
-- [ ] **Step 1: Write the failing test**
-
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
-
-- [ ] **Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
-````
+Read `./task-structure-template.md` for the full task format with TDD step-by-step cycle, file paths, and test context. Each task follows this structure.
 
 ## No Placeholders
 
@@ -278,3 +216,8 @@ After saving the plan, determine and persist implementation strategy, then route
 **4. Offer execution choice via AskUserQuestion:** (when spec-challenge NOT needed)
 - "Subagent-Driven (Recommended)" — dispatch fresh subagent per task via ecw:impl-orchestration
 - "Direct Implementation" — implement tasks sequentially in current session
+
+## Supplementary Files
+
+- `plan-header-template.md` — Plan document header format
+- `task-structure-template.md` — Task format with TDD step-by-step cycle

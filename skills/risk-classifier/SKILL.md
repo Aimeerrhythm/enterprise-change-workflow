@@ -234,35 +234,9 @@ After user selection, execute the corresponding route directly without re-confir
 
 ### State Persistence
 
-After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md` (user may adjust level during confirmation; writing after confirmation ensures data accuracy). The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write:
+After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md` (user may adjust level during confirmation; writing after confirmation ensures data accuracy). The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write.
 
-```markdown
-# ECW Session State
-
-<!-- ECW:STATUS:START -->
-- **Risk Level**: P{X}
-- **Domains**: {domain list}
-- **Mode**: {single-domain/cross-domain}
-- **Routing**: {full routing chain}
-- **Current Phase**: phase1-complete
-- **Created**: {YYYY-MM-DD HH:mm}
-- **Workflow ID**: {YYYYMMDD-HHmm}
-- **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
-- **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
-- **Auto-Continue**: yes
-<!-- ECW:STATUS:END -->
-
-<!-- ECW:MODE:START -->
-- **Working Mode**: analysis
-<!-- ECW:MODE:END -->
-
-<!-- ECW:LEDGER:START -->
-## Subagent Ledger
-
-| Phase | Agent | Type | Est. Scale | Started | Duration |
-|-------|-------|------|-----------|---------|----------|
-<!-- ECW:LEDGER:END -->
-```
+**Before writing session-state.md**, Read `./session-state-format.md` for the exact file template, marker conventions, working mode definitions, and context management advisory.
 
 This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. **Record timestamps** for governance audit: note the time before dispatch (`Started`, HH:mm format) and compute elapsed time after return (`Duration`, e.g. "2m", "45s"). Purposes:
 - Restore context when continuing work in a new session
@@ -279,34 +253,6 @@ All session-scoped files (including session-state.md itself) live under `.claude
 - User can view current ECW workflow state
 - Manual recovery after compression (user says "read ECW state")
 - Monitoring scripts to assess subagent consumption
-
-> **Marker-based updates**: session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent table), `STOP` (auto-updated by Stop hook).
-
-> **Working modes**: Each skill sets the `MODE` marker section on entry to declare the current working mode. This helps post-compaction recovery understand the workflow phase. Mode definitions:
->
-> | Mode | Set by | Behavior |
-> |------|--------|----------|
-> | `analysis` | risk-classifier, requirements-elicitation, domain-collab | Focus on understanding requirements; read broadly before concluding |
-> | `planning` | writing-plans, spec-challenge | Design implementation approach; prioritize cross-file consistency |
-> | `implementation` | impl-orchestration, tdd, systematic-debugging | Write code; keep atomic commits; run tests after each change |
-> | `verification` | impl-verify, biz-impact-analysis | Review completed work; severity-grade findings; do not modify code |
->
-> **Mode switch**: When entering a skill, update the MODE marker: `<!-- ECW:MODE:START -->\n- **Working Mode**: {mode}\n<!-- ECW:MODE:END -->`
-
-> **Session advisory — context management**:
->
-> After Plan completion (writing-plans finishes), evaluate whether to continue or start a new session:
->
-> | Signal | Advisory |
-> |--------|----------|
-> | P0/P1 with prior domain-collab or requirements-elicitation | **Strongly recommend new session** — requirement analysis + plan writing likely consumed 100K+ context |
-> | P2 with Plan ≥ 5 Tasks | **Recommend new session** — TDD for many tasks will push context toward compaction threshold |
-> | P2 with Plan ≤ 4 Tasks, no prior requirement analysis | **Continue** — context overhead is manageable |
-> | P3 | **Continue** — no formal plan, minimal context |
->
-> Full workflow for P0 cross-domain changes typically requires 500+ turns. Recommend switching to a new session after plan completion (after spec-challenge) to avoid context compression causing information loss.
->
-> **New session recovery**: Tasks created by TaskCreate do not persist across sessions. When a new session reads `session-state.md` to restore context, it needs to re-create pending Tasks based on the `Post-Implementation Tasks` field (using the TaskCreate rules above).
 
 ### Route Task Creation
 
@@ -489,33 +435,7 @@ Reference the three-dimensional factor table in the file specified by ecw.yml `p
 
 ### Phase 2 Output Format
 
-```markdown
-## Change Risk Precise Assessment (Phase 2)
-
-### Risk Level: P{X} (Phase 1 pre-assessment: P{Y}, {upgraded/downgraded/unchanged})
-
-### Classification Factors
-| Factor | Level | Rationale |
-|--------|-------|-----------|
-| Impact Scope | P{X} | {details: which shared resources/cross-domain calls/MQ Topics} |
-| Change Type | P{X} | {details: state machine/signature/SQL etc.} |
-| Business Sensitivity | P{X} | {details: inventory/tasks/orders etc.} |
-
-### Impact Scope Details
-- **Shared resources:** {list}
-- **Cross-domain calls:** {list}
-- **MQ Topics:** {list}
-- **End-to-end paths:** {path ID + affected steps}
-- **External systems:** {list}
-
-### Level Change
-{upgrade → list workflow steps to backfill}
-{downgrade → list workflow steps that can be skipped (suggested, user decides)}
-{unchanged → "Phase 1 pre-assessment was accurate, proceed as planned"}
-
-### Downstream Workflow (Updated)
-{list remaining workflow steps based on final level}
-```
+**Before generating Phase 2 report**, Read `./phase2-output-template.md` for the exact output structure.
 
 > **CRITICAL — Phase 2 Auto-Continue**: After outputting the Phase 2 report and writing the checkpoint, **immediately invoke** the next skill in the routing chain (typically `ecw:writing-plans`). Do NOT output text asking "是否继续", "Ready?", or any confirmation. The Auto-Continue rule from Phase 1 still applies — the user already confirmed the full workflow.
 
@@ -567,153 +487,16 @@ Based on biz-impact-analysis actual impact scope, use the three-dimensional fact
 
 #### Step 3: Output Calibration Suggestions
 
-**When deviation is significant** (level difference ≥ 2, or key dimension deviation ≥ 50%), output calibration suggestions:
+**Before generating Phase 3 output**, Read `./phase3-output-template.md` for the three output format variants (significant deviation with suggestions, accurate prediction, minor deviation). Choose the variant matching the determination from Step 2.
 
-```markdown
-## Risk Prediction Calibration Suggestions (Phase 3)
+#### Steps 4-6: Persist Calibration Records
 
-### Predicted vs. Actual
-| Dimension | Phase 1 Predicted | Phase 2 Precise | biz-impact-analysis Actual |
-|-----------|------------------|-----------------|---------------------------|
-| Risk Level | P{x} | P{y} | Should be P{z} |
-| Affected domain count | {n} | {n} | {n} |
-| Cross-domain calls | {n} | {n} | {n} |
-| MQ Topics | {n} | {n} | {n} |
-| External systems | {n} | {n} | {n} |
+After outputting calibration suggestions (Step 3), persist results to three files. Read `./phase3-calibration-formats.md` for the exact format of each:
+- Step 4: Append to `calibration-log.md` (full-dimension comparison log)
+- Step 5: Append to `calibration-history.md` (quick-lookup structured index for Phase 1)
+- Step 6: Extract/update instincts in `instincts.md` (heuristic rules for future predictions)
 
-### Deviation Analysis
-{Root cause analysis: Why was the prediction inaccurate?}
-- Keyword match missed? → change-risk-classification.md needs additional keywords
-- Shared resource table incomplete? → shared-resources.md needs consumer domain list additions
-- Domain registry scope inaccurate? → domain-registry.md needs code directory adjustment
-- Cross-domain call matrix missing? → cross-domain-calls.md needs call relationship additions
-
-### Suggested Adjustments
-- `change-risk-classification.md`: {specific suggestion, e.g., "Upgrade keyword XXX from P2 to P1"}
-- `shared-resources.md`: {e.g., "Add consumer domain list for shared resource XXX"}
-- `domain-registry.md`: {e.g., "Expand code directory scope for domain XXX"}
-- `cross-domain-calls.md`: {e.g., "Add call relationship A→B"}
-
-> Above are suggestions only. Require user confirmation before manual configuration changes.
-```
-
-**When prediction is accurate**, output brief confirmation:
-
-```
-Phase 3 calibration complete: Predicted level P{x} matches actual impact. No adjustments needed.
-```
-
-**When deviation is minor** (level difference 1 and key dimension deviation < 50%), record but do not output suggestions:
-
-```
-Phase 3 calibration complete: Predicted level P{x}, actual closer to P{y}. Minor deviation within acceptable range.
-```
-
-> **Two calibration files — distinct roles:**
->
-> | File | Role | Format | Consumer |
-> |------|------|--------|----------|
-> | `calibration-log.md` | Full-dimension comparison log | Detailed table (Phase 1/2/Actual per dimension) | Human review, pattern analysis |
-> | `calibration-history.md` | Quick-lookup structured index | Concise bullet list (Predicted/Actual/Keywords) | Phase 1 automated reference |
->
-> `calibration-log.md` is the source of truth; `calibration-history.md` is a derived index optimized for Phase 1 to scan quickly without parsing tables. Both are appended in the same Phase 3 execution — log first, then history.
-
-#### Step 4: Append Calibration Record
-
-After each Phase 3 execution, append calibration results to `.claude/ecw/calibration-log.md` (path configurable via ecw.yml `paths.calibration_log`).
-
-Append format:
-
-```markdown
-### {YYYY-MM-DD} — {change summary}
-
-| Dimension | Phase 1 | Phase 2 | Actual |
-|-----------|---------|---------|--------|
-| Risk Level | P{x} | P{y} | P{z} |
-| Affected domain count | {n} | {n} | {n} |
-| Cross-domain calls | {n} | {n} | {n} |
-| MQ Topics | {n} | {n} | {n} |
-| External systems | {n} | {n} | {n} |
-
-**Determination**: {Accurate / Over-alert / Missed / Minor deviation}
-**Deviation cause**: {one-line explanation; write "—" if no deviation}
-
----
-```
-
-> If file does not exist, first copy initial template from `templates/calibration-log.md` (or create an empty file with header).
-
-#### Step 5: Append Calibration History Record
-
-After appending to `calibration-log.md`, also write a concise structured record to `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). This file is optimized for Phase 1 to read and reference in future sessions.
-
-If the file does not exist, create it with header:
-
-```markdown
-# Calibration History
-
-> Auto-appended by Phase 3. Phase 1 reads recent entries as prediction reference.
-
----
-```
-
-Append format:
-
-```markdown
-### {YYYY-MM-DD HH:mm} — {change summary}
-
-- **Predicted**: P{x}
-- **Actual**: P{z}
-- **Determination**: {Accurate / Over-alert / Missed / Minor deviation}
-- **Cause**: {one-line deviation cause; "—" if accurate}
-- **Keywords**: {Phase 1 keywords that triggered original classification}
-
----
-```
-
-> **Write failure handling**: Retry once → still fails: output content in conversation and continue workflow. This file is supplementary; failure does not block Phase 3.
-
-#### Step 6: Extract Instinct
-
-Based on calibration result, extract or update an instinct in `.claude/ecw/state/instincts.md` (path configurable via ecw.yml `paths.instincts`). Instincts are lightweight heuristic rules that SessionStart hook injects into future sessions when confidence is high enough.
-
-**Extraction rules:**
-
-| Determination | Instinct Extraction |
-|---------------|-------------------|
-| **Missed** (under-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider raising level by 1" → base confidence: 0.5 |
-| **Over-alert** (over-predicted) | Pattern: "when keywords [{keywords}] appear" → Action: "consider lowering level by 1" → base confidence: 0.5 |
-| **Accurate** | If a matching instinct exists (same keywords), increase confidence by 0.1 (cap 1.0) |
-| **Minor deviation** | No instinct extraction |
-
-**Update rules:**
-- Before writing a new instinct, scan existing entries for keyword overlap (≥50% keyword match = same instinct)
-- If a matching instinct exists: increase confidence by 0.15 (cap 1.0), update `Updated` date
-- New instinct starts at confidence 0.5
-
-**File format** (if file does not exist, create with header):
-
-```markdown
-# Risk Classification Instincts
-
-> Auto-managed by Phase 3. SessionStart injects entries with confidence > 0.7.
-> Do not edit manually — scores are calibrated by repeated observations.
-
----
-```
-
-Each instinct entry:
-
-```markdown
-<!-- INSTINCT -->
-- **Pattern**: {when these keywords/modules appear}
-- **Action**: {consider raising/lowering level by 1}
-- **Confidence**: {0.0-1.0}
-- **Source**: {YYYY-MM-DD calibration: {determination} — {one-line cause}}
-- **Updated**: {YYYY-MM-DD}
-```
-
-> **Robustness**: If the file cannot be written, skip silently. Instinct extraction is best-effort and does not block Phase 3.
+> Write failure handling for all three: Retry once → still fails → output content in conversation and continue workflow.
 
 ### Notes
 
@@ -764,3 +547,10 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | Bug fix without reproduction test | Fix correctness cannot be automatically verified | Write reproduction test first (RED), then fix to make it pass (GREEN) |
 | Skipped Phase 3 after biz-impact-analysis | Prediction deviation not discovered; rules cannot improve | Must execute Phase 3 calibration after biz-impact-analysis report |
 | Phase 3 suggestion applied without user confirmation | Single change may be coincidental; auto-modification may introduce bias | Phase 3 only outputs suggestions; user decides whether to adopt |
+
+## Supplementary Files
+
+- `session-state-format.md` — Session state file template, marker conventions, working mode definitions, context advisory
+- `phase2-output-template.md` — Phase 2 precise classification report format
+- `phase3-output-template.md` — Phase 3 calibration output (3 variants by determination)
+- `phase3-calibration-formats.md` — Steps 4-6 file formats: calibration-log, calibration-history, instincts
