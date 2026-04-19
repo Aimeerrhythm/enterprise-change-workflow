@@ -10,6 +10,8 @@ description: >
 
 Execute multi-round cross-consistency verification on changed files. Exit only when a round produces zero findings. Focuses on inter-file structural consistency.
 
+**Announce at start:** "Using ecw:cross-review to verify cross-file consistency."
+
 ## Why This Is Needed
 
 The same concept described in different sections of the same file or across multiple files often becomes inconsistent (table row counts differ, list items missing, terminology mixed). This is especially common in document-heavy changes (multiple markdown files cross-referencing each other). Structured multi-dimensional verification + convergence loop systematically eliminates these issues.
@@ -123,6 +125,16 @@ After {N} rounds of verification (fixed {M} issues), cross-file consistency chec
   - Does not analyze business impact (ecw:biz-impact-analysis's responsibility)
   - Does not check compilation/references (verify-completion hook's responsibility)
   - Does not review plan design (ecw:spec-challenge's responsibility)
+
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "It's just a terminology difference, not a real inconsistency" | Users reading different files will see different terms for the same concept. This IS an inconsistency. Fix it. |
+| "The counts are close enough" | If one file says 6 items and another checks 5, there is a missing check. "Close enough" in documentation becomes a missed dimension in production. |
+| "Round 2 found no new issues, probably clean" | Round 2 checks fixes for side effects. A fix in File A may introduce inconsistency with File C not in Round 1's scope. |
+| "These are just docs, not code, severity is low" | Documents drive behavior. Inconsistent docs produce inconsistent implementations. must-fix applies to structural inconsistencies regardless of file type. |
+| "5 rounds is enough, remaining issues are minor" | If findings persist after 5 rounds, they need user intervention, not dismissal. Output all unresolved items. |
 
 ## Common Cross-Inconsistency Patterns
 

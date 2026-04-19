@@ -278,3 +278,14 @@ After saving the plan, determine and persist implementation strategy, then route
 **4. Offer execution choice via AskUserQuestion:** (when spec-challenge NOT needed)
 - "Subagent-Driven (Recommended)" — dispatch fresh subagent per task via ecw:impl-orchestration
 - "Direct Implementation" — implement tasks sequentially in current session
+
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "The requirement is clear enough, skip design completeness check" | Unclear requirements become bugs during TDD. Every unresolved question costs 10x more to fix in implementation than in planning. |
+| "I'll add details during implementation" | Plans with gaps produce implementations with gaps. The engineer reading this plan has zero context — they need everything spelled out. |
+| "Similar to Task N is good enough" | The engineer may read tasks out of order. Repeat the code. DRY applies to production code, not plan documentation. |
+| "This step is obvious, no code block needed" | Nothing is obvious to an engineer with zero project context. If a step changes code, show the code. |
+| "TDD readiness check is overhead for simple plans" | Simple plans with missing test context cause TDD to waste turns discovering file paths and imports. Two minutes of checking saves twenty minutes of TDD thrashing. |
+| "P2 plans don't need this level of detail" | P2 detail level is simplified, not absent. Task merging rules and 5-10 min granularity still apply. |
