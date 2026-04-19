@@ -18,6 +18,10 @@ import re
 import subprocess
 import sys
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ecw_config import read_ecw_config as _read_ecw_config  # noqa: E402
+
 try:
     import yaml
 except ImportError:
@@ -320,18 +324,6 @@ def check_java_tests(cwd, modified):
         return [], []  # mvn 不在 PATH 中，跳过
 
     return [], []
-
-
-def _read_ecw_config(cwd):
-    """读取 .claude/ecw/ecw.yml 配置，返回 dict（文件不存在或解析失败返回空 dict）。"""
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if not os.path.exists(ecw_yml) or not yaml:
-        return {}
-    try:
-        with open(ecw_yml, encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
 
 
 def _load_path_mappings(cwd, cfg):

@@ -16,35 +16,12 @@ import re
 import sys
 from datetime import datetime
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state  # noqa: E402
+
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
-
-
-def _find_session_state(cwd):
-    """Find session-state.md in session-data/{workflow-id}/ or legacy paths."""
-    # New convention: session-state.md lives in session-data/{workflow-id}/
-    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if os.path.isdir(session_data_dir):
-        try:
-            subdirs = sorted(
-                [d for d in os.listdir(session_data_dir)
-                 if os.path.isdir(os.path.join(session_data_dir, d))],
-                reverse=True,
-            )
-            for d in subdirs:
-                candidate = os.path.join(session_data_dir, d, "session-state.md")
-                if os.path.exists(candidate):
-                    return candidate
-        except Exception:
-            pass
-    # Legacy fallback paths
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "session-state.md"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
 
 
 def _get_session_data_files(cwd):
@@ -197,7 +174,7 @@ def main():
         print(json.dumps({"result": "continue", "systemMessage": msg}))
         return
 
-    state_path = _find_session_state(cwd)
+    state_path = find_session_state(cwd)
     checkpoint_files = _get_session_data_files(cwd)
 
     if state_path:

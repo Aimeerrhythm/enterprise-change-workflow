@@ -96,6 +96,16 @@ class TestCleanupStateFiles:
         session_end._cleanup_state_files(str(tmp_path))
         assert not mf.exists()
 
+    def test_removes_tool_call_counter(self, session_end, tmp_path):
+        """Removes tool-call-count.txt so next session starts from zero."""
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        counter = state_dir / "tool-call-count.txt"
+        counter.write_text("87")
+
+        session_end._cleanup_state_files(str(tmp_path))
+        assert not counter.exists()
+
     def test_no_error_when_no_state_dir(self, session_end, tmp_path):
         """No error when state directory doesn't exist."""
         session_end._cleanup_state_files(str(tmp_path))  # Should not raise
@@ -118,11 +128,12 @@ class TestSessionEndMain:
 
     def test_marks_state_and_cleans_up(self, session_end, tmp_path):
         """Full flow: marks ended + cleans up modified-files.txt."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-wf"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
         state_file.write_text("# ECW\n- **Risk Level**: P1\n- **Status**: active\n")
-        mf = state_dir / "modified-files.txt"
+        mf = tmp_path / ".claude" / "ecw" / "state" / "modified-files.txt"
+        mf.parent.mkdir(parents=True, exist_ok=True)
         mf.write_text("foo.py\n")
 
         input_data = {"cwd": str(tmp_path)}

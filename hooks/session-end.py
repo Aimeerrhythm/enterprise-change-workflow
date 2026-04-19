@@ -14,17 +14,9 @@ import re
 import sys
 from datetime import datetime
 
-
-def _find_session_state(cwd):
-    """Find session-state.md. Returns path or None."""
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "state", "session-state.md"),
-        os.path.join(cwd, ".claude", "ecw", "session-state.md"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state  # noqa: E402
 
 
 def _mark_session_ended(state_path):
@@ -63,13 +55,18 @@ def _mark_session_ended(state_path):
 
 def _cleanup_state_files(cwd):
     """Remove transient state files that don't need to persist across sessions."""
-    # modified-files.txt is per-session; clear it so next session starts fresh
-    modified_files = os.path.join(cwd, ".claude", "ecw", "state", "modified-files.txt")
-    try:
-        if os.path.exists(modified_files):
-            os.remove(modified_files)
-    except Exception:
-        pass
+    state_dir = os.path.join(cwd, ".claude", "ecw", "state")
+    transient_files = [
+        "modified-files.txt",
+        "tool-call-count.txt",
+    ]
+    for fname in transient_files:
+        try:
+            fpath = os.path.join(state_dir, fname)
+            if os.path.exists(fpath):
+                os.remove(fpath)
+        except Exception:
+            pass
 
 
 def main():
@@ -80,7 +77,7 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
-    state_path = _find_session_state(cwd)
+    state_path = find_session_state(cwd)
     if state_path:
         _mark_session_ended(state_path)
 

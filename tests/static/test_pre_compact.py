@@ -244,13 +244,14 @@ class TestBuildRecoveryMessage:
 # ══════════════════════════════════════════════════════
 
 class TestFindSessionState:
-    """Tests for _find_session_state path resolution."""
+    """Tests for find_session_state (now delegated to marker_utils)."""
 
     def test_finds_in_session_data_subdir(self, pre_compact_module, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260418-1200"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text("# State")
-        result = pre_compact_module._find_session_state(str(tmp_path))
+        from hooks.marker_utils import find_session_state
+        result = find_session_state(str(tmp_path))
         assert result is not None
         assert "session-state.md" in result
 
@@ -258,11 +259,13 @@ class TestFindSessionState:
         legacy = tmp_path / ".claude" / "ecw" / "session-state.md"
         legacy.parent.mkdir(parents=True)
         legacy.write_text("# Legacy State")
-        result = pre_compact_module._find_session_state(str(tmp_path))
+        from hooks.marker_utils import find_session_state
+        result = find_session_state(str(tmp_path))
         assert result is not None
 
     def test_returns_none_when_missing(self, pre_compact_module, tmp_path):
-        assert pre_compact_module._find_session_state(str(tmp_path)) is None
+        from hooks.marker_utils import find_session_state
+        assert find_session_state(str(tmp_path)) is None
 
 
 # ══════════════════════════════════════════════════════

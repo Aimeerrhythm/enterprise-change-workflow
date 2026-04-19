@@ -4,6 +4,27 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.8.1] - 2026-04-19
+
+### 修复
+
+- **ecw.yml 重复键** (F-12) — 合并两个 `impl_orchestration` 段，消除 YAML 解析歧义
+- **session-end.py 路径 bug** (F-1) — `_find_session_state()` 搜索错误路径 `ecw/state/`，改用 `marker_utils.find_session_state()`
+- **dispatcher.py get_profile 路径 bug** — `get_profile()` 搜索不存在的 `ecw/state/session-state.md`，导致 risk profile 始终退化为 "standard"，P0 无法获得 "strict" profile
+- **compact-suggest 计数器跨 session 不重置** — `tool-call-count.txt` 未被 session-end 清理，新 session 继承旧计数导致过早弹出压缩建议
+
+### 改进
+
+- **Hook 共享模块** (DC-1/PC-6) — 新增 `ecw_config.py`，5 个 Hook 消除 `_find_session_state` / `_read_ecw_config` 重复定义，统一使用 `marker_utils` + `ecw_config`
+- **lint_skills.py 新增 3 项检查** — CHECK 15 (共享模块强制)、CHECK 16 (subagent 安全四要素)、CHECK 17 (eval 覆盖报告)
+
+### 新增
+
+- **test_hook_exception_safety.py** (DC-4) — AST 检查所有 Hook `__main__` 必须有 try/except + 禁止 sys.exit(1)
+- **test_yaml_template_validity.py** (PC-4) — YAML 模板无重复键检查
+- **test_workflow_guard.py** (DC-2) — verify-completion 工作流完整性检查占位
+- **test_artifact_schema.py** (DC-5) — artifact-schemas.md schema 覆盖占位
+
 ## [0.8.0] - 2026-04-18
 
 ### 新增

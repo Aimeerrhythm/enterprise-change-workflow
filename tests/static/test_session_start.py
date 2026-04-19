@@ -266,7 +266,7 @@ class TestReadInstincts:
 # ══════════════════════════════════════════════════════
 
 class TestReadEcwConfig:
-    """Tests for _read_ecw_config reading ecw.yml."""
+    """Tests for _get_project_info reading ecw.yml."""
 
     def test_reads_project_name_and_language(self, session_start, tmp_path):
         ecw_dir = tmp_path / ".claude" / "ecw"
@@ -274,12 +274,12 @@ class TestReadEcwConfig:
         (ecw_dir / "ecw.yml").write_text(
             "project:\n  name: test-wms\n  language: java\n"
         )
-        cfg = session_start._read_ecw_config(str(tmp_path))
+        cfg = session_start._get_project_info(str(tmp_path))
         assert cfg["project_name"] == "test-wms"
         assert cfg["language"] == "java"
 
     def test_returns_empty_when_no_file(self, session_start, tmp_path):
-        cfg = session_start._read_ecw_config(str(tmp_path))
+        cfg = session_start._get_project_info(str(tmp_path))
         assert cfg == {} or (not cfg.get("project_name") and not cfg.get("language"))
 
 

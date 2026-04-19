@@ -813,6 +813,100 @@ def check_routing_matrix(result: LintResult):
 
 
 # ══════════════════════════════════════════════════════
+# CHECK 15: Hook shared module enforcement (DC-1, PC-6)
+# ══════════════════════════════════════════════════════
+
+FORBIDDEN_DEFINITIONS = {
+    "_find_session_state": "marker_utils.find_session_state",
+    "find_session_state": "marker_utils.find_session_state",
+    "_read_ecw_config": "ecw_config.read_ecw_config",
+}
+SHARED_MODULES = {"marker_utils.py", "ecw_config.py"}
+
+
+def check_hook_shared_modules(result: LintResult):
+    """Hook files must not re-implement functions that exist in shared modules."""
+    for py_file in sorted(HOOKS_DIR.glob("*.py")):
+        if py_file.name in SHARED_MODULES or py_file.name.startswith("test_"):
+            continue
+        content = py_file.read_text(encoding="utf-8")
+        for func_name, shared_location in FORBIDDEN_DEFINITIONS.items():
+            if re.search(rf"^def\s+{re.escape(func_name)}\s*\(", content, re.MULTILINE):
+                result.error(
+                    f"[shared-module] hooks/{py_file.name}: defines '{func_name}' locally — "
+                    f"must use {shared_location} instead"
+                )
+
+
+# ══════════════════════════════════════════════════════
+# CHECK 16: Subagent safety four elements (PC-3)
+# ══════════════════════════════════════════════════════
+
+SUBAGENT_REQUIRED_KEYWORDS = {
+    "timeout": ["timeout", "Timeout", "超时"],
+    "budget": ["budget", "Budget", "cap", "上限", "最大"],
+    "stall": ["stall", "Stall", "卡住", "无进展", "not decrease"],
+    "escalation": ["escalat", "Escalat", "升级", "通知用户", "AskUserQuestion"],
+}
+
+
+def check_subagent_safety_controls(result: LintResult):
+    """Skills dispatching subagents must define timeout, budget, stall detection, escalation."""
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        content = skill_md.read_text(encoding="utf-8")
+        dispatches_agents = bool(re.search(
+            r"(?:dispatch|Dispatch)\s+(?:one\s+)?(?:Agent|subagent|implementer|verifier)"
+            r"|subagent_type\s*[:=]"
+            r"|Subagent\s+(?:Dispatch|Ledger|dispatch)"
+            r"|并行.*(?:分发|调度).*(?:Agent|子代理)",
+            content
+        ))
+        if not dispatches_agents:
+            continue
+        for control_name, keywords in SUBAGENT_REQUIRED_KEYWORDS.items():
+            if not any(kw in content for kw in keywords):
+                result.warn(
+                    f"[subagent-safety] skills/{skill_dir.name}/SKILL.md: "
+                    f"dispatches subagents but missing '{control_name}' control"
+                )
+
+
+# ══════════════════════════════════════════════════════
+# CHECK 17: Eval coverage report (PC-2)
+# ══════════════════════════════════════════════════════
+
+EVAL_DIR = ROOT / "tests" / "eval"
+
+
+def check_eval_coverage(result: LintResult):
+    """Report skills without behavioral eval coverage (warning only)."""
+    skills_with_eval = set()
+    if EVAL_DIR.exists():
+        for d in EVAL_DIR.iterdir():
+            if d.is_dir() and (d / "promptfooconfig.yaml").exists():
+                skills_with_eval.add(d.name)
+        if (EVAL_DIR / "scenarios").exists():
+            skills_with_eval.add("risk-classifier")
+
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        if skill_dir.name not in skills_with_eval:
+            result.warn(
+                f"[eval-coverage] skills/{skill_dir.name}: no behavioral eval — "
+                f"Anthropic recommends eval as prerequisite for prompt engineering"
+            )
+
+
+# ══════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════
 
@@ -831,6 +925,9 @@ ALL_CHECKS = {
     "claude-md": check_claudemd_consistency,
     "tokens": check_token_stats,
     "routing-matrix": check_routing_matrix,
+    "shared-modules": check_hook_shared_modules,
+    "subagent-safety": check_subagent_safety_controls,
+    "eval-coverage": check_eval_coverage,
 }
 
 

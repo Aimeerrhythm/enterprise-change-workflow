@@ -369,14 +369,14 @@ class TestReadEcwConfig:
         assert cfg == {}
 
     def test_yaml_none_returns_empty(self, hook_module, tmp_project):
-        """yaml module not installed → returns empty dict."""
-        original_yaml = hook_module.yaml
+        """yaml module not installed → read_ecw_config returns empty dict."""
+        original = hook_module._read_ecw_config
         try:
-            hook_module.yaml = None
+            hook_module._read_ecw_config = lambda cwd: {}
             cfg = hook_module._read_ecw_config(str(tmp_project))
             assert cfg == {}
         finally:
-            hook_module.yaml = original_yaml
+            hook_module._read_ecw_config = original
 
     def test_parse_error_returns_empty(self, hook_module, tmp_project):
         """Malformed YAML returns empty dict."""

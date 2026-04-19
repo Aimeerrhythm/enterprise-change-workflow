@@ -89,13 +89,6 @@ verification:
   # mvn test 超时秒数。超时不阻止完成，仅输出警告。
   test_timeout: 300
 
-# impl-orchestration 配置
-impl_orchestration:
-  # 首 Task 前是否执行编译/测试预检。
-  # true（默认）：在 dispatch 第一个 Task 前运行项目构建验证，提前暴露 baseline 问题。
-  # false：跳过预检，直接开始 Task 分发。
-  pre_check: true
-
 # TDD 流程配置
 # 控制测试先行流程的行为。与 risk-classifier 路由联动。
 tdd:
@@ -122,8 +115,8 @@ paths:
   calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）
   instincts: ".claude/ecw/state/instincts.md"                      # Phase 3 提取的 instinct（SessionStart 注入）
 
-# impl-orchestration 并行执行配置
-# 控制 impl-orchestration 的并行执行行为。
+# impl-orchestration 配置
+# 控制 impl-orchestration 的并行执行行为和预检设置。
 impl_orchestration:
   # 是否启用并行执行。true：按依赖图分层并行调度 implementer。false：串行执行（原始行为）。
   parallel: true
