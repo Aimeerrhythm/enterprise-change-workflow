@@ -55,7 +55,7 @@ Phases: Domain Identification → Round 1 (Independent Analysis, parallel) → R
 
 Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general-purpose`).
 
-**Model selection**: `model: opus` (domain analysis requires deep understanding of business rules, state machines, and cross-domain dependencies — errors here cascade to all downstream workflow). Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` for that domain to reduce cost.
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: domain analysis requires deep understanding of business rules, state machines, and cross-domain dependencies — errors here cascade to all downstream workflow. Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` (`models.defaults.mechanical`) for that domain to reduce cost.
 
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
@@ -70,7 +70,7 @@ Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
+6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | opus | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
@@ -87,7 +87,7 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 3. Specifically flag: other domains' `cross_domain_risks` where `target` points to this domain ("another domain specifically noted you may be affected")
 4. Dispatch new round of domain agents in parallel
 
-**Model selection**: `model: opus` (negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues. Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
 **Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills template variables: `{project_name}`, `{domain_name}`, `{user_requirement}`, `{round1_yaml_output}`, and the "Other Domains' Change Plans" section (aggregate other domains' `affected_components`, `state_changes`, `cross_domain_risks`, flagging risks pointing to this domain).
 
@@ -99,7 +99,7 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
+5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | opus | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 

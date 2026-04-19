@@ -331,7 +331,7 @@ Append to Phase 1 output:
 
 | Item | Details |
 |------|---------|
-| **Who executes** | risk-classifier dispatches a subagent (`model: sonnet`) to query dependency graph; coordinator holds only structured YAML result |
+| **Who executes** | risk-classifier dispatches a subagent (`model: sonnet`, default from `models.defaults.verification`; configurable via ecw.yml) to query dependency graph; coordinator holds only structured YAML result |
 | **When** | After ecw:requirements-elicitation / ecw:domain-collab completes, before ecw:writing-plans |
 | **Applicable** | P0/P1 (have requirement analysis artifacts) |
 | **Not applicable** | P2 (Phase 1 lightweight check already covered), P3, Bug fixes (skip requirement analysis, go directly to systematic-debugging) |
@@ -395,7 +395,7 @@ upgrade_reason: "..."  # if upgraded
 - Output Phase 2 report in the defined format
 - Write checkpoint to `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (see Session Data Path Convention for path resolution)
 
-**Model**: `model: sonnet` (dependency graph query is rule-based lookup, not creative reasoning)
+**Model**: `model: sonnet` (default from `models.defaults.verification`; configurable via ecw.yml). Reason: dependency graph query is rule-based lookup, not creative reasoning.
 
 **Timeout**: 180s. If subagent has not returned within this time, terminate and fall back to Phase 1 level (see Error Handling).
 

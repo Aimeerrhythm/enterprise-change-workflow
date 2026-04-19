@@ -116,7 +116,7 @@ summary: "One-line summary of this round"
 2. Retry once with the same model
 3. If retry also fails: mark that Round as `[incomplete: Round {N}]` in the output, continue with findings from other Rounds. Do not block convergence — but warn user that one verification dimension was skipped.
 
-**Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
+**Model selection**: Use `model: "sonnet"` (default from `models.defaults.verification`; configurable via ecw.yml) for all verification subagents. Reason: verification is pattern-matching against reference material — does not require Opus-level reasoning.
 
 **Timeout per Round subagent**: 180s. If a Round subagent has not returned within this time, terminate it and fall back to coordinator inline execution for that Round (see Error Handling).
 
@@ -217,6 +217,8 @@ summary: "One-line summary of this round"
 2. **Severity tagging**:
    - **must-fix**: Layering violations, resource leaks, severe duplication (50+ lines of identical logic), reverse dependencies
    - **suggestion**: Method too long, naming could be better, minor duplication, extractable but not urgent
+
+If ecw.yml `rules.enabled: true`: pass engineering rules files from `rules.path` (default `.claude/ecw/rules/`) to the Round 4 subagent. Verification against `[must-follow]` rules → must-fix; `[recommended]` rules → suggestion.
 
 ### Round N+ (Conditional Trigger) — Fix Re-Verification
 

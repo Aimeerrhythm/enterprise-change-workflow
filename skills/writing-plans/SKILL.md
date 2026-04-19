@@ -99,7 +99,7 @@ After receiving the subagent's summary:
 
 ### Model
 
-`model: opus` — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
+`model: opus` (default from `models.defaults.planning`; configurable via ecw.yml) — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
 
 **Timeout (dynamic)**: Scale timeout by estimated Task count — **≤5 Tasks: 180s**, **6–10 Tasks: 300s**, **>10 Tasks: 420s**. Estimate Task count before dispatch from requirement scope: single-domain focused change → ≤5; multi-domain (2–3 domains) or medium complexity → 6–10; large cross-domain (4+ domains) or high complexity → >10. If estimate is unavailable, default to 300s. On timeout, **fall back to Direct mode immediately** — do NOT retry (empirically, a timed-out Plan subagent retried under the same conditions times out again, wasting another full timeout window).
 
