@@ -47,8 +47,8 @@ domain-collab:
   - "Your Thought"
 
 impl-orchestration:
-  - "implementer-prompt.md"
-  - "spec-reviewer-prompt.md"
+  - "implementer.md"
+  - "spec-reviewer.md"
   - "Your Thought"
 
 systematic-debugging:
