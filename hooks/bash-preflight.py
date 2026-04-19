@@ -11,6 +11,12 @@ Override: set ECW_ALLOW_DANGEROUS_CMD=1 environment variable to bypass all check
 import os
 import re
 
+# ── Tag refspec pattern ──
+# Matches common tag patterns: v1.0.0, v2.3, refs/tags/...
+_TAG_PATTERN = re.compile(
+    r'(?:refs/tags/\S+|(?:^|\s)v\d+\.\d+(?:\.\d+)?(?:[-.\w]*)(?:\s|$))'
+)
+
 # ── Blocked command patterns ──
 # These commands are hard-blocked — the tool call is denied.
 # (compiled_regex, label, guidance)
@@ -22,7 +28,7 @@ BLOCKED_PATTERNS = [
         "Pre-commit hooks exist for a reason. Fix the underlying issue instead of bypassing checks.",
     ),
     (
-        re.compile(r'\bgit\s+push\b.+--force\b'),
+        re.compile(r'\bgit\s+push\b.+--force(?!-with-lease)\b'),
         "git push --force",
         "Force-push can destroy remote history. Use --force-with-lease for safer alternatives.",
     ),
@@ -91,6 +97,11 @@ WARN_MSG_TEMPLATE = (
 )
 
 
+def _is_tag_push(command):
+    """Check if a git push command targets a tag (lower risk than branch force-push)."""
+    return bool(_TAG_PATTERN.search(command))
+
+
 def check(input_data, config=None):
     """Check Bash command for dangerous operations.
 
@@ -110,13 +121,20 @@ def check(input_data, config=None):
     if not command:
         return ("continue", "")
 
+    warnings = []
+
     # Check blocked patterns first
     for pattern, label, guidance in BLOCKED_PATTERNS:
         if pattern.search(command):
+            if ("force" in label.lower() or "-f" in label) and _is_tag_push(command):
+                warnings.append(WARN_MSG_TEMPLATE.format(
+                    label="force-push tag",
+                    guidance="Force-pushing a tag is lower risk but still notable. Verify the tag target.",
+                ))
+                continue
             return ("block", BLOCK_MSG_TEMPLATE.format(label=label, guidance=guidance))
 
     # Check warning patterns
-    warnings = []
     for pattern, label, guidance in WARN_PATTERNS:
         if pattern.search(command):
             warnings.append(WARN_MSG_TEMPLATE.format(label=label, guidance=guidance))

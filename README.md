@@ -363,7 +363,7 @@ enterprise-change-workflow/
 │   └── README.md                # Scanner output format specification
 ├── tests/                       # Three-layer test suite
 │   ├── Makefile                 # lint / test-hook / eval-* targets
-│   ├── static/                  # Layer 1: Python static lint (14 checks) + pytest hook unit tests (301 cases)
+│   ├── static/                  # Layer 1: Python static lint (14 checks) + pytest hook unit tests (488 cases)
 │   └── eval/                    # Layer 2: promptfoo behavioral eval (4 suites: risk-classifier/domain-collab/tdd/impl-verify)
 ├── CLAUDE.md                    # Plugin-level guidance
 ├── CHANGELOG.md                 # Version history

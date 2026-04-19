@@ -146,6 +146,14 @@ Based on user selections:
 - **Adopted improvements** → Update document
 - **Deferred improvements** → Record in document's "Future Iterations" section
 
+**Plan Revision Strategy (CRITICAL)**:
+
+The coordinator (main session) directly revises the plan document — do not dispatch a subagent for plan revision. Both the Plan content and the review findings are already in the coordinator's context, so delegating adds latency with no benefit.
+
+Use Write to overwrite the entire plan file rather than incremental edits. Plan files are typically 50-80KB; do not use Edit for large plan files as exact-match replacement is fragile and error-prone on files of this size.
+
+Exception: If the plan requires >30% content restructuring AND exceeds 100KB, a subagent may be dispatched, but it must also use Write (full overwrite), not Edit.
+
 ## Response Summary Format
 
 After all items are handled, output summary table for user final confirmation:
@@ -227,11 +235,11 @@ Use AskUserQuestion:
 ```
 Question: "Plan phase complete. How would you like to continue?"
 Options:
-  1. "New session for implementation (Recommended)" — Implement in a new session; all analysis artifacts are saved to files
-  2. "Continue in current session" — Continue implementing in current session (note: long sessions may cause context compression and information loss)
+  1. "Continue in current session (Recommended)" — Continue implementing; PreCompact hook automatically preserves key context checkpoints for recovery
+  2. "New session for implementation" — Implement in a new session; all analysis artifacts are saved to files
 ```
 
-When option 1 is selected, output:
+When option 2 is selected, output:
 "All analysis artifacts have been saved. In a new session, say 'continue ECW implementation' and I will read the Plan file and state file to resume work."
 
 Also output implementation strategy recommendation (based on Task count in Plan; see risk-classifier "Implementation Strategy Selection" section):

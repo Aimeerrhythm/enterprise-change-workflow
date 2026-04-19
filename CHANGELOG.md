@@ -8,10 +8,22 @@
 
 ### 修复
 
+- **bash-preflight force-push 误拦截** (Finding-01) — `--force-with-lease` 被正则一刀切拦截（自相矛盾建议用它却拦截它），改用负向前瞻排除；tag push 降级为 warning
+- **skill 过渡 auto-continue** (Finding-02/04) — 用户选择"Proceed"后下游 skill 过渡仍弹确认，添加 CRITICAL 指令强制 IMMEDIATELY invoke，禁止输出确认文本
+- **ecw-init 缺少 Write 权限配置** (Finding-03) — ecw-init 未配置 `.claude/settings.local.json` Write 权限，导致产出物写入触发权限确认弹窗
+- **spec-challenge Plan 修订策略** (Finding-05) — Step 4 未指定修订方式，LLM 派 subagent 用 Edit 在 75KB Plan 上逐段替换导致 33 分钟瓶颈；明确 coordinator 直接用 Write 覆写
+- **session 切换体验差** (Finding-06) — 翻转推荐为"继续当前 session"，移除吓人措辞，添加 PreCompact hook 保护说明
 - **ecw.yml 重复键** (F-12) — 合并两个 `impl_orchestration` 段，消除 YAML 解析歧义
 - **session-end.py 路径 bug** (F-1) — `_find_session_state()` 搜索错误路径 `ecw/state/`，改用 `marker_utils.find_session_state()`
 - **dispatcher.py get_profile 路径 bug** — `get_profile()` 搜索不存在的 `ecw/state/session-state.md`，导致 risk profile 始终退化为 "standard"，P0 无法获得 "strict" profile
 - **compact-suggest 计数器跨 session 不重置** — `tool-call-count.txt` 未被 session-end 清理，新 session 继承旧计数导致过早弹出压缩建议
+
+### 测试
+
+- **test_auto_continue.py** — 4 个测试验证 skill 过渡 auto-continue 机制
+- **test_ecw_init_permissions.py** — 2 个测试验证 ecw-init Write 权限配置
+- **test_spec_challenge.py 新增 6 个测试** — Plan 修订策略 (3) + session 推荐翻转 (3)
+- **test_bash_preflight.py 新增 6 个测试** — force-with-lease 放行 + tag push 降级
 
 ### 改进
 

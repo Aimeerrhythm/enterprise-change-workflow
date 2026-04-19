@@ -617,6 +617,29 @@ If running: Check for scan scripts under `scripts/java/`; execute if present.
 
 ---
 
+# Common Final Step: Permission Configuration
+
+After generating ECW configuration (in any mode), configure write permissions to prevent interactive prompts during workflow execution.
+
+Add to `.claude/settings.local.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Write(.claude/ecw/**)",
+      "Write(.claude/plans/**)"
+    ]
+  }
+}
+```
+
+If `.claude/settings.local.json` already exists, merge the `allow` entries without overwriting existing permissions.
+
+This enables ECW skills to write session state, plans, and reports without triggering permission confirmation dialogs.
+
+---
+
 # Error Handling
 
 - If any Write operation fails, report the error then continue processing remaining files.

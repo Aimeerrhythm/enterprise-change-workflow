@@ -230,6 +230,8 @@ Options:
 
 After user selection, execute the corresponding route directly without re-confirmation.
 
+> **CRITICAL — Auto-Continue Rule**: When user selects "Proceed", you MUST **immediately invoke** the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). Do NOT output any text like "下一步…是否继续？", "Ready to proceed?", or any form of confirmation prompt. The user's selection of "Proceed" IS the confirmation — no second confirmation is needed. This applies to ALL subsequent skill transitions in the routing chain: after domain-collab completes, after Phase 2 completes, etc. — always immediately invoke the next skill without asking.
+
 ### State Persistence
 
 After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md` (user may adjust level during confirmation; writing after confirmation ensures data accuracy). The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write:
@@ -247,6 +249,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 - **Workflow ID**: {YYYYMMDD-HHmm}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
+- **Auto-Continue**: yes
 <!-- ECW:STATUS:END -->
 
 <!-- ECW:MODE:START -->
@@ -513,6 +516,8 @@ Reference the three-dimensional factor table in the file specified by ecw.yml `p
 ### Downstream Workflow (Updated)
 {list remaining workflow steps based on final level}
 ```
+
+> **CRITICAL — Phase 2 Auto-Continue**: After outputting the Phase 2 report and writing the checkpoint, **immediately invoke** the next skill in the routing chain (typically `ecw:writing-plans`). Do NOT output text asking "是否继续", "Ready?", or any confirmation. The Auto-Continue rule from Phase 1 still applies — the user already confirmed the full workflow.
 
 ---
 
