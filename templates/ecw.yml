@@ -144,3 +144,11 @@ impl_orchestration:
   pre_check: true
   # 每层合并后是否运行编译检查。
   merge_compile_check: true
+
+# 工程规则配置
+# 控制 implementer 和 impl-verifier 的规则执行行为。
+rules:
+  # 是否启用工程规则。true：实现前读取规则文件，Round 4 验证合规性。false：跳过规则检查。
+  enabled: true
+  # 规则文件目录路径。包含 common/ 子目录及可选的语言级子目录。
+  path: ".claude/ecw/rules/"

@@ -122,6 +122,16 @@ If self-review reveals issues, fix them and report. Do NOT re-run self-review af
 
 **Source code reading guidance:** Prefer Grep with limited context (`-A 5`) over full Read for investigation. Only Read full files when you need to understand the complete class structure for implementation or testing.
 
+## Engineering Rules
+
+{RULES_CONTEXT — injected by orchestrator if ecw.yml rules.enabled: true}
+
+If engineering rules are provided:
+- Read applicable rules files before starting implementation
+- Follow `[must-follow]` rules strictly — violations will be caught in impl-verify Round 4
+- Follow `[recommended]` rules where practical
+- If a task requirement conflicts with a rule, note the conflict in your report (DONE_WITH_CONCERNS)
+
 ## Subagent Boundary
 
 You are a single-task agent. Respect these boundaries strictly:
