@@ -14,6 +14,10 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 > **Single-domain requirements** are handled by `ecw:requirements-elicitation`. This skill focuses on multi-domain scenarios.
 
+**Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
+
+**Mode switch**: Update session-state.md MODE marker to `analysis`.
+
 ## Trigger
 
 - **Manual**: `/domain-collab <requirement or change description>`
@@ -206,6 +210,17 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 | All domain Agents fail in a Round | Notify user: "Domain analysis agents failed. Provide manual domain impact assessment or retry." Do not proceed to next Round |
 | Knowledge file missing (`domain-registry.md`, `cross-domain-rules.md`, per-domain knowledge) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. If `domain-registry.md` missing: halt and ask user to run `/ecw-init` |
 | Report file write failure (`domain-collab-report.md`, `knowledge-summary.md`) | Retry once → still fails: output full report content in conversation so downstream skills can reference it |
+
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "Only one domain is really affected, the others are minor" | If other domains have any cross_domain_risks pointing at them, they need independent analysis. "Minor" impact is still impact. |
+| "Round 2 negotiation is overkill for this requirement" | Round 2 catches companion changes that Round 1 independent analysis misses. Skip it and integration issues surface during implementation. |
+| "Domain X returned none, so I can skip it in Round 2" | Check inbound risks first. If another domain flagged X in cross_domain_risks, X must participate in Round 2 even if its own analysis was none. |
+| "I already know the cross-domain dependencies" | Knowledge docs may be stale. Code verification (Round 3 §3d) catches what assumptions miss. |
+| "The requirement is clear enough to skip domain analysis" | Cross-domain coupling is invisible from requirements text. Only domain experts reading their own business rules can identify companion changes. |
+| "I'll merge the domain reports manually instead of running Round 3" | Round 3 cross-validation catches conflicts and omissions that simple merging misses. The coordinator's systematic checks are the point. |
 
 ## Notes
 

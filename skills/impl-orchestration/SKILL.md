@@ -361,6 +361,17 @@ If plan has many small tasks, consider merging per risk-classifier rules:
 
 Reference risk-classifier "实现策略选择" section for authoritative rules. Do not redefine here.
 
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "These tasks are independent enough to skip dependency graph construction" | File-level conflicts are invisible from task descriptions. Two tasks touching the same file will cause merge conflicts. Build the graph. |
+| "Single-message dispatch is awkward, I'll send them separately" | Sequential dispatch defeats parallelism. All same-layer tasks MUST go in one message. This is the entire point of parallel execution. |
+| "Spec review passed, no need for code quality review at P0" | P0 error cost is extreme. Spec review checks correctness; code quality review checks maintainability. Both are mandatory at P0. |
+| "The implementer said DONE, I trust the report" | Implementer reports may be incomplete or optimistic. Spec reviewer must read actual code independently. |
+| "Pre-flight check failed but it's probably pre-existing" | Pre-existing failures cause cascading confusion across task dispatches. Fix or get user approval before proceeding. |
+| "Task is BLOCKED after 2 retries, but one more try might work" | 2 re-dispatches is the hard limit. Escalate to user. Retrying without changes wastes budget. |
+
 ## ecw.yml Configuration
 
 New configuration fields for parallel execution:
