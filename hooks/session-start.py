@@ -126,10 +126,26 @@ def _summarize_checkpoint(filepath, name):
 def _get_project_info(cwd):
     """Read ecw.yml and extract key project info."""
     cfg = _read_full_ecw_config(cwd)
-    return {
+    info = {
         "project_name": cfg.get("project", {}).get("name", ""),
         "language": cfg.get("project", {}).get("language", ""),
     }
+    models = cfg.get("models", {})
+    defaults = models.get("defaults", {})
+    overrides = models.get("overrides", {})
+    STANDARD_DEFAULTS = {
+        "analysis": "opus",
+        "planning": "opus",
+        "implementation": "sonnet",
+        "verification": "sonnet",
+        "mechanical": "haiku",
+    }
+    non_default = {k: v for k, v in defaults.items() if STANDARD_DEFAULTS.get(k) != v}
+    if non_default or overrides:
+        info["model_config"] = non_default
+        if overrides:
+            info["model_overrides"] = overrides
+    return info
 
 
 def _check_modified_files(cwd):
@@ -251,6 +267,10 @@ def main():
             cfg_lines.append(f"- Active risk level: {state_fields['risk_level']}")
         if state_fields.get("working_mode"):
             cfg_lines.append(f"- Working mode: {state_fields['working_mode']}")
+        if ecw_cfg.get("model_config"):
+            cfg_lines.append(f"- Model config (non-default): {ecw_cfg['model_config']}")
+        if ecw_cfg.get("model_overrides"):
+            cfg_lines.append(f"- Model overrides: {ecw_cfg['model_overrides']}")
         sections.append(
             "# [ECW] Project config\n\n" + "\n".join(cfg_lines)
         )

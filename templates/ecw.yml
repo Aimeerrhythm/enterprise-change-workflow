@@ -115,6 +115,24 @@ paths:
   calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）
   instincts: ".claude/ecw/state/instincts.md"                      # Phase 3 提取的 instinct（SessionStart 注入）
 
+# 模型路由配置
+# 控制各工作流阶段使用的 Claude 模型。项目可按需覆盖默认值以优化成本。
+# overrides 按 agent 模板文件名（去 .md）覆盖，如 {"domain-analyst": "sonnet"}。
+models:
+  defaults:
+    analysis: opus          # domain-collab, biz-impact-analysis
+    planning: opus          # writing-plans, spec-challenge
+    implementation: sonnet  # impl-orchestration, tdd
+    verification: sonnet    # impl-verify, requirements-elicitation, risk-classifier Phase 2
+    mechanical: haiku       # 简单任务 (enum/DTO/config)
+  overrides: {}
+
+# 工程规则框架
+# 结构化工程标准，implementer 实现时参考，impl-verifier Round 4 验证时对照。
+rules:
+  enabled: true
+  path: .claude/ecw/rules/
+
 # impl-orchestration 配置
 # 控制 impl-orchestration 的并行执行行为和预检设置。
 impl_orchestration:

@@ -27,8 +27,8 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 <!-- ECW:LEDGER:START -->
 ## Subagent Ledger
 
-| Phase | Agent | Type | Est. Scale | Started | Duration |
-|-------|-------|------|-----------|---------|----------|
+| Phase | Agent | Type | Model | Est. Scale | Started | Duration |
+|-------|-------|------|-------|-----------|---------|----------|
 <!-- ECW:LEDGER:END -->
 ```
 

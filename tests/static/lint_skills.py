@@ -480,6 +480,7 @@ def check_ecw_yml_keys(result: LintResult):
     # Extract nested keys
     nested_keys = set()
     current_section = None
+    current_subsection = None
     for line in template_content.split("\n"):
         stripped = line.strip()
         if stripped.startswith("#") or not stripped:
@@ -488,12 +489,20 @@ def check_ecw_yml_keys(result: LintResult):
         m = re.match(r"^(\w+):", line)
         if m and not line.startswith(" "):
             current_section = m.group(1)
+            current_subsection = None
             continue
-        # Nested key
+        # Nested key (2-level)
         if current_section:
-            m = re.match(r"^\s+(\w+):", line)
-            if m:
-                nested_keys.add(f"{current_section}.{m.group(1)}")
+            m = re.match(r"^  (\w+):", line)
+            if m and not line.startswith("    "):
+                current_subsection = m.group(1)
+                nested_keys.add(f"{current_section}.{current_subsection}")
+                continue
+            # 3-level key
+            if current_subsection:
+                m = re.match(r"^    (\w+):", line)
+                if m:
+                    nested_keys.add(f"{current_section}.{current_subsection}.{m.group(1)}")
 
     all_valid_keys = known_keys | nested_keys
 
