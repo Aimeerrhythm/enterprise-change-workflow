@@ -907,6 +907,42 @@ def check_eval_coverage(result: LintResult):
 
 
 # ══════════════════════════════════════════════════════
+# CHECK 18: Mode-switch consistency with session-state-format.md
+# ══════════════════════════════════════════════════════
+
+MODE_SWITCH_GOLDEN = {
+    "analysis": ["risk-classifier", "requirements-elicitation", "domain-collab"],
+    "planning": ["writing-plans", "spec-challenge"],
+    "implementation": ["impl-orchestration", "tdd", "systematic-debugging"],
+    "verification": ["impl-verify", "biz-impact-analysis"],
+}
+
+
+def check_mode_switch_consistency(result: LintResult):
+    """Skills listed in session-state-format.md mode table must have Mode switch instruction."""
+    for mode, skills in MODE_SWITCH_GOLDEN.items():
+        for skill_name in skills:
+            skill_md = SKILLS_DIR / skill_name / "SKILL.md"
+            if not skill_md.exists():
+                result.error(f"[mode-switch] skills/{skill_name}/SKILL.md not found")
+                continue
+            content = skill_md.read_text(encoding="utf-8")
+            if "Mode switch" not in content:
+                result.error(
+                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
+                    f"missing 'Mode switch' instruction (expected mode: {mode})"
+                )
+                continue
+            idx = content.index("Mode switch")
+            nearby = content[idx:idx + 200]
+            if mode not in nearby.lower():
+                result.error(
+                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
+                    f"'Mode switch' found but expected mode '{mode}' not in nearby text"
+                )
+
+
+# ══════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════
 
@@ -928,6 +964,7 @@ ALL_CHECKS = {
     "shared-modules": check_hook_shared_modules,
     "subagent-safety": check_subagent_safety_controls,
     "eval-coverage": check_eval_coverage,
+    "mode-switch": check_mode_switch_consistency,
 }
 
 

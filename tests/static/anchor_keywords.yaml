@@ -17,6 +17,8 @@ risk-classifier:
   - "P3"
   - "Fast Track"
   - "Common Mistakes"
+  - "Mode switch"
+  - "Announce at start"
 
 tdd:
   - "RED"
@@ -33,36 +35,52 @@ impl-verify:
   - "zero must-fix"
   - "Round"
   - "convergence"
+  - "Announce at start"
 
 domain-collab:
   - "Round 1"
   - "Round 2"
   - "Round 3"
   - "Coordinator"
+  - "Mode switch"
+  - "Announce at start"
+  - "Your Thought"
 
 impl-orchestration:
   - "implementer-prompt.md"
   - "spec-reviewer-prompt.md"
+  - "Your Thought"
 
 systematic-debugging:
   - "root cause"
   - "reproduction"
+  - "Mode switch"
 
 writing-plans:
   - "Plan"
   - "rollback"
+  - "Your Thought"
 
 spec-challenge:
   - "Fatal Flaw"
   - "adversarial"
+  - "Mode switch"
+  - "Announce at start"
+  - "Your Thought"
 
 requirements-elicitation:
   - "Systematic Questioning"
   - "Questioning Dimension"
+  - "Mode switch"
+  - "Announce at start"
 
 biz-impact-analysis:
   - "biz-impact-analysis"
   - "knowledge"
+  - "Announce at start"
+  - "Your Thought"
 
 cross-review:
   - "cross-file"
+  - "Announce at start"
+  - "Your Thought"
