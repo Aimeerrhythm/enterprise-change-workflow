@@ -269,16 +269,17 @@ Use `agents/implementer.md` prompt template (via `subagent_type: "ecw:implemente
 - Working directory
 - **For worktree dispatch**: "You are in an isolated worktree. Implement, test, and commit. Your changes will be merged after review."
 - **Completed layer context**: Briefly list what prior layers implemented (file names + one-line summary), so the implementer understands what already exists
+- **Engineering rules** (if ecw.yml `rules.enabled: true`): Include in prompt: "Engineering rules are at `{rules.path}`. Read applicable rules before implementing. Your code will be verified against these rules in impl-verify Round 4."
 
 **Model selection and timeout:**
 
 | Task Type | Model | Timeout | Criteria |
 |-----------|-------|---------|----------|
-| Mechanical tasks | `model: "haiku"` | 60s | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
-| Integration/design tasks | `model: "sonnet"` | 180s | Multi-file coordination, judgment needed, business logic |
-| Architecture tasks | `model: "opus"` | 300s | Cross-module structural decisions, complex state machines, deep reasoning required |
+| Mechanical tasks | `model:` from `models.defaults.mechanical` (default: `"haiku"`) | 60s | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
+| Integration/design tasks | `model:` from `models.defaults.implementation` (default: `"sonnet"`) | 180s | Multi-file coordination, judgment needed, business logic |
+| Architecture tasks | `model:` from `models.defaults.analysis` (default: `"opus"`) | 300s | Cross-module structural decisions, complex state machines, deep reasoning required |
 
-Default to `model: "sonnet"` when classification is ambiguous.
+Default to `models.defaults.implementation` when classification is ambiguous.
 
 **Agent-side execution limits** (enforced inside implementer.md): Implementer hard-stops at 100 tool calls and 15 source file reads. If a task is too large for these limits, split it before dispatching — do not rely on coordinator-side timeout alone.
 

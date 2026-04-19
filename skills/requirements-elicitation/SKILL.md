@@ -117,7 +117,7 @@ This incremental append ensures Q&A history survives context compaction during l
 
 ### Step 4: Synthesis Analysis
 
-After all Q&A rounds complete, use the Agent tool to launch **one agent** (`model: sonnet` — synthesis requires cross-referencing multiple Q&A rounds and identifying contradictions):
+After all Q&A rounds complete, use the Agent tool to launch **one agent** (`model: sonnet`, default from `models.defaults.verification`; configurable via ecw.yml — synthesis requires cross-referencing multiple Q&A rounds and identifying contradictions):
 
 **Prompt:**
 ```
@@ -139,7 +139,7 @@ List findings from both perspectives separately. Tag each finding with severity 
 
 - Include: All Q&A context, existing code/documentation findings
 
-**Ledger update**: After Agent returns, append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | medium | {HH:mm} | {duration} |`. Note time before dispatch and compute duration after return.
+**Ledger update**: After Agent returns, append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| requirements-elicitation | synthesis-analysis | general | sonnet | medium | {HH:mm} | {duration} |`. Note time before dispatch and compute duration after return.
 
 **Timeout**: 180s. If synthesis Agent has not returned, terminate and present Q&A findings directly to user (see Error Handling).
 

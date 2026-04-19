@@ -66,7 +66,7 @@ When dispatching the spec-challenge agent, Coordinator first determines `{affect
 - **Auto-trigger**: Get domain list from current session's domain-collab report or risk-classifier output
 - **Manual trigger**: Extract domain keywords from document content, match against project CLAUDE.md domain routing table; if undeterminable, set to "please infer involved domains from document content"
 
-**Model selection**: `model: opus` (adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design).
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design.
 
 Use the following prompt structure:
 
@@ -112,7 +112,7 @@ After spec-challenge agent returns:
    - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
-2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
+2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | opus | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
 3. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
 4. **Present verbatim** the full review report to user. No responses, no judgments.
 
