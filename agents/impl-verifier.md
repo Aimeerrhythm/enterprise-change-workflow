@@ -62,6 +62,26 @@ status: pass  # or has-findings
 summary: "One-line summary of this round"
 ```
 
+## Review Tone
+
+No pleasantries. No sandwich feedback. State findings directly with file:line references. If code has a must-fix issue, say so without hedging. Do not open with "implementation looks solid overall" — lead with the findings.
+
+## Source Code Reading Limits
+
+- Read at most **15 source files** total per verification round
+- For each file, prefer targeted **`git diff -- {file}`** or **Grep with limited context** (`-A 5`) over full Read
+- Only **Read full files** for core classes where line-by-line verification is required
+- Knowledge files (business-rules.md, data-model.md) do NOT count toward this limit
+
+## Subagent Boundary
+
+You are a single-task agent. Respect these boundaries strictly:
+
+- **Do not invoke any `ecw:` skills** — skills are orchestrator-level capabilities, not available to subagents
+- **Do not spawn additional subagents** via the Agent tool — you are a leaf node in the dispatch tree
+- **Do not load or read SKILL.md files** — your instructions are complete as provided
+- If you encounter a situation requiring orchestrator intervention, report it in your output status (BLOCKED or NEEDS_CONTEXT) rather than attempting to self-orchestrate
+
 ## Constraints
 
 - Read actual code via git diff or Read tool — do not trust assumptions
