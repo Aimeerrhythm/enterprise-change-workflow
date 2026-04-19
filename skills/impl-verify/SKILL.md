@@ -10,6 +10,8 @@ description: >
 
 After implementation completes and before marking the task done, perform multi-dimensional cross-validation of code changes: code logic ↔ requirements / domain knowledge / Plan / engineering standards. Converge over multiple rounds; exit only with zero must-fix findings.
 
+**Announce at start:** "Using ecw:impl-verify to verify implementation correctness."
+
 **Mode switch**: Update session-state.md MODE marker to `verification`.
 
 ## Why This Is Needed

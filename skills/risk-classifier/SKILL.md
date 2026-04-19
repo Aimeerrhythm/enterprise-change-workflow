@@ -13,6 +13,10 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 **Core Principle:** The process for changing a log statement should not be as heavy as changing inventory deduction logic.
 
+**Announce at start:** "Using ecw:risk-classifier to classify change risk level."
+
+**Mode switch**: Update session-state.md MODE marker to `analysis`.
+
 ## TDD Phase Notes
 
 **TDD:RED** in routing tables means writing failing tests before implementation code. This is a structural step in the ECW pipeline, not an optional suggestion.
