@@ -11,6 +11,10 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Core Principle:** Every question you don't ask now becomes a future bug, rework, or misunderstanding. Ask more now, change less later.
 
+**Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."
+
+**Mode switch**: Update session-state.md MODE marker to `analysis`.
+
 ## When to Use
 
 - User proposes a new feature or requirement
