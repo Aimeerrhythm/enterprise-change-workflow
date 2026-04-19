@@ -1,0 +1,38 @@
+---
+description: Development conventions for SKILL.md files
+globs: skills/**/SKILL.md
+---
+
+# SKILL.md Conventions
+
+## Size Budget
+
+SKILL.md MUST stay under 400 lines. If exceeding, extract content into supplementary files.
+
+## REFERENCE/TEMPLATE Extraction
+
+SKILL.md only contains execution logic. Extract the following into same-directory supplementary files:
+
+- Output templates → `*-template.md`
+- Lookup tables / DOT diagrams → `*-reference.md` / `*-diagram.md`
+- Large inline prompts → dedicated files
+
+Supplementary files are loaded on-demand via Read references, not embedded in SKILL.md.
+
+## Mode-Switch + Announce-at-Start (ALL skills)
+
+Every SKILL.md MUST declare near the top (after Overview):
+
+1. **Announce at start**: One sentence telling the user which skill is active (transparency)
+   - Format: `**Announce at start:** "Using ecw:<skill-name> to <purpose>."`
+2. **Mode switch**: Update session-state.md MODE marker (state tracking)
+   - Format: `**Mode switch**: Update session-state.md MODE marker to \`<mode>\`.`
+
+## Rationalization Defense Tables (Critical skills)
+
+For skills where LLM may self-rationalize skipping steps, include a table of:
+
+| Rationalization Pattern | Why It's Wrong | Correct Behavior |
+|------------------------|---------------|-----------------|
+
+Apply to: risk-classifier, impl-verify, tdd, spec-challenge, writing-plans.

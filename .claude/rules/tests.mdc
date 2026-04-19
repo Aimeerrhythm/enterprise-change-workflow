@@ -1,0 +1,32 @@
+---
+description: Testing conventions for ECW plugin
+globs: tests/**/*.py
+---
+
+# Testing Conventions
+
+## Structural Convention Tests
+
+New structural rules added to agent/skill templates MUST have corresponding static detection tests in `tests/static/`.
+
+## RED-First Strategy
+
+When adding new conventions:
+1. Write failing tests first (RED phase)
+2. Implement in parallel worktrees
+3. Verify all tests pass (GREEN)
+
+## Parameterized Batch Assertions
+
+Use `pytest.mark.parametrize` to assert conventions across all applicable files:
+
+- Agent hardening tests → parametrize over ALL_AGENTS / REVIEW_AGENTS lists
+- Skill lint checks → parametrize over all SKILL.md paths
+- Keep agent/file lists at module top for easy maintenance
+
+## Test File Organization
+
+- `tests/static/` — structural/lint checks (no runtime, fast)
+- `tests/static/lint_skills.py` — SKILL.md structural checks
+- `tests/static/test_agent_hardening.py` — agent template checks
+- `tests/static/anchor_keywords.yaml` — required section anchors per skill/agent
