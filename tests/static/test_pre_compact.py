@@ -250,7 +250,7 @@ class TestFindSessionState:
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260418-1200"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text("# State")
-        from hooks.marker_utils import find_session_state
+        find_session_state = pre_compact_module.find_session_state
         result = find_session_state(str(tmp_path))
         assert result is not None
         assert "session-state.md" in result
@@ -259,12 +259,12 @@ class TestFindSessionState:
         legacy = tmp_path / ".claude" / "ecw" / "session-state.md"
         legacy.parent.mkdir(parents=True)
         legacy.write_text("# Legacy State")
-        from hooks.marker_utils import find_session_state
+        find_session_state = pre_compact_module.find_session_state
         result = find_session_state(str(tmp_path))
         assert result is not None
 
     def test_returns_none_when_missing(self, pre_compact_module, tmp_path):
-        from hooks.marker_utils import find_session_state
+        find_session_state = pre_compact_module.find_session_state
         assert find_session_state(str(tmp_path)) is None
 
 

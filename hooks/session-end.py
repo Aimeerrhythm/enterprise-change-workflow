@@ -59,6 +59,7 @@ def _cleanup_state_files(cwd):
     transient_files = [
         "modified-files.txt",
         "tool-call-count.txt",
+        "investigated-files.txt",
     ]
     for fname in transient_files:
         try:
