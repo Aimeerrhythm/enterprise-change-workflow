@@ -14,3 +14,7 @@ __pycache__/
 .env.*
 dist/
 .claude/worktrees/
+.claude/debug
+.claude/architecture-audit/
+.claude/plans/
+.claude/ecw/state

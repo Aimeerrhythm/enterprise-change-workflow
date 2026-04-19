@@ -17,6 +17,11 @@ import re
 import sys
 from datetime import datetime
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state  # noqa: E402
+from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
+
 
 # Maximum lines to include from session-state.md
 MAX_STATE_LINES = 60
@@ -28,37 +33,16 @@ CHECKPOINT_PREVIEW_BYTES = 512
 
 def _read_session_state(cwd):
     """Read session-state.md content. Returns (content, path) or (None, None)."""
-    # New convention: session-state.md lives in session-data/{workflow-id}/
-    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if os.path.isdir(session_data_dir):
-        try:
-            subdirs = sorted(
-                [d for d in os.listdir(session_data_dir)
-                 if os.path.isdir(os.path.join(session_data_dir, d))],
-                reverse=True,
-            )
-            for d in subdirs:
-                candidate = os.path.join(session_data_dir, d, "session-state.md")
-                if os.path.exists(candidate):
-                    try:
-                        with open(candidate, encoding="utf-8", errors="ignore") as f:
-                            content = f.read()
-                        if content.strip():
-                            return content, candidate
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-    # Legacy fallback path
-    legacy = os.path.join(cwd, ".claude", "ecw", "session-state.md")
-    if os.path.exists(legacy):
-        try:
-            with open(legacy, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            if content.strip():
-                return content, legacy
-        except Exception:
-            pass
+    state_path = find_session_state(cwd)
+    if not state_path:
+        return None, None
+    try:
+        with open(state_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if content.strip():
+            return content, state_path
+    except Exception:
+        pass
     return None, None
 
 
@@ -139,25 +123,13 @@ def _summarize_checkpoint(filepath, name):
         return f"- `{name}`"
 
 
-def _read_ecw_config(cwd):
-    """Read ecw.yml and extract key config values."""
-    try:
-        import yaml
-    except ImportError:
-        return {}
-
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if not os.path.exists(ecw_yml):
-        return {}
-    try:
-        with open(ecw_yml, encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
-        return {
-            "project_name": cfg.get("project", {}).get("name", ""),
-            "language": cfg.get("project", {}).get("language", ""),
-        }
-    except Exception:
-        return {}
+def _get_project_info(cwd):
+    """Read ecw.yml and extract key project info."""
+    cfg = _read_full_ecw_config(cwd)
+    return {
+        "project_name": cfg.get("project", {}).get("name", ""),
+        "language": cfg.get("project", {}).get("language", ""),
+    }
 
 
 def _check_modified_files(cwd):
@@ -268,7 +240,7 @@ def main():
         )
 
     # 3. ECW project config
-    ecw_cfg = _read_ecw_config(cwd)
+    ecw_cfg = _get_project_info(cwd)
     if ecw_cfg.get("project_name") or ecw_cfg.get("language"):
         cfg_lines = []
         if ecw_cfg.get("project_name"):

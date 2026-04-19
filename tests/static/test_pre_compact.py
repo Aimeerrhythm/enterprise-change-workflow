@@ -5,10 +5,13 @@ required fields for context-compaction recovery.
 
 These tests call the hook script as a subprocess (same approach as
 test_verify_completion.py) and validate the stdout JSON contract.
+Unit tests also cover the internal functions added in v0.7+.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +21,7 @@ import pytest
 # ── Constants ──
 ROOT = Path(__file__).resolve().parent.parent.parent
 HOOK_SCRIPT = ROOT / "hooks" / "pre-compact.py"
+HOOKS_DIR = ROOT / "hooks"
 
 
 @pytest.fixture
@@ -34,6 +38,18 @@ def run_pre_compact():
         )
         return result
     return _run
+
+
+@pytest.fixture
+def pre_compact_module():
+    """Import pre-compact.py as a module for unit testing internal functions."""
+    spec = importlib.util.spec_from_file_location(
+        "pre_compact",
+        HOOKS_DIR / "pre-compact.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # ══════════════════════════════════════════════════════
@@ -110,3 +126,179 @@ class TestPreCompactHookScriptExists:
             f"Missing hook script: {HOOK_SCRIPT}\n"
             "Issue #5 requires a PreCompact hook at hooks/pre-compact.py"
         )
+
+
+# ══════════════════════════════════════════════════════
+# _extract_risk_level / _extract_current_phase (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestExtractHelpers:
+    """Tests for session-state.md field extraction helpers."""
+
+    def test_extract_risk_level_p0(self, pre_compact_module, tmp_path):
+        f = tmp_path / "state.md"
+        f.write_text("**Risk Level**: P0\n**Current Phase**: implementation")
+        assert pre_compact_module._extract_risk_level(str(f)) == "P0"
+
+    def test_extract_risk_level_p3(self, pre_compact_module, tmp_path):
+        f = tmp_path / "state.md"
+        f.write_text("**Risk Level**: P3\n")
+        assert pre_compact_module._extract_risk_level(str(f)) == "P3"
+
+    def test_extract_risk_level_missing(self, pre_compact_module, tmp_path):
+        f = tmp_path / "state.md"
+        f.write_text("No risk info here\n")
+        assert pre_compact_module._extract_risk_level(str(f)) is None
+
+    def test_extract_current_phase(self, pre_compact_module, tmp_path):
+        f = tmp_path / "state.md"
+        f.write_text("**Current Phase**: requirements-elicitation\n")
+        assert pre_compact_module._extract_current_phase(str(f)) == "requirements-elicitation"
+
+    def test_extract_current_phase_missing(self, pre_compact_module, tmp_path):
+        f = tmp_path / "state.md"
+        f.write_text("No phase info\n")
+        assert pre_compact_module._extract_current_phase(str(f)) is None
+
+
+# ══════════════════════════════════════════════════════
+# _build_recovery_message (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestBuildRecoveryMessage:
+    """Tests for the recovery message builder added in the v0.7 refactor."""
+
+    def test_with_state_risk_phase_and_checkpoints(self, pre_compact_module, tmp_path):
+        """Full happy path: state + risk + phase + checkpoint files."""
+        state = tmp_path / ".claude" / "ecw" / "session-data" / "wf1" / "session-state.md"
+        state.parent.mkdir(parents=True)
+        state.write_text("**Risk Level**: P0\n**Current Phase**: implementation\n")
+
+        checkpoint_files = [
+            ".claude/ecw/session-data/wf1/session-state.md",
+            ".claude/ecw/session-data/wf1/domain-collab-report.md",
+            ".claude/ecw/session-data/wf1/requirements-summary.md",
+        ]
+        msg = pre_compact_module._build_recovery_message(str(state), checkpoint_files, str(tmp_path))
+
+        assert "MANDATORY: Auto-continue" in msg
+        assert "(P0)" in msg
+        assert "domain-collab-report.md" in msg
+        assert "requirements-summary.md" in msg
+        # session-state.md should NOT appear in the "checkpoint files" step
+        # (it's already shown in step 1 as the primary state file)
+        if "checkpoint files" in msg:
+            checkpoint_section = msg.split("checkpoint files")[1].split("\n**NEXT")[0]
+            assert "session-state" not in checkpoint_section
+        assert "`implementation`" in msg
+
+    def test_without_state_path(self, pre_compact_module, tmp_path):
+        """No session-state.md: message instructs discovery."""
+        msg = pre_compact_module._build_recovery_message(None, [], str(tmp_path))
+
+        assert "MANDATORY: Auto-continue" in msg
+        assert "List `.claude/ecw/session-data/`" in msg
+        assert "NEXT ACTION" in msg
+
+    def test_with_state_but_no_risk_no_phase(self, pre_compact_module, tmp_path):
+        """State file exists but has no risk/phase fields."""
+        state = tmp_path / "state.md"
+        state.write_text("# Session State\nSome content\n")
+
+        msg = pre_compact_module._build_recovery_message(str(state), [], str(tmp_path))
+
+        assert "MANDATORY: Auto-continue" in msg
+        # No risk parenthetical
+        assert "(P" not in msg
+        # Generic next action (no phase)
+        assert "determine the current" in msg
+
+    def test_checkpoint_files_capped_at_5(self, pre_compact_module, tmp_path):
+        """Only first 5 non-state checkpoint files are listed."""
+        state = tmp_path / "state.md"
+        state.write_text("**Risk Level**: P1\n")
+
+        checkpoints = [f".claude/ecw/session-data/wf1/file-{i}.md" for i in range(8)]
+        msg = pre_compact_module._build_recovery_message(str(state), checkpoints, str(tmp_path))
+
+        assert "file-4.md" in msg
+        assert "file-5.md" not in msg
+
+    def test_no_checkpoint_files_omits_step3(self, pre_compact_module, tmp_path):
+        """Empty checkpoint list: step 3 (read checkpoints) is omitted."""
+        state = tmp_path / "state.md"
+        state.write_text("**Risk Level**: P2\n")
+
+        msg = pre_compact_module._build_recovery_message(str(state), [], str(tmp_path))
+
+        assert "checkpoint files" not in msg
+
+    def test_auto_continue_directive_is_first(self, pre_compact_module, tmp_path):
+        """Auto-continue directive must be the very first content in the message."""
+        msg = pre_compact_module._build_recovery_message(None, [], str(tmp_path))
+        assert msg.startswith("**MANDATORY: Auto-continue")
+
+
+# ══════════════════════════════════════════════════════
+# _find_session_state (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestFindSessionState:
+    """Tests for find_session_state (now delegated to marker_utils)."""
+
+    def test_finds_in_session_data_subdir(self, pre_compact_module, tmp_path):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260418-1200"
+        state_dir.mkdir(parents=True)
+        (state_dir / "session-state.md").write_text("# State")
+        from hooks.marker_utils import find_session_state
+        result = find_session_state(str(tmp_path))
+        assert result is not None
+        assert "session-state.md" in result
+
+    def test_falls_back_to_legacy(self, pre_compact_module, tmp_path):
+        legacy = tmp_path / ".claude" / "ecw" / "session-state.md"
+        legacy.parent.mkdir(parents=True)
+        legacy.write_text("# Legacy State")
+        from hooks.marker_utils import find_session_state
+        result = find_session_state(str(tmp_path))
+        assert result is not None
+
+    def test_returns_none_when_missing(self, pre_compact_module, tmp_path):
+        from hooks.marker_utils import find_session_state
+        assert find_session_state(str(tmp_path)) is None
+
+
+# ══════════════════════════════════════════════════════
+# _get_session_data_files (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestGetSessionDataFiles:
+    """Tests for _get_session_data_files listing checkpoint files."""
+
+    def test_lists_md_files_from_subdir(self, pre_compact_module, tmp_path):
+        subdir = tmp_path / ".claude" / "ecw" / "session-data" / "wf1"
+        subdir.mkdir(parents=True)
+        (subdir / "report.md").write_text("# Report")
+        (subdir / "notes.txt").write_text("not md")
+        result = pre_compact_module._get_session_data_files(str(tmp_path))
+        assert any("report.md" in f for f in result)
+        assert not any("notes.txt" in f for f in result)
+
+    def test_returns_empty_when_no_dir(self, pre_compact_module, tmp_path):
+        assert pre_compact_module._get_session_data_files(str(tmp_path)) == []
+
+
+# ══════════════════════════════════════════════════════
+# _append_compact_marker (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestAppendCompactMarker:
+    """Tests for _append_compact_marker appending timestamp to state file."""
+
+    def test_appends_marker(self, pre_compact_module, tmp_path):
+        state = tmp_path / "state.md"
+        state.write_text("# ECW State\n")
+        pre_compact_module._append_compact_marker(str(state))
+        content = state.read_text()
+        assert "<!-- ECW:COMPACT:" in content
+        assert content.startswith("# ECW State\n")

@@ -80,7 +80,6 @@ scan_patterns:
   # db_write: "INSERT|UPDATE|DELETE"             # SQL 写操作。命中说明直接修改数据，需关注事务边界和数据一致性。
   # cache_op: "redisTemplate|RedissonClient"     # 缓存操作。命中说明涉及缓存读写，需关注缓存一致性和过期策略。
   # scheduled: "@Scheduled|@XxlJob"              # 定时任务。命中说明是定时触发逻辑，修改可能影响执行频率和业务时序。
-
 # 完成验证配置
 # verify-completion hook 的行为控制。
 verification:
@@ -115,3 +114,15 @@ paths:
   calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史
   calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）
   instincts: ".claude/ecw/state/instincts.md"                      # Phase 3 提取的 instinct（SessionStart 注入）
+
+# impl-orchestration 配置
+# 控制 impl-orchestration 的并行执行行为和预检设置。
+impl_orchestration:
+  # 是否启用并行执行。true：按依赖图分层并行调度 implementer。false：串行执行（原始行为）。
+  parallel: true
+  # 最大并行 implementer 子代理数。建议 2-4，过高增加合并冲突风险。
+  max_parallelism: 3
+  # 首个 Task 执行前是否运行编译+测试预检。
+  pre_check: true
+  # 每层合并后是否运行编译检查。
+  merge_compile_check: true

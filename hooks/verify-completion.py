@@ -18,10 +18,27 @@ import re
 import subprocess
 import sys
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ecw_config import read_ecw_config as _read_ecw_config  # noqa: E402
+
 try:
     import yaml
 except ImportError:
     yaml = None
+
+
+ECW_ARTIFACT_PREFIXES = (
+    ".claude/knowledge/",
+    ".claude/ecw/session-data/",
+    ".claude/plans/",
+    ".claude/ecw/state/",
+)
+
+
+def _is_ecw_artifact(filepath):
+    normalized = filepath.replace(os.sep, "/")
+    return any(normalized.startswith(p) for p in ECW_ARTIFACT_PREFIXES)
 
 
 # ── User-visible messages (locale: zh-CN) ──
@@ -83,28 +100,31 @@ def check(input_data, config=None):
     if not modified and not deleted:
         return ("continue", _format_pass_message(0, 0))
 
+    source_modified = [f for f in modified if not _is_ecw_artifact(f)]
+    source_deleted = [f for f in deleted if not _is_ecw_artifact(f)]
+
     ecw_configured = os.path.exists(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
 
     if ecw_configured:
-        for filepath in modified:
+        for filepath in source_modified:
             issues.extend(check_broken_references(cwd, filepath))
-        for filepath in deleted:
+        for filepath in source_deleted:
             issues.extend(check_stale_references(cwd, filepath))
 
-    compile_issues, compile_warnings = check_java_compilation(cwd, modified)
+    compile_issues, compile_warnings = check_java_compilation(cwd, source_modified)
     issues.extend(compile_issues)
 
     test_issues, test_warnings = [], []
     if not compile_issues:
-        test_issues, test_warnings = check_java_tests(cwd, modified)
+        test_issues, test_warnings = check_java_tests(cwd, source_modified)
         issues.extend(test_issues)
 
     # Non-essential reminders: skip at "minimal" profile (P3)
     knowledge_reminders = []
     test_reminders = []
     if profile != "minimal":
-        knowledge_reminders = check_knowledge_doc_freshness(cwd, modified)
-        test_reminders = check_test_coverage(cwd, modified)
+        knowledge_reminders = check_knowledge_doc_freshness(cwd, source_modified)
+        test_reminders = check_test_coverage(cwd, source_modified)
 
     all_warnings = (compile_warnings or []) + (test_warnings or [])
 
@@ -304,18 +324,6 @@ def check_java_tests(cwd, modified):
         return [], []  # mvn 不在 PATH 中，跳过
 
     return [], []
-
-
-def _read_ecw_config(cwd):
-    """读取 .claude/ecw/ecw.yml 配置，返回 dict（文件不存在或解析失败返回空 dict）。"""
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if not os.path.exists(ecw_yml) or not yaml:
-        return {}
-    try:
-        with open(ecw_yml, encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
 
 
 def _load_path_mappings(cwd, cfg):

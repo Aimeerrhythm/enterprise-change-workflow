@@ -24,6 +24,11 @@ import os
 import re
 import sys
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state  # noqa: E402
+from ecw_config import read_ecw_config  # noqa: E402
+
 
 # ── Risk level → profile mapping ──
 
@@ -90,12 +95,12 @@ def get_profile(cwd):
 
     # 2. session-state.md
     if cwd:
-        state_file = os.path.join(cwd, ".claude", "ecw", "state", "session-state.md")
+        state_file = find_session_state(cwd)
         try:
-            if os.path.exists(state_file):
+            if state_file:
                 with open(state_file, encoding="utf-8", errors="ignore") as f:
                     content = f.read(4096)  # Read only the header
-                m = re.search(r'risk_level:\s*(P[0-3])', content, re.IGNORECASE)
+                m = re.search(r'(?:risk_level|\*\*Risk Level\*\*):\s*(P[0-3])', content, re.IGNORECASE)
                 if m:
                     return RISK_PROFILE_MAP.get(m.group(1).upper(), DEFAULT_PROFILE)
         except Exception:
@@ -130,29 +135,13 @@ def _load_subhook(module_filename):
     return mod
 
 
-def _read_ecw_config(cwd):
-    """Read .claude/ecw/ecw.yml configuration. Returns dict (empty on failure)."""
-    try:
-        import yaml as _yaml
-    except ImportError:
-        return {}
-    ecw_yml = os.path.join(cwd, ".claude", "ecw", "ecw.yml")
-    if not os.path.exists(ecw_yml):
-        return {}
-    try:
-        with open(ecw_yml, encoding="utf-8") as f:
-            return _yaml.safe_load(f) or {}
-    except Exception:
-        return {}
-
-
 # ── Main dispatcher ──
 
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
     profile = get_profile(cwd)
-    config = _read_ecw_config(cwd) if cwd else {}
+    config = read_ecw_config(cwd) if cwd else {}
     config["_runtime_profile"] = profile
 
     system_messages = []

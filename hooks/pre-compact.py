@@ -16,35 +16,12 @@ import re
 import sys
 from datetime import datetime
 
+# Import shared utilities (same directory)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import find_session_state  # noqa: E402
+
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
-
-
-def _find_session_state(cwd):
-    """Find session-state.md in session-data/{workflow-id}/ or legacy paths."""
-    # New convention: session-state.md lives in session-data/{workflow-id}/
-    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if os.path.isdir(session_data_dir):
-        try:
-            subdirs = sorted(
-                [d for d in os.listdir(session_data_dir)
-                 if os.path.isdir(os.path.join(session_data_dir, d))],
-                reverse=True,
-            )
-            for d in subdirs:
-                candidate = os.path.join(session_data_dir, d, "session-state.md")
-                if os.path.exists(candidate):
-                    return candidate
-        except Exception:
-            pass
-    # Legacy fallback paths
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "session-state.md"),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
 
 
 def _get_session_data_files(cwd):
@@ -124,66 +101,87 @@ def _extract_current_phase(state_path):
     return None
 
 
+def _build_recovery_message(state_path, checkpoint_files, cwd):
+    """Build the recovery systemMessage with auto-continue as the primary directive."""
+    parts = []
+
+    rel_state = None
+    risk = None
+    phase = None
+    if state_path:
+        rel_state = os.path.relpath(state_path, cwd)
+        risk = _extract_risk_level(state_path)
+        phase = _extract_current_phase(state_path)
+
+    # Auto-continue directive FIRST — this is the primary instruction
+    parts.append(
+        "**MANDATORY: Auto-continue after compaction.** "
+        "Do NOT wait for user input. Do NOT ask for confirmation. "
+        "Immediately execute the recovery steps below, then resume "
+        "the ECW workflow from where it left off."
+    )
+
+    # Recovery steps — concise, actionable
+    parts.append("\n**Recovery steps:**")
+
+    if rel_state:
+        risk_info = f" ({risk})" if risk else ""
+        parts.append(
+            f"\n1. Read `{rel_state}`{risk_info} — "
+            "find **Routing** (next skill) and **Current Phase**"
+        )
+    else:
+        parts.append(
+            "\n1. List `.claude/ecw/session-data/` subdirs, "
+            "read `session-state.md` from the most recent one"
+        )
+
+    parts.append("\n2. Run **TaskList** — find pending/in-progress tasks")
+
+    if checkpoint_files:
+        non_state = [f for f in checkpoint_files if "session-state" not in f]
+        if non_state:
+            files_str = ", ".join(f"`{f}`" for f in non_state[:5])
+            parts.append(f"\n3. Read checkpoint files if needed: {files_str}")
+
+    # Explicit next action
+    if phase:
+        parts.append(
+            f"\n**NEXT ACTION:** Phase before compaction was `{phase}`. "
+            "Read session-state.md, determine exact next step, execute it now."
+        )
+    else:
+        parts.append(
+            "\n**NEXT ACTION:** Read session-state.md, determine the current "
+            "phase and next step from Routing, execute it now."
+        )
+
+    return "\n".join(parts)
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
     if not cwd:
         msg = (
-            "**Context compaction occurred.** List `.claude/ecw/session-data/` subdirectories, "
-            "read `session-state.md` from the most recent one to restore context. "
-            "Check TaskList for pending work."
+            "**MANDATORY: Auto-continue after compaction.** "
+            "Do NOT wait for user input. "
+            "List `.claude/ecw/session-data/` subdirectories, "
+            "read `session-state.md` from the most recent one, "
+            "run TaskList, then resume the ECW workflow immediately."
         )
         print(json.dumps({"result": "continue", "systemMessage": msg}))
         return
 
-    state_path = _find_session_state(cwd)
+    state_path = find_session_state(cwd)
     checkpoint_files = _get_session_data_files(cwd)
 
-    # Append compaction marker to session-state.md
     if state_path:
         _append_compact_marker(state_path)
 
-    # Build recovery message
-    parts = ["**Context compaction occurred.** Restore context by reading:"]
-
-    if state_path:
-        rel_state = os.path.relpath(state_path, cwd)
-        risk = _extract_risk_level(state_path)
-        phase = _extract_current_phase(state_path)
-        risk_info = f" (risk: {risk})" if risk else ""
-        parts.append(f"\n1. **Workflow state**: `{rel_state}`{risk_info}")
-    else:
-        phase = None
-        parts.append("\n1. No active session-state.md found")
-
-    if checkpoint_files:
-        parts.append(f"\n2. **Checkpoint files** ({len(checkpoint_files)}):")
-        for cf in checkpoint_files:
-            parts.append(f"   - `{cf}`")
-    else:
-        parts.append("\n2. No checkpoint files in session-data/")
-
-    parts.append("\n3. Check **TaskList** for pending work")
-    parts.append(
-        "\n4. Check `.claude/ecw/state/modified-files.txt` for files "
-        "modified before compaction"
-    )
-
-    # Auto-continue instruction
-    parts.append(
-        "\n5. **IMPORTANT: Auto-continue** — After restoring context, "
-        "immediately resume the ECW workflow from where it left off. "
-        "Read session-state.md Routing and Current Phase to determine "
-        "the next step, then execute it WITHOUT asking the user for "
-        "confirmation. Do NOT wait for user input to continue."
-    )
-    if phase:
-        parts.append(f"   Current phase before compaction: `{phase}`")
-
-    msg = "\n".join(parts)
-    result = {"result": "continue", "systemMessage": msg}
-    print(json.dumps(result, ensure_ascii=False))
+    msg = _build_recovery_message(state_path, checkpoint_files, cwd)
+    print(json.dumps({"result": "continue", "systemMessage": msg}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

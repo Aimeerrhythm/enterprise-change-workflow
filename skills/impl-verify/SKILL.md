@@ -80,7 +80,9 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 1. Execute `git diff --name-only` to get the changed file list (lightweight)
 2. Dispatch Round 1-4 as **parallel** subagents (4 Agent tool calls in a single message)
 3. Collect structured findings YAML from each subagent
-4. Merge findings, present to user, handle convergence loop
+4. Merge findings, deduplicate across Rounds
+5. **Persist findings**: Write merged findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` **before** creating any fix Tasks or presenting to user. Format per finding: severity, Round, file:line, description, expected vs actual, fix suggestion. Update this file after each re-verification round (append new findings, mark fixed ones as `[FIXED]`). This ensures findings survive context compaction.
+6. Present findings to user, handle convergence loop
 
 **Each Round subagent uses the prompt template defined in `agents/impl-verifier.md`.** Coordinator fills the template variables with round-specific reference material and verification checklist.
 

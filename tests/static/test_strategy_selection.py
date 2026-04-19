@@ -1,4 +1,6 @@
 """Tests for Issue #1: Multi-dimensional Implementation Strategy Selection."""
+import re
+
 import pytest
 from pathlib import Path
 
@@ -112,3 +114,35 @@ class TestTddSubagentDelegation:
     def test_iron_law_still_exists(self):
         """Iron Law must be preserved (regression)."""
         assert "NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST" in self.content
+
+
+class TestTddRiskAwareEnforcement:
+    """Verify TDD SKILL.md has risk-aware enforcement architecture."""
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = (ROOT / "skills" / "tdd" / "SKILL.md").read_text()
+        self.lower = self.content.lower()
+
+    def test_has_risk_enforcement_table(self):
+        """Must have enforcement table covering P0/P1/P2/P3/Bug/Emergency."""
+        assert "p0" in self.lower and "p1" in self.lower
+        assert "p2" in self.lower and "p3" in self.lower
+        assert "bug" in self.lower and "emergency" in self.lower
+
+    def test_has_p2_simplified_mode(self):
+        """Must describe P2 simplified mode with concrete constraints."""
+        assert "simplified" in self.lower
+        assert re.search(r'max\s*5|5\s*cycle', self.lower)
+
+    def test_has_ecw_yml_override(self):
+        """Must describe ecw.yml tdd.enabled override."""
+        assert "tdd.enabled" in self.content
+
+    def test_has_skip_confirmation_protocol(self):
+        """Must describe skip confirmation via AskUserQuestion."""
+        assert "skip" in self.lower and "askuserquestion" in self.lower
+
+    def test_has_cycle_subagent_model_selection(self):
+        """Must specify model for TDD cycle subagents (sonnet)."""
+        assert "sonnet" in self.lower

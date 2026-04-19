@@ -4,6 +4,57 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.8.1] - 2026-04-19
+
+### 修复
+
+- **ecw.yml 重复键** (F-12) — 合并两个 `impl_orchestration` 段，消除 YAML 解析歧义
+- **session-end.py 路径 bug** (F-1) — `_find_session_state()` 搜索错误路径 `ecw/state/`，改用 `marker_utils.find_session_state()`
+- **dispatcher.py get_profile 路径 bug** — `get_profile()` 搜索不存在的 `ecw/state/session-state.md`，导致 risk profile 始终退化为 "standard"，P0 无法获得 "strict" profile
+- **compact-suggest 计数器跨 session 不重置** — `tool-call-count.txt` 未被 session-end 清理，新 session 继承旧计数导致过早弹出压缩建议
+
+### 改进
+
+- **Hook 共享模块** (DC-1/PC-6) — 新增 `ecw_config.py`，5 个 Hook 消除 `_find_session_state` / `_read_ecw_config` 重复定义，统一使用 `marker_utils` + `ecw_config`
+- **lint_skills.py 新增 3 项检查** — CHECK 15 (共享模块强制)、CHECK 16 (subagent 安全四要素)、CHECK 17 (eval 覆盖报告)
+
+### 新增
+
+- **test_hook_exception_safety.py** (DC-4) — AST 检查所有 Hook `__main__` 必须有 try/except + 禁止 sys.exit(1)
+- **test_yaml_template_validity.py** (PC-4) — YAML 模板无重复键检查
+- **test_workflow_guard.py** (DC-2) — verify-completion 工作流完整性检查占位
+- **test_artifact_schema.py** (DC-5) — artifact-schemas.md schema 覆盖占位
+
+## [0.8.0] - 2026-04-18
+
+### 新增
+
+- **impl-orchestration 并行执行** — 依赖图分析 + worktree 隔离并行调度 implementer subagent。串行 N 个 Task 压缩为 L 层并行（WMS 案例: 13 Task 串行 93min → 理论 5 层 ~25min）。含文件级冲突检测、最大并行度控制（默认 3）、合并冲突处理、串行 fallback
+- **ecw.yml `impl_orchestration` 配置段** — 新增 parallel/max_parallelism/pre_check/merge_compile_check 四项配置，ecw-upgrade 自动补充
+- **ecw-monitor 告警扫描** — assistant text content 关键词扫描（超时/timeout/fallback/失控/error/失败/degraded/异常），命中时输出 Alerts section
+
+### 改进
+
+- **calibration 双文件分工明确化** — `calibration-log.md`（完整维度对比，人工 review 用）与 `calibration-history.md`（简洁索引，Phase 1 自动检索用）。risk-classifier SKILL.md、CLAUDE.md、模板均补充分工说明
+
+## [0.7.0] - 2026-04-18
+
+### 修复
+
+- **impl-orchestration → impl-verify 自动路由** (Issue-6) — 完成所有 Task 后直接执行 impl-verify，不再询问用户确认
+- **impl-verify findings 持久化** (Issue-7) — 每轮验证后将 findings 写入 `session-data/{workflow-id}/impl-verify-findings.md`
+- **Subagent Ledger 完整记录** (Issue-8) — impl-orchestration 每批 Task 完成后更新 session-state Ledger
+- **spec-challenge-report.md 独立生成** (Artifact-1) — findings 在回写 Plan 前先独立持久化到 session-data/
+- **writing-plans/spec-challenge 分裂建议不冲突** — P0/P1 后续有 spec-challenge 时，writing-plans 不提前触发 compact 建议，由 spec-challenge 完成后统一走 new session 分裂点
+- **verify-completion 知识文档白名单** (Issue-5) — `.claude/knowledge/`、`session-data/`、`plans/` 路径跳过编译/测试验证
+- **Plan subagent 动态超时** (Issue-2) — 根据预估 Task 数设置超时（≤5: 180s, 6-10: 300s, >10: 420s），超时后跳过重试直接 fallback Direct
+- **PreCompact auto-continue 前置** (Issue-1) — auto-continue 指令移至 systemMessage 最前，提高 compact 后自动恢复可靠性
+- **知识库跨域调用自动回填** (Warning-3) — biz-impact-analysis 发现未注册跨域调用时自动追加到 cross-domain-calls.md
+
+### 新增
+
+- **impl-orchestration 首 Task 前预检** (Warning-1) — 执行前运行 compile+test 预检，提前暴露基础设施问题。可通过 ecw.yml `impl_orchestration.pre_check` 关闭
+
 ## [0.6.6] - 2026-04-17
 
 ### 修复

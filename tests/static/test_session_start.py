@@ -214,6 +214,118 @@ class TestSessionStartMain:
                 assert output["result"] == "continue"
 
 
+
+
+# ══════════════════════════════════════════════════════
+# _read_instincts (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestReadInstincts:
+    """Tests for _read_instincts parsing instincts.md with INSTINCT markers."""
+
+    def test_parses_valid_instinct(self, session_start, tmp_path):
+        """Parses well-formed instinct entry above confidence threshold."""
+        instincts_dir = tmp_path / ".claude" / "ecw" / "state"
+        instincts_dir.mkdir(parents=True)
+        (instincts_dir / "instincts.md").write_text(
+            "# Instincts\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: order cancel after payment\n"
+            "- **Action**: classify as P0\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: calibration-2026-04\n"
+        )
+        result = session_start._read_instincts(str(tmp_path))
+        assert len(result) == 1
+        assert result[0]["pattern"] == "order cancel after payment"
+        assert result[0]["confidence"] == 0.85
+
+    def test_filters_below_threshold(self, session_start, tmp_path):
+        """Entries with confidence < 0.7 are excluded."""
+        instincts_dir = tmp_path / ".claude" / "ecw" / "state"
+        instincts_dir.mkdir(parents=True)
+        (instincts_dir / "instincts.md").write_text(
+            "# Instincts\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: minor fix\n"
+            "- **Action**: classify as P3\n"
+            "- **Confidence**: 0.5\n"
+            "- **Source**: test\n"
+        )
+        result = session_start._read_instincts(str(tmp_path))
+        assert len(result) == 0
+
+    def test_returns_empty_when_no_file(self, session_start, tmp_path):
+        """No instincts.md → empty list."""
+        result = session_start._read_instincts(str(tmp_path))
+        assert result == []
+
+
+# ══════════════════════════════════════════════════════
+# _read_ecw_config (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestReadEcwConfig:
+    """Tests for _get_project_info reading ecw.yml."""
+
+    def test_reads_project_name_and_language(self, session_start, tmp_path):
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True)
+        (ecw_dir / "ecw.yml").write_text(
+            "project:\n  name: test-wms\n  language: java\n"
+        )
+        cfg = session_start._get_project_info(str(tmp_path))
+        assert cfg["project_name"] == "test-wms"
+        assert cfg["language"] == "java"
+
+    def test_returns_empty_when_no_file(self, session_start, tmp_path):
+        cfg = session_start._get_project_info(str(tmp_path))
+        assert cfg == {} or (not cfg.get("project_name") and not cfg.get("language"))
+
+
+# ══════════════════════════════════════════════════════
+# _check_modified_files (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestCheckModifiedFiles:
+    """Tests for _check_modified_files reading modified-files.txt."""
+
+    def test_reads_file_list(self, session_start, tmp_path):
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "modified-files.txt").write_text(
+            "src/OrderService.java\nsrc/PaymentService.java\n"
+        )
+        result = session_start._check_modified_files(str(tmp_path))
+        assert len(result) == 2
+        assert "src/OrderService.java" in result
+
+    def test_returns_empty_when_no_file(self, session_start, tmp_path):
+        result = session_start._check_modified_files(str(tmp_path))
+        assert result == []
+
+
+# ══════════════════════════════════════════════════════
+# _summarize_checkpoint (v0.7+)
+# ══════════════════════════════════════════════════════
+
+class TestSummarizeCheckpoint:
+    """Tests for _summarize_checkpoint heading extraction."""
+
+    def test_extracts_first_heading(self, session_start, tmp_path):
+        f = tmp_path / "requirements-summary.md"
+        f.write_text("# Requirements Summary\nDetail content here.\n")
+        result = session_start._summarize_checkpoint(str(f), "requirements-summary.md")
+        assert "requirements-summary.md" in result
+        assert "Requirements Summary" in result
+
+    def test_handles_empty_file(self, session_start, tmp_path):
+        f = tmp_path / "empty.md"
+        f.write_text("")
+        result = session_start._summarize_checkpoint(str(f), "empty.md")
+        assert "empty.md" in result
+
+
 class TestSessionStartScriptExists:
     """Guard test: the hook script file must exist."""
 
