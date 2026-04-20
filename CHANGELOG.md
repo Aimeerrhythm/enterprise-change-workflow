@@ -4,6 +4,18 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.3] - 2026-04-20
+
+### 修复
+
+- **Gateguard 新文件放行** — Write 新建文件时 gateguard-fact-force hook 误拦截（要求调查 callers），加 `os.path.exists` 检查跳过不存在的文件
+- **impl-orchestration 协调器禁止直接实现** — 协调器在剩余 Task 少时跳过子代理自己写代码，绕过 ecw.yml models 配置和 gateguard hook；Serial Fallback 明确 serial ≠ coordinator-direct，Never Rules + Common Rationalizations 双重防护
+- **Spec Review 后必须派发 repair 子代理** — 协调器 Spec Review 发现问题后直接 Edit 修复，同样绕过配置；改为强制派发 repair implementer subagent
+
+### 改进
+
+- **TDD subagent-driven 快速路由** — 当实现策略为 subagent-driven 时，TDD skill 从冗余 pass-through 改为明确的两步快速路由（更新 session-state → 立即 invoke impl-orchestration）
+
 ## [0.9.2] - 2026-04-20
 
 ### 修复

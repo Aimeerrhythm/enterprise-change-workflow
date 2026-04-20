@@ -123,13 +123,15 @@ If a layer has more tasks than max parallelism, split into sub-layers (e.g., 5 t
 
 ### Serial Fallback
 
-Fall back to fully serial execution (no worktree isolation, original behavior) when:
+Fall back to fully serial execution (no worktree isolation) when:
 - Dependency graph is a single chain (all tasks mutually dependent)
 - Plan has ≤ 3 tasks (parallelism overhead exceeds benefit)
 - User explicitly requests serial execution
 - ecw.yml sets `impl_orchestration.parallel: false`
 
-Announce: "Tasks are interdependent / few enough — using serial execution."
+**Serial ≠ coordinator-direct.** Serial mode still dispatches implementer subagents — just one at a time without worktree isolation. The coordinator NEVER writes implementation code itself. This ensures ecw.yml `models` config is respected and hook enforcement (gateguard, verify-completion) applies consistently.
+
+Announce: "Tasks are interdependent / few enough — using serial execution (subagent dispatch, no worktree)."
 
 ## Layer Execution
 
@@ -212,8 +214,8 @@ The reviewer reads actual code and verifies:
 - Misunderstandings
 
 If issues found for any task:
-1. Fix issues on the current branch (sequential — fixes may touch shared files)
-2. Re-review only the failed tasks
+1. Dispatch a **repair implementer subagent** (same `subagent_type: "ecw:implementer"`, same model as original implementer) with: the spec review findings + task context + "fix these issues only, do not re-implement". The coordinator MUST NOT edit source code directly — this bypasses ecw.yml models config and gateguard hook.
+2. Re-review only the repaired tasks (dispatch spec reviewer again)
 3. Max 3 rounds per task (see Loop Safety Controls)
 
 **Spec reviewer timeout**: 120s. If reviewer times out, coordinator performs simplified spec check inline.
@@ -353,6 +355,8 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 - **Skip fact-forcing gate** — implementers must quote task requirements before editing and check cross-domain file ownership
 - **Dispatch parallel tasks that share files** — file-conflict detection must prevent this; if missed, merge will fail
 - **Send parallel Agent calls in separate messages** — all same-layer dispatches go in ONE message
+- **Implement any task directly as coordinator** — always dispatch implementer subagents, even for the last remaining task or serial fallback. The coordinator coordinates; subagents implement. Implementing directly bypasses ecw.yml `models` config (coordinator runs on its own model, not the configured `implementation` model) and gateguard hook enforcement
+- **Edit source code to fix spec review issues** — dispatch a repair implementer subagent instead. Same reason: coordinator edits bypass models config and hooks
 
 ## Task Merging
 
@@ -372,6 +376,8 @@ Reference risk-classifier "实现策略选择" section for authoritative rules. 
 | "The implementer said DONE, I trust the report" | Implementer reports may be incomplete or optimistic. Spec reviewer must read actual code independently. |
 | "Pre-flight check failed but it's probably pre-existing" | Pre-existing failures cause cascading confusion across task dispatches. Fix or get user approval before proceeding. |
 | "Task is BLOCKED after 2 retries, but one more try might work" | 2 re-dispatches is the hard limit. Escalate to user. Retrying without changes wastes budget. |
+| "Only 2-3 tasks left, easier to just implement them myself" | Coordinator implementing directly bypasses ecw.yml `models` config (uses coordinator's model instead of configured `implementation` model) and skips gateguard hook enforcement. Always dispatch subagents — even for a single remaining task. |
+| "Spec review found a small fix, I'll edit it inline instead of dispatching" | Coordinator editing code directly has the same bypass problem. Dispatch a repair implementer subagent — it takes 30s and respects the configured model + hooks. |
 
 ## ecw.yml Configuration
 

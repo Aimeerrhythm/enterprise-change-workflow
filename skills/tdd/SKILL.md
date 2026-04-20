@@ -87,13 +87,16 @@ When risk level is P2, apply these concrete constraints:
 5. **Compile failure limit**: If the same compilation error recurs 3 times after attempted fixes, stop and report to the user instead of retrying.
 6. **No design questions**: Do not use AskUserQuestion for design decisions (data format, field naming, storage approach). These were resolved during writing-plans. If you discover a genuine gap, note it in your output and proceed with the Plan's specification.
 
-## Subagent Delegation for Heavy TDD
+## Subagent-Driven Fast Route
 
-When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e., `ecw:impl-orchestration` will be used), **TDD does not execute in the coordinator**. Instead:
+When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e., `ecw:impl-orchestration` will be used), **this skill is a pass-through**. TDD cycles execute inside each implementer subagent, not in the coordinator.
 
-1. Each implementer subagent dispatched by `ecw:impl-orchestration` executes its own TDD cycle within its isolated context
-2. The coordinator only receives cycle summaries (pass/fail + modified file list), not file contents
-3. This skill's protocol (Iron Law, risk-aware enforcement, cycle rules) still applies — it is injected into each implementer's prompt by `ecw:impl-orchestration`
+**Action — do these two things only, then stop:**
+
+1. Update `session-state.md` MODE marker to `implementation`
+2. **Immediately invoke `ecw:impl-orchestration`** via Skill tool — no other work, no AskUserQuestion
+
+TDD protocol (Iron Law, risk-aware enforcement, cycle rules) is embedded into each implementer's prompt by `ecw:impl-orchestration`. Do NOT execute any TDD cycle in the coordinator when strategy is subagent-driven.
 
 When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 unique files**:
 

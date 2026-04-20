@@ -85,6 +85,9 @@ def check(input_data, config=None):
     if _is_exempt(file_path, cwd):
         return ("continue", "")
 
+    if not os.path.exists(file_path):
+        return ("continue", "")
+
     rel_path = os.path.relpath(file_path, cwd) if os.path.isabs(file_path) else file_path
 
     investigated = _read_investigated(cwd)
