@@ -456,6 +456,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.9.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.1
 [0.9.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.0
 [0.8.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.1
 [0.8.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.0
