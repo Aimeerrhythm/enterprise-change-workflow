@@ -145,3 +145,11 @@ impl_orchestration:
   # 每层合并后是否运行编译检查。
   merge_compile_check: true
 
+# 自动流程配置
+# 控制工作流自动化程度。开启后减少手动确认点，加速端到端执行。
+auto_flow:
+  # Phase 1 风险分级后是否自动确认（跳过 AskUserQuestion）。
+  # true：系统公告分级结果后直接进入下游流程，用户可随时打断。
+  # false（默认）：停下来让用户确认风险等级再继续。
+  auto_confirm: false
+

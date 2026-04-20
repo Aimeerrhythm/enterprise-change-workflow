@@ -261,6 +261,20 @@ Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix 
 
 Never fix bugs without a test. This integrates with `ecw:systematic-debugging` Phase 4.
 
+## Downstream Handoff
+
+After all TDD cycles for the current Plan Task complete (all tests GREEN):
+
+1. **If Implementation Strategy is `subagent-driven`**: TDD cycles are executed inside implementer subagents dispatched by `ecw:impl-orchestration`. No coordinator-level handoff needed — `ecw:impl-orchestration` manages the flow.
+
+2. **If Implementation Strategy is `direct`** (executing Tasks sequentially in main session):
+   - Mark the current Task as complete via TaskUpdate
+   - Check TaskList for the next pending Plan Task
+   - If next Plan Task exists: Begin TDD RED phase for the next Task immediately
+   - If all Plan Tasks complete: Proceed to impl-verify
+
+> **CRITICAL — Auto-Continue Rule**: After the final Plan Task's GREEN phase completes (all implementation tasks done), update session-state.md `Next` field to `ecw:impl-verify`, then **immediately invoke** `ecw:impl-verify`. Do NOT output "implementation complete, shall I verify?" or any confirmation prompt. The user already approved the full workflow during Phase 1. If a pending `ecw:impl-verify` Task exists in TaskList, mark it `in_progress` first. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
+
 ## Error Handling
 
 | Scenario | Handling |

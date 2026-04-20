@@ -208,9 +208,15 @@ First output a brief assessment (no more than 5 lines):
 Downstream routing: {full routing chain, e.g., ecw:domain-collab(multi-domain) → Phase 2 → ecw:writing-plans → TDD:RED → Implementation(GREEN) → ecw:biz-impact-analysis → Phase 3}
 ```
 
-Then **immediately use `AskUserQuestion` tool** for user confirmation (confirm level + domains + routing in one go); do not output lengthy text waiting for manual reply. After user confirms, downstream skills execute directly without re-confirmation.
+Then check ecw.yml `auto_flow.auto_confirm`:
 
-**AskUserQuestion invocation:**
+**If `auto_confirm: true`** — Skip AskUserQuestion. Output:
+```
+[Auto-Flow] Risk: P{X} | {single-domain/cross-domain} ({domain list}) | Route: {routing chain}. Auto-proceeding...
+```
+Then **immediately invoke** the next downstream skill (same as "Proceed" path below). The user can interrupt at any time if they disagree with the classification.
+
+**If `auto_confirm: false` (default)** or `auto_flow` section missing — use `AskUserQuestion` tool for user confirmation:
 
 ```
 Question: "Risk level P{X}, proceed with the above workflow?"

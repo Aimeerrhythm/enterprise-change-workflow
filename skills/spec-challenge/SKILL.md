@@ -264,6 +264,14 @@ Also output implementation strategy recommendation (based on Task count in Plan;
 
 Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-data/{workflow-id}/session-state.md`.
 
+> **CRITICAL — Auto-Continue Rule**: When user selects "Continue in current session" and `Auto-Continue` is `yes` in session-state.md:
+> - Update session-state.md `Next` field, then **immediately invoke** the next skill based on Implementation Strategy:
+>   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
+>   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
+> - Do NOT output additional confirmation text. The user already confirmed the workflow during Phase 1.
+> - When user selects "New session for implementation": Output resume instructions and STOP (no auto-invoke).
+> - If `Auto-Continue` field is missing or `no`, fall back to showing strategy recommendation and waiting for user direction (backward compatibility).
+
 ### Manual Trigger
 
 At any time, run `/spec-challenge <file path>` on any spec/plan file.

@@ -18,6 +18,7 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 - **Auto-Continue**: yes
+- **Next**: {next skill to invoke, updated by each skill before handoff}
 <!-- ECW:STATUS:END -->
 
 <!-- ECW:MODE:START -->

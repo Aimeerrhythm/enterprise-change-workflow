@@ -101,6 +101,21 @@ def _extract_current_phase(state_path):
     return None
 
 
+def _extract_next_skill(state_path):
+    """Extract next skill from session-state.md Next field."""
+    try:
+        with open(state_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read(2048)
+        m = re.search(r'\*\*Next\*\*:\s*(.+)', content)
+        if m:
+            val = m.group(1).strip()
+            if val and val.lower() not in ('tbd', 'none', 'complete', ''):
+                return val
+    except Exception:
+        pass
+    return None
+
+
 def _build_recovery_message(state_path, checkpoint_files, cwd):
     """Build the recovery systemMessage with auto-continue as the primary directive."""
     parts = []
@@ -108,10 +123,12 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
     rel_state = None
     risk = None
     phase = None
+    next_skill = None
     if state_path:
         rel_state = os.path.relpath(state_path, cwd)
         risk = _extract_risk_level(state_path)
         phase = _extract_current_phase(state_path)
+        next_skill = _extract_next_skill(state_path)
 
     # Auto-continue directive FIRST — this is the primary instruction
     parts.append(
@@ -145,7 +162,12 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
             parts.append(f"\n3. Read checkpoint files if needed: {files_str}")
 
     # Explicit next action
-    if phase:
+    if next_skill:
+        parts.append(
+            f"\n**NEXT ACTION:** Invoke `{next_skill}` immediately. "
+            "This was the next skill in the routing chain before compaction."
+        )
+    elif phase:
         parts.append(
             f"\n**NEXT ACTION:** Phase before compaction was `{phase}`. "
             "Read session-state.md, determine exact next step, execute it now."

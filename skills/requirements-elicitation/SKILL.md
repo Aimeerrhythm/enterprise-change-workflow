@@ -304,6 +304,11 @@ Wait for user confirmation. After confirmation:
 - **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`
 - **Fallback**: If Phase 2 not needed, invoke `ecw:writing-plans` directly
 
+> **CRITICAL — Auto-Continue Rule**: After user confirms the requirement summary, update session-state.md `Next` field, then **immediately invoke** the next skill:
+> - **P0/P1**: Immediately invoke risk-classifier Phase 2. After Phase 2 completes, immediately invoke `ecw:writing-plans`. Do NOT output confirmation text between these transitions.
+> - **P2**: Immediately invoke `ecw:writing-plans`.
+> - The user's confirmation of the requirement summary IS the go-ahead for the rest of the workflow. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user direction (backward compatibility).
+
 ## Error Handling
 
 | Scenario | Handling |

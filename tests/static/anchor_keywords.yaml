@@ -29,6 +29,8 @@ tdd:
   - "P0"
   - "P1"
   - "P2"
+  - "Downstream Handoff"
+  - "Auto-Continue"
 
 impl-verify:
   - "must-fix"
@@ -36,6 +38,7 @@ impl-verify:
   - "Round"
   - "convergence"
   - "Announce at start"
+  - "Auto-Continue"
 
 domain-collab:
   - "Round 1"
@@ -45,6 +48,7 @@ domain-collab:
   - "Mode switch"
   - "Announce at start"
   - "Your Thought"
+  - "Auto-Continue"
 
 impl-orchestration:
   - "implementer.md"
@@ -60,6 +64,7 @@ writing-plans:
   - "Plan"
   - "rollback"
   - "Your Thought"
+  - "Auto-Continue"
 
 spec-challenge:
   - "Fatal Flaw"
@@ -67,18 +72,21 @@ spec-challenge:
   - "Mode switch"
   - "Announce at start"
   - "Your Thought"
+  - "Auto-Continue"
 
 requirements-elicitation:
   - "Systematic Questioning"
   - "Questioning Dimension"
   - "Mode switch"
   - "Announce at start"
+  - "Auto-Continue"
 
 biz-impact-analysis:
   - "biz-impact-analysis"
   - "knowledge"
   - "Announce at start"
   - "Your Thought"
+  - "Auto-Continue"
 
 cross-review:
   - "cross-file"

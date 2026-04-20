@@ -242,6 +242,16 @@ If ecw.yml `rules.enabled: true`: pass engineering rules files from `rules.path`
 - **Stall detection**: If must-fix count does not decrease for 2 consecutive rounds (Round N and N+1 have equal or higher must-fix count), stop iterating and escalate to user: `[Stall detected: must-fix count not decreasing after {N} rounds. Remaining {X} must-fix items require manual intervention.]`
 - **Context savings**: By dispatching Rounds as subagents, the coordinator holds only the changed file list (~500 tokens) plus aggregated findings YAML (~200 tokens per finding). In the WMS P0 session, this would have reduced coordinator context from ~49 file reads to ~4 YAML summaries.
 
+## Downstream Handoff
+
+After convergence (zero must-fix findings in the most recent round):
+
+> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
+> - **P0/P1**: **Immediately invoke** `ecw:biz-impact-analysis`. Do NOT output "verification passed, shall I analyze business impact?" or any confirmation. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList.
+> - **P2**: Output suggestion to run biz-impact-analysis; wait for user decision.
+> - **P3**: No downstream handoff needed.
+> - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
+
 ## Severity Definitions
 
 | Severity | Definition | Blocks Convergence | Typical Scenarios |

@@ -198,7 +198,12 @@ P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plan
 P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
 ```
 
-**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
+**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
+
+> **CRITICAL — Auto-Continue Rule**: After Round 3 completes and report is output, update session-state.md `Next` field, then **immediately invoke** the next skill:
+> - **P0/P1**: Immediately invoke risk-classifier Phase 2. Do NOT output confirmation text or wait for user input.
+> - **P2**: Immediately invoke `ecw:writing-plans`. Do NOT ask for confirmation.
+> - The user already confirmed the full workflow during Phase 1. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 
 ---
 

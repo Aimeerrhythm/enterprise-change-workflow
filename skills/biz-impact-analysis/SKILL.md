@@ -138,9 +138,11 @@ When `ecw:impl-verify` completes:
 
 After biz-impact-analysis report is output:
 
-1. If current change is **P0/P1** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`), **immediately execute Phase 3 calibration** — use Skill tool to invoke `ecw:risk-classifier` with argument `--phase3`
-2. If current change is **P2**, suggest executing Phase 3 (not mandatory; user decides)
-3. Phase 3 no longer needs manual trigger — automatically chains after biz-impact-analysis completes
+> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
+> - **P0/P1**: **Immediately invoke** `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Do NOT output "analysis complete, shall I calibrate?" or any confirmation. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
+> - **P2**: Suggest executing Phase 3 (not mandatory; user decides).
+> - **P3**: No Phase 3 needed.
+> - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 

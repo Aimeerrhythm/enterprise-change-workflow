@@ -57,6 +57,7 @@ def _extract_state_fields(content):
         "current_phase": r'\*\*Current Phase\*\*:\s*(.+)',
         "status": r'\*\*Status\*\*:\s*(.+)',
         "working_mode": r'\*\*Working Mode\*\*:\s*(.+)',
+        "next_skill": r'\*\*Next\*\*:\s*(.+)',
     }
     for key, pattern in patterns.items():
         m = re.search(pattern, content, re.IGNORECASE)
@@ -277,12 +278,21 @@ def main():
 
     # 4. Task recovery hint
     if state_content and state_fields.get("status", "").lower() != "ended":
-        sections.append(
-            "# [ECW] Recovery hint\n\n"
-            "An active ECW workflow was detected from a previous session. "
-            "Check TaskList for pending work. If no tasks exist, re-create "
-            "them based on the `Post-Implementation Tasks` field in session-state.md."
-        )
+        next_skill = state_fields.get("next_skill", "").strip()
+        if next_skill and next_skill.lower() not in ('tbd', 'none', 'complete', ''):
+            sections.append(
+                "# [ECW] Recovery hint\n\n"
+                f"An active ECW workflow was detected. Next skill to invoke: `{next_skill}`. "
+                "Check TaskList for pending work. If no tasks exist, re-create "
+                "them based on the `Post-Implementation Tasks` field in session-state.md."
+            )
+        else:
+            sections.append(
+                "# [ECW] Recovery hint\n\n"
+                "An active ECW workflow was detected from a previous session. "
+                "Check TaskList for pending work. If no tasks exist, re-create "
+                "them based on the `Post-Implementation Tasks` field in session-state.md."
+            )
 
     # 5. Modified files from previous session
     prev_modified = _check_modified_files(cwd)
