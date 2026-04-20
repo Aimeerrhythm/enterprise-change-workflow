@@ -62,7 +62,7 @@ def check(input_data, config=None):
     if not file_path:
         return ("continue", "")
 
-    rel_path = os.path.relpath(file_path, cwd) if cwd and file_path.startswith(cwd) else file_path
+    rel_path = os.path.relpath(file_path, cwd) if cwd else file_path
     rel_path = rel_path.replace(os.sep, "/")
 
     if any(rel_path.startswith(prefix) for prefix in EDITABLE_PATH_PREFIXES):
