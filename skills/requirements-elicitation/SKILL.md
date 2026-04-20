@@ -1,6 +1,10 @@
 ---
 name: requirements-elicitation
-description: Use when user proposes a new requirement, feature, change request, or business need — before any implementation begins. Only for P0/P1 single-domain requirements routed by ecw:risk-classifier.
+description: >
+  Use when user proposes a new requirement, feature, change request, or business
+  need — before any implementation begins. Invocable standalone via
+  /ecw:requirements-elicitation or auto-routed by ecw:risk-classifier for P0/P1
+  single-domain requirements.
 ---
 
 # Requirements Elicitation
@@ -13,7 +17,7 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."
 
-**Mode switch**: Update session-state.md MODE marker to `analysis`.
+**Mode switch**: Update session-state.md MODE marker to `analysis` (if session-state.md exists).
 
 ## When to Use
 
@@ -22,28 +26,21 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 - User says "I want to...", "We need to...", "Add a feature..."
 - User provides a PRD, specification, or requirement document for implementation
 
-**Prerequisite:** This skill is no longer triggered directly. All change-type tasks enter through `ecw:risk-classifier`, which decides whether to invoke this skill based on risk level and domain count:
-- P0/P1 single-domain → ecw:risk-classifier invokes this skill (full workflow)
-- P0/P1 cross-domain → ecw:risk-classifier invokes `ecw:domain-collab` (replaces this skill)
-- P2 → ecw:risk-classifier skips this skill, goes directly to ecw:writing-plans (1-round simplified confirmation)
-- P3 → Skip this skill, implement directly
-
-If ecw:risk-classifier has not yet executed, **execute ecw:risk-classifier first**, then let it decide whether to invoke this skill.
+**Invocation modes:**
+- **Standalone**: `/ecw:requirements-elicitation` — execute full 9-dimension questioning directly. No risk-classifier prerequisite needed.
+- **Auto-routed**: `ecw:risk-classifier` invokes this skill for P0/P1 single-domain requirements (risk level and domain info available via session-state.md).
 
 **When NOT to use:**
 - User gives a precise, fully-specified technical task ("fix the null pointer on line 42")
 - User explicitly says "just do it, don't ask questions"
-- **Bug fix / debugging scenarios** — bug fixes still go through `ecw:risk-classifier` for risk pre-assessment first, then route to `ecw:systematic-debugging` for diagnosis and fix; they do not go through this skill
-- Changes classified as P2 or P3 by ecw:risk-classifier
+- **Bug fix / debugging scenarios** — route to `ecw:systematic-debugging` instead
 
 ## Skill Handoff
 
 **After user confirms the requirement summary, execute the following handoff steps:**
 
-1. **P0/P1 requirements**: First execute **ecw:risk-classifier Phase 2** (precise classification). Phase 2 will re-assess risk level and impact scope based on the requirement summary produced by this skill, potentially upgrading/downgrading and adjusting downstream workflow. After Phase 2 completes, invoke `ecw:writing-plans`.
-2. **P2 requirements** (should not reach this skill, but as fallback): Directly invoke `ecw:writing-plans`.
-
-**Do not skip Phase 2 and go directly to ecw:writing-plans** — Phase 2 is a mandatory node between requirement analysis completion and plan writing.
+1. **If session-state.md exists (workflow mode)**: Execute **ecw:risk-classifier Phase 2** (precise classification), then invoke `ecw:writing-plans`.
+2. **If session-state.md absent (standalone mode)**: Directly invoke `ecw:writing-plans` with the requirement summary. writing-plans will default to P0 full detail mode.
 
 ## Core Flow
 

@@ -205,7 +205,7 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 | "The reviewer is being too harsh, these are edge cases" | Edge cases in P0/P1 changes become production incidents. The reviewer's job is to find them. |
 | "User disagreed with the finding, so it's not important" | User drives decisions, but disagreement must come with technical rationale. Record the disagreement; do not silently drop the finding. |
 | "Plan revision is a quick fix, I'll use Edit" | Large plan files (50-80KB) break Edit's exact-match replacement. Use Write for full overwrite. |
-| "I'll skip the session split recommendation, user knows what to do" | Session split is the authoritative context management decision point. Writing-plans defers to this moment. It MUST trigger. |
+| "I'll skip the session split recommendation, user knows what to do" | Context management checkpoints are handled by PreCompact hook. Do not re-introduce session split AskUserQuestion — auto-continue to implementation. |
 
 ## Workflow Integration
 
@@ -233,43 +233,15 @@ ecw:risk-classifier (P0 / P1 cross-domain)
   → implementation
 ```
 
-### Post-Review: Session Split Recommendation
+### Post-Review: Auto-Continue to Implementation
 
-After spec-challenge completes and user confirms review results (Plan updated), **ALWAYS** output split recommendation for **P0 and P1 cross-domain changes**. This is the authoritative context management decision point — writing-plans deliberately defers its context-health check when spec-challenge follows, so this recommendation MUST trigger regardless of context-health state.
+After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and **immediately proceed to implementation** — do NOT ask the user whether to continue or start a new session. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-At this point, all analysis phase artifacts have been persisted:
-- domain-collab report → `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md`
-- Plan file → `.claude/plans/` directory
-- Spec-challenge record → `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`
-- ECW state → `.claude/ecw/session-data/{workflow-id}/session-state.md`
-- Knowledge summary → `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md`
-
-Use AskUserQuestion:
-
-```
-Question: "Plan phase complete. How would you like to continue?"
-Options:
-  1. "Continue in current session (Recommended)" — Continue implementing; PreCompact hook automatically preserves key context checkpoints for recovery
-  2. "New session for implementation" — Implement in a new session; all analysis artifacts are saved to files
-```
-
-When option 2 is selected, output:
-"All analysis artifacts have been saved. In a new session, say 'continue ECW implementation' and I will read the Plan file and state file to resume work."
-
-Also output implementation strategy recommendation (based on Task count in Plan; see risk-classifier "Implementation Strategy Selection" section):
-- Plan Tasks ≤ 3 → "Recommend direct implementation (few tasks, subagent parallelism not needed)"
-- Plan Tasks 4-8, P0/P1 → "Recommend using `ecw:impl-orchestration` (many tasks, parallelism accelerates)"
-- Plan Tasks > 8, P0/P1 → "Recommend using `ecw:impl-orchestration`, merge simple Tasks (see Implementation Strategy Selection section)"
-- Plan Tasks 4+, P2 → "Recommend direct implementation (medium risk, parallelization overhead unnecessary)"
-
-Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-data/{workflow-id}/session-state.md`.
-
-> **CRITICAL — Auto-Continue Rule**: When user selects "Continue in current session" and `Auto-Continue` is `yes` in session-state.md:
+> **CRITICAL — Auto-Continue Rule**: When `Auto-Continue` is `yes` in session-state.md:
 > - Update session-state.md `Next` field, then **immediately invoke** the next skill based on Implementation Strategy:
 >   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
 >   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
 > - Do NOT output additional confirmation text. The user already confirmed the workflow during Phase 1.
-> - When user selects "New session for implementation": Output resume instructions and STOP (no auto-invoke).
 > - If `Auto-Continue` field is missing or `no`, fall back to showing strategy recommendation and waiting for user direction (backward compatibility).
 
 ### Manual Trigger

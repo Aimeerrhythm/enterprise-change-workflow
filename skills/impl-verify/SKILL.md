@@ -246,7 +246,7 @@ If ecw.yml `rules.enabled: true`: pass engineering rules files from `rules.path`
 
 After convergence (zero must-fix findings in the most recent round):
 
-> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
+> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md (if unavailable, default to P0), update `Next` field, then:
 > - **P0/P1**: **Immediately invoke** `ecw:biz-impact-analysis`. Do NOT output "verification passed, shall I analyze business impact?" or any confirmation. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList.
 > - **P2**: Output suggestion to run biz-impact-analysis; wait for user decision.
 > - **P3**: No downstream handoff needed.
@@ -262,6 +262,8 @@ After convergence (zero must-fix findings in the most recent round):
 **Judgment principle**: If unsure whether it's must-fix or suggestion, ask yourself: **Will this issue cause a bug or incident in production?** Yes → must-fix. No → suggestion.
 
 ## Risk Level Behavior Differences
+
+Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. If unavailable (standalone invocation), default to P0 (all rounds mandatory).
 
 | Risk | Execution Scope | Details |
 |------|----------------|---------|

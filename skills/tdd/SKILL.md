@@ -55,7 +55,7 @@ Bug fixes skip writing-plans. The input is the root cause analysis from `ecw:sys
 
 ## Risk-Aware Enforcement
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for current risk level. If unavailable, use AskUserQuestion to ask the user.
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for current risk level. If unavailable (standalone invocation), default to P0 (mandatory + verification log).
 
 | Risk Level | TDD Mode | Details |
 |-----------|----------|---------|
@@ -280,7 +280,7 @@ After all TDD cycles for the current Plan Task complete (all tests GREEN):
 | Scenario | Handling |
 |----------|---------|
 | Plan file missing or unreadable | For requirement changes: halt and notify user — TDD cannot proceed without a Plan. For bug fixes: proceed using systematic-debugging output as input |
-| `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level |
+| `session-state.md` unavailable (risk level unknown) | Default to P0 (mandatory + verification log) and proceed |
 | Subagent delegation failure (≥ 6 files mode) | Record failure → retry once → still fails: fall back to direct TDD execution in coordinator context |
 | Test command fails with environment error (not test failure) | Report environment issue to user — do not count as TDD cycle failure. Fix environment first, then resume |
 

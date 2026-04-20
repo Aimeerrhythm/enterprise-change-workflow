@@ -21,7 +21,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 ## Risk-Aware Detail Level
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable, use AskUserQuestion.
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable (standalone invocation), default to P0 (full detail mode).
 
 | Risk Level | Plan Detail | Task Granularity |
 |-----------|-------------|-----------------|
@@ -191,7 +191,7 @@ If you find issues, fix them inline.
 | Subagent timeout (dynamic limit exceeded) | Record `TIMEOUT` in Subagent Ledger → **fall back to Direct mode immediately** (no retry — empirically, retry under same conditions times out again, wasting another full timeout window). Coordinator generates plan itself in Direct mode |
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
-| `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level before proceeding |
+| `session-state.md` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
 
 ## Downstream Handoff
 

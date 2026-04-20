@@ -100,10 +100,10 @@ class TestSpecChallengePlanRevision:
 
 
 class TestSpecChallengeSessionContinuity:
-    """Verify spec-challenge recommends continuing in current session.
+    """Verify spec-challenge auto-continues to implementation.
 
-    Finding-06: Session switch UX is poor — manual close/open/passphrase.
-    Should recommend continuing in current session with PreCompact protection.
+    Session split removed — auto-continue to implementation after review.
+    PreCompact hook handles context management automatically.
     """
 
     @pytest.fixture(autouse=True)
@@ -111,25 +111,23 @@ class TestSpecChallengeSessionContinuity:
         self.content = (ROOT / "skills" / "spec-challenge" / "SKILL.md").read_text()
         self.lower = self.content.lower()
 
-    def test_continue_is_recommended(self):
-        """'Continue in current session' must be the recommended option."""
-        has_continue_recommended = bool(
-            re.search(r'continue.{0,40}(current|this).{0,20}session.{0,40}recommend', self.lower)
-            or re.search(r'recommend.{0,40}continue.{0,40}(current|this).{0,20}session', self.lower)
+    def test_auto_continue_to_implementation(self):
+        """Must auto-continue to implementation, not ask about session split."""
+        has_auto_continue = bool(
+            re.search(r'auto.?continue', self.lower)
+            and re.search(r'immediately invoke', self.lower)
         )
-        assert has_continue_recommended, \
-            "Continue in current session must be the recommended option"
+        assert has_auto_continue, \
+            "Must auto-continue to implementation after review"
 
-    def test_no_scary_warning_on_continue(self):
-        """Must NOT have scary warning about information loss on continue option."""
-        has_scary_warning = bool(
-            re.search(
-                r'continue.{0,80}(information loss|信息丢失|context compression.{0,20}(loss|丢失))',
-                self.lower
-            )
+    def test_no_session_split_ask(self):
+        """Must NOT use AskUserQuestion for session split decision."""
+        post_review_section = self.content.split("Post-Review")[1] if "Post-Review" in self.content else ""
+        has_split_ask = bool(
+            re.search(r'askuserquestion', post_review_section.lower())
         )
-        assert not has_scary_warning, \
-            "Must not have scary warning about information loss on continue option"
+        assert not has_split_ask, \
+            "Post-Review must not use AskUserQuestion for session split"
 
     def test_mentions_precompact_protection(self):
         """Must mention PreCompact hook as context protection mechanism."""
