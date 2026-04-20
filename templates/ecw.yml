@@ -2,7 +2,7 @@
 # 本文件定义项目的 ECW 配置。由 /ecw-init 生成，可手动编辑。
 
 # ECW 配置版本（由 /ecw-init 或 /ecw-upgrade 自动写入，勿手动修改）
-ecw_version: "0.9.1"
+ecw_version: "0.9.2"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
@@ -129,12 +129,6 @@ models:
     verification: sonnet    # impl-verify, requirements-elicitation, risk-classifier Phase 2
     mechanical: haiku       # 简单任务 (enum/DTO/config)
   overrides: {}
-
-# 工程规则框架
-# 结构化工程标准，implementer 实现时参考，impl-verifier Round 4 验证时对照。
-rules:
-  enabled: true
-  path: .claude/ecw/rules/
 
 # impl-orchestration 配置
 # 控制 impl-orchestration 的并行执行行为和预检设置。

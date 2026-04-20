@@ -261,7 +261,7 @@ If issues found → fix sequentially on current branch → re-review (max 2 roun
 
 ## Implementer Prompt Construction
 
-Use `agents/implementer.md` prompt template (via `subagent_type: "ecw:implementer"`). Inject:
+Dispatch with `subagent_type: "ecw:implementer"` (base instructions auto-injected). Pass in `prompt`:
 - Full task text (don't make subagent read plan file)
 - Scene-setting context (where this fits, dependencies, what prior layers already built)
 - ECW domain context (domain name, knowledge file paths, risk level)
