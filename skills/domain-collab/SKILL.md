@@ -59,12 +59,12 @@ Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general
 
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
-**All domain Agents use the prompt template defined in `agents/domain-analyst.md`.** Coordinator reads the template, fills variables (`{project_name}`, `{domain_id}`, `{domain_name}`, `{description}`, `{knowledge_root}`, `{code_root}`, `{user_requirement}`) with domain-registry data, and passes the filled prompt to each Agent.
+**All domain Agents are dispatched with `subagent_type: "ecw:domain-analyst"`**, which auto-injects the agent's base instructions (output format, reading limits, subagent boundary rules). Coordinator passes domain-specific context in the `prompt` parameter: project_name, domain_id, domain_name, description, knowledge_root, index path, business_rules path, data_model path, code_root, related_code_dirs, extra_knowledge_lines, component_types (from ecw.yml), and user_requirement.
 
 **Coordinator operation steps:**
 1. Read each matched domain's metadata from domain-registry
-2. Fill the template above with variables to generate a prompt for each domain
-3. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
+2. Construct prompt with domain context variables for each domain
+3. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message, `subagent_type: "ecw:domain-analyst"`)
 4. Collect all Agent YAML results
 5. **Return value validation**: For each domain agent, verify the YAML contains required fields (`domain`, `impact_level`, `summary`). If a domain agent returns invalid format:
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
@@ -89,11 +89,11 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 
 **Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues. Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
-**Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills template variables: `{project_name}`, `{domain_name}`, `{user_requirement}`, `{round1_yaml_output}`, and the "Other Domains' Change Plans" section (aggregate other domains' `affected_components`, `state_changes`, `cross_domain_risks`, flagging risks pointing to this domain).
+**Round 2 domain Agents are dispatched with `subagent_type: "ecw:domain-negotiator"`**, which auto-injects the agent's base instructions. Coordinator passes in the `prompt`: project_name, domain_name, user_requirement, this domain's Round 1 YAML output, and the "Other Domains' Change Plans" section (aggregate other domains' `affected_components`, `state_changes`, `cross_domain_risks`, flagging risks pointing to this domain).
 
 **Coordinator operation steps:**
-1. Fill the template above with variables to generate Round 2 prompt for each domain
-2. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message)
+1. Construct prompt with Round 1 results and other domains' change summaries for each domain
+2. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message, `subagent_type: "ecw:domain-negotiator"`)
 3. Collect all Agent YAML results
 4. **Return value validation**: For each domain agent, verify the YAML contains required fields (`domain`, `negotiation_result.revised_impact_level`). If a domain agent returns invalid format:
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`

@@ -86,7 +86,7 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 5. **Persist findings**: Write merged findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` **before** creating any fix Tasks or presenting to user. Format per finding: severity, Round, file:line, description, expected vs actual, fix suggestion. Update this file after each re-verification round (append new findings, mark fixed ones as `[FIXED]`). This ensures findings survive context compaction.
 6. Present findings to user, handle convergence loop
 
-**Each Round subagent uses the prompt template defined in `agents/impl-verifier.md`.** Coordinator fills the template variables with round-specific reference material and verification checklist.
+**Each Round subagent is dispatched with `subagent_type: "ecw:impl-verifier"`**, which auto-injects the agent's base instructions (verification approach, output format, reading limits). Coordinator passes round-specific reference material and verification checklist in the `prompt` parameter.
 
 **Each Round subagent receives:**
 - Changed file list (from coordinator)
