@@ -151,3 +151,11 @@ auto_flow:
   # false（默认）：停下来让用户确认风险等级再继续。
   auto_confirm: false
 
+# Hook 行为配置
+# 控制 ECW hook（config-protect、gateguard-fact-force 等）的拦截范围。
+hooks:
+  # 路径白名单（相对于项目根目录）。匹配前缀的文件不被 config-protect 和 gateguard 拦截。
+  # 默认已内置: .claude/knowledge/, .claude/ecw/session-data/, .claude/plans/, templates/
+  exempt_paths: []
+  #   - "src/generated/"         # 自动生成的代码
+  #   - "docs/"                  # 文档目录

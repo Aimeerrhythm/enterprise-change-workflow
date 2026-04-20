@@ -65,11 +65,11 @@ def check(input_data, config=None):
     rel_path = os.path.relpath(file_path, cwd) if cwd else file_path
     rel_path = rel_path.replace(os.sep, "/")
 
-    if any(rel_path.startswith(prefix) for prefix in EDITABLE_PATH_PREFIXES):
-        return ("continue", "")
-
-    # Allow editing plugin template files (templates/ directory)
-    if rel_path.startswith("templates/"):
+    # Built-in exempt prefixes + user-configured exempt_paths from ecw.yml
+    exempt = list(EDITABLE_PATH_PREFIXES)
+    if config:
+        exempt.extend(config.get("hooks", {}).get("exempt_paths", []))
+    if any(rel_path.startswith(prefix) for prefix in exempt):
         return ("continue", "")
 
     basename = os.path.basename(file_path)

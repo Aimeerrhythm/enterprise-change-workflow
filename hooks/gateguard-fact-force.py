@@ -51,7 +51,7 @@ def _record_investigated(cwd, rel_path):
         pass
 
 
-def _is_exempt(file_path, cwd):
+def _is_exempt(file_path, cwd, config=None):
     if not file_path:
         return True
 
@@ -60,8 +60,15 @@ def _is_exempt(file_path, cwd):
         return True
 
     rel = os.path.relpath(file_path, cwd) if os.path.isabs(file_path) else file_path
-    if rel.startswith(".claude" + os.sep) or rel.startswith(".claude/"):
+    rel = rel.replace(os.sep, "/")
+    if rel.startswith(".claude/"):
         return True
+
+    # User-configured exempt paths from ecw.yml
+    if config:
+        for prefix in config.get("hooks", {}).get("exempt_paths", []):
+            if rel.startswith(prefix):
+                return True
 
     return False
 
@@ -82,7 +89,7 @@ def check(input_data, config=None):
     if not file_path or not cwd:
         return ("continue", "")
 
-    if _is_exempt(file_path, cwd):
+    if _is_exempt(file_path, cwd, config):
         return ("continue", "")
 
     if not os.path.exists(file_path):
