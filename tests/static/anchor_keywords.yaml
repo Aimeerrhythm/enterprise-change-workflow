@@ -52,7 +52,7 @@ domain-collab:
 
 impl-orchestration:
   - "implementer.md"
-  - "spec-reviewer.md"
+  - "spec-reviewer"
   - "Your Thought"
 
 systematic-debugging:

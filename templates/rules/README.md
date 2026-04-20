@@ -10,6 +10,7 @@ rules/
     coding-style.md     # Naming, formatting, code organization
     security.md         # Security standards (OWASP, input validation)
     testing.md          # Testing standards (coverage, patterns, assertions)
+    ecw-development.md  # ECW plugin internal development rules
   {language}/           # Optional language-specific rules (e.g., java/, go/)
 ```
 

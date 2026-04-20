@@ -19,51 +19,11 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 ## TDD Phase Notes
 
-**TDD:RED** in routing tables means writing failing tests before implementation code. This is a structural step in the ECW pipeline, not an optional suggestion.
-
-### Execution
-
-When TDD:RED phase triggers, invoke `ecw:tdd` skill to execute the Red-Green-Refactor cycle. `ecw:tdd` differentiates by risk level: P0 includes verification logs, P1 full cycle, P2 simplified mode, P3 recommended but not mandatory.
-
-### Risk-Level Differentiation
-
-| Level | TDD Requirement | Details |
-|-------|----------------|---------|
-| P0-P2 | **Mandatory** | After plan completion (P0 includes spec-challenge), write failing tests covering plan test scenarios first, then write implementation code |
-| P3 | **Recommended** | Routing does not include TDD step; user decides whether to test first |
-| Bug | **Mandatory** | After systematic-debugging locates root cause, write a failing test that reproduces the bug, then fix |
-| Fast Track | **Skip** | Fix speed takes priority; TDD not applicable; verify regression via mvn test after fix |
-
-> **Configuration linkage**: When ecw.yml `tdd.enabled` is set to `false`, all "mandatory" above downgrades to "recommended" — user decides whether to test first.
-
-### Skip Confirmation
-
-TDD:RED for P0-P2 is a mandatory step with no skip option by default.
-
-If user strongly requests to skip TDD during P0-P2 flow, use AskUserQuestion to confirm risk before allowing skip:
-```
-Question: "Confirm skip TDD? Without TDD, test coverage relies on post-implementation mvn test."
-Options:
-  1. "Continue TDD (Recommended)" — Write failing tests first, then implement
-  2. "Skip TDD" — Implement directly (skip test-first)
-```
+**TDD:RED** in routing tables means writing failing tests before implementation code. Invoke `ecw:tdd` which differentiates by risk level (P0: mandatory + verification logs, P1: mandatory, P2: simplified, P3: recommended). When ecw.yml `tdd.enabled: false`, all mandatory downgrades to recommended. Skip confirmation details: see `ecw:tdd` Skip Confirmation Protocol.
 
 ## Bug Fix Routing
 
-Bug fixes also go through this skill for risk pre-assessment first, then chain to `ecw:systematic-debugging` for diagnosis and fix:
-
-```
-bug report → risk-classifier (Phase 1, quick pre-assessment)
-  → systematic-debugging (locate root cause)
-  → TDD:RED (write failing test reproducing the bug)
-  → fix (GREEN, make test pass)
-  → mvn test (full regression)
-  → ecw:impl-verify
-  → ecw:biz-impact-analysis (if P0/P1)
-  → Phase 3 calibration (automatic)
-```
-
-Regardless of risk level, bug fixes skip ecw:requirements-elicitation (bugs need diagnosis and fix, not requirement elicitation).
+Bug fixes go through this skill for risk pre-assessment, then chain to `ecw:systematic-debugging`. See Skill Interaction for full routing. All levels skip ecw:requirements-elicitation.
 
 ## When to Use
 
@@ -155,26 +115,15 @@ After user describes requirement, **before the first downstream skill triggers**
 #### Step 1: Keyword Extraction & Domain Identification
 
 Extract from user's requirement description:
-- **Business keywords** → Map to domains (reference project CLAUDE.md domain routing section (keyword→domain mapping table))
+- **Business keywords** → Map to domains via project CLAUDE.md domain routing table (keyword→domain mapping); count matched domains for single/cross-domain routing (see Skill Interaction)
 - **Operation keywords** → Determine operation type (CRUD, state changes, message format, etc.)
-- **Sensitive words** → Directly trigger high-risk flag
-- **Domain match count** → Count how many distinct domains matched (for single-domain/cross-domain routing, see Skill Interaction)
-
-**Domain match determination:** Read keywords from project CLAUDE.md domain routing section (keyword→domain mapping table), match against user input one by one. Record matched domain list and count, output to Phase 1 report.
-
-**Sensitive word determination:** → Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Quick Reference for the complete keyword→estimated level mapping table. Match any sensitive word → at least P1.
+- **Sensitive words** → Read ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Quick Reference keyword→level mapping; any match → at least P1
 
 #### Step 2: Quick Shared Resource Check
 
-Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`, check whether classes/methods mentioned by user appear in the shared resources table.
+Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`. If file missing, log `[Warning: {file} not found]` and skip. Read risk factors §Factor 1 for domain dependency thresholds.
 
-> **Knowledge file robustness**: Before reading, verify the file exists. If `shared-resources.md` or the risk factors file does not exist, log `[Warning: {file} not found, skipping shared resource check]` and continue with keyword-based assessment only. Do not halt Phase 1 for missing knowledge files.
-
-→ Read the file specified by ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Factor 1: Impact Scope for the domain dependency count→risk level threshold mapping.
-
-**Note:** Phase 1 checks §3 (shared resources) + §2 (MQ topology, only check if user-mentioned keywords involve MQ Topics). Does not check §1/§4/§5 (deferred to Phase 2).
-
-**P2 lightweight check:** For P2 single-domain requirements (skips ecw:requirements-elicitation, no requirement analysis artifacts), Phase 1's §3 + §2 check results serve as final risk signals. If shared resources or MQ Topic write-operation changes are discovered, **upgrade to P1 immediately** — do not wait for Phase 2.
+Phase 1 checks §3 (shared resources) + §2 (MQ topology, only if user mentions MQ). Does not check §1/§4/§5 (deferred to Phase 2). **P2 single-domain**: if shared resources or MQ write-ops found, **upgrade to P1 immediately**.
 
 #### Step 3: Composite Assessment
 
@@ -183,18 +132,11 @@ Total Risk = max(Keyword Estimated Level, Shared Resource Level)
 Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domain"
 ```
 
-> Full three-dimensional factor definitions (Impact Scope / Change Type / Business Sensitivity) are in the file specified by ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses only the first two dimensions for quick assessment; Phase 2 uses all three.
+Full three-dimensional factors in ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses first two dimensions only.
 
-**Calibration history reference**: Before finalizing, check `.claude/ecw/state/calibration-history.md` (path configurable via ecw.yml `paths.calibration_history`). If the file exists and contains entries matching current keywords:
-- Scan the **last 10 entries** for keyword overlap with this change
-- If a pattern shows the same keywords were previously over-predicted or under-predicted, adjust the composite level accordingly (±1 level max)
-- Log the adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history: {matching record summary}]`
+**Calibration history**: Check `.claude/ecw/state/calibration-history.md` — scan last 10 entries for keyword overlap, adjust ±1 level max if systematic deviation found. Log adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history]`. If file missing or empty, skip silently.
 
-> **Robustness**: If the file does not exist or is empty, skip silently. Calibration history is an enhancement, not a requirement.
-
-If information is insufficient to determine, **default to P2** (better to over-process than under-process).
-
-Look up "Total Risk + Cross-Domain determination" in the Skill Interaction routing table to determine downstream workflow.
+If information insufficient, **default to P2**. Look up routing in Skill Interaction.
 
 ### Phase 1 Output Format
 
@@ -244,25 +186,11 @@ After user selection, execute the corresponding route directly without re-confir
 
 ### State Persistence
 
-After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md` (user may adjust level during confirmation; writing after confirmation ensures data accuracy). The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write.
+After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md`. The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write.
 
-**Before writing session-state.md**, Read `./session-state-format.md` for the exact file template, marker conventions, working mode definitions, and context management advisory.
+**Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 
-This file serves as the sole persistence carrier for ECW workflow state. Each skill's coordinator appends Subagent Ledger rows after Agent dispatch completes. **Record timestamps** for governance audit: note the time before dispatch (`Started`, HH:mm format) and compute elapsed time after return (`Duration`, e.g. "2m", "45s"). Purposes:
-- Restore context when continuing work in a new session
-
-### Session Data Path Convention
-
-All session-scoped files (including session-state.md itself) live under `.claude/ecw/session-data/{workflow-id}/`. The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format. This isolates artifacts from different change requests, preventing overwrite when multiple workflows run sequentially.
-
-**Path resolution rule** (applies to all skills):
-1. **Writing (first skill creates dir):** risk-classifier generates `{workflow-id}` and creates `.claude/ecw/session-data/{workflow-id}/session-state.md`
-2. **Reading (downstream skills):** List subdirectories under `.claude/ecw/session-data/`, take the most recent one (highest name in descending sort), read `session-state.md` from there
-3. **Fallback:** If no subdirectory exists (legacy workflow), fall back to `.claude/ecw/session-data/{filename}`
-4. Create the subdirectory on first write if it does not exist
-- User can view current ECW workflow state
-- Manual recovery after compression (user says "read ECW state")
-- Monitoring scripts to assess subagent consumption
+Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
 
 ### Route Task Creation
 
@@ -276,19 +204,11 @@ After Phase 1 user confirmation, create pending Tasks for **post-implementation*
 
 **Creation method**: Use TaskCreate tool, set blockedBy dependency chain. **After all Tasks are created, update `session-state.md`'s `Post-Implementation Tasks` field with actual Task IDs** (e.g., `impl-verify(#3) → biz-impact-analysis(#4)`):
 
-1. TaskCreate: **"ecw:impl-verify — Implementation correctness verification"**
-   - description: "After implementation completes, execute `/ecw:impl-verify`. Pass only with zero must-fix findings. Mark this Task complete and continue to next."
-   - status: pending
-2. TaskCreate: **"ecw:biz-impact-analysis — Business impact analysis"** (P0/P1 only)
-   - description: "After impl-verify passes, execute `/ecw:biz-impact-analysis` to analyze business impact of code changes."
-   - blockedBy: [impl-verify task ID]
-3. TaskCreate: **"Phase 3 Calibration — Risk classification feedback"** (P0/P1 only)
-   - description: "After biz-impact-analysis report is produced, execute Phase 3 calibration to compare predicted vs. actual impact."
-   - blockedBy: [biz-impact-analysis task ID]
+1. TaskCreate: **"ecw:impl-verify — Implementation correctness verification"** (pending)
+2. TaskCreate: **"ecw:biz-impact-analysis — Business impact analysis"** (P0/P1 only, blockedBy: impl-verify)
+3. TaskCreate: **"Phase 3 Calibration — Risk classification feedback"** (P0/P1 only, blockedBy: biz-impact-analysis)
 
-> These Tasks remain visible during implementation (TaskList). After AI completes all implementation tasks, it will see the pending impl-verify Task and naturally proceed to the next step.
->
-> **Bug fixes** follow the same pattern: All levels create `ecw:impl-verify`; P0/P1 additionally create `ecw:biz-impact-analysis` → `Phase 3 Calibration` (same blockedBy chain as requirement changes).
+> These Tasks remain visible during implementation (TaskList). Bug fixes follow the same pattern.
 
 ---
 
@@ -369,7 +289,7 @@ Coordinator dispatches a single subagent to execute Steps 1-4:
 - knowledge-summary.md path (if exists under `.claude/ecw/session-data/{workflow-id}/`, subagent uses it to reduce original file reads)
 - Risk factor file path (from ecw.yml `paths.risk_factors`)
 
-> **Knowledge file robustness (subagent)**: Pass all paths to the subagent. The subagent must verify each file exists before reading. For any missing file, subagent logs `[Warning: {file} not found]` in the corresponding `classification_factors` detail and continues with available data. Missing files reduce analysis precision but do not block Phase 2.
+> **Knowledge file robustness**: Pass all paths to subagent. Missing files → subagent logs `[Warning: {file} not found]` and continues with available data (see Error Handling).
 
 **Subagent executes** Steps 1-4 internally and returns structured YAML:
 
