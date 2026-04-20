@@ -16,6 +16,11 @@
 ### 新增
 
 - **Auto-Flow** — 标准化 skill 间过渡机制 + 精确压缩恢复（PreCompact 注入自动继续指令，消除转场确认弹窗）
+- **全自动执行链路** — 移除 spec-challenge session 分裂确认，`auto_confirm: true` 时整条链仅剩 spec-challenge 致命缺陷确认一个人工交互点
+- **Skill 独立调用** — 7 个 skill 单独调用时默认 P0 完整模式，不再 AskUserQuestion 询问风险等级；requirements-elicitation 解除 risk-classifier 前置依赖
+- **产出物 Schema** — `templates/artifact-schemas.md` 统一定义 7 个 ECW 过程产出物的结构、字段、写入方/读取方
+- **impl-verify 执行状态检查** — verify-completion hook 检查 `impl-verify-findings.md` 是否存在，未执行时输出精确提醒（替代旧的通用文字提醒）
+- **ecw-upgrade auto_flow 迁移** — Check B 显式列出 `auto_flow:` 配置段，已有项目升级自动补上
 - **可配置模型路由** — ecw.yml 新增 `models` 配置段，9 个 SKILL.md 模型引用从硬编码改为配置化路由；session-start 注入模型配置
 - **工程规则框架** — `templates/rules/` 新增 Agent 引用 + session-start 注入机制
 - **Token 成本追踪** — `cost-tracker.py` hook，基于 token 用量的成本追踪和预算告警
