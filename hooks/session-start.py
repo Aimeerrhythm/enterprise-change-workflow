@@ -21,6 +21,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import find_session_state  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
+from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
 
 # Maximum lines to include from session-state.md
@@ -214,12 +215,45 @@ def _read_instincts(cwd):
     return []
 
 
+def _check_version_mismatch(cwd):
+    """Compare plugin version vs ecw.yml ecw_version.
+
+    Returns (mismatch: bool, plugin_ver: str, config_ver: str).
+    """
+    plugin_ver = _read_plugin_version()
+    if not plugin_ver:
+        return False, "", ""
+    cfg = _read_full_ecw_config(cwd)
+    if not cfg:
+        return False, plugin_ver, ""
+    config_ver = cfg.get("ecw_version", "")
+    if not config_ver:
+        return True, plugin_ver, "(missing)"
+    return config_ver != plugin_ver, plugin_ver, config_ver
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
     if not cwd:
         print(json.dumps({"result": "continue"}))
+        return
+
+    # 0. Version check — block everything else if mismatch
+    mismatch, plugin_ver, config_ver = _check_version_mismatch(cwd)
+    if mismatch:
+        warning = (
+            f"# [ECW] 配置版本不匹配\n\n"
+            f"- 插件版本: `{plugin_ver}`\n"
+            f"- 项目 ecw.yml 版本: `{config_ver}`\n\n"
+            "**必须先执行 `/ecw-upgrade` 同步配置后再处理用户请求。**\n"
+            "直接告知用户需要执行升级命令，不要尝试处理其他任何任务。"
+        )
+        print(json.dumps(
+            {"result": "continue", "additionalContext": warning},
+            ensure_ascii=False,
+        ))
         return
 
     sections = []

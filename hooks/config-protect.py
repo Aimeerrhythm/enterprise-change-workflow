@@ -68,6 +68,10 @@ def check(input_data, config=None):
     if any(rel_path.startswith(prefix) for prefix in EDITABLE_PATH_PREFIXES):
         return ("continue", "")
 
+    # Allow editing plugin template files (templates/ directory)
+    if rel_path.startswith("templates/"):
+        return ("continue", "")
+
     basename = os.path.basename(file_path)
     if basename in PROTECTED_BASENAMES:
         return ("block", BLOCK_MESSAGE_TEMPLATE.format(basename=basename))

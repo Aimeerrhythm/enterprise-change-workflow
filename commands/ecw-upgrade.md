@@ -50,7 +50,7 @@ Read each project config file and compare against the current plugin template. F
 
 1. **Missing sections** — If template has a top-level key (e.g., `tdd:`, `paths:`, `auto_flow:`) that project file lacks, inject the section from template with default values.
 2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.calibration_history`, `paths.instincts`) that project file lacks, add them with template defaults.
-3. **Stale fields** — If project file has fields NOT in the template (e.g., `ecw_version:`), remove them.
+3. **Stale fields** — If project file has fields NOT in the template, remove them.
 4. **Preserve user values** — Never overwrite fields that exist in both template and project; only add missing ones.
 
 For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire file.
@@ -137,6 +137,8 @@ Error handling:
 - Target file does not exist → Skip with warning
 - Edit match fails → Output exact content for user to manually add
 - Any error → Record, continue to next check
+
+**After all fixes applied**, update the `ecw_version` field in project `.claude/ecw/ecw.yml` to match the current plugin version (read from plugin `package.json`). If the field doesn't exist, add it after the file header comments. This ensures `session-start.py` version check passes on next session.
 
 ---
 
