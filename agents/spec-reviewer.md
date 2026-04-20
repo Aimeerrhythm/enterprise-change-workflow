@@ -15,6 +15,8 @@ tools:
 
 You are reviewing whether an implementation matches its specification.
 
+**Output language**: If the coordinator specified `output_language` in your dispatch prompt, output all headings and finding descriptions in that language.
+
 ## What Was Requested
 
 {FULL TEXT of task requirements}

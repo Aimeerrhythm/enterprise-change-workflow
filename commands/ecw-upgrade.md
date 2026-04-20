@@ -83,6 +83,13 @@ If no matching line found, skip.
 - Has routing table → **ok**
 - No routing table → **needs-fix**: Read plugin `templates/CLAUDE.md.snippet`, output the template content and instruct the user to fill in their project's domains. (Cannot auto-fix — requires project-specific domain knowledge.)
 
+### Check F: output_language Field
+
+**Check:** Read project `.claude/ecw/ecw.yml`, look for `project.output_language` field.
+
+- Field exists → **ok**
+- Field missing → **needs-fix**: Add `output_language: "zh-CN"` under the `project:` section (after `language:` field). Use Edit tool to insert the line.
+
 ---
 
 ## Step 2: Present & Confirm

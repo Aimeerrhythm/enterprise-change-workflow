@@ -15,6 +15,8 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 
 **Announce at start:** "Using ecw:biz-impact-analysis to assess business impact of code changes."
 
+**Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
+
 ## Trigger
 
 - **Manual**: `/biz-impact-analysis` — Analyze all changes on current branch vs master

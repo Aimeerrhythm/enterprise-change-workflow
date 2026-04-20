@@ -11,6 +11,8 @@ description: >
 
 Classify risk level (P0~P3) for any code change, **driving the depth of downstream workflow**. Executed in three phases: Phase 1 (requirement description stage, quick pre-assessment), Phase 2 (after plan completion, precise classification), Phase 3 (after implementation, calibrate prediction accuracy based on biz-impact-analysis feedback).
 
+**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `phase2-assessment.md` follow this language. `session-state.md` field keys stay English (machine-parsed).
+
 **Core Principle:** The process for changing a log statement should not be as heavy as changing inventory deduction logic.
 
 **Announce at start:** "Using ecw:risk-classifier to classify change risk level."

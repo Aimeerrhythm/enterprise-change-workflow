@@ -13,6 +13,8 @@ description: >
 
 When user proposes a requirement, **do NOT** jump straight to implementation. Instead, act as a senior business analyst: read existing materials first, then systematically ask questions dimension by dimension until both sides reach full consensus on what to build.
 
+**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `requirements-summary.md` follow this language.
+
 **Core Principle:** Every question you don't ask now becomes a future bug, rework, or misunderstanding. Ask more now, change less later.
 
 **Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."

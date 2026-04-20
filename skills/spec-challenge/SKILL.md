@@ -12,6 +12,8 @@ After a plan/design document is produced, dispatch the `spec-challenge` agent fo
 
 **Announce at start:** "Using ecw:spec-challenge for adversarial plan review."
 
+**Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
+
 **Mode switch**: Update session-state.md MODE marker to `planning`.
 
 ## Trigger

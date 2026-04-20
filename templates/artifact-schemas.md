@@ -2,6 +2,15 @@
 
 Centralized schema definitions for all ECW workflow artifacts stored under `.claude/ecw/session-data/{workflow-id}/`.
 
+## Localization
+
+All artifact headings, table headers, and field labels MUST be output in the language configured by `ecw.yml` → `project.output_language`. The templates below use English as structural reference only — translate all human-readable text (headings, labels, descriptions) to the configured language when writing artifacts.
+
+- `zh-CN`: 所有标题、表头、字段标签用中文输出
+- `en`: Use English as-is from templates
+
+**Exception**: `session-state.md` marker comments (`<!-- ECW:STATUS:START -->` etc.) and field keys (`Risk Level`, `Domains`, `Mode`) stay in English — they are machine-parsed by hooks.
+
 ## Overview
 
 | Artifact | Writer | Readers | Purpose |
