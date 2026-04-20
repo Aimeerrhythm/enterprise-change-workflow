@@ -8,6 +8,7 @@ PreToolUse 拦截 TaskUpdate(status=completed)：
 4. Java 测试检查（改了 .java 文件 → mvn test，失败则阻止；ecw.yml verification.run_tests 控制开关）
 5. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
 6. TDD 测试覆盖提醒（BizService/Manager 改了但无对应测试文件 → 定向提醒；ecw.yml tdd.check_test_files 控制开关）
+7. impl-verify 执行状态检查（session-data 下无 impl-verify-findings.md → 提醒先执行 impl-verify）
 技术检查 1-4 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒 + TDD 测试覆盖提醒。
 """
 
@@ -63,13 +64,16 @@ _MESSAGES = {
     "fail_more": "...还有 {n} 个问题",
     "pass_header": (
         "**[ECW Verify]** 技术检查通过"
-        "（{modified} 个修改文件、{deleted} 个删除文件，无断裂引用）。\n\n"
-        "**语义验证**：如果尚未执行 `ecw:impl-verify`，"
-        "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
+        "（{modified} 个修改文件、{deleted} 个删除文件，无断裂引用）。"
     ),
     "warnings_header": "\n\n---\n\n**[注意事项]**\n\n",
     "knowledge_header": "\n\n---\n\n**[知识文档同步提醒]** 以下域的业务代码有变更，请确认知识文档是否需要同步更新：\n\n",
     "tdd_header": "\n\n---\n\n**[TDD 测试覆盖提醒]** 以下业务组件有代码变更但缺少对应测试：\n\n",
+    "impl_verify_reminder": (
+        "**语义验证**：未检测到 `impl-verify-findings.md`，"
+        "`ecw:impl-verify` 可能尚未执行。"
+        "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
+    ),
 }
 
 
@@ -122,16 +126,19 @@ def check(input_data, config=None):
     # Non-essential reminders: skip at "minimal" profile (P3)
     knowledge_reminders = []
     test_reminders = []
+    impl_verify_ran = True
     if profile != "minimal":
         knowledge_reminders = check_knowledge_doc_freshness(cwd, source_modified)
         test_reminders = check_test_coverage(cwd, source_modified)
+        impl_verify_ran = check_impl_verify_executed(cwd)
 
     all_warnings = (compile_warnings or []) + (test_warnings or [])
 
     if issues:
         return ("block", _format_fail_message(issues))
     return ("continue", _format_pass_message(
-        len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders
+        len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders,
+        impl_verify_ran
     ))
 
 
@@ -428,6 +435,18 @@ def check_knowledge_doc_freshness(cwd, modified):
     return reminders
 
 
+def check_impl_verify_executed(cwd):
+    """检查 session-data 下是否存在 impl-verify-findings.md，判断 impl-verify 是否已执行。"""
+    session_data = os.path.join(cwd, ".claude", "ecw", "session-data")
+    if not os.path.isdir(session_data):
+        return False
+    for workflow_dir in os.listdir(session_data):
+        findings = os.path.join(session_data, workflow_dir, "impl-verify-findings.md")
+        if os.path.isfile(findings):
+            return True
+    return False
+
+
 def check_test_coverage(cwd, modified):
     """检查新增/修改的 BizService/Manager 是否有对应测试文件。返回提醒列表（不阻止完成）。"""
     reminders = []
@@ -468,9 +487,12 @@ def _format_fail_message(issues):
 
 
 def _format_pass_message(modified_count, deleted_count, warnings=None,
-                         knowledge_reminders=None, test_reminders=None):
+                         knowledge_reminders=None, test_reminders=None,
+                         impl_verify_ran=True):
     """Format technical check pass message with optional reminders."""
     msg = _MESSAGES["pass_header"].format(modified=modified_count, deleted=deleted_count)
+    if not impl_verify_ran:
+        msg += "\n\n" + _MESSAGES["impl_verify_reminder"]
     if warnings:
         msg += _MESSAGES["warnings_header"]
         msg += "\n".join(f"- {w}" for w in warnings)
@@ -495,10 +517,12 @@ def output_fail(issues):
     print(json.dumps(result, ensure_ascii=False))
 
 
-def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None, test_reminders=None):
+def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None,
+                test_reminders=None, impl_verify_ran=True):
     """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒 + TDD 测试覆盖提醒"""
     result = {"systemMessage": _format_pass_message(
-        modified_count, deleted_count, warnings, knowledge_reminders, test_reminders
+        modified_count, deleted_count, warnings, knowledge_reminders, test_reminders,
+        impl_verify_ran
     )}
     print(json.dumps(result, ensure_ascii=False))
 
