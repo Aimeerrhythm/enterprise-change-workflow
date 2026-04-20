@@ -14,6 +14,8 @@ You are executing the `/ecw-init` command. Your task is to detect the project's 
 
 ## Step 0: Smart Discovery + Mode Selection
 
+**Create config-edit marker:** Run `mkdir -p .claude/ecw && touch .claude/ecw/.config-edit-allowed` via Bash to temporarily allow config file edits. This marker must be cleaned up in the Common Final Step.
+
 ### 0a: Scan Existing Documents
 
 Scan **two information sources** to detect existing knowledge documents:
@@ -637,6 +639,8 @@ Add to `.claude/settings.local.json`:
 If `.claude/settings.local.json` already exists, merge the `allow` entries without overwriting existing permissions.
 
 This enables ECW skills to write session state, plans, and reports without triggering permission confirmation dialogs.
+
+**Clean up config-edit marker:** Run `rm -f .claude/ecw/.config-edit-allowed` via Bash to restore config protection.
 
 ---
 

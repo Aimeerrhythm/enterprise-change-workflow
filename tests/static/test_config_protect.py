@@ -235,3 +235,45 @@ class TestEditablePathPrefixes:
         """EDITABLE_PATH_PREFIXES must contain exactly the 3 expected prefixes."""
         expected = {".claude/knowledge/", ".claude/ecw/session-data/", ".claude/plans/"}
         assert set(config_protect.EDITABLE_PATH_PREFIXES) == expected
+
+
+# ══════════════════════════════════════════════════════
+# Upgrade Marker File Bypass
+# ══════════════════════════════════════════════════════
+
+class TestUpgradeMarkerBypass:
+    """Verify that .config-edit-allowed marker file bypasses protection."""
+
+    def test_marker_file_allows_protected_edit(self, config_protect, tmp_path):
+        """When marker file exists, protected files should pass through."""
+        marker = tmp_path / ".claude" / "ecw" / ".config-edit-allowed"
+        marker.parent.mkdir(parents=True)
+        marker.touch()
+        inp = _make_input(f"{tmp_path}/.claude/ecw/ecw.yml")
+        inp["cwd"] = str(tmp_path)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_CONFIG_EDIT", None)
+            action, message = config_protect.check(inp)
+        assert action == "continue"
+        assert message == ""
+
+    def test_no_marker_file_still_blocks(self, config_protect, tmp_path):
+        """Without marker file, protected files are still blocked."""
+        inp = _make_input(f"{tmp_path}/.claude/ecw/ecw.yml")
+        inp["cwd"] = str(tmp_path)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_CONFIG_EDIT", None)
+            action, _ = config_protect.check(inp)
+        assert action == "block"
+
+    def test_marker_in_wrong_location_still_blocks(self, config_protect, tmp_path):
+        """Marker file in wrong directory doesn't bypass."""
+        wrong_marker = tmp_path / ".claude" / ".config-edit-allowed"
+        wrong_marker.parent.mkdir(parents=True)
+        wrong_marker.touch()
+        inp = _make_input(f"{tmp_path}/.claude/ecw/ecw.yml")
+        inp["cwd"] = str(tmp_path)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_CONFIG_EDIT", None)
+            action, _ = config_protect.check(inp)
+        assert action == "block"

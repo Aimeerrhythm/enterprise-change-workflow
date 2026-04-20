@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [Unreleased]
+
+### 修复
+
+- **config-protect marker 机制** — ecw-upgrade / ecw-init 执行时自动创建 `.claude/ecw/.config-edit-allowed` 标记文件临时放行配置编辑，完成后自动清理；解决升级命令被自身 hook 拦截的鸡生蛋问题
+
 ## [0.9.0] - 2026-04-20
 
 ### 架构改进

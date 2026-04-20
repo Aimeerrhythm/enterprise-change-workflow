@@ -27,6 +27,8 @@ EDITABLE_PATH_PREFIXES = (
     ".claude/plans/",
 )
 
+UPGRADE_MARKER = ".claude/ecw/.config-edit-allowed"
+
 BLOCK_MESSAGE_TEMPLATE = (
     "**[ECW Config Protection]** Blocked modification of `{basename}`. "
     "This is a protected ECW configuration file. "
@@ -51,11 +53,15 @@ def check(input_data, config=None):
     if os.environ.get("ECW_ALLOW_CONFIG_EDIT", "").strip() == "1":
         return ("continue", "")
 
+    # Check upgrade marker file (created by ecw-upgrade / ecw-init)
+    cwd = input_data.get("cwd", "")
+    if cwd and os.path.isfile(os.path.join(cwd, UPGRADE_MARKER)):
+        return ("continue", "")
+
     file_path = input_data.get("tool_input", {}).get("file_path", "")
     if not file_path:
         return ("continue", "")
 
-    cwd = input_data.get("cwd", "")
     rel_path = os.path.relpath(file_path, cwd) if cwd and file_path.startswith(cwd) else file_path
     rel_path = rel_path.replace(os.sep, "/")
 
