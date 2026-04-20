@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.5] - 2026-04-20
+
+### 新增
+
+- **hooks.exempt_paths 配置化** — hook 拦截路径白名单从 Python 硬编码迁移到 ecw.yml `hooks.exempt_paths`，支持用户自定义相对路径前缀；config-protect 和 gateguard 均读取此配置
+
+### 修复
+
+- **config-protect relpath 误拦截** — `file_path.startswith(cwd)` 路径规范化不一致时 fallback 为绝对路径，导致 `templates/ecw.yml` 等合法编辑被拦截；改用 `os.path.relpath()` 无条件计算相对路径
+
+## [0.9.4] - 2026-04-20
+
+### 新增
+
+- **output_language 产出物本地化** — ecw.yml 新增 `project.output_language` 字段（默认 zh-CN），6 个 SKILL.md + 6 个 agent 模板读取并遵循此配置，artifact-schemas.md 增加全局 Localization 规则
+- **ecw-upgrade Check F/G** — 自动迁移 `output_language` 字段和 `hooks` 配置段
+
 ## [0.9.3] - 2026-04-20
 
 ### 修复
