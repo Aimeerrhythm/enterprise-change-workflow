@@ -130,12 +130,6 @@ models:
     mechanical: haiku       # 简单任务 (enum/DTO/config)
   overrides: {}
 
-# 工程规则框架
-# 结构化工程标准，implementer 实现时参考，impl-verifier Round 4 验证时对照。
-rules:
-  enabled: true
-  path: .claude/ecw/rules/
-
 # impl-orchestration 配置
 # 控制 impl-orchestration 的并行执行行为和预检设置。
 impl_orchestration:

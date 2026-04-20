@@ -8,7 +8,6 @@ Validates:
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATES_DIR = ROOT / "templates"
@@ -16,31 +15,6 @@ AGENTS_DIR = ROOT / "agents"
 SKILLS_DIR = ROOT / "skills"
 
 RULES_COMMON_FILES = ["coding-style.md", "security.md", "testing.md"]
-
-
-def _load_ecw_yml():
-    return yaml.safe_load((TEMPLATES_DIR / "ecw.yml").read_text(encoding="utf-8"))
-
-
-class TestEcwYmlRulesSection:
-    """ecw.yml must define a rules section."""
-
-    def test_ecw_yml_has_rules_section(self):
-        cfg = _load_ecw_yml()
-        assert "rules" in cfg, "ecw.yml missing 'rules' section"
-
-    def test_rules_has_enabled(self):
-        cfg = _load_ecw_yml()
-        assert isinstance(
-            cfg["rules"]["enabled"], bool
-        ), "rules.enabled must be a boolean"
-
-    def test_rules_has_path(self):
-        cfg = _load_ecw_yml()
-        path = cfg["rules"]["path"]
-        assert isinstance(path, str) and len(path) > 0, (
-            "rules.path must be a non-empty string"
-        )
 
 
 class TestRulesTemplatesExist:
