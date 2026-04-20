@@ -57,6 +57,7 @@ def _extract_state_fields(content):
         "current_phase": r'\*\*Current Phase\*\*:\s*(.+)',
         "status": r'\*\*Status\*\*:\s*(.+)',
         "working_mode": r'\*\*Working Mode\*\*:\s*(.+)',
+        "next_skill": r'\*\*Next\*\*:\s*(.+)',
     }
     for key, pattern in patterns.items():
         m = re.search(pattern, content, re.IGNORECASE)
@@ -126,10 +127,26 @@ def _summarize_checkpoint(filepath, name):
 def _get_project_info(cwd):
     """Read ecw.yml and extract key project info."""
     cfg = _read_full_ecw_config(cwd)
-    return {
+    info = {
         "project_name": cfg.get("project", {}).get("name", ""),
         "language": cfg.get("project", {}).get("language", ""),
     }
+    models = cfg.get("models", {})
+    defaults = models.get("defaults", {})
+    overrides = models.get("overrides", {})
+    STANDARD_DEFAULTS = {
+        "analysis": "opus",
+        "planning": "opus",
+        "implementation": "sonnet",
+        "verification": "sonnet",
+        "mechanical": "haiku",
+    }
+    non_default = {k: v for k, v in defaults.items() if STANDARD_DEFAULTS.get(k) != v}
+    if non_default or overrides:
+        info["model_config"] = non_default
+        if overrides:
+            info["model_overrides"] = overrides
+    return info
 
 
 def _check_modified_files(cwd):
@@ -251,18 +268,31 @@ def main():
             cfg_lines.append(f"- Active risk level: {state_fields['risk_level']}")
         if state_fields.get("working_mode"):
             cfg_lines.append(f"- Working mode: {state_fields['working_mode']}")
+        if ecw_cfg.get("model_config"):
+            cfg_lines.append(f"- Model config (non-default): {ecw_cfg['model_config']}")
+        if ecw_cfg.get("model_overrides"):
+            cfg_lines.append(f"- Model overrides: {ecw_cfg['model_overrides']}")
         sections.append(
             "# [ECW] Project config\n\n" + "\n".join(cfg_lines)
         )
 
     # 4. Task recovery hint
     if state_content and state_fields.get("status", "").lower() != "ended":
-        sections.append(
-            "# [ECW] Recovery hint\n\n"
-            "An active ECW workflow was detected from a previous session. "
-            "Check TaskList for pending work. If no tasks exist, re-create "
-            "them based on the `Post-Implementation Tasks` field in session-state.md."
-        )
+        next_skill = state_fields.get("next_skill", "").strip()
+        if next_skill and next_skill.lower() not in ('tbd', 'none', 'complete', ''):
+            sections.append(
+                "# [ECW] Recovery hint\n\n"
+                f"An active ECW workflow was detected. Next skill to invoke: `{next_skill}`. "
+                "Check TaskList for pending work. If no tasks exist, re-create "
+                "them based on the `Post-Implementation Tasks` field in session-state.md."
+            )
+        else:
+            sections.append(
+                "# [ECW] Recovery hint\n\n"
+                "An active ECW workflow was detected from a previous session. "
+                "Check TaskList for pending work. If no tasks exist, re-create "
+                "them based on the `Post-Implementation Tasks` field in session-state.md."
+            )
 
     # 5. Modified files from previous session
     prev_modified = _check_modified_files(cwd)

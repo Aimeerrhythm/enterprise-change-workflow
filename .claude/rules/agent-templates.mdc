@@ -1,0 +1,34 @@
+---
+description: Development conventions for agent template files
+globs: agents/*.md
+---
+
+# Agent Template Conventions
+
+## Subagent Boundary Guard (ALL agents)
+
+Every agent template MUST include a `## Subagent Boundary` section with:
+
+- Prohibit invoking any `ecw:` skills (skills are orchestrator-level capabilities)
+- Prohibit spawning additional subagents via Agent tool (leaf node principle)
+- Prohibit loading or reading SKILL.md files (instructions are self-contained)
+- Report BLOCKED/NEEDS_CONTEXT status when encountering orchestrator-level situations
+
+## Anti-Sycophancy (Review agents only)
+
+Review agents (spec-reviewer, domain-analyst, domain-negotiator, impl-verifier) MUST include a `## Review Tone` section:
+
+- No pleasantries — state findings directly
+- No impact → say so bluntly without hedging
+- High impact → state problems without softening
+- Never open with praise or caveats — lead with the assessment
+
+## Source Code Reading Limits (Review agents only)
+
+Review agents MUST include a `## Source Code Reading Limits` section:
+
+- Set explicit file read cap (e.g., max 10 source files)
+- Prefer Grep with limited context (`-A 5`) over full Read
+- Only Read full files for core interfaces directly participating in the change
+- Knowledge files do NOT count toward the file limit
+- Purpose: prevent token explosion and irrelevant code wandering

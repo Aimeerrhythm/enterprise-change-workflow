@@ -10,6 +10,10 @@ description: |
 
 After a plan/design document is produced, dispatch the `spec-challenge` agent for independent adversarial review. Present the review report to the user, who confirms handling for each item.
 
+**Announce at start:** "Using ecw:spec-challenge for adversarial plan review."
+
+**Mode switch**: Update session-state.md MODE marker to `planning`.
+
 ## Trigger
 
 - **Manual**: `/spec-challenge <file path>` — Launch review on specified document
@@ -62,7 +66,7 @@ When dispatching the spec-challenge agent, Coordinator first determines `{affect
 - **Auto-trigger**: Get domain list from current session's domain-collab report or risk-classifier output
 - **Manual trigger**: Extract domain keywords from document content, match against project CLAUDE.md domain routing table; if undeterminable, set to "please infer involved domains from document content"
 
-**Model selection**: `model: opus` (adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design).
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design.
 
 Use the following prompt structure:
 
@@ -108,7 +112,7 @@ After spec-challenge agent returns:
    - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
-2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
+2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | opus | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
 3. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
 4. **Present verbatim** the full review report to user. No responses, no judgments.
 
@@ -145,6 +149,14 @@ Based on user selections:
 - **Disagreed fatal flaws** → Draft technical rebuttal, present to user for confirmation
 - **Adopted improvements** → Update document
 - **Deferred improvements** → Record in document's "Future Iterations" section
+
+**Plan Revision Strategy (CRITICAL)**:
+
+The coordinator (main session) directly revises the plan document — do not dispatch a subagent for plan revision. Both the Plan content and the review findings are already in the coordinator's context, so delegating adds latency with no benefit.
+
+Use Write to overwrite the entire plan file rather than incremental edits. Plan files are typically 50-80KB; do not use Edit for large plan files as exact-match replacement is fragile and error-prone on files of this size.
+
+Exception: If the plan requires >30% content restructuring AND exceeds 100KB, a subagent may be dispatched, but it must also use Write (full overwrite), not Edit.
 
 ## Response Summary Format
 
@@ -185,6 +197,16 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 | Agent returns unstructured text (no F/I items) | Treat entire response as a single improvement suggestion (I1) and present to user for confirmation |
 | `spec-challenge-report.md` write failure | Retry once → still fails: output full report in conversation and continue with user confirmation flow |
 
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "The plan is well-structured, probably no fatal flaws" | Well-structured plans with logical gaps are more dangerous than rough plans with sound logic. Structure is not correctness. |
+| "The reviewer is being too harsh, these are edge cases" | Edge cases in P0/P1 changes become production incidents. The reviewer's job is to find them. |
+| "User disagreed with the finding, so it's not important" | User drives decisions, but disagreement must come with technical rationale. Record the disagreement; do not silently drop the finding. |
+| "Plan revision is a quick fix, I'll use Edit" | Large plan files (50-80KB) break Edit's exact-match replacement. Use Write for full overwrite. |
+| "I'll skip the session split recommendation, user knows what to do" | Context management checkpoints are handled by PreCompact hook. Do not re-introduce session split AskUserQuestion — auto-continue to implementation. |
+
 ## Workflow Integration
 
 ### Auto-Trigger Scenarios
@@ -211,36 +233,16 @@ ecw:risk-classifier (P0 / P1 cross-domain)
   → implementation
 ```
 
-### Post-Review: Session Split Recommendation
+### Post-Review: Auto-Continue to Implementation
 
-After spec-challenge completes and user confirms review results (Plan updated), **ALWAYS** output split recommendation for **P0 and P1 cross-domain changes**. This is the authoritative context management decision point — writing-plans deliberately defers its context-health check when spec-challenge follows, so this recommendation MUST trigger regardless of context-health state.
+After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and **immediately proceed to implementation** — do NOT ask the user whether to continue or start a new session. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-At this point, all analysis phase artifacts have been persisted:
-- domain-collab report → `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md`
-- Plan file → `.claude/plans/` directory
-- Spec-challenge record → `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`
-- ECW state → `.claude/ecw/session-data/{workflow-id}/session-state.md`
-- Knowledge summary → `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md`
-
-Use AskUserQuestion:
-
-```
-Question: "Plan phase complete. How would you like to continue?"
-Options:
-  1. "New session for implementation (Recommended)" — Implement in a new session; all analysis artifacts are saved to files
-  2. "Continue in current session" — Continue implementing in current session (note: long sessions may cause context compression and information loss)
-```
-
-When option 1 is selected, output:
-"All analysis artifacts have been saved. In a new session, say 'continue ECW implementation' and I will read the Plan file and state file to resume work."
-
-Also output implementation strategy recommendation (based on Task count in Plan; see risk-classifier "Implementation Strategy Selection" section):
-- Plan Tasks ≤ 3 → "Recommend direct implementation (few tasks, subagent parallelism not needed)"
-- Plan Tasks 4-8, P0/P1 → "Recommend using `ecw:impl-orchestration` (many tasks, parallelism accelerates)"
-- Plan Tasks > 8, P0/P1 → "Recommend using `ecw:impl-orchestration`, merge simple Tasks (see Implementation Strategy Selection section)"
-- Plan Tasks 4+, P2 → "Recommend direct implementation (medium risk, parallelization overhead unnecessary)"
-
-Update the recommended strategy to the `Implementation Strategy` field in `.claude/ecw/session-data/{workflow-id}/session-state.md`.
+> **CRITICAL — Auto-Continue Rule**: When `Auto-Continue` is `yes` in session-state.md:
+> - Update session-state.md `Next` field, then **immediately invoke** the next skill based on Implementation Strategy:
+>   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
+>   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
+> - Do NOT output additional confirmation text. The user already confirmed the workflow during Phase 1.
+> - If `Auto-Continue` field is missing or `no`, fall back to showing strategy recommendation and waiting for user direction (backward compatibility).
 
 ### Manual Trigger
 

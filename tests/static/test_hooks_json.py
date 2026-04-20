@@ -131,24 +131,26 @@ class TestExistingHooksRegression:
             "(B-1: Hook dispatcher pattern replaces direct hook registration)"
         )
 
-    def test_dispatcher_uses_wildcard_matcher(self, hooks_data):
-        """Dispatcher must use '*' matcher to receive all PreToolUse events."""
+    def test_dispatcher_uses_targeted_matcher(self, hooks_data):
+        """Dispatcher must use targeted matcher to avoid spawning on read-only tools."""
         hooks = hooks_data.get("hooks", {})
         pre_tool_entries = hooks.get("PreToolUse", [])
 
-        found_wildcard = False
         for entry in pre_tool_entries:
-            if entry.get("matcher") == "*":
-                for hook in entry.get("hooks", []):
-                    if "dispatcher.py" in hook.get("command", ""):
-                        found_wildcard = True
-                        break
-            if found_wildcard:
-                break
+            for hook in entry.get("hooks", []):
+                if "dispatcher.py" in hook.get("command", ""):
+                    matcher = entry.get("matcher", "*")
+                    assert matcher != "*", (
+                        "Dispatcher should use targeted matcher (e.g. 'Bash|Edit|Write|TaskUpdate') "
+                        "instead of '*' to avoid spawning Python on Read/Grep/Glob"
+                    )
+                    for tool in ["Bash", "Edit", "Write", "TaskUpdate"]:
+                        assert tool in matcher, (
+                            f"Dispatcher matcher must include '{tool}'"
+                        )
+                    return
 
-        assert found_wildcard, (
-            "Dispatcher entry must use '*' matcher for routing flexibility"
-        )
+        pytest.fail("Could not find dispatcher.py entry to verify matcher")
 
     def test_dispatcher_has_timeout(self, hooks_data):
         """Dispatcher must have a timeout configured."""

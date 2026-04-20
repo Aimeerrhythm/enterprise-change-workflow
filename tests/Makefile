@@ -22,7 +22,7 @@ lint-py:
 
 # Layer 1b: hook 单元测试（<10s, $0）
 test-hook:
-	$(PYTHON) -m pytest static/test_verify_completion.py static/test_dispatcher.py static/test_post_edit_check.py static/test_config_protect.py static/test_hooks_json.py static/test_session_start.py static/test_stop_persist.py static/test_session_end.py static/test_pre_compact.py static/test_marker_utils.py static/test_compact_suggest.py static/test_secret_scan.py static/test_bash_preflight.py -v
+	$(PYTHON) -m pytest static/test_verify_completion.py static/test_dispatcher.py static/test_post_edit_check.py static/test_config_protect.py static/test_hooks_json.py static/test_session_start.py static/test_stop_persist.py static/test_session_end.py static/test_pre_compact.py static/test_marker_utils.py static/test_cost_tracker.py static/test_gateguard_fact_force.py static/test_secret_scan.py static/test_bash_preflight.py -v
 
 # Layer 2: risk-classifier P0 场景行为 Eval（~2min, ~$0.50）
 eval-quick: _check-api-key

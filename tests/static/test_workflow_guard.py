@@ -2,8 +2,6 @@
 
 Source: Anthropic "Building Effective Agents" — guardrails pattern;
         OpenAI Agents SDK — "fail fast when checks do not pass".
-
-xfail = spec test for not-yet-implemented feature. Remove xfail after implementation.
 """
 from __future__ import annotations
 
@@ -26,7 +24,6 @@ class TestWorkflowGuardPresence:
         content = (HOOKS_DIR / "verify-completion.py").read_text(encoding="utf-8")
         assert "impl-verify" in content or "impl_verify" in content
 
-    @pytest.mark.xfail(reason="DC-2: workflow guard not yet implemented — should check impl-verify execution status, not just mention it")
     def test_checks_impl_verify_was_executed(self):
         """verify-completion should verify impl-verify actually ran (not just remind)."""
         content = (HOOKS_DIR / "verify-completion.py").read_text(encoding="utf-8")

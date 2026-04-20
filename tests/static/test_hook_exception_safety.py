@@ -17,7 +17,7 @@ EXCLUDED = {"marker_utils.py", "ecw_config.py", "__init__.py", "conftest.py"}
 
 # Sub-hooks are loaded by dispatcher.py and protected by its try/except.
 # They don't need their own __main__ block.
-SUB_HOOKS = {"bash-preflight.py", "compact-suggest.py", "config-protect.py", "secret-scan.py"}
+SUB_HOOKS = {"bash-preflight.py", "config-protect.py", "gateguard-fact-force.py", "secret-scan.py"}
 
 
 def get_hook_files():

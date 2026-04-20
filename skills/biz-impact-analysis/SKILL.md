@@ -13,6 +13,8 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 
 **Mode switch**: Update session-state.md MODE marker to `verification`.
 
+**Announce at start:** "Using ecw:biz-impact-analysis to assess business impact of code changes."
+
 ## Trigger
 
 - **Manual**: `/biz-impact-analysis` — Analyze all changes on current branch vs master
@@ -29,7 +31,7 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    4. Fill above results into Agent prompt, replacing full diff
 
 > **Knowledge file robustness**: If `ecw-path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
-3. **Dispatch biz-impact-analysis agent** (`model: opus` — business impact analysis is the final safety net; missed impact goes straight to production incidents) — Pass in preprocessed results, await impact analysis report
+3. **Dispatch biz-impact-analysis agent** (`model: opus`, default from `models.defaults.analysis`; configurable via ecw.yml — business impact analysis is the final safety net; missed impact goes straight to production incidents) — Pass in preprocessed results, await impact analysis report
 4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
    - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
    - Retry once with the same model
@@ -136,9 +138,11 @@ When `ecw:impl-verify` completes:
 
 After biz-impact-analysis report is output:
 
-1. If current change is **P0/P1** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`), **immediately execute Phase 3 calibration** — use Skill tool to invoke `ecw:risk-classifier` with argument `--phase3`
-2. If current change is **P2**, suggest executing Phase 3 (not mandatory; user decides)
-3. Phase 3 no longer needs manual trigger — automatically chains after biz-impact-analysis completes
+> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
+> - **P0/P1**: **Immediately invoke** `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Do NOT output "analysis complete, shall I calibrate?" or any confirmation. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
+> - **P2**: Suggest executing Phase 3 (not mandatory; user decides).
+> - **P3**: No Phase 3 needed.
+> - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 
@@ -147,7 +151,7 @@ If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysi
 After Agent returns, append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table:
 
 ```
-| biz-impact-analysis | analyst | ecw:biz-impact-analysis | large | {HH:mm} | {duration} |
+| biz-impact-analysis | analyst | ecw:biz-impact-analysis | opus | large | {HH:mm} | {duration} |
 ```
 
 Note time before dispatch and compute duration after Agent return.
@@ -164,6 +168,16 @@ Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-
 | `ecw-path-mappings.md` missing | Agent cannot map files to domains → output `[Warning: path mappings not found, domain identification degraded]` and proceed with file-path-based heuristic grouping |
 | Knowledge files missing (cross-domain-calls.md, mq-topology.md, etc.) | Agent logs `[Warning: {file} not found]` per missing file → analysis continues with available data, "Analysis Coverage" section in report reflects gaps |
 | `git diff` returns empty | No changes to analyze → notify user and exit without dispatching agent |
+
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "Changes are in one domain, no cross-domain impact" | Single-domain changes can affect shared resources consumed by other domains. Always check shared resources and end-to-end paths. |
+| "The knowledge files are probably up to date" | Knowledge docs drift from code. Reverse validation catches stale entries. Skip it and the report includes phantom dependencies. |
+| "No MQ or external references, so skip those sections" | Correct to skip if scan confirms no hits. But note it explicitly in Analysis Coverage — silent skips are the most dangerous blind spots. |
+| "This is a low-risk query change, impact is minimal" | Query logic changes can affect downstream filtering. Medium risk, not minimal. Check end-to-end paths. |
+| "Report is getting long but I need to include everything" | Conciseness is a hard constraint. Prioritize action items (max 3). Move verbose details to structured tables. |
 
 ## Notes
 

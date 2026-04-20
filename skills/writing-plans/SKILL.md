@@ -21,7 +21,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 ## Risk-Aware Detail Level
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable, use AskUserQuestion.
+Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable (standalone invocation), default to P0 (full detail mode).
 
 | Risk Level | Plan Detail | Task Granularity |
 |-----------|-------------|-----------------|
@@ -99,7 +99,7 @@ After receiving the subagent's summary:
 
 ### Model
 
-`model: opus` — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
+`model: opus` (default from `models.defaults.planning`; configurable via ecw.yml) — Plan quality drives all downstream implementation; a flawed plan causes cascading rework across TDD, implementation, and verification phases.
 
 **Timeout (dynamic)**: Scale timeout by estimated Task count — **≤5 Tasks: 180s**, **6–10 Tasks: 300s**, **>10 Tasks: 420s**. Estimate Task count before dispatch from requirement scope: single-domain focused change → ≤5; multi-domain (2–3 domains) or medium complexity → 6–10; large cross-domain (4+ domains) or high complexity → >10. If estimate is unavailable, default to 300s. On timeout, **fall back to Direct mode immediately** — do NOT retry (empirically, a timed-out Plan subagent retried under the same conditions times out again, wasting another full timeout window).
 
@@ -129,73 +129,11 @@ This structure informs the task decomposition.
 
 ## Plan Document Header
 
-**Save plans to:** `.claude/plans/<feature-name>.md`
-
-**Every plan MUST start with this header:**
-
-```markdown
-# [Feature Name] Implementation Plan
-
-> **Risk Level:** P{N} | **Domains:** {domain list} | **Implementation Strategy:** {direct | subagent-driven}
-
-**Goal:** [One sentence describing what this builds]
-
-**Architecture:** [2-3 sentences about approach]
-
-**Tech Stack:** [Key technologies/libraries]
-
----
-```
-
-**Implementation Strategy** is read from `session-state.md` `实现策略` field. If TBD or unavailable, determine by risk-classifier's "Implementation Strategy Selection" rules: Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven.
+Read `./plan-header-template.md` for the exact header format. Every plan MUST start with this header. Save plans to `.claude/plans/<feature-name>.md`.
 
 ## Task Structure
 
-````markdown
-### Task N: [Component Name]
-
-**Files:**
-- Create: `exact/path/to/file.py`
-- Modify: `exact/path/to/existing.py:123-145`
-- Test: `tests/exact/path/to/test.py`
-
-**Test Context:**
-- Test framework: {from pom.xml/package.json, e.g., JUnit 5 + MockitoExtension}
-- Base test class: {from ecw.yml tdd.base_test_class, or "none"}
-- Key dependencies for test: {list interfaces/classes the test needs to mock or import, with file paths}
-
-- [ ] **Step 1: Write the failing test**
-
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
-
-- [ ] **Step 3: Write minimal implementation**
-
-```python
-def function(input):
-    return expected
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
-````
+Read `./task-structure-template.md` for the full task format with TDD step-by-step cycle, file paths, and test context. Each task follows this structure.
 
 ## No Placeholders
 
@@ -253,7 +191,7 @@ If you find issues, fix them inline.
 | Subagent timeout (dynamic limit exceeded) | Record `TIMEOUT` in Subagent Ledger → **fall back to Direct mode immediately** (no retry — empirically, retry under same conditions times out again, wasting another full timeout window). Coordinator generates plan itself in Direct mode |
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
-| `session-state.md` unavailable (risk level unknown) | Use AskUserQuestion to ask user for risk level before proceeding |
+| `session-state.md` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
 
 ## Downstream Handoff
 
@@ -268,13 +206,29 @@ After saving the plan, determine and persist implementation strategy, then route
 **2. TDD phase?** (P0-P2 when `tdd.enabled: true`, and spec-challenge NOT needed)
 → Remind that implementation should follow `ecw:tdd`.
 
-**3. Implementation strategy routing:** (when spec-challenge NOT needed)
+**3. Auto-route implementation:** (when spec-challenge NOT needed)
 
-| Strategy | Handoff |
-|----------|---------|
-| `subagent-driven` | "Plan saved. Recommend using `ecw:impl-orchestration` to execute task-by-task with per-task review." |
-| `direct` | "Plan saved. Implement tasks sequentially, following ecw:tdd for each." |
+The implementation strategy was already determined and written to session-state.md (see "Update session-state.md" above). Apply the strategy automatically:
 
-**4. Offer execution choice via AskUserQuestion:** (when spec-challenge NOT needed)
-- "Subagent-Driven (Recommended)" — dispatch fresh subagent per task via ecw:impl-orchestration
-- "Direct Implementation" — implement tasks sequentially in current session
+| Strategy | Action |
+|----------|--------|
+| `subagent-driven` | Invoke `ecw:tdd` first (if `tdd.enabled: true`), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly. |
+| `direct` | Invoke `ecw:tdd` to begin the first Plan Task's RED phase. |
+
+> **CRITICAL — Auto-Continue Rule**: Do NOT use AskUserQuestion to offer execution strategy choice. The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update session-state.md `Next` field, then **immediately invoke** the next skill. The user already confirmed the workflow during Phase 1. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to AskUserQuestion for user choice (backward compatibility).
+
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "The requirement is clear enough, skip design completeness check" | Unclear requirements become bugs during TDD. Every unresolved question costs 10x more to fix in implementation than in planning. |
+| "I'll add details during implementation" | Plans with gaps produce implementations with gaps. The engineer reading this plan has zero context — they need everything spelled out. |
+| "Similar to Task N is good enough" | The engineer may read tasks out of order. Repeat the code. DRY applies to production code, not plan documentation. |
+| "This step is obvious, no code block needed" | Nothing is obvious to an engineer with zero project context. If a step changes code, show the code. |
+| "TDD readiness check is overhead for simple plans" | Simple plans with missing test context cause TDD to waste turns discovering file paths and imports. Two minutes of checking saves twenty minutes of TDD thrashing. |
+| "P2 plans don't need this level of detail" | P2 detail level is simplified, not absent. Task merging rules and 5-10 min granularity still apply. |
+
+## Supplementary Files
+
+- `plan-header-template.md` — Plan document header format
+- `task-structure-template.md` — Task format with TDD step-by-step cycle

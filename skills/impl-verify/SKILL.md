@@ -10,6 +10,8 @@ description: >
 
 After implementation completes and before marking the task done, perform multi-dimensional cross-validation of code changes: code logic ↔ requirements / domain knowledge / Plan / engineering standards. Converge over multiple rounds; exit only with zero must-fix findings.
 
+**Announce at start:** "Using ecw:impl-verify to verify implementation correctness."
+
 **Mode switch**: Update session-state.md MODE marker to `verification`.
 
 ## Why This Is Needed
@@ -114,7 +116,7 @@ summary: "One-line summary of this round"
 2. Retry once with the same model
 3. If retry also fails: mark that Round as `[incomplete: Round {N}]` in the output, continue with findings from other Rounds. Do not block convergence — but warn user that one verification dimension was skipped.
 
-**Model selection**: Use `model: "sonnet"` for all verification subagents. Verification is pattern-matching against reference material — does not require Opus-level reasoning.
+**Model selection**: Use `model: "sonnet"` (default from `models.defaults.verification`; configurable via ecw.yml) for all verification subagents. Reason: verification is pattern-matching against reference material — does not require Opus-level reasoning.
 
 **Timeout per Round subagent**: 180s. If a Round subagent has not returned within this time, terminate it and fall back to coordinator inline execution for that Round (see Error Handling).
 
@@ -216,6 +218,8 @@ summary: "One-line summary of this round"
    - **must-fix**: Layering violations, resource leaks, severe duplication (50+ lines of identical logic), reverse dependencies
    - **suggestion**: Method too long, naming could be better, minor duplication, extractable but not urgent
 
+If ecw.yml `rules.enabled: true`: pass engineering rules files from `rules.path` (default `.claude/ecw/rules/`) to the Round 4 subagent. Verification against `[must-follow]` rules → must-fix; `[recommended]` rules → suggestion.
+
 ### Round N+ (Conditional Trigger) — Fix Re-Verification
 
 **Triggered only when any previous Round has must-fix findings that have been fixed.**
@@ -238,6 +242,16 @@ summary: "One-line summary of this round"
 - **Stall detection**: If must-fix count does not decrease for 2 consecutive rounds (Round N and N+1 have equal or higher must-fix count), stop iterating and escalate to user: `[Stall detected: must-fix count not decreasing after {N} rounds. Remaining {X} must-fix items require manual intervention.]`
 - **Context savings**: By dispatching Rounds as subagents, the coordinator holds only the changed file list (~500 tokens) plus aggregated findings YAML (~200 tokens per finding). In the WMS P0 session, this would have reduced coordinator context from ~49 file reads to ~4 YAML summaries.
 
+## Downstream Handoff
+
+After convergence (zero must-fix findings in the most recent round):
+
+> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md (if unavailable, default to P0), update `Next` field, then:
+> - **P0/P1**: **Immediately invoke** `ecw:biz-impact-analysis`. Do NOT output "verification passed, shall I analyze business impact?" or any confirmation. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList.
+> - **P2**: Output suggestion to run biz-impact-analysis; wait for user decision.
+> - **P3**: No downstream handoff needed.
+> - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
+
 ## Severity Definitions
 
 | Severity | Definition | Blocks Convergence | Typical Scenarios |
@@ -248,6 +262,8 @@ summary: "One-line summary of this round"
 **Judgment principle**: If unsure whether it's must-fix or suggestion, ask yourself: **Will this issue cause a bug or incident in production?** Yes → must-fix. No → suggestion.
 
 ## Risk Level Behavior Differences
+
+Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. If unavailable (standalone invocation), default to P0 (all rounds mandatory).
 
 | Risk | Execution Scope | Details |
 |------|----------------|---------|
@@ -264,84 +280,7 @@ summary: "One-line summary of this round"
 
 ## Output Format
 
-Per-round output:
-
-```markdown
-### Impl-Verify Round {N} — {dimension name}
-
-**Check scope**: {cross-referenced artifacts + code file list}
-
-**Findings**:
-
-| # | Type | Reference Source | Code Location | Deviation Description | Severity |
-|---|------|-----------------|--------------|----------------------|----------|
-| 1 | State machine deviation | requirements: "A→B→C" | FooService.java:142 | Code allows A→C jump, missing state B | must-fix |
-| 2 | Method too long | Engineering standards | BarService.java:60 | issue() method 50+ lines, mixes validation and business logic | suggestion |
-
-**This round: {X} must-fix + {Y} suggestions.**
-```
-
-Zero must-fix output:
-
-```markdown
-### Impl-Verify Round {N} — {dimension name}
-
-**Check scope**: {cross-referenced artifacts + code file list}
-
-**Findings**: No must-fix items. {Y} suggestions (non-blocking).
-
-**This round zero must-fix, verification passed.**
-```
-
-Final pass summary:
-
-```markdown
-## Impl-Verify Verification Passed
-
-After {N} rounds of verification (fixed {X} must-fix issues), implementation correctness check passed.
-
-**Per-dimension results**:
-- Round 1 (Requirements↔Code): {count} must-fix, resolved
-- Round 2 (Domain Knowledge↔Code): {count} must-fix, resolved
-- Round 3 (Plan↔Code): {count} must-fix, resolved
-- Round 4 (Engineering Standards↔Code): {count} must-fix, resolved
-- Round {M} (Fix re-verification): Zero must-fix ✓
-
-**Unaddressed suggestions** ({count}, non-blocking):
-| # | Location | Suggestion Content |
-|---|----------|--------------------|
-| 1 | ... | ... |
-
-Verification passed. Task can be marked as complete.
-
-**Next step** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
-- P0/P1 change → **Immediately** use Skill tool to invoke `ecw:biz-impact-analysis` to analyze business impact of code changes.
-- P2 change → **Suggested** to run `ecw:biz-impact-analysis` (not mandatory; user may decide to skip).
-- P3 / pure formatting change → No biz-impact-analysis needed.
-
-If TaskList has a pending "ecw:biz-impact-analysis" Task, marking impl-verify Task as completed will automatically unblock that Task.
-```
-
-## Output Constraints
-
-### In-Session Output Limits
-
-Per-round findings table:
-- **≤ 5 must-fix**: Output full findings table directly
-- **> 5 must-fix**: Output summary in session (count + top 3 most severe items)
-- **All findings**: After each verification pass completes, write all findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` regardless of count. This ensures findings survive context compaction during multi-round convergence.
-- **Zero must-fix**: Use simplified output format (`### Impl-Verify Round {N} — {dimension}` + `**Findings**: No must-fix items. {Y} suggestions (non-blocking).` + `**This round zero must-fix, verification passed.**`), no more than 3 lines
-
-Final pass summary:
-- Summary no more than **15 lines** (one line per Round result + unaddressed suggestion list max 5 items)
-- If there are skipped suggestions, list only the count, not details
-
-### Fix Re-Verification Rounds
-
-Fix re-verification rounds (Round N+) output only:
-- Re-verified must-fix IDs + pass/fail result (table format, one item per line)
-- New findings (if any)
-- **Do not repeat already-passed Round results**
+**Before generating verification output**, Read `./output-templates.md` for per-round findings format, zero-findings format, final pass summary structure, and output constraints.
 
 ## Error Handling
 
@@ -383,21 +322,9 @@ When these thoughts occur, **stop** — you are rationalizing skipping or weaken
 
 ## Common Implementation Deviation Patterns
 
-For focused attention in each Round:
+For focused attention in each Round, Read `./deviation-patterns.md` for the 14 most common deviation patterns with Round mapping and examples.
 
-| Pattern | Round | Example |
-|---------|-------|---------|
-| **State machine transition missing** | 1, 2 | Requirement defines A→B→C, code allows direct A→C jump |
-| **Validation rule omitted** | 1, 2 | Requirement says "quantity must be positive", code has no check |
-| **Error handling mismatch** | 1, 3 | Plan says "rollback on failure", code swallows exception |
-| **Calculation formula error** | 1 | Requirement: price × qty - discount, code: (price - discount) × qty |
-| **Scope creep** | 1 | Code adds functionality not required by requirements |
-| **Idempotency missing** | 2 | New MQ consumer has no deduplication, violating business-rules.md idempotency section |
-| **Cross-domain contract violation** | 2 | Code directly calls cross-domain internal method, not going through document-defined Facade |
-| **Reuse decision not followed** | 3 | Plan specifies reusing existing method, code re-implements it |
-| **Test scenario omitted** | 3 | Plan lists normal/exception/boundary 3 test scenarios, only normal scenario test written |
-| **Assertion missing** | 3 | Plan requires verifying failure return, test only prints result with no assert |
-| **Mock abuse** | 3 | Mocked the output of the dependency being tested — test is testing Mock behavior, not real code |
-| **Layering violation** | 4 | Controller directly calls Mapper, bypassing Service layer |
-| **Resource leak** | 4 | Database connection/file handle not closed in finally |
-| **Severe duplication** | 4 | 50+ lines of identical logic with another class — should extract common method |
+## Supplementary Files
+
+- `output-templates.md` — Per-round findings format, zero-findings format, final pass summary, output constraints
+- `deviation-patterns.md` — 14 common implementation deviation patterns by Round

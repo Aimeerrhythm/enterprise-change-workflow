@@ -2,8 +2,6 @@
 
 Source: OpenAI Agents SDK — Sessions for structured state;
         Data Contracts (Andrew Jones, 2023).
-
-xfail = schema file not yet created. Remove xfail after implementation.
 """
 from __future__ import annotations
 
@@ -25,16 +23,12 @@ KNOWN_ARTIFACTS = [
 
 class TestArtifactSchema:
 
-    @pytest.mark.xfail(reason="DC-5: artifact-schemas.md not yet created")
     def test_schema_file_exists(self):
         """artifact-schemas.md should exist in templates/."""
         assert SCHEMA_FILE.exists()
 
-    @pytest.mark.xfail(reason="DC-5: artifact-schemas.md not yet created")
     def test_all_artifacts_have_schema(self):
         """All known artifact files should be documented in the schema."""
-        if not SCHEMA_FILE.exists():
-            pytest.skip("not created")
         content = SCHEMA_FILE.read_text(encoding="utf-8")
         for artifact in KNOWN_ARTIFACTS:
             assert artifact in content, f"'{artifact}' not in schema"

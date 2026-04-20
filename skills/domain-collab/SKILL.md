@@ -14,6 +14,10 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 > **Single-domain requirements** are handled by `ecw:requirements-elicitation`. This skill focuses on multi-domain scenarios.
 
+**Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
+
+**Mode switch**: Update session-state.md MODE marker to `analysis`.
+
 ## Trigger
 
 - **Manual**: `/domain-collab <requirement or change description>`
@@ -28,28 +32,9 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 ## Workflow Overview
 
-```dot
-digraph domain_collab {
-  rankdir=TB;
+For a visual overview of the process, see `./workflow-diagram.md`.
 
-  "User input requirement" [shape=doublecircle];
-  "Phase 1: Domain Identification" [shape=box];
-  "Matched domains?" [shape=diamond];
-  "Hint: single-domain, use requirements-elicitation" [shape=box];
-  "Round 1: Independent Analysis (parallel)" [shape=box];
-  "Round 2: Inter-Domain Negotiation (parallel)" [shape=box];
-  "Round 3: Coordinator Cross-Validation" [shape=box];
-  "Output Report" [shape=doublecircle];
-
-  "User input requirement" -> "Phase 1: Domain Identification";
-  "Phase 1: Domain Identification" -> "Matched domains?";
-  "Matched domains?" -> "Hint: single-domain, use requirements-elicitation" [label="0~1 domains"];
-  "Matched domains?" -> "Round 1: Independent Analysis (parallel)" [label="2+ domains"];
-  "Round 1: Independent Analysis (parallel)" -> "Round 2: Inter-Domain Negotiation (parallel)";
-  "Round 2: Inter-Domain Negotiation (parallel)" -> "Round 3: Coordinator Cross-Validation";
-  "Round 3: Coordinator Cross-Validation" -> "Output Report";
-}
-```
+Phases: Domain Identification → Round 1 (Independent Analysis, parallel) → Round 2 (Inter-Domain Negotiation, parallel) → Round 3 (Coordinator Cross-Validation) → Output Report.
 
 ## Phase 1: Domain Identification
 
@@ -70,71 +55,11 @@ digraph domain_collab {
 
 Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general-purpose`).
 
-**Model selection**: `model: opus` (domain analysis requires deep understanding of business rules, state machines, and cross-domain dependencies — errors here cascade to all downstream workflow). Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` for that domain to reduce cost.
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: domain analysis requires deep understanding of business rules, state machines, and cross-domain dependencies — errors here cascade to all downstream workflow. Exception: if Phase 1 or prior context strongly predicts a domain's `impact_level: none`, use `model: haiku` (`models.defaults.mechanical`) for that domain to reduce cost.
 
 **Prerequisites (Coordinator executes before dispatching Agents):** Read `.claude/ecw/ecw.yml` to get project.name and component_types; read the file at ecw.yml `paths.domain_registry` to get domain definitions.
 
-**All domain Agents use the prompt template defined in `agents/domain-analyst.md`.** Coordinator fills the template variables with domain-registry data.
-
-```
-You are a {project_name} {domain_name} domain expert Agent. Your task is to analyze the impact of a requirement on your responsible domain.
-(project_name read from `.claude/ecw/ecw.yml`)
-
-## Your Domain Info
-- Domain ID: {domain_id}
-- Domain Name: {domain_name}
-- Responsibilities: {description}
-
-## Your Knowledge Documents
-Read entry point: {knowledge_root}{index}. From there, locate sections relevant to the requirement.
-Only read knowledge files and sections directly relevant to the requirement description — do not read everything.
-Core files: {knowledge_root}{business_rules} (state machine and validation rules sections), {knowledge_root}{data_model} (related entities).
-{extra_knowledge_lines}
-
-## Code Directory (grep to verify when needed)
-- Main directory: {code_root}
-{related_code_dirs}
-
-## Requirement Description
----
-{user_requirement}
----
-
-## Analysis Requirements
-1. Analyze the requirement's impact on this domain based on your knowledge documents
-2. Identify components that need changes (read available values from `.claude/ecw/ecw.yml` `component_types` field)
-3. Identify state transition changes
-4. Identify risk points that may affect other domains
-5. Do not guess — only make judgments based on documents and code you have read
-6. If this domain is completely unaffected, explain why
-
-## Output Constraints
-- YAML block total length no more than 30 lines
-- `notes` field no more than 2 sentences
-- If `impact_level` is none, only output domain + impact_level + summary (three fields)
-- If no `state_changes` or no `cross_domain_risks`, omit that field (do not output empty arrays)
-- Do not output analysis reasoning process — only output conclusive YAML
-
-## Output Format (strictly follow this YAML format, wrapped in ```yaml code block)
-domain: {domain_id}
-impact_level: none | low | medium | high
-summary: "One-sentence summary of requirement impact on this domain"
-affected_components:
-  - type: "Read available values from ecw.yml component_types"
-    name: "Class name or resource name"
-    change: "What change is needed"
-state_changes:
-  - entity: "Entity name"
-    from: "Original state"
-    to: "New state"
-    trigger: "Trigger condition"
-cross_domain_risks:
-  - target: "Target domain ID"
-    type: "direct_call | mq | shared_resource"
-    resource: "Resource name"
-    reason: "Why it may be affected"
-notes: "Other things to note"
-```
+**All domain Agents use the prompt template defined in `agents/domain-analyst.md`.** Coordinator reads the template, fills variables (`{project_name}`, `{domain_id}`, `{domain_name}`, `{description}`, `{knowledge_root}`, `{code_root}`, `{user_requirement}`) with domain-registry data, and passes the filled prompt to each Agent.
 
 **Coordinator operation steps:**
 1. Read each matched domain's metadata from domain-registry
@@ -145,7 +70,7 @@ notes: "Other things to note"
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
+6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | opus | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
@@ -162,63 +87,9 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 3. Specifically flag: other domains' `cross_domain_risks` where `target` points to this domain ("another domain specifically noted you may be affected")
 4. Dispatch new round of domain agents in parallel
 
-**Model selection**: `model: opus` (negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues). Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
+**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: negotiation requires reasoning about cross-domain conflicts, companion changes, and impact propagation — misjudgment leads to missed integration issues. Domains that were `impact_level: none` in Round 1 and had no inbound risks are skipped entirely (see skip rule below).
 
-**Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills the template variables with Round 1 results and other domains' change summaries.
-
-```
-You are a {project_name} {domain_name} domain expert Agent (negotiation round).
-
-In Round 1 you performed independent analysis of the requirement. Now other domains have also completed their analysis. Your task is to assess whether other domains' change plans affect your domain.
-
-## Original Requirement
----
-{user_requirement}
----
-
-## Your Round 1 Analysis Result
-{round1_yaml_output}
-
-## Other Domains' Change Plans (Summary)
-{for each other domain:}
-### {other_domain_name} Domain — {impact_level}
-{summary}
-Changes: {affected_components as comma-separated "type:name" list}
-Risks pointing to you: {cross_domain_risks where target == current domain, one line each, or "None"}
-
-If you need to verify business rules, read as needed: {knowledge_root}{business_rules}.
-Only read when other domains' changes may affect your domain's rules — do not preemptively read everything.
-
-## Negotiation Task
-1. Check if other domains' changes affect your domain (interface changes, message body changes, shared resource changes, etc.)
-2. If affected, describe the specific impact point and the companion changes needed on your side
-3. If you reported impact_level: none in Round 1, but other domains' changes do affect you, update your assessment
-4. If you discover conflicts between other domains' change plans and your domain (modifying same interface simultaneously, incompatible state machines, etc.), flag the conflict points
-5. If other domains' changes have zero impact on you, simply report revised_impact_level matching Round 1, leave other fields empty
-
-## Output Constraints
-- YAML block total length no more than 20 lines
-- If other domains' changes have zero impact on this domain, only output domain + revised_impact_level (matching Round 1) + one-sentence explanation
-- Do not output analysis reasoning process — only output conclusive YAML
-
-## Output Format (strictly follow this YAML format, wrapped in ```yaml code block)
-domain: {domain_id}
-negotiation_result:
-  revised_impact_level: none | low | medium | high
-  impact_from_others:
-    - source_domain: "Which domain's changes affected you"
-      impact: "Specific impact description"
-      required_action: "Companion changes needed on your side"
-  conflicts:
-    - with_domain: "Conflicting domain"
-      description: "Conflict description"
-      suggestion: "Suggested resolution"
-  revised_components:
-    - type: "Component type"
-      name: "Class name"
-      change: "Change content"
-      reason: "What change from which domain necessitates this companion change"
-```
+**Round 2 domain Agents use the prompt template defined in `agents/domain-negotiator.md`.** Coordinator fills template variables: `{project_name}`, `{domain_name}`, `{user_requirement}`, `{round1_yaml_output}`, and the "Other Domains' Change Plans" section (aggregate other domains' `affected_components`, `state_changes`, `cross_domain_risks`, flagging risks pointing to this domain).
 
 **Coordinator operation steps:**
 1. Fill the template above with variables to generate Round 2 prompt for each domain
@@ -228,7 +99,7 @@ negotiation_result:
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
+5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | opus | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 
@@ -282,7 +153,7 @@ For each `cross_domain_risk`:
 
 **3e. Output Report**
 
-1. **Write full report to file** `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md` (using the full report template below)
+1. **Write full report to file** `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md`. **Before writing**, Read `./report-template.md` for the complete report structure.
 2. **Output only summary version in conversation** (no more than 30 lines), including:
    - Domain overview table (domain name + level + changed component count + one-line summary)
    - Inter-domain conflicts (if any)
@@ -291,103 +162,9 @@ For each `cross_domain_risk`:
 
 Detailed per-domain analysis, code verification results, negotiation findings, etc. are in the file. Subsequent Phase 2 and ecw:writing-plans read the file directly for full data.
 
-<details>
-<summary>Full Report Template (used when writing to file)</summary>
-
-```markdown
-# Multi-Domain Collaboration Analysis Report
-
-## Requirement Summary
-{user_requirement}
-
-## Domain Overview (Merged Round 1 + Round 2)
-| Domain | Round 1 Level | Post-Negotiation Level | Changed Components | Summary |
-|--------|--------------|----------------------|-------------------|---------|
-| {domain_name} | {round1_level} | {final_level} | {count} | {summary} |
-
-## Per-Domain Detailed Analysis
-
-### {domain_name} Domain
-**Impact Level**: {impact_level}
-**Summary**: {summary}
-
-**Components to Change:**
-| Type | Name | Change Content | Verification |
-|------|------|---------------|-------------|
-| {type} | {name} | {change} | verified/stale |
-
-**State Changes:**
-- {entity}: {from} → {to} ({trigger})
-
-**Cross-Domain Risks:**
-- → {target}: {reason} ({type}: {resource})
-
-### (next domain...)
-
-## Inter-Domain Negotiation Findings
-
-### Impact Level Changes
-(If any domain's impact level upgraded after Round 2 negotiation, list the change reason)
-| Domain | Round 1 Level | Post-Negotiation Level | Reason |
-|--------|--------------|----------------------|--------|
-| {domain} | {round1_level} | {round2_level} | {reason} |
-(If all domain levels unchanged, show "No level changes")
-
-### Companion Changes Discovered in Negotiation
-(Changes each domain discovered in Round 2 that are needed due to other domains' changes)
-| Domain | New Component | Change Content | Triggered By |
-|--------|--------------|---------------|-------------|
-| {domain} | {component} | {change} | {source_domain}'s {what} change |
-(If no companion changes, show "None")
-
-### Inter-Domain Conflicts
-(Conflicts found in Round 2 negotiation + Coordinator cross-validation)
-| Domain A | Domain B | Conflict Description | Suggestion |
-|----------|----------|---------------------|------------|
-| {domain_a} | {domain_b} | {description} | {suggestion} |
-(If no conflicts, show "None")
-
-## Coordinator Cross-Validation Findings
-### Omission Detection
-- {domain}: Domain A flagged cross_domain_risk pointing to {domain}, but {domain} reported none in both Round 1 and negotiation — suggest confirming
-
-## Cross-Domain Dependencies & Implementation Order
-(Based on cross_domain_risks dependency relationships, suggest implementation order)
-1. First modify {depended-upon domain} (called/consumed by other domains)
-2. Then modify {dependent domain}
-3. Finally modify {downstream domain}
-
-## Code Verification Results
-- verified: {name} — confirmed to exist
-- stale: {name} — knowledge docs record it but not found in code, suggest confirming
-
-## Risk Point Summary
-- {notes from each domain}
-```
-
-</details>
-
 **3f. Write Knowledge Summary File**
 
-Write key information from knowledge files read during this analysis to `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` for reuse by downstream skills (risk-classifier Phase 2, impl-verify Round 2), reducing redundant reads of original knowledge files:
-
-```markdown
-# Knowledge Summary (extracted during domain-collab analysis)
-
-## Involved Domains: {domain list}
-
-## Related Shared Resources
-{Entries extracted from shared-resources.md relevant to this change}
-
-## Related Cross-Domain Calls
-{Entries extracted from cross-domain-calls.md involving changed domains}
-
-## Related MQ Topics
-{Entries extracted from mq-topology.md involving changed domains}
-
-## Related Business Rules Summary
-{For each involved domain: summary of state machines and validation rules from business-rules.md relevant to this change}
-```
+Write key information from knowledge files read during this analysis to `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` for reuse by downstream skills (risk-classifier Phase 2, impl-verify Round 2), reducing redundant reads of original knowledge files. **Before writing**, Read `./knowledge-summary-template.md` for the file structure.
 
 ---
 
@@ -409,6 +186,8 @@ If all domain Agents return `impact_level: none`:
 
 ## Downstream Handoff: risk-classifier Phase 2
 
+Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. If unavailable (standalone invocation), default to P0.
+
 **P0/P1**: After collaboration analysis report is output, immediately execute risk-classifier Phase 2 (precise classification). Phase 2 will re-assess risk level based on this skill's collaboration analysis report (per-domain `affected_components`, `cross_domain_risks`, Coordinator cross-validation findings). Proceed to `ecw:writing-plans` after Phase 2 completes.
 
 **P2**: Skip Phase 2 (Phase 1 lightweight check already covered), proceed directly to `ecw:writing-plans`.
@@ -421,7 +200,12 @@ P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plan
 P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
 ```
 
-**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, use AskUserQuestion: "压缩后继续 (Recommended)" (description: "上下文较大，在阶段边界压缩无损。输入 /compact 后自动继续") vs "直接继续". If user picks compact, output "请输入 /compact，压缩完成后将自动继续。" then STOP. Otherwise (file missing, LOW, MEDIUM, or user picks continue), proceed immediately.
+**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
+
+> **CRITICAL — Auto-Continue Rule**: After Round 3 completes and report is output, update session-state.md `Next` field, then **immediately invoke** the next skill:
+> - **P0/P1**: Immediately invoke risk-classifier Phase 2. Do NOT output confirmation text or wait for user input.
+> - **P2**: Immediately invoke `ecw:writing-plans`. Do NOT ask for confirmation.
+> - The user already confirmed the full workflow during Phase 1. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 
 ---
 
@@ -434,6 +218,17 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 | Knowledge file missing (`domain-registry.md`, `cross-domain-rules.md`, per-domain knowledge) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. If `domain-registry.md` missing: halt and ask user to run `/ecw-init` |
 | Report file write failure (`domain-collab-report.md`, `knowledge-summary.md`) | Retry once → still fails: output full report content in conversation so downstream skills can reference it |
 
+## Common Rationalizations
+
+| Your Thought | Reality |
+|-------------|---------|
+| "Only one domain is really affected, the others are minor" | If other domains have any cross_domain_risks pointing at them, they need independent analysis. "Minor" impact is still impact. |
+| "Round 2 negotiation is overkill for this requirement" | Round 2 catches companion changes that Round 1 independent analysis misses. Skip it and integration issues surface during implementation. |
+| "Domain X returned none, so I can skip it in Round 2" | Check inbound risks first. If another domain flagged X in cross_domain_risks, X must participate in Round 2 even if its own analysis was none. |
+| "I already know the cross-domain dependencies" | Knowledge docs may be stale. Code verification (Round 3 §3d) catches what assumptions miss. |
+| "The requirement is clear enough to skip domain analysis" | Cross-domain coupling is invisible from requirements text. Only domain experts reading their own business rules can identify companion changes. |
+| "I'll merge the domain reports manually instead of running Round 3" | Round 3 cross-validation catches conflicts and omissions that simple merging misses. The coordinator's systematic checks are the point. |
+
 ## Notes
 
 - Each round of Agent dispatch uses Agent tool's parallel calls (multiple Agent tool calls in a single message)
@@ -441,3 +236,9 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 - Code verification uses Grep tool, not bash grep
 - Cross-domain rule files are read as needed — do not load all at once
 - Every cross-domain risk in analysis results must be tagged with source (knowledge docs / cross-domain rules / code scan)
+
+## Supplementary Files
+
+- `workflow-diagram.md` — DOT visual overview of the 3-Round process
+- `report-template.md` — Full report template for domain-collab-report.md output
+- `knowledge-summary-template.md` — Knowledge summary file structure for downstream reuse

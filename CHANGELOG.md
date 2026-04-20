@@ -4,14 +4,74 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.0] - 2026-04-20
+
+### 架构改进
+
+- **Agent 加固** — 7 个 Agent 模板全部新增 Subagent Boundary 守卫（单任务身份声明 + 禁止 invoke/spawn）、反谄媚指令、源码读取上限声明
+- **SKILL.md 标准化** — 11 个 SKILL.md 统一添加 Mode Switch、Announce-at-Start、Common Rationalizations 表格（≤5 条独特反模式）
+- **SKILL.md 瘦身** — 从 5 个 SKILL.md 中提取 REFERENCE/TEMPLATE 内容到补充文件，降低主文件行数
+- **risk-classifier 优化** — SKILL.md 从 566→486 行，消除冗余（TDD 细节引用 ecw:tdd、Bug 路由引用 Skill Interaction 表、合并 session-state 重复段落）
+
+### 新增
+
+- **Auto-Flow** — 标准化 skill 间过渡机制 + 精确压缩恢复（PreCompact 注入自动继续指令，消除转场确认弹窗）
+- **全自动执行链路** — 移除 spec-challenge session 分裂确认，`auto_confirm: true` 时整条链仅剩 spec-challenge 致命缺陷确认一个人工交互点
+- **Skill 独立调用** — 7 个 skill 单独调用时默认 P0 完整模式，不再 AskUserQuestion 询问风险等级；requirements-elicitation 解除 risk-classifier 前置依赖
+- **产出物 Schema** — `templates/artifact-schemas.md` 统一定义 7 个 ECW 过程产出物的结构、字段、写入方/读取方
+- **impl-verify 执行状态检查** — verify-completion hook 检查 `impl-verify-findings.md` 是否存在，未执行时输出精确提醒（替代旧的通用文字提醒）
+- **ecw-upgrade auto_flow 迁移** — Check B 显式列出 `auto_flow:` 配置段，已有项目升级自动补上
+- **可配置模型路由** — ecw.yml 新增 `models` 配置段，9 个 SKILL.md 模型引用从硬编码改为配置化路由；session-start 注入模型配置
+- **工程规则框架** — `templates/rules/` 新增 Agent 引用 + session-start 注入机制
+- **Token 成本追踪** — `cost-tracker.py` hook，基于 token 用量的成本追踪和预算告警
+- **Fact-Forcing Gate 守卫** — `gateguard-fact-force.py` hook，PreToolUse 阶段检查 implementer 事实溯源合规性
+- **设计规范三层体系** — 机器校验（lint）+ Claude 行为规则（rules）+ 参考文档（docs）：
+  - `templates/rules/common/ecw-development.md` — ECW 内部开发规则（15 条 must-follow + 5 条 recommended）
+  - `docs/design-reference.md` — Token 预算、模型选择、上下文管理、Subagent 规模分类指南
+  - `lint_skills.py` 新增 3 项检查（skill-length / agent-structure / hook-fail-open），总计 21 项
+  - `test_design_standards.py` 新增 ~15 个 pytest 测试覆盖规范合规
+
+### 测试
+
+- Agent 加固测试（boundary / anti-sycophancy / reading limits）
+- Mode-switch / announce-at-start / rationalization 表格测试
+- 模型路由、成本追踪、规则框架 RED 测试
+- **总计 654 测试用例**（从 488 增至 654）
+
+### 修复
+
+- ecw.yml 并行 worktree 合并后的重复 `rules` 段
+- anchor_keywords.yaml impl-orchestration agent 文件名过时引用
+
+### 数据
+
+| 指标 | v0.8.1 | v0.9.0 | 变化 |
+|------|--------|--------|------|
+| Lint 检查项 | 18 | 21 | +3 |
+| 单元测试 | 488 | 654 | +166 |
+| Hook 模块 | 10 | 12 | +2 (cost-tracker, gateguard-fact-force) |
+| risk-classifier 行数 | 566 | 486 | -14% |
+
 ## [0.8.1] - 2026-04-19
 
 ### 修复
 
+- **bash-preflight force-push 误拦截** (Finding-01) — `--force-with-lease` 被正则一刀切拦截（自相矛盾建议用它却拦截它），改用负向前瞻排除；tag push 降级为 warning
+- **skill 过渡 auto-continue** (Finding-02/04) — 用户选择"Proceed"后下游 skill 过渡仍弹确认，添加 CRITICAL 指令强制 IMMEDIATELY invoke，禁止输出确认文本
+- **ecw-init 缺少 Write 权限配置** (Finding-03) — ecw-init 未配置 `.claude/settings.local.json` Write 权限，导致产出物写入触发权限确认弹窗
+- **spec-challenge Plan 修订策略** (Finding-05) — Step 4 未指定修订方式，LLM 派 subagent 用 Edit 在 75KB Plan 上逐段替换导致 33 分钟瓶颈；明确 coordinator 直接用 Write 覆写
+- **session 切换体验差** (Finding-06) — 翻转推荐为"继续当前 session"，移除吓人措辞，添加 PreCompact hook 保护说明
 - **ecw.yml 重复键** (F-12) — 合并两个 `impl_orchestration` 段，消除 YAML 解析歧义
 - **session-end.py 路径 bug** (F-1) — `_find_session_state()` 搜索错误路径 `ecw/state/`，改用 `marker_utils.find_session_state()`
 - **dispatcher.py get_profile 路径 bug** — `get_profile()` 搜索不存在的 `ecw/state/session-state.md`，导致 risk profile 始终退化为 "standard"，P0 无法获得 "strict" profile
 - **compact-suggest 计数器跨 session 不重置** — `tool-call-count.txt` 未被 session-end 清理，新 session 继承旧计数导致过早弹出压缩建议
+
+### 测试
+
+- **test_auto_continue.py** — 4 个测试验证 skill 过渡 auto-continue 机制
+- **test_ecw_init_permissions.py** — 2 个测试验证 ecw-init Write 权限配置
+- **test_spec_challenge.py 新增 6 个测试** — Plan 修订策略 (3) + session 推荐翻转 (3)
+- **test_bash_preflight.py 新增 6 个测试** — force-with-lease 放行 + tag push 降级
 
 ### 改进
 
@@ -386,6 +446,10 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.9.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.0
+[0.8.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.1
+[0.8.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.0
+[0.7.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.7.0
 [0.6.6]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.6
 [0.6.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.5
 [0.6.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.4

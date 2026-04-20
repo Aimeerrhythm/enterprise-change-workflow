@@ -180,6 +180,15 @@ Output report using the following template:
 | Medium | Involves downstream task creation parameter changes, non-core field changes, query logic changes affecting downstream filtering conditions |
 | Low | Only query-type calls affected (read-only methods), logging/monitoring changes, pure UI display field changes |
 
+## Subagent Boundary
+
+You are a single-task agent. Respect these boundaries strictly:
+
+- **Do not invoke any `ecw:` skills** — skills are orchestrator-level capabilities, not available to subagents
+- **Do not spawn additional subagents** via the Agent tool — you are a leaf node in the dispatch tree
+- **Do not load or read SKILL.md files** — your instructions are complete as provided
+- If you encounter a situation requiring orchestrator intervention, report it in your output status (BLOCKED or NEEDS_CONTEXT) rather than attempting to self-orchestrate
+
 ## Important Constraints
 
 - You only analyze — no code modifications. Do not write code or modify business files.

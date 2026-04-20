@@ -13,6 +13,8 @@ Random fixes waste time and create new bugs. Quick patches mask underlying issue
 
 **Announce at start:** "Using ecw:systematic-debugging for root cause investigation."
 
+**Mode switch**: Update session-state.md MODE marker to `implementation`.
+
 ## The Iron Law
 
 ```

@@ -139,8 +139,11 @@ def check_frontmatter(result: LintResult):
 # ══════════════════════════════════════════════════════
 
 def check_skill_references(result: LintResult):
-    """All `ecw:xxx` references in SKILL.md/CLAUDE.md must point to existing skill directories."""
+    """All `ecw:xxx` references in SKILL.md/CLAUDE.md must point to existing skill or agent directories."""
     existing_skills = {d.name for d in get_skill_dirs()}
+    existing_agents = set()
+    if AGENTS_DIR.exists():
+        existing_agents = {f.stem for f in AGENTS_DIR.glob("*.md")}
 
     # Collect all files to scan
     files_to_scan: list[Path] = []
@@ -177,8 +180,8 @@ def check_skill_references(result: LintResult):
 
         for match in ref_pattern.finditer(content):
             skill_name = match.group(1)
-            if skill_name not in existing_skills:
-                result.error(f"[xref] {rel}: references `ecw:{skill_name}` but skills/{skill_name}/ does not exist")
+            if skill_name not in existing_skills and skill_name not in existing_agents:
+                result.error(f"[xref] {rel}: references `ecw:{skill_name}` but neither skills/{skill_name}/ nor agents/{skill_name}.md exists")
 
 
 # ══════════════════════════════════════════════════════
@@ -480,6 +483,7 @@ def check_ecw_yml_keys(result: LintResult):
     # Extract nested keys
     nested_keys = set()
     current_section = None
+    current_subsection = None
     for line in template_content.split("\n"):
         stripped = line.strip()
         if stripped.startswith("#") or not stripped:
@@ -488,12 +492,20 @@ def check_ecw_yml_keys(result: LintResult):
         m = re.match(r"^(\w+):", line)
         if m and not line.startswith(" "):
             current_section = m.group(1)
+            current_subsection = None
             continue
-        # Nested key
+        # Nested key (2-level)
         if current_section:
-            m = re.match(r"^\s+(\w+):", line)
-            if m:
-                nested_keys.add(f"{current_section}.{m.group(1)}")
+            m = re.match(r"^  (\w+):", line)
+            if m and not line.startswith("    "):
+                current_subsection = m.group(1)
+                nested_keys.add(f"{current_section}.{current_subsection}")
+                continue
+            # 3-level key
+            if current_subsection:
+                m = re.match(r"^    (\w+):", line)
+                if m:
+                    nested_keys.add(f"{current_section}.{current_subsection}.{m.group(1)}")
 
     all_valid_keys = known_keys | nested_keys
 
@@ -907,6 +919,135 @@ def check_eval_coverage(result: LintResult):
 
 
 # ══════════════════════════════════════════════════════
+# CHECK 18: Mode-switch consistency with session-state-format.md
+# ══════════════════════════════════════════════════════
+
+MODE_SWITCH_GOLDEN = {
+    "analysis": ["risk-classifier", "requirements-elicitation", "domain-collab"],
+    "planning": ["writing-plans", "spec-challenge"],
+    "implementation": ["impl-orchestration", "tdd", "systematic-debugging"],
+    "verification": ["impl-verify", "biz-impact-analysis"],
+}
+
+
+def check_mode_switch_consistency(result: LintResult):
+    """Skills listed in session-state-format.md mode table must have Mode switch instruction."""
+    for mode, skills in MODE_SWITCH_GOLDEN.items():
+        for skill_name in skills:
+            skill_md = SKILLS_DIR / skill_name / "SKILL.md"
+            if not skill_md.exists():
+                result.error(f"[mode-switch] skills/{skill_name}/SKILL.md not found")
+                continue
+            content = skill_md.read_text(encoding="utf-8")
+            if "Mode switch" not in content:
+                result.error(
+                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
+                    f"missing 'Mode switch' instruction (expected mode: {mode})"
+                )
+                continue
+            idx = content.index("Mode switch")
+            nearby = content[idx:idx + 200]
+            if mode not in nearby.lower():
+                result.error(
+                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
+                    f"'Mode switch' found but expected mode '{mode}' not in nearby text"
+                )
+
+
+# ══════════════════════════════════════════════════════
+# CHECK 19: Skill length (line count)
+# ══════════════════════════════════════════════════════
+
+SKILL_LINE_LIMIT = 500
+
+
+def check_skill_length(result: LintResult):
+    """SKILL.md files should stay under 500 lines to maintain focused, scannable prompts."""
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        line_count = len(skill_md.read_text(encoding="utf-8").splitlines())
+        if line_count > SKILL_LINE_LIMIT:
+            result.warn(
+                f"[skill-length] skills/{skill_dir.name}/SKILL.md is {line_count} lines "
+                f"(limit: {SKILL_LINE_LIMIT}) — consider splitting into sub-files"
+            )
+
+
+# ══════════════════════════════════════════════════════
+# CHECK 20: Agent file structure validation
+# ══════════════════════════════════════════════════════
+
+AGENT_REQUIRED_FRONTMATTER = {"name", "description", "model"}
+AGENT_RECOMMENDED_FRONTMATTER = {"tools"}
+VALID_AGENT_MODELS = {"haiku", "sonnet", "opus"}
+
+
+def check_agent_structure(result: LintResult):
+    """Agent .md files must have complete frontmatter and a Boundary section."""
+    if not AGENTS_DIR.exists():
+        return
+    for agent_file in sorted(AGENTS_DIR.glob("*.md")):
+        content = agent_file.read_text(encoding="utf-8")
+        fm = parse_frontmatter(content)
+        if fm is None:
+            result.error(f"[agent-structure] agents/{agent_file.name}: missing YAML frontmatter")
+            continue
+        for field in AGENT_REQUIRED_FRONTMATTER:
+            if field not in fm or not fm[field]:
+                result.error(
+                    f"[agent-structure] agents/{agent_file.name}: "
+                    f"frontmatter missing required field '{field}'"
+                )
+        for field in AGENT_RECOMMENDED_FRONTMATTER:
+            if field not in fm or not fm[field]:
+                result.warn(
+                    f"[agent-structure] agents/{agent_file.name}: "
+                    f"frontmatter missing recommended field '{field}'"
+                )
+        model = fm.get("model", "")
+        if model and model not in VALID_AGENT_MODELS:
+            result.error(
+                f"[agent-structure] agents/{agent_file.name}: "
+                f"model '{model}' not in {VALID_AGENT_MODELS}"
+            )
+        if not re.search(r"##\s+.*[Bb]oundary", content):
+            result.error(
+                f"[agent-structure] agents/{agent_file.name}: "
+                f"missing '## ... Boundary' section header"
+            )
+
+
+# ══════════════════════════════════════════════════════
+# CHECK 21: Hook fail-open error handling
+# ══════════════════════════════════════════════════════
+
+
+def check_hook_fail_open(result: LintResult):
+    """Hooks with main() must use try/except and output continue on error (fail-open)."""
+    for py_file in sorted(HOOKS_DIR.glob("*.py")):
+        if py_file.name in SHARED_MODULES or py_file.name.startswith("test_"):
+            continue
+        content = py_file.read_text(encoding="utf-8")
+        if "def main()" not in content:
+            continue
+        if not re.search(r"try\s*:", content):
+            result.error(
+                f"[hook-fail-open] hooks/{py_file.name}: "
+                f"main() must be wrapped in try/except for fail-open semantics"
+            )
+            continue
+        if '"continue"' not in content and "'continue'" not in content:
+            result.error(
+                f"[hook-fail-open] hooks/{py_file.name}: "
+                f"except branch must output {{\"result\": \"continue\"}} (fail-open)"
+            )
+
+
+# ══════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════
 
@@ -928,6 +1069,10 @@ ALL_CHECKS = {
     "shared-modules": check_hook_shared_modules,
     "subagent-safety": check_subagent_safety_controls,
     "eval-coverage": check_eval_coverage,
+    "mode-switch": check_mode_switch_consistency,
+    "skill-length": check_skill_length,
+    "agent-structure": check_agent_structure,
+    "hook-fail-open": check_hook_fail_open,
 }
 
 

@@ -80,15 +80,65 @@ class TestForcePushBlocking:
             action, msg = bash_preflight.check(inp)
         assert action == "block"
 
-    def test_force_with_lease_not_blocked(self, bash_preflight):
-        """--force-with-lease is the safe alternative and should pass."""
+    def test_force_with_lease_allowed(self, bash_preflight):
+        """--force-with-lease is the safe alternative and must NOT be blocked."""
         inp = _make_input("git push --force-with-lease origin feature")
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
             action, _ = bash_preflight.check(inp)
-        # --force-with-lease contains --force so it will match --force pattern
-        # but this is intentional — users should get explicit approval for any force push
+        assert action == "continue"
+
+    def test_force_with_lease_no_warning(self, bash_preflight):
+        """--force-with-lease should produce no warning at all."""
+        inp = _make_input("git push --force-with-lease origin feature")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "continue"
+        assert msg == ""
+
+    def test_force_push_tag_long_warned(self, bash_preflight):
+        """Force-pushing a tag (v1.0.0) should warn but not block."""
+        inp = _make_input("git push --force origin v1.0.0")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "continue"
+        assert msg  # Should have a warning
+
+    def test_force_push_tag_short_warned(self, bash_preflight):
+        """Force-pushing a tag with -f should warn but not block."""
+        inp = _make_input("git push -f origin v2.3.1")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "continue"
+        assert msg
+
+    def test_force_push_refs_tags_warned(self, bash_preflight):
+        """Force-pushing refs/tags/ should warn but not block."""
+        inp = _make_input("git push --force origin refs/tags/v1.0")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "continue"
+        assert msg
+
+    def test_force_push_branch_still_blocked(self, bash_preflight):
+        """Force-pushing a branch must still be blocked after tag fix."""
+        inp = _make_input("git push --force origin feature-x")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
         assert action == "block"
+
+    def test_force_delete_tag_not_affected(self, bash_preflight):
+        """git push --delete should not be affected by force-push rules."""
+        inp = _make_input("git push --delete origin v1.0.0")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
 
 
 # ══════════════════════════════════════════════════════
