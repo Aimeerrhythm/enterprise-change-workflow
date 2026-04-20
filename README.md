@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -144,7 +144,7 @@ ECW uses a unified dispatcher pattern for hooks. `hooks.json` registers 6 event 
 | Sub-module | Profiles | Description |
 |------------|----------|-------------|
 | `verify-completion` | minimal, standard, strict | 4 hard blocks + 1 soft reminder before task completion |
-| `config-protect` | minimal, standard, strict | Block AI from modifying critical ECW config files |
+| `config-protect` | minimal, standard, strict | Block AI from modifying critical ECW config files (auto-bypassed during ecw-upgrade/ecw-init via marker file) |
 | `compact-suggest` | minimal, standard, strict | Proactive context compaction suggestion based on tool-call count |
 | `secret-scan` | standard, strict | Detect sensitive data (AWS keys, JWT, GitHub tokens, private keys) |
 | `bash-preflight` | standard, strict | Dangerous command pre-check (--no-verify, push --force, rm -rf) |

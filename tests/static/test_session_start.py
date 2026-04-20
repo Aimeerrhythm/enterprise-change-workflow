@@ -331,3 +331,61 @@ class TestSessionStartScriptExists:
 
     def test_hook_script_exists(self):
         assert (HOOKS_DIR / "session-start.py").exists()
+
+
+# ══════════════════════════════════════════════════════
+# Version Check (v0.9+)
+# ══════════════════════════════════════════════════════
+
+
+class TestVersionCheck:
+    """Tests for _check_version_mismatch detecting plugin/config version drift."""
+
+    def _write_ecw_yml(self, tmp_path, content):
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True, exist_ok=True)
+        (ecw_dir / "ecw.yml").write_text(content)
+
+    def test_version_mismatch_detected(self, session_start, tmp_path):
+        """ecw_version differs from plugin version → mismatch=True."""
+        self._write_ecw_yml(tmp_path, 'ecw_version: "0.1.0"\nproject:\n  name: test\n')
+        mismatch, p_ver, c_ver = session_start._check_version_mismatch(str(tmp_path))
+        assert mismatch is True
+        assert c_ver == "0.1.0"
+        assert p_ver  # non-empty
+
+    def test_version_match_no_warning(self, session_start, tmp_path):
+        """ecw_version matches plugin version → mismatch=False."""
+        from ecw_config import read_plugin_version
+        plugin_ver = read_plugin_version()
+        self._write_ecw_yml(tmp_path, f'ecw_version: "{plugin_ver}"\nproject:\n  name: test\n')
+        mismatch, p_ver, c_ver = session_start._check_version_mismatch(str(tmp_path))
+        assert mismatch is False
+        assert p_ver == plugin_ver
+
+    def test_missing_ecw_version_treated_as_mismatch(self, session_start, tmp_path):
+        """ecw.yml without ecw_version field → mismatch=True."""
+        self._write_ecw_yml(tmp_path, "project:\n  name: test\n")
+        mismatch, p_ver, c_ver = session_start._check_version_mismatch(str(tmp_path))
+        assert mismatch is True
+        assert c_ver == "(missing)"
+
+    def test_no_ecw_yml_no_mismatch(self, session_start, tmp_path):
+        """No ecw.yml at all → mismatch=False (not an ECW project)."""
+        mismatch, p_ver, c_ver = session_start._check_version_mismatch(str(tmp_path))
+        assert mismatch is False
+
+    def test_mismatch_output_contains_upgrade_instruction(self, session_start, tmp_path):
+        """Version mismatch → main() output contains /ecw-upgrade instruction."""
+        self._write_ecw_yml(tmp_path, 'ecw_version: "0.0.1"\nproject:\n  name: test\n')
+        input_data = {"cwd": str(tmp_path)}
+        input_json = json.dumps(input_data)
+        import io
+        with patch("sys.stdin", io.StringIO(input_json)):
+            with patch("builtins.print") as mock_print:
+                session_start.main()
+                output = json.loads(mock_print.call_args[0][0])
+                assert "additionalContext" in output
+                ctx = output["additionalContext"]
+                assert "/ecw-upgrade" in ctx
+                assert "0.0.1" in ctx

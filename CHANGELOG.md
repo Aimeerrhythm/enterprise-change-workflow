@@ -4,6 +4,16 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.1] - 2026-04-20
+
+### 新增
+
+- **SessionStart 版本校验** — 启动时比对项目 `ecw.yml` 的 `ecw_version` 与插件 `package.json` 版本，不一致时强制提示执行 `/ecw-upgrade`
+
+### 修复
+
+- **config-protect marker 机制** — ecw-upgrade / ecw-init 执行时自动创建 `.claude/ecw/.config-edit-allowed` 标记文件临时放行配置编辑，完成后自动清理；解决升级命令被自身 hook 拦截的鸡生蛋问题
+
 ## [0.9.0] - 2026-04-20
 
 ### 架构改进
