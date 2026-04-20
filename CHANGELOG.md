@@ -4,6 +4,49 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.0] - 2026-04-20
+
+### 架构改进
+
+- **Agent 加固** — 7 个 Agent 模板全部新增 Subagent Boundary 守卫（单任务身份声明 + 禁止 invoke/spawn）、反谄媚指令、源码读取上限声明
+- **SKILL.md 标准化** — 11 个 SKILL.md 统一添加 Mode Switch、Announce-at-Start、Common Rationalizations 表格（≤5 条独特反模式）
+- **SKILL.md 瘦身** — 从 5 个 SKILL.md 中提取 REFERENCE/TEMPLATE 内容到补充文件，降低主文件行数
+- **risk-classifier 优化** — SKILL.md 从 566→486 行，消除冗余（TDD 细节引用 ecw:tdd、Bug 路由引用 Skill Interaction 表、合并 session-state 重复段落）
+
+### 新增
+
+- **Auto-Flow** — 标准化 skill 间过渡机制 + 精确压缩恢复（PreCompact 注入自动继续指令，消除转场确认弹窗）
+- **可配置模型路由** — ecw.yml 新增 `models` 配置段，9 个 SKILL.md 模型引用从硬编码改为配置化路由；session-start 注入模型配置
+- **工程规则框架** — `templates/rules/` 新增 Agent 引用 + session-start 注入机制
+- **Token 成本追踪** — `cost-tracker.py` hook，基于 token 用量的成本追踪和预算告警
+- **Fact-Forcing Gate 守卫** — `gateguard-fact-force.py` hook，PreToolUse 阶段检查 implementer 事实溯源合规性
+- **设计规范三层体系** — 机器校验（lint）+ Claude 行为规则（rules）+ 参考文档（docs）：
+  - `templates/rules/common/ecw-development.md` — ECW 内部开发规则（15 条 must-follow + 5 条 recommended）
+  - `docs/design-reference.md` — Token 预算、模型选择、上下文管理、Subagent 规模分类指南
+  - `lint_skills.py` 新增 3 项检查（skill-length / agent-structure / hook-fail-open），总计 21 项
+  - `test_design_standards.py` 新增 ~15 个 pytest 测试覆盖规范合规
+
+### 测试
+
+- Agent 加固测试（boundary / anti-sycophancy / reading limits）
+- Mode-switch / announce-at-start / rationalization 表格测试
+- 模型路由、成本追踪、规则框架 RED 测试
+- **总计 654 测试用例**（从 488 增至 654）
+
+### 修复
+
+- ecw.yml 并行 worktree 合并后的重复 `rules` 段
+- anchor_keywords.yaml impl-orchestration agent 文件名过时引用
+
+### 数据
+
+| 指标 | v0.8.1 | v0.9.0 | 变化 |
+|------|--------|--------|------|
+| Lint 检查项 | 18 | 21 | +3 |
+| 单元测试 | 488 | 654 | +166 |
+| Hook 模块 | 10 | 12 | +2 (cost-tracker, gateguard-fact-force) |
+| risk-classifier 行数 | 566 | 486 | -14% |
+
 ## [0.8.1] - 2026-04-19
 
 ### 修复
@@ -398,6 +441,10 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[0.9.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.0
+[0.8.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.1
+[0.8.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.0
+[0.7.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.7.0
 [0.6.6]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.6
 [0.6.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.5
 [0.6.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.6.4

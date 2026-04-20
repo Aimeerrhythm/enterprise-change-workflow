@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -343,7 +343,10 @@ enterprise-change-workflow/
 │   ├── stop-persist.py          # Stop marker-based state persistence
 │   ├── pre-compact.py           # PreCompact recovery guidance
 │   ├── session-end.py           # SessionEnd cleanup
-│   └── marker_utils.py          # Shared idempotent marker update utilities
+│   ├── cost-tracker.py          # Token-based cost tracking and budget alerts
+│   ├── gateguard-fact-force.py  # Fact-Forcing Gate compliance check
+│   ├── marker_utils.py          # Shared idempotent marker update utilities
+│   └── ecw_config.py            # Shared ECW config reader utilities
 ├── templates/                   # Config and knowledge file templates
 │   ├── ecw.yml                  # Project config template
 │   ├── domain-registry.md       # Domain registry template
@@ -355,15 +358,17 @@ enterprise-change-workflow/
 │   │   ├── common/              # Cross-domain common knowledge (6 files)
 │   │   └── domain/              # Domain-level knowledge (3 files)
 │   └── rules/                   # Engineering rule templates
-│       ├── common/              # Universal rules (security, testing, coding-style, performance, design-patterns)
+│       ├── common/              # Universal rules (security, testing, coding-style, performance, design-patterns, ecw-development)
 │       ├── java/                # Java-specific rules
 │       └── go/                  # Go-specific rules
 ├── scripts/
 │   ├── java/                    # Java/Spring project scanners (3 scripts)
 │   └── README.md                # Scanner output format specification
+├── docs/                        # Design reference and advisory docs
+│   └── design-reference.md      # Token budgets, model selection, context management guidelines
 ├── tests/                       # Three-layer test suite
 │   ├── Makefile                 # lint / test-hook / eval-* targets
-│   ├── static/                  # Layer 1: Python static lint (14 checks) + pytest hook unit tests (488 cases)
+│   ├── static/                  # Layer 1: Python static lint (21 checks) + pytest unit tests (654 cases)
 │   └── eval/                    # Layer 2: promptfoo behavioral eval (4 suites: risk-classifier/domain-collab/tdd/impl-verify)
 ├── CLAUDE.md                    # Plugin-level guidance
 ├── CHANGELOG.md                 # Version history

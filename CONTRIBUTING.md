@@ -11,6 +11,7 @@ commands/         — User-invocable command definitions (/ecw-init, etc.)
 hooks/            — Python hook scripts + hooks.json registration
 templates/        — Configuration and knowledge file templates
   └── rules/      — Engineering rule templates (common/ + language-specific/)
+docs/             — Design reference and advisory documentation
 tests/
   ├── static/     — Static linting and unit tests (Layer 1)
   └── eval/       — Behavioral eval scenarios via promptfoo (Layer 2)
@@ -60,7 +61,7 @@ tests/
 
 2. **Format**: YAML frontmatter with `name`, `description`, `scope`, `paths`, and optional `extends` fields.
 
-3. **Scope**: Rules should be actionable and verifiable — "do X" or "do not do Y" with clear boundaries, not vague guidelines.
+3. **Scope**: Rules should be actionable and verifiable — "do X" or "do not do Y" with clear boundaries, not vague guidelines. See `templates/rules/common/ecw-development.md` for ECW internal development rules as an example.
 
 4. **Update README**: Add new rules to the table in `templates/rules/README.md`.
 
