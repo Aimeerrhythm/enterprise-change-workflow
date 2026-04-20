@@ -4,7 +4,11 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-## [Unreleased]
+## [0.9.1] - 2026-04-20
+
+### 新增
+
+- **SessionStart 版本校验** — 启动时比对项目 `ecw.yml` 的 `ecw_version` 与插件 `package.json` 版本，不一致时强制提示执行 `/ecw-upgrade`
 
 ### 修复
 
