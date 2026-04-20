@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.2] - 2026-04-20
+
+### 修复
+
+- **Agent 模板路径解析** — 技能执行时 `agents/*.md` 模板因相对路径按项目 cwd 解析导致读取失败；改用 `subagent_type` 自动注入机制，coordinator 仅在 prompt 中传递动态上下文，消除路径依赖
+
 ## [0.9.1] - 2026-04-20
 
 ### 新增
