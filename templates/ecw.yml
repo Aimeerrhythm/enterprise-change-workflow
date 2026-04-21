@@ -2,7 +2,7 @@
 # 本文件定义项目的 ECW 配置。由 /ecw-init 生成，可手动编辑。
 
 # ECW 配置版本（由 /ecw-init 或 /ecw-upgrade 自动写入，勿手动修改）
-ecw_version: "0.9.5"
+ecw_version: "0.9.6"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
@@ -154,6 +154,16 @@ auto_flow:
 # Hook 行为配置
 # 控制 ECW hook（config-protect、gateguard-fact-force 等）的拦截范围。
 hooks:
+  # 受 gateguard 保护的文件扩展名（白名单模式）。
+  # 仅这些扩展名的文件首次编辑时需要先调查上下文。留空 [] 则 gateguard 不生效。
+  # 扩展名可带或不带点号前缀（".java" 和 "java" 等价）。
+  gateguard_extensions: []
+  #   - ".java"
+  #   - ".xml"
+  #   - ".yml"
+  #   - ".py"
+  #   - ".go"
+  #   - ".ts"
   # 路径白名单（相对于项目根目录）。匹配前缀的文件不被 config-protect 和 gateguard 拦截。
   # 默认已内置: .claude/knowledge/, .claude/ecw/session-data/, .claude/plans/, templates/
   exempt_paths: []

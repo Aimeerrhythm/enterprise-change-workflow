@@ -1,0 +1,36 @@
+# S23: Ambiguous Domain Boundary
+# Keywords match 2 domains (order + logistics) but semantically only 1 domain (order).
+# Tests that domain identification uses semantic context, not pure keyword matching.
+- vars:
+    input: "订单详情页面中的物流状态展示组件需要增加一个'已揽收'状态的样式，只改前端展示逻辑，不涉及物流域接口"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'requirement';
+      metric: change_type_requirement
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Pure UI change in order domain — should be single-domain, not cross-domain
+        return result.mode === 'single-domain';
+      metric: mode_single_domain
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Low complexity UI change — P2 or P3
+        return result.risk_level === 'P2' || result.risk_level === 'P3';
+      metric: risk_level_p2_or_p3
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // Single-domain → must NOT include domain-collab
+        return !routing.includes('domain-collab');
+      metric: routing_excludes_domain_collab

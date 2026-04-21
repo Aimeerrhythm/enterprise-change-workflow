@@ -1,0 +1,254 @@
+# ECW Workflow Traces — Golden Fixture
+#
+# Defines the expected complete workflow trace for each {risk_level, domain_scope, change_type}
+# routing combination. Cross-validated against routing_matrix.yaml and data_contracts.yaml
+# by test_workflow_simulator.py.
+#
+# Fields:
+#   skill_chain:       ordered list of skills invoked (phase2/phase3 as separate steps)
+#   checkpoint_writes: list of {skill, key} checkpoint files produced
+#   ask_user_skills:   skills that invoke AskUserQuestion during the trace
+
+traces:
+
+  # ── Requirement Changes — Single Domain ──
+
+  - name: "P0 single-domain requirement"
+    input: {risk_level: P0, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - requirements-elicitation
+        - risk-classifier-phase2
+        - writing-plans
+        - spec-challenge
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: requirements-elicitation, key: requirements-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: spec-challenge, key: spec-challenge-report}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, tdd]
+
+  - name: "P1 single-domain requirement"
+    input: {risk_level: P1, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - requirements-elicitation
+        - risk-classifier-phase2
+        - writing-plans
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: requirements-elicitation, key: requirements-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, tdd]
+
+  - name: "P2 single-domain requirement"
+    input: {risk_level: P2, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - writing-plans
+        - tdd
+        - impl-verify
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: impl-verify, key: impl-verify-findings}
+      ask_user_skills: [risk-classifier, writing-plans, tdd]
+
+  - name: "P3 single-domain requirement"
+    input: {risk_level: P3, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+      ask_user_skills: [risk-classifier]
+
+  # ── Requirement Changes — Cross-Domain ──
+
+  - name: "P0 cross-domain requirement"
+    input: {risk_level: P0, domain_scope: cross-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - domain-collab
+        - risk-classifier-phase2
+        - writing-plans
+        - spec-challenge
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: domain-collab, key: domain-collab-report}
+        - {skill: domain-collab, key: knowledge-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: spec-challenge, key: spec-challenge-report}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, writing-plans, spec-challenge, tdd]
+
+  - name: "P1 cross-domain requirement"
+    input: {risk_level: P1, domain_scope: cross-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - domain-collab
+        - risk-classifier-phase2
+        - writing-plans
+        - spec-challenge
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: domain-collab, key: domain-collab-report}
+        - {skill: domain-collab, key: knowledge-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: spec-challenge, key: spec-challenge-report}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, writing-plans, spec-challenge, tdd]
+
+  - name: "P2 cross-domain requirement"
+    input: {risk_level: P2, domain_scope: cross-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - domain-collab
+        - writing-plans
+        - tdd
+        - impl-verify
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: domain-collab, key: domain-collab-report}
+        - {skill: domain-collab, key: knowledge-summary}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: impl-verify, key: impl-verify-findings}
+      ask_user_skills: [risk-classifier, writing-plans, tdd]
+
+  - name: "P3 cross-domain requirement"
+    input: {risk_level: P3, domain_scope: cross-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - domain-collab
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: domain-collab, key: domain-collab-report}
+        - {skill: domain-collab, key: knowledge-summary}
+      ask_user_skills: [risk-classifier]
+
+  # ── Bug Fix Changes ──
+
+  - name: "P0 bug fix"
+    input: {risk_level: P0, domain_scope: any, change_type: bug}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - systematic-debugging
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: systematic-debugging, key: debug-evidence}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, systematic-debugging, tdd]
+
+  - name: "P1 bug fix"
+    input: {risk_level: P1, domain_scope: any, change_type: bug}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - systematic-debugging
+        - tdd
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: systematic-debugging, key: debug-evidence}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, systematic-debugging, tdd]
+
+  - name: "P2 bug fix"
+    input: {risk_level: P2, domain_scope: any, change_type: bug}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - systematic-debugging
+        - tdd
+        - impl-verify
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: systematic-debugging, key: debug-evidence}
+        - {skill: impl-verify, key: impl-verify-findings}
+      ask_user_skills: [risk-classifier, systematic-debugging, tdd]
+
+  - name: "P3 bug fix"
+    input: {risk_level: P3, domain_scope: any, change_type: bug}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - systematic-debugging
+        - tdd
+        - impl-verify
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: systematic-debugging, key: debug-evidence}
+        - {skill: impl-verify, key: impl-verify-findings}
+      ask_user_skills: [risk-classifier, systematic-debugging, tdd]
+
+  # ── Fast Track ──
+
+  - name: "Fast track emergency fix"
+    input: {risk_level: any, domain_scope: any, change_type: fast-track}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier]

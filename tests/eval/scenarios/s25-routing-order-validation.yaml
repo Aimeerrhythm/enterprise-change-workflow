@@ -1,0 +1,73 @@
+# S25: Routing Order Validation — P0 Cross-Domain
+# P0 cross-domain requirement with state machine + MQ changes.
+# Tests that routing array preserves correct skill ordering:
+#   domain-collab BEFORE writing-plans, writing-plans BEFORE spec-challenge, etc.
+- vars:
+    input: "需要修改库存扣减逻辑并同步订单域的状态机流转规则：库存域冻结扣减需要增加预占步骤，订单域需要新增'预占中'状态节点，同时MQ消息格式增加预占批次号字段"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.risk_level === 'P0';
+      metric: risk_level_p0
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.mode === 'cross-domain';
+      metric: mode_cross_domain
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'requirement';
+      metric: change_type_requirement
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // domain-collab must come BEFORE writing-plans
+        const dcIdx = routing.indexOf('domain-collab');
+        const wpIdx = routing.indexOf('writing-plans');
+        return dcIdx >= 0 && wpIdx >= 0 && dcIdx < wpIdx;
+      metric: domain_collab_before_writing_plans
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // writing-plans must come BEFORE spec-challenge
+        const wpIdx = routing.indexOf('writing-plans');
+        const scIdx = routing.indexOf('spec-challenge');
+        return wpIdx >= 0 && scIdx >= 0 && wpIdx < scIdx;
+      metric: writing_plans_before_spec_challenge
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // impl-verify must come BEFORE biz-impact-analysis
+        const ivIdx = routing.indexOf('impl-verify');
+        const biaIdx = routing.indexOf('biz-impact-analysis');
+        return ivIdx >= 0 && biaIdx >= 0 && ivIdx < biaIdx;
+      metric: impl_verify_before_biz_impact
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // Cross-domain must NOT include requirements-elicitation
+        return !routing.includes('requirements-elicitation');
+      metric: routing_excludes_requirements_elicitation
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P0 must include tdd
+        return routing.includes('tdd');
+      metric: routing_includes_tdd

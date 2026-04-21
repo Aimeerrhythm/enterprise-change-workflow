@@ -1048,6 +1048,53 @@ def check_hook_fail_open(result: LintResult):
 
 
 # ══════════════════════════════════════════════════════
+# CHECK 22: Data Contract Cross-Validation
+# ══════════════════════════════════════════════════════
+
+
+def check_data_contracts(result: LintResult):
+    """Verify skill I/O contracts: every write path exists in SKILL.md, every read has a writer."""
+    contracts_file = TESTS_STATIC / "data_contracts.yaml"
+    contracts = load_yaml_file(contracts_file)
+    if contracts is None:
+        result.warn("[data-contracts] data_contracts.yaml not found or PyYAML not installed, skipping")
+        return
+
+    skills = contracts.get("skills", {})
+    if not skills:
+        result.warn("[data-contracts] data_contracts.yaml has no skills section")
+        return
+
+    all_writers = {}
+    for skill_name, spec in skills.items():
+        for entry in spec.get("writes", []) or []:
+            all_writers[entry["key"]] = skill_name
+
+    for skill_name, spec in skills.items():
+        skill_md = SKILLS_DIR / skill_name / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        content = skill_md.read_text(encoding="utf-8")
+
+        for entry in spec.get("writes", []) or []:
+            if entry["path_pattern"] not in content:
+                result.error(
+                    f"[data-contracts] skills/{skill_name}: writes '{entry['key']}' "
+                    f"with path_pattern '{entry['path_pattern']}' not found in SKILL.md"
+                )
+
+        for entry in spec.get("reads", []) or []:
+            key = entry["key"]
+            if key == "session-state":
+                continue
+            if key not in all_writers:
+                result.error(
+                    f"[data-contracts] skills/{skill_name}: reads '{key}' "
+                    f"but no skill declares it as a write output"
+                )
+
+
+# ══════════════════════════════════════════════════════
 # Main
 # ══════════════════════════════════════════════════════
 
@@ -1073,6 +1120,7 @@ ALL_CHECKS = {
     "skill-length": check_skill_length,
     "agent-structure": check_agent_structure,
     "hook-fail-open": check_hook_fail_open,
+    "data-contracts": check_data_contracts,
 }
 
 

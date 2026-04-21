@@ -9,19 +9,14 @@ State file: .claude/ecw/state/investigated-files.txt
   - One relative path per line
   - Cleared at session end
 
-Exemptions:
-  - Non-source files (.md, .json, .yml, .yaml, .txt, .toml, .cfg, .ini, .lock)
-  - Files under .claude/ directory (ECW artifacts)
-  - ECW_GATEGUARD_DISABLED=1 environment variable
-  - "minimal" profile (P3 risk level)
+Whitelist mode:
+  - Only files matching hooks.gateguard_extensions in ecw.yml are guarded.
+  - Empty or missing gateguard_extensions = gateguard fully disabled.
+  - Files under .claude/ directory are always exempt.
+  - "minimal" profile (P3 risk level) skips gateguard via dispatcher.
 """
 
 import os
-
-EXEMPT_EXTENSIONS = {
-    ".md", ".json", ".yml", ".yaml", ".txt", ".toml",
-    ".cfg", ".ini", ".lock", ".csv", ".xml", ".html",
-}
 
 STATE_FILENAME = "investigated-files.txt"
 
@@ -51,12 +46,26 @@ def _record_investigated(cwd, rel_path):
         pass
 
 
+def _parse_guarded_extensions(config):
+    """Read gateguard_extensions from config and normalize to a set of lowercase dotted extensions."""
+    if not config:
+        return set()
+    raw = config.get("hooks", {}).get("gateguard_extensions", [])
+    if not raw:
+        return set()
+    exts = set()
+    for e in raw:
+        e = str(e).strip()
+        if not e:
+            continue
+        if not e.startswith("."):
+            e = "." + e
+        exts.add(e.lower())
+    return exts
+
+
 def _is_exempt(file_path, cwd, config=None):
     if not file_path:
-        return True
-
-    _, ext = os.path.splitext(file_path)
-    if ext.lower() in EXEMPT_EXTENSIONS:
         return True
 
     rel = os.path.relpath(file_path, cwd) if os.path.isabs(file_path) else file_path
@@ -64,7 +73,6 @@ def _is_exempt(file_path, cwd, config=None):
     if rel.startswith(".claude/"):
         return True
 
-    # User-configured exempt paths from ecw.yml
     if config:
         for prefix in config.get("hooks", {}).get("exempt_paths", []):
             if rel.startswith(prefix):
@@ -78,15 +86,20 @@ def check(input_data, config=None):
 
     Returns:
         ("block", message) — first touch, demands investigation
-        ("continue", "") — file already investigated or exempt
+        ("continue", "") — file already investigated, exempt, or not guarded
     """
-    if os.environ.get("ECW_GATEGUARD_DISABLED", "").strip() == "1":
-        return ("continue", "")
-
     file_path = input_data.get("tool_input", {}).get("file_path", "")
     cwd = input_data.get("cwd", "")
 
     if not file_path or not cwd:
+        return ("continue", "")
+
+    guarded_exts = _parse_guarded_extensions(config)
+    if not guarded_exts:
+        return ("continue", "")
+
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() not in guarded_exts:
         return ("continue", "")
 
     if _is_exempt(file_path, cwd, config):
