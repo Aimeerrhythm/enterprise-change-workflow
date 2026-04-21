@@ -12,6 +12,8 @@ description: |
 
 Accepts natural language requirements spanning 2+ domains, dispatches domain-specific Agents in parallel for analysis, and outputs a structured report after Coordinator cross-validation.
 
+**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels follow this language. Pass `output_language` value to every dispatched agent prompt.
+
 > **Single-domain requirements** are handled by `ecw:requirements-elicitation`. This skill focuses on multi-domain scenarios.
 
 **Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."

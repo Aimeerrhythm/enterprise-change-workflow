@@ -12,6 +12,8 @@ After implementation completes and before marking the task done, perform multi-d
 
 **Announce at start:** "Using ecw:impl-verify to verify implementation correctness."
 
+**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `impl-verify-findings.md` follow this language. Pass to dispatched verifier agent prompts.
+
 **Mode switch**: Update session-state.md MODE marker to `verification`.
 
 ## Why This Is Needed

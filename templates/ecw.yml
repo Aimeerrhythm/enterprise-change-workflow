@@ -2,12 +2,13 @@
 # 本文件定义项目的 ECW 配置。由 /ecw-init 生成，可手动编辑。
 
 # ECW 配置版本（由 /ecw-init 或 /ecw-upgrade 自动写入，勿手动修改）
-ecw_version: "0.9.2"
+ecw_version: "0.9.5"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
   type: "java-monolith"              # java-monolith | java-microservice | go-monolith | node | python
   language: "java"                   # java | go | typescript | python
+  output_language: "zh-CN"           # 产出物输出语言。zh-CN | en。控制 session-data 下报告的标题、表头、字段标签语言
 
 # 组件类型定义
 # 域分析中识别的变更组件分类。每种类型定义 grep 验证模式。
@@ -150,3 +151,11 @@ auto_flow:
   # false（默认）：停下来让用户确认风险等级再继续。
   auto_confirm: false
 
+# Hook 行为配置
+# 控制 ECW hook（config-protect、gateguard-fact-force 等）的拦截范围。
+hooks:
+  # 路径白名单（相对于项目根目录）。匹配前缀的文件不被 config-protect 和 gateguard 拦截。
+  # 默认已内置: .claude/knowledge/, .claude/ecw/session-data/, .claude/plans/, templates/
+  exempt_paths: []
+  #   - "src/generated/"         # 自动生成的代码
+  #   - "docs/"                  # 文档目录

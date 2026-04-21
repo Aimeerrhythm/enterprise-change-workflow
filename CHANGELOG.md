@@ -4,6 +4,35 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.5] - 2026-04-20
+
+### 新增
+
+- **hooks.exempt_paths 配置化** — hook 拦截路径白名单从 Python 硬编码迁移到 ecw.yml `hooks.exempt_paths`，支持用户自定义相对路径前缀；config-protect 和 gateguard 均读取此配置
+
+### 修复
+
+- **config-protect relpath 误拦截** — `file_path.startswith(cwd)` 路径规范化不一致时 fallback 为绝对路径，导致 `templates/ecw.yml` 等合法编辑被拦截；改用 `os.path.relpath()` 无条件计算相对路径
+
+## [0.9.4] - 2026-04-20
+
+### 新增
+
+- **output_language 产出物本地化** — ecw.yml 新增 `project.output_language` 字段（默认 zh-CN），6 个 SKILL.md + 6 个 agent 模板读取并遵循此配置，artifact-schemas.md 增加全局 Localization 规则
+- **ecw-upgrade Check F/G** — 自动迁移 `output_language` 字段和 `hooks` 配置段
+
+## [0.9.3] - 2026-04-20
+
+### 修复
+
+- **Gateguard 新文件放行** — Write 新建文件时 gateguard-fact-force hook 误拦截（要求调查 callers），加 `os.path.exists` 检查跳过不存在的文件
+- **impl-orchestration 协调器禁止直接实现** — 协调器在剩余 Task 少时跳过子代理自己写代码，绕过 ecw.yml models 配置和 gateguard hook；Serial Fallback 明确 serial ≠ coordinator-direct，Never Rules + Common Rationalizations 双重防护
+- **Spec Review 后必须派发 repair 子代理** — 协调器 Spec Review 发现问题后直接 Edit 修复，同样绕过配置；改为强制派发 repair implementer subagent
+
+### 改进
+
+- **TDD subagent-driven 快速路由** — 当实现策略为 subagent-driven 时，TDD skill 从冗余 pass-through 改为明确的两步快速路由（更新 session-state → 立即 invoke impl-orchestration）
+
 ## [0.9.2] - 2026-04-20
 
 ### 修复
