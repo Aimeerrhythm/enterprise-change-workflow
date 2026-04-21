@@ -323,3 +323,58 @@ class TestPatternIntegrity:
     def test_warn_patterns_are_compiled_regex(self, bash_preflight):
         for pattern, label, guidance in bash_preflight.WARN_PATTERNS:
             assert hasattr(pattern, "search"), f"Pattern for '{label}' is not a compiled regex"
+
+
+# ══════════════════════════════════════════════════════
+# Blocked: sed -i bypass of gateguard
+# ══════════════════════════════════════════════════════
+
+JAVA_CONFIG = {"hooks": {"gateguard_extensions": [".java"]}}
+
+
+class TestSedBypassBlocking:
+
+    def test_sed_i_java_blocked(self, bash_preflight):
+        inp = _make_input("sed -i '' 's/old/new/' src/Service.java")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp, JAVA_CONFIG)
+        assert action == "block"
+        assert "sed -i" in msg
+        assert ".java" in msg
+
+    def test_sed_i_non_guarded_passes(self, bash_preflight):
+        inp = _make_input("sed -i '' 's/old/new/' README.md")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp, JAVA_CONFIG)
+        assert action == "continue"
+
+    def test_sed_i_no_config_passes(self, bash_preflight):
+        inp = _make_input("sed -i '' 's/old/new/' Service.java")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_sed_i_empty_extensions_passes(self, bash_preflight):
+        inp = _make_input("sed -i '' 's/old/new/' Service.java")
+        config = {"hooks": {"gateguard_extensions": []}}
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp, config)
+        assert action == "continue"
+
+    def test_sed_without_i_passes(self, bash_preflight):
+        inp = _make_input("sed 's/old/new/' Service.java")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp, JAVA_CONFIG)
+        assert action == "continue"
+
+    def test_sed_i_piped_to_java(self, bash_preflight):
+        inp = _make_input("sed -i 's/foo/bar/g' src/main/java/App.java")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp, JAVA_CONFIG)
+        assert action == "block"

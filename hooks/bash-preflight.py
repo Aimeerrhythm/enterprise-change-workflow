@@ -11,6 +11,42 @@ Override: set ECW_ALLOW_DANGEROUS_CMD=1 environment variable to bypass all check
 import os
 import re
 
+
+def _parse_guarded_extensions(config):
+    """Read gateguard_extensions from config, normalize to set of lowercase dotted extensions."""
+    if not config:
+        return set()
+    raw = config.get("hooks", {}).get("gateguard_extensions", [])
+    if not raw:
+        return set()
+    exts = set()
+    for e in raw:
+        e = str(e).strip()
+        if not e:
+            continue
+        if not e.startswith("."):
+            e = "." + e
+        exts.add(e.lower())
+    return exts
+
+
+def _check_sed_bypass(command, config):
+    """Detect sed -i targeting files with guarded extensions. Returns block message or None."""
+    guarded_exts = _parse_guarded_extensions(config)
+    if not guarded_exts:
+        return None
+    if not re.search(r'\bsed\b.*\s-i', command):
+        return None
+    for ext in guarded_exts:
+        pattern = re.escape(ext)
+        if re.search(pattern + r'(?:\s|$|\'|")', command):
+            return (
+                f"**[ECW Bash Preflight]** Blocked: `sed -i` targeting `*{ext}` file detected.\n\n"
+                f"This file type is protected by ECW Gateguard. Use the Edit tool instead of sed, "
+                f"so the gateguard hook can verify you've investigated the file first."
+            )
+    return None
+
 # ── Tag refspec pattern ──
 # Matches common tag patterns: v1.0.0, v2.3, refs/tags/...
 _TAG_PATTERN = re.compile(
@@ -120,6 +156,11 @@ def check(input_data, config=None):
     command = input_data.get("tool_input", {}).get("command", "")
     if not command:
         return ("continue", "")
+
+    # Check for sed -i bypass of gateguard
+    sed_block = _check_sed_bypass(command, config)
+    if sed_block:
+        return ("block", sed_block)
 
     warnings = []
 

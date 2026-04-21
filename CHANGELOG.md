@@ -4,6 +4,14 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.6] - 2026-04-21
+
+### 改进
+
+- **Gateguard 白名单模式** — 从黑名单排除法改为白名单模式，通过 ecw.yml `hooks.gateguard_extensions` 配置受保护的扩展名（如 `.java`、`.xml`）；未配置则 gateguard 完全不生效，彻底解决非 ECW 项目被误拦截问题
+- **Bash sed -i 绕过防护** — bash-preflight 新增 `sed -i` 绕过检测，当命令修改 gateguard 保护的文件类型时拦截并提示使用 Edit 工具
+- **移除环境变量控制** — 删除 `ECW_GATEGUARD_DISABLED` 环境变量，gateguard 行为完全由 ecw.yml 配置控制
+
 ## [0.9.5] - 2026-04-20
 
 ### 新增
