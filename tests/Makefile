@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: lint lint-md lint-py test-hook eval-quick eval-full all clean _check-api-key
+.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full all clean _check-api-key
 
 # Layer 1: 静态结构验证（<3s, $0）
 lint: lint-md lint-py
@@ -23,6 +23,14 @@ lint-py:
 # Layer 1b: hook 单元测试（<10s, $0）
 test-hook:
 	$(PYTHON) -m pytest static/test_verify_completion.py static/test_dispatcher.py static/test_post_edit_check.py static/test_config_protect.py static/test_hooks_json.py static/test_session_start.py static/test_stop_persist.py static/test_session_end.py static/test_pre_compact.py static/test_marker_utils.py static/test_cost_tracker.py static/test_gateguard_fact_force.py static/test_secret_scan.py static/test_bash_preflight.py -v
+
+# Layer 1c: 数据契约验证（<5s, $0）
+test-contracts:
+	$(PYTHON) -m pytest static/test_data_contracts.py -v
+
+# Layer 1.5: 工作流模拟器（<5s, $0）
+test-simulator:
+	$(PYTHON) -m pytest static/test_workflow_simulator.py -v
 
 # Layer 2: risk-classifier P0 场景行为 Eval（~2min, ~$0.50）
 eval-quick: _check-api-key
@@ -47,8 +55,8 @@ eval-impl-verify: _check-api-key
 # Layer 2b: 全部 Skill 行为 Eval
 eval-all-skills: eval-full eval-domain-collab eval-tdd eval-impl-verify
 
-# 日常开发：静态 + hook 测试 + P0 场景
-all: lint test-hook eval-quick
+# 日常开发：静态 + hook 测试 + 契约 + 模拟器 + P0 场景
+all: lint test-hook test-contracts test-simulator eval-quick
 
 # 清理缓存
 clean:

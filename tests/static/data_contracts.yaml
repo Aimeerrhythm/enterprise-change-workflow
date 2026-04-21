@@ -1,0 +1,201 @@
+# ECW Skill Data Contracts — Golden Fixture
+#
+# Defines the file I/O contract between skills: which checkpoint files each
+# skill writes (produces) and reads (consumes). Used by test_data_contracts.py
+# and lint_skills.py CHECK 22 to detect contract breakage (renamed files,
+# missing fields, dangling reads).
+#
+# Convention:
+#   key:          logical name (stable across path changes)
+#   path_pattern: substring that MUST appear in the skill's SKILL.md
+#   fields:       session-state.md bold field names the skill reads
+#   condition:    when this read/write applies (for routing-aware checks)
+
+skills:
+
+  risk-classifier:
+    writes:
+      - key: session-state
+        path_pattern: "session-state.md"
+        required_fields:
+          - Risk Level
+          - Domains
+          - Mode
+          - Routing
+          - Current Phase
+          - Workflow ID
+          - Post-Implementation Tasks
+          - Implementation Strategy
+          - Auto-Continue
+          - Next
+      - key: phase2-assessment
+        path_pattern: "phase2-assessment.md"
+        condition: "P0/P1"
+      - key: calibration-log
+        path_pattern: "calibration-log.md"
+        condition: "P0/P1 (Phase 3)"
+      - key: calibration-history
+        path_pattern: "calibration-history.md"
+        condition: "P0/P1 (Phase 3)"
+      - key: instincts
+        path_pattern: "instincts.md"
+        condition: "P0/P1 (Phase 3)"
+    reads: []
+    subagent_dispatches:
+      - phase: phase2
+        model: sonnet
+        count: 1
+        condition: "P0/P1"
+    ask_user_question: true
+    task_creates:
+      - impl-verify
+      - biz-impact-analysis
+      - phase3-calibration
+
+  requirements-elicitation:
+    writes:
+      - key: requirements-summary
+        path_pattern: "requirements-summary.md"
+    reads:
+      - key: session-state
+        fields: [Risk Level, Domains]
+    subagent_dispatches:
+      - phase: synthesis
+        model: sonnet
+        count: 1
+        condition: "P0/P1"
+    ask_user_question: true
+
+  domain-collab:
+    writes:
+      - key: domain-collab-report
+        path_pattern: "domain-collab-report.md"
+      - key: knowledge-summary
+        path_pattern: "knowledge-summary.md"
+    reads:
+      - key: session-state
+        fields: [Risk Level, Domains, Mode]
+    subagent_dispatches:
+      - phase: round1
+        model: opus
+        count: N
+        note: "1 per matched domain"
+      - phase: round2
+        model: opus
+        count: N
+        note: "1 per active domain"
+    ask_user_question: false
+
+  writing-plans:
+    writes:
+      - key: plan-file
+        path_pattern: ".claude/plans/"
+    reads:
+      - key: session-state
+        fields: [Risk Level]
+      - key: requirements-summary
+        condition: "P0/P1 single-domain"
+      - key: domain-collab-report
+        condition: "cross-domain"
+      - key: phase2-assessment
+        condition: "P0/P1"
+      - key: knowledge-summary
+        condition: "cross-domain (if exists)"
+    subagent_dispatches:
+      - phase: plan-generation
+        model: opus
+        count: 1
+        condition: "domains >= 2 OR knowledge_files >= 3"
+    ask_user_question: true
+
+  spec-challenge:
+    writes:
+      - key: spec-challenge-report
+        path_pattern: "spec-challenge-report.md"
+    reads:
+      - key: plan-file
+    subagent_dispatches:
+      - phase: review
+        model: opus
+        count: 1
+    ask_user_question: true
+
+  tdd:
+    writes: []
+    reads:
+      - key: session-state
+        fields: [Risk Level]
+      - key: plan-file
+        condition: "requirement (not bug/fast-track)"
+    subagent_dispatches: []
+    ask_user_question: true
+
+  impl-orchestration:
+    writes: []
+    reads:
+      - key: session-state
+        fields: [Risk Level, Implementation Strategy]
+      - key: plan-file
+    subagent_dispatches:
+      - phase: implementation
+        model: sonnet
+        count: N
+        note: "1 per task in layer (parallel)"
+      - phase: spec-review
+        model: sonnet
+        count: N
+        note: "1 per task in layer"
+      - phase: code-quality
+        model: sonnet
+        count: N
+        condition: "P0 only"
+    ask_user_question: true
+
+  impl-verify:
+    writes:
+      - key: impl-verify-findings
+        path_pattern: "impl-verify-findings.md"
+    reads:
+      - key: session-state
+        fields: [Risk Level]
+      - key: requirements-summary
+        condition: "single-domain requirement (degradable)"
+      - key: domain-collab-report
+        condition: "cross-domain requirement (degradable)"
+      - key: plan-file
+        condition: "requirement (degradable)"
+      - key: knowledge-summary
+        condition: "if exists"
+    subagent_dispatches:
+      - phase: rounds-1-4
+        model: sonnet
+        count: 4
+        note: "parallel: requirements, domain-rules, plan-decisions, engineering-standards"
+    ask_user_question: false
+
+  biz-impact-analysis:
+    writes: []
+    reads:
+      - key: session-state
+        fields: [Risk Level]
+    subagent_dispatches:
+      - phase: analysis
+        model: opus
+        count: 1
+    ask_user_question: false
+
+  systematic-debugging:
+    writes:
+      - key: debug-evidence
+        path_pattern: "debug-evidence.md"
+    reads:
+      - key: session-state
+        fields: [Risk Level]
+    subagent_dispatches: []
+    ask_user_question: true
+
+  cross-review:
+    writes: []
+    reads: []
+    subagent_dispatches: []
+    ask_user_question: true

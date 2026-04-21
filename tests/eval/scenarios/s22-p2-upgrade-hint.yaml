@@ -1,0 +1,36 @@
+# S22: P2 Upgrade Hint — Shared Resource Involvement
+# A seemingly P2 change that touches shared cache/resource → should upgrade to P1.
+# Tests Phase 1 shared resource check: Step 2 cross-reference with shared-resources.md.
+- vars:
+    input: "需要修改商品缓存 key 的命名规则，把原来的 product:{id} 改成 product:{id}:{version}，涉及商品详情页和购物车页面的缓存读取"
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.change_type === 'requirement';
+      metric: change_type_requirement
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // Cache key rename affects multiple consumers → should upgrade to at least P1
+        return result.risk_level === 'P0' || result.risk_level === 'P1';
+      metric: risk_level_at_least_p1
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        // P1+ must include writing-plans
+        return routing.includes('writing-plans');
+      metric: routing_includes_writing_plans
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const routing = result.routing || [];
+        return routing.includes('impl-verify');
+      metric: routing_includes_impl_verify
