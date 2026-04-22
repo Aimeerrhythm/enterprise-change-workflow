@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.9.7-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.8-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -359,8 +359,7 @@ enterprise-change-workflow/
 │   │   └── domain/              # Domain-level knowledge (3 files)
 │   └── rules/                   # Engineering rule templates
 │       ├── common/              # Universal rules (security, testing, coding-style, performance, design-patterns, ecw-development)
-│       ├── java/                # Java-specific rules
-│       └── go/                  # Go-specific rules
+│       └── java/                # Java-specific rules
 ├── scripts/
 │   ├── java/                    # Java/Spring project scanners (3 scripts)
 │   └── README.md                # Scanner output format specification
