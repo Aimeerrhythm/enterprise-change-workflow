@@ -24,7 +24,9 @@ PROTECTED_BASENAMES = {
 EDITABLE_PATH_PREFIXES = (
     ".claude/knowledge/",
     ".claude/ecw/session-data/",
+    ".claude/ecw/state/",
     ".claude/plans/",
+    "templates/",
 )
 
 UPGRADE_MARKER = ".claude/ecw/.config-edit-allowed"

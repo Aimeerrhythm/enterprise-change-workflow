@@ -4,6 +4,17 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.7] - 2026-04-22
+
+### 修复
+
+- **cost-tracker 1M context 误报** — 移除硬编码 `MAX_CONTEXT = 200_000`，从 `ANTHROPIC_MODEL` 环境变量检测 `[1m]` 后缀自动识别 context window 大小（200K / 1M），修复 1M context 模型下压缩建议过早触发的问题
+- **config-protect 误拦截 templates/ 和 state/** — `EDITABLE_PATH_PREFIXES` 补充 `templates/` 和 `.claude/ecw/state/` 前缀，工作流过程产出物和模板文件不再被 config-protect 拦截
+
+### 测试
+
+- **TestMaxContext** — 4 项测试覆盖 `_get_max_context()` 的 200K 默认值、Opus 1M、Sonnet 1M、空环境变量场景
+
 ## [0.9.6] - 2026-04-21
 
 ### 改进
