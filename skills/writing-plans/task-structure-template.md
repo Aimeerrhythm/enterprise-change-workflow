@@ -11,33 +11,38 @@ Each task follows this format:
 - Test: `tests/exact/path/to/test.py`
 
 **Test Context:**
-- Test framework: {from pom.xml/package.json, e.g., JUnit 5 + MockitoExtension}
+- Test framework: {from pom.xml, e.g., JUnit 5 + MockitoExtension}
 - Base test class: {from ecw.yml tdd.base_test_class, or "none"}
 - Key dependencies for test: {list interfaces/classes the test needs to mock or import, with file paths}
 
 - [ ] **Step 1: Write the failing test**
 
-```python
-def test_specific_behavior():
-    result = function(input)
-    assert result == expected
+```java
+@Test
+void shouldBehaveAsExpected() {
+    // given
+    // when
+    // then
+    assertEquals(expected, result);
+}
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/path/test.py::test_name -v`
-Expected: FAIL with "function not defined"
+Run: `mvn test -pl <module> -Dtest=<TestClass>#<testMethod>`
+Expected: FAIL
 
 - [ ] **Step 3: Write minimal implementation**
 
-```python
-def function(input):
-    return expected
+```java
+public ReturnType methodName(ParamType param) {
+    return expected;
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/path/test.py::test_name -v`
+Run: `mvn test -pl <module> -Dtest=<TestClass>#<testMethod>`
 Expected: PASS
 
 - [ ] **Step 5: Commit**

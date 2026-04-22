@@ -6,8 +6,8 @@ ecw_version: "0.9.7"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
-  type: "java-monolith"              # java-monolith | java-microservice | go-monolith | node | python
-  language: "java"                   # java | go | typescript | python
+  type: "java-monolith"              # java-monolith | java-microservice
+  language: "java"                   # java
   output_language: "zh-CN"           # 产出物输出语言。zh-CN | en。控制 session-data 下报告的标题、表头、字段标签语言
 
 # 组件类型定义

@@ -218,9 +218,6 @@ Infer default test command from `ecw.yml project.language`:
 | Language | Default Test Command |
 |----------|---------------------|
 | java | `mvn test -pl <module> -Dtest=<TestClass>` |
-| go | `go test ./path/to/package -run TestName` |
-| typescript | `npm test -- --testPathPattern=<file>` |
-| python | `pytest path/to/test.py::test_name -v` |
 
 If `tdd.base_test_class` is set in ecw.yml, extend from it in new test files.
 
