@@ -168,16 +168,13 @@ Same as Scaffold Step 1 + Step 2c:
 1. **Detect project language** by scanning build files:
 
 ```bash
-ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requirements.txt 2>/dev/null
+ls pom.xml build.gradle build.gradle.kts 2>/dev/null
 ```
 
 | Detected File | Language | Project Type |
 |--------------|----------|-------------|
 | `pom.xml` | java | java-monolith (java-microservice if multi-module) |
-| `build.gradle` / `build.gradle.kts` | java/kotlin | java-monolith/microservice |
-| `package.json` | typescript | node |
-| `go.mod` | go | go-monolith |
-| `pyproject.toml` / `requirements.txt` | python | python |
+| `build.gradle` / `build.gradle.kts` | java | java-monolith/microservice |
 
 For Java projects, check if multi-module: `find . -name "pom.xml" -maxdepth 3 | head -20`
 
@@ -391,12 +388,9 @@ Scan project root for build files to detect language and project type:
 | Detected File | Language | Project Type |
 |--------------|----------|-------------|
 | `pom.xml` | java | java-monolith (java-microservice if multiple `pom.xml` under subdirectories) |
-| `build.gradle` or `build.gradle.kts` | java (or kotlin) | java-monolith (or java-microservice) |
-| `package.json` | typescript | node |
-| `go.mod` | go | go-monolith |
-| `pyproject.toml` or `requirements.txt` | python | python |
+| `build.gradle` or `build.gradle.kts` | java | java-monolith (or java-microservice) |
 
-Check via Bash: `ls pom.xml build.gradle build.gradle.kts package.json go.mod pyproject.toml requirements.txt 2>/dev/null`
+Check via Bash: `ls pom.xml build.gradle build.gradle.kts 2>/dev/null`
 
 If multiple build systems detected, select the primary one (e.g., Java project with `pom.xml` takes precedence even if `package.json` exists for frontend tooling).
 

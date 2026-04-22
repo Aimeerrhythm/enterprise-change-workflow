@@ -4,6 +4,13 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.8] - 2026-04-22
+
+### 重构
+
+- **ecw-upgrade Check C 改为检测 Java 项目后自动开启 TDD** — 原来通过搜索项目 `CLAUDE.md` 的 TDD 文字判断，现改为检测 `pom.xml` 确认 Java 项目，直接校验 `ecw.yml` 的 `tdd.enabled` 字段，Java 项目默认开启 TDD，非 Java 项目跳过
+- **精简为 Java only 支持** — 移除 ecw-init/ecw-validate-config/tdd/writing-plans/ecw.yml 模板中 go/python/node/typescript 相关语言检测表、测试命令和代码示例，当前仅支持 Java 项目
+
 ## [0.9.7] - 2026-04-22
 
 ### 修复

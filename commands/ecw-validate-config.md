@@ -42,7 +42,7 @@ Search for unreplaced template placeholders:
 
 ### 2b: Language Consistency
 
-- `project.language` should match files in project root (pom.xml → java, go.mod → go, etc.)
+- `project.language` should match files in project root (pom.xml / build.gradle → java)
 - `scan_patterns` values should be appropriate for the declared language
 
 ### 2c: Path Validity
