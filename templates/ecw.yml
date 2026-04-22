@@ -2,7 +2,7 @@
 # 本文件定义项目的 ECW 配置。由 /ecw-init 生成，可手动编辑。
 
 # ECW 配置版本（由 /ecw-init 或 /ecw-upgrade 自动写入，勿手动修改）
-ecw_version: "0.9.7"
+ecw_version: "0.9.8"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
