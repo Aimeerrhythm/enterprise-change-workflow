@@ -73,6 +73,24 @@ class TestCostCalculation:
         assert cost == 0.0
 
 
+class TestMaxContext:
+    def test_default_200k(self, cost_tracker):
+        with patch.dict(os.environ, {"ANTHROPIC_MODEL": "pub-claude-opus-4-6"}):
+            assert cost_tracker._get_max_context() == 200_000
+
+    def test_1m_context(self, cost_tracker):
+        with patch.dict(os.environ, {"ANTHROPIC_MODEL": "pub-claude-opus-4-6[1m]"}):
+            assert cost_tracker._get_max_context() == 1_000_000
+
+    def test_sonnet_1m(self, cost_tracker):
+        with patch.dict(os.environ, {"ANTHROPIC_MODEL": "pub-claude-sonnet-4-6[1m]"}):
+            assert cost_tracker._get_max_context() == 1_000_000
+
+    def test_empty_env(self, cost_tracker):
+        with patch.dict(os.environ, {"ANTHROPIC_MODEL": ""}):
+            assert cost_tracker._get_max_context() == 200_000
+
+
 class TestCompactThreshold:
     def test_default_threshold(self, cost_tracker):
         with patch.dict(os.environ, {}, clear=True):

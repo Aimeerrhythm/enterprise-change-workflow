@@ -27,10 +27,17 @@ PRICING = {
     "opus":   {"input": 15.00, "output": 75.0},
 }
 
-MAX_CONTEXT = 200_000
 DEFAULT_COMPACT_THRESHOLD = 60
 STRONG_COMPACT_THRESHOLD = 80
 METRICS_FILE = "cost-metrics.jsonl"
+
+
+def _get_max_context():
+    """Detect max context window from ANTHROPIC_MODEL env var."""
+    model = os.environ.get("ANTHROPIC_MODEL", "")
+    if "[1m]" in model:
+        return 1_000_000
+    return 200_000
 
 
 def _detect_model():
@@ -152,7 +159,8 @@ def main():
         + usage.get("cache_creation_input_tokens", 0)
         + usage.get("cache_read_input_tokens", 0)
     )
-    context_pct = (total_input / MAX_CONTEXT) * 100
+    max_context = _get_max_context()
+    context_pct = (total_input / max_context) * 100
 
     _append_metrics(cwd, usage, session_id, model, cost, context_pct)
 
