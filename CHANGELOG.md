@@ -9,6 +9,7 @@
 ### 修复
 
 - **cost-tracker 1M context 误报** — 移除硬编码 `MAX_CONTEXT = 200_000`，从 `ANTHROPIC_MODEL` 环境变量检测 `[1m]` 后缀自动识别 context window 大小（200K / 1M），修复 1M context 模型下压缩建议过早触发的问题
+- **config-protect 误拦截 templates/ 和 state/** — `EDITABLE_PATH_PREFIXES` 补充 `templates/` 和 `.claude/ecw/state/` 前缀，工作流过程产出物和模板文件不再被 config-protect 拦截
 
 ### 测试
 

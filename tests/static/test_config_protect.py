@@ -231,9 +231,31 @@ class TestEditablePathPrefixes:
             action, _ = config_protect.check(inp)
         assert action == "block"
 
+    def test_state_file_passes(self, config_protect):
+        """Files under .claude/ecw/state/ are editable (process artifacts)."""
+        inp = _make_input("/fake/project/.claude/ecw/state/cost-metrics.jsonl")
+        action, message = config_protect.check(inp)
+        assert action == "continue"
+        assert message == ""
+
+    def test_templates_file_passes(self, config_protect):
+        """Files under templates/ are editable (version bumps, ecw-init scaffolding)."""
+        inp = _make_input("/fake/project/templates/ecw.yml")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("ECW_ALLOW_CONFIG_EDIT", None)
+            action, message = config_protect.check(inp)
+        assert action == "continue"
+        assert message == ""
+
     def test_editable_prefix_constant_completeness(self, config_protect):
-        """EDITABLE_PATH_PREFIXES must contain exactly the 3 expected prefixes."""
-        expected = {".claude/knowledge/", ".claude/ecw/session-data/", ".claude/plans/"}
+        """EDITABLE_PATH_PREFIXES must contain exactly the expected prefixes."""
+        expected = {
+            ".claude/knowledge/",
+            ".claude/ecw/session-data/",
+            ".claude/ecw/state/",
+            ".claude/plans/",
+            "templates/",
+        }
         assert set(config_protect.EDITABLE_PATH_PREFIXES) == expected
 
 
