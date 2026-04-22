@@ -55,18 +55,14 @@ Read each project config file and compare against the current plugin template. F
 
 For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire file.
 
-### Check C: CLAUDE.md TDD Reference
+### Check C: TDD Enabled for Java Projects
 
-**Check:** Search project `CLAUDE.md` for "测试先行" or "TDD".
+**Check:** Run `ls pom.xml 2>/dev/null` in project root to detect Java project.
 
-- Found → **ok**
-- Not found → **needs-fix**: Search for a line containing `mvn test` (or language-equivalent test command). If found, replace with:
-
-```
-- **测试先行（TDD）**：新功能/Bug 修复必须先写失败测试，再写实现代码。编译通过不代表逻辑正确，测试通过才算完成
-```
-
-If no matching line found, skip.
+- `pom.xml` not found → **skip** (non-Java project, TDD auto-enable not applicable)
+- `pom.xml` found → Read project `.claude/ecw/ecw.yml`, check `tdd.enabled`:
+  - `true` → **ok**
+  - `false` or field missing → **needs-fix**: Set `tdd.enabled: true` using Edit tool
 
 ### Check D: change-risk-classification.md Terminology
 
