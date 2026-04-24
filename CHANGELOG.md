@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.0.0] - 2026-04-24
+
+### 新增
+
+
+
+### 修复
+
+
+
+### 增强
+
+
+
 ## [0.9.9] - 2026-04-24
 
 ### 新功能
@@ -564,3 +578,4 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 [0.2.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.1.0
+[1.0.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.0.0

@@ -1,6 +1,6 @@
 {
   "name": "ecw",
-  "version": "0.9.9",
+  "version": "1.0.0",
   "description": "Claude Code plugin for structured change management in large multi-module projects",
   "author": "Aimeerrhythm",
   "license": "MIT",
