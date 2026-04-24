@@ -93,6 +93,13 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 - Section exists → **ok**
 - Section missing → **needs-fix**: Add the `hooks:` section from plugin `templates/ecw.yml` to the end of the project file.
 
+### Check H: knowledge_maintenance Configuration
+
+**Check:** Read project `.claude/ecw/ecw.yml`, look for `knowledge_maintenance:` top-level section.
+
+- Section exists → **ok**
+- Section missing → **needs-fix**: Read the `knowledge_maintenance:` section from plugin `templates/ecw.yml` and insert it after the `paths:` section in the project file. Preserve all default values.
+
 ---
 
 ## Step 2: Present & Confirm

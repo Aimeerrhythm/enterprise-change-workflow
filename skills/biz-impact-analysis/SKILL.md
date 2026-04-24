@@ -140,6 +140,10 @@ When `ecw:impl-verify` completes:
 
 After biz-impact-analysis report is output:
 
+> **Knowledge utilization tracking**: Before proceeding to Phase 3, output one line:
+> `💡 Run /ecw:knowledge-track to record how knowledge docs were used in this task.`
+> This is a non-blocking suggestion — do NOT wait for user response, proceed immediately.
+
 > **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
 > - **P0/P1**: **Immediately invoke** `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Do NOT output "analysis complete, shall I calibrate?" or any confirmation. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
 > - **P2**: Suggest executing Phase 3 (not mandatory; user decides).
