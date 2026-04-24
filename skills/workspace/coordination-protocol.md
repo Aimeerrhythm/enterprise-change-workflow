@@ -57,6 +57,8 @@ If a service doesn't complete within 30 minutes:
 |------|----------|-----------|--------|
 | workspace.yml | `{ws}/.claude/ecw/workspace.yml` | create command | workspace creation |
 | CLAUDE.md | `{ws}/CLAUDE.md` | create command | workspace creation |
-| cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Phase 1-2 |
-| workspace-task.md | `{ws}/{svc}/.claude/ecw/workspace-task.md` | coordinator | Phase 3 |
-| status.json | `{ws}/{svc}/status.json` | child session | Phase 4 completion |
+| cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Phase 1 + updated Phase 3 |
+| workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/workspace-analysis-task.md` | coordinator | Phase 1 end |
+| analysis-report.md | `{ws}/{svc}/.claude/ecw/analysis-report.md` | child session | Phase 2 end |
+| confirmed-contract.md | `{ws}/{svc}/.claude/ecw/confirmed-contract.md` | coordinator | Phase 3 end |
+| status.json | `{ws}/{svc}/status.json` | child session | Phase 4 end |

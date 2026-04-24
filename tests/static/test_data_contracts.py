@@ -62,6 +62,12 @@ KEY_ALIASES = {
     "instincts": [
         "instincts",
     ],
+    "workspace-yml": [
+        "workspace-yml", "workspace.yml",
+    ],
+    "analysis-report": [
+        "analysis-report", "analysis-report.md",
+    ],
 }
 
 
@@ -168,11 +174,13 @@ class TestUpstreamWriters:
     def test_reader_has_upstream_writer(self, contracts):
         """Every reads entry (except session-state) must have a producing skill."""
         writers = _all_writers(contracts)
+        # Keys produced outside the skill system (by commands or child sessions)
+        EXTERNAL_PRODUCERS = {"session-state", "workspace-yml", "analysis-report"}
         orphans = []
         for skill_name, spec in contracts.items():
             for entry in spec.get("reads", []) or []:
                 key = entry["key"]
-                if key == "session-state":
+                if key in EXTERNAL_PRODUCERS:
                     continue
                 if key not in writers:
                     orphans.append(f"{skill_name} reads '{key}' but no skill writes it")

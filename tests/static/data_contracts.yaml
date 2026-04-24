@@ -199,3 +199,52 @@ skills:
     reads: []
     subagent_dispatches: []
     ask_user_question: true
+
+  knowledge-audit:
+    writes:
+      - key: stale-refs
+        path_pattern: ".claude/ecw/state/stale-refs.md"
+    reads: []
+    subagent_dispatches: []
+    ask_user_question: false
+
+  knowledge-track:
+    writes:
+      - key: doc-tracker
+        path_pattern: ".claude/ecw/knowledge-ops/doc-tracker.md"
+    reads: []
+    subagent_dispatches: []
+    ask_user_question: false
+
+  knowledge-repomap:
+    writes:
+      - key: repo-map
+        path_pattern: ".claude/ecw/knowledge-ops/repo-map.md"
+    reads: []
+    subagent_dispatches: []
+    ask_user_question: false
+
+  workspace:
+    writes:
+      - key: cross-service-plan
+        path_pattern: ".claude/ecw/session-data/{wf-id}/cross-service-plan.md"
+      - key: workspace-analysis-task
+        path_pattern: "{service}/.claude/ecw/workspace-analysis-task.md"
+      - key: confirmed-contract
+        path_pattern: "{service}/.claude/ecw/confirmed-contract.md"
+    reads:
+      - key: workspace-yml
+        path_pattern: ".claude/ecw/workspace.yml"
+      - key: analysis-report
+        path_pattern: "{service}/.claude/ecw/analysis-report.md"
+        condition: "Phase 3 contract alignment"
+    subagent_dispatches:
+      - phase: phase2-analysis
+        model: sonnet
+        count: N
+        note: "one interactive child session per service"
+      - phase: phase4-impl
+        model: sonnet
+        count: N
+        note: "same child sessions continue to implementation"
+    ask_user_question: true
