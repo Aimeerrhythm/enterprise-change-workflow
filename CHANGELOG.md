@@ -4,19 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+# 更新日志
+
+本文件记录项目的所有重要变更。
+
+格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
+
 ## [1.0.0] - 2026-04-24
 
 ### 新增
 
-
-
-### 修复
-
-
-
-### 增强
-
-
+- **多仓库工作区（`ecw:workspace`）** — 跨独立 Git 仓库的协同开发能力
+  - `create`：基于 git worktree 创建隔离工作区，自动扫描服务目录、分支冲突检测、用户确认后创建，生成 workspace.yml + CLAUDE.md，完成后自动开新 tab 启动协调流程
+  - `run`：6 Phase Phase-Gate 协调器（Pre-flight → 需求分析 → 契约定义 → 用户确认+任务分发 → 多 session 并行实施 → 跨服务验证 → 汇总推送），每个 Phase 强制检查前置产物，防止跳步
+  - `status` / `push` / `destroy`：工作区生命周期管理
+  - 终端自动化（Ghostty/iTerm2/tmux/manual）：自动开新 tab 启动子 session
+  - ECW 就绪预检：检测各服务知识库状态，优先读知识文件，缺失时提示用户先运行 `/ecw-init`
+  - 文件协调协议：子 session 通过 status.json 上报，coordinator 轮询监听
 
 ## [0.9.9] - 2026-04-24
 

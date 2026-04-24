@@ -1,6 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 
 [中文文档](README.zh-CN.md)
@@ -90,7 +91,7 @@ User proposes requirement / change / bug
 
 ## Components
 
-### Skills (11)
+### Skills (15)
 
 | Component | Trigger | Description |
 |-----------|---------|-------------|
@@ -105,6 +106,10 @@ User proposes requirement / change / bug
 | `ecw:impl-verify` | After implementation (P0-P2) | Multi-round convergence: code ↔ requirements/rules/plan/standards, severity-based exit |
 | `ecw:biz-impact-analysis` | After impl-verify | Git diff → dispatches agent to analyze business impact, outputs structured report |
 | `ecw:cross-review` | Manual only (`/ecw:cross-review`) | Cross-file structural consistency verification for document-heavy changes (optional tool) |
+| `ecw:knowledge-audit` | Manual, periodic | Knowledge base health check: stale references, three-criteria compliance, content composition |
+| `ecw:knowledge-track` | Manual, post-task | Doc utilization tracking (hit/miss/redundant/misleading), quantifies knowledge base ROI |
+| `ecw:knowledge-repomap` | Manual, after refactors | Auto-generate code structure index from ecw.yml component_types |
+| `ecw:workspace` | Manual only (`/ecw:workspace`) | **Multi-repo workspace**: git worktree isolation + Phase-Gate coordinator + multi-session parallel implementation across independent services |
 
 ### Agents (7)
 
@@ -306,7 +311,7 @@ enterprise-change-workflow/
 ├── .claude-plugin/
 │   ├── plugin.json              # Plugin metadata
 │   └── marketplace.json         # Marketplace descriptor
-├── skills/                      # 11 core skills
+├── skills/                      # 15 core skills
 │   ├── risk-classifier/         # Risk classification (P0-P3, three phases)
 │   ├── domain-collab/           # Cross-domain collaborative analysis (three rounds)
 │   ├── requirements-elicitation/# Requirements elicitation (9-dimension questioning)

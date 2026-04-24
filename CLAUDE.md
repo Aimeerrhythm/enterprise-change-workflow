@@ -18,6 +18,7 @@ ECW provides structured change management workflows for large multi-module proje
 12. **Knowledge Base Audit** (`ecw:knowledge-audit`) — Knowledge base health check: content composition, stale references, three-criteria compliance
 13. **Knowledge Utilization Tracking** (`ecw:knowledge-track`) — Post-task doc utilization tracking (hit/miss/redundant/misleading)
 14. **Code Structure Index** (`ecw:knowledge-repomap`) — Auto-generate Repo Map from component_types configuration
+15. **Multi-Repo Workspace** (`ecw:workspace`) — Cross-service workspace with git worktree isolation + multi-session parallel development
 
 ## Workflow
 
@@ -68,6 +69,10 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/knowledge-ops/doc-tracker.md` | After each knowledge-track run | Doc utilization tracking records (hit/miss/redundant/misleading) |
 | `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |
 | `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
+| `.claude/ecw/workspace.yml` | After workspace create | Workspace config: services, branches, build settings (workspace root only) |
+| `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run Phase 1-3 | Cross-service change plan: dependencies, contracts, execution order |
+| `{service}/.claude/ecw/workspace-task.md` | Before workspace run Phase 4 | Per-service task dispatched to child session |
+| `{service}/status.json` | After child session completes | Child session completion marker, read by coordinator |
 
 ### Knowledge Files (populate as needed)
 
@@ -137,6 +142,7 @@ Reference `templates/CLAUDE.md.snippet` for the template.
 | ecw:knowledge-audit | — | `/ecw:knowledge-audit` (manual, periodic) |
 | ecw:knowledge-track | — | `/ecw:knowledge-track` (manual, post-task) |
 | ecw:knowledge-repomap | — | `/ecw:knowledge-repomap` (manual, after refactors) |
+| ecw:workspace | User mentions multiple services/repos for cross-service development | `/ecw:workspace create\|run\|status\|push\|destroy` |
 
 | Command | Description |
 |---------|------------|

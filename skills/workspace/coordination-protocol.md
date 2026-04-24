@@ -8,16 +8,14 @@ Written by child session on completion. Read by coordinator for polling.
 
 ```json
 {
-  "service": "ofc",
+  "service": "{service_id}",
   "status": "completed",
-  "summary": "Implemented cancelOrder with stock release and MQ notification",
+  "summary": "Brief description of what was implemented",
   "files_changed": [
-    "src/main/java/com/example/ofc/service/OrderService.java",
-    "src/main/java/com/example/ofc/event/OrderCancelEvent.java"
+    "src/main/java/com/example/{pkg}/service/XxxService.java"
   ],
   "commits": [
-    "abc1234 feat: add cancelOrder stock release logic",
-    "def5678 feat: add OrderCancelEvent MQ producer"
+    "abc1234 feat: brief commit message"
   ],
   "error": null
 }
