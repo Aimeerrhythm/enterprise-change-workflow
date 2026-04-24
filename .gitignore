@@ -18,3 +18,4 @@ dist/
 .claude/architecture-audit/
 .claude/plans/
 .claude/ecw/state
+.claude/scheduled_tasks.lock
