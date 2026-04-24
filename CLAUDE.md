@@ -15,6 +15,9 @@ ECW provides structured change management workflows for large multi-module proje
 9. **Implementation Correctness Verification** (`ecw:impl-verify`) — Multi-dimensional convergence verification: code ↔ requirements/rules/Plan/standards
 10. **Business Impact Analysis** (`ecw:biz-impact-analysis`) — Analyze impact on business processes after code changes
 11. **Cross-File Consistency Verification** (`ecw:cross-review`) — Inter-file structural consistency verification (manual optional tool)
+12. **Knowledge Base Audit** (`ecw:knowledge-audit`) — Knowledge base health check: content composition, stale references, three-criteria compliance
+13. **Knowledge Utilization Tracking** (`ecw:knowledge-track`) — Post-task doc utilization tracking (hit/miss/redundant/misleading)
+14. **Code Structure Index** (`ecw:knowledge-repomap`) — Auto-generate Repo Map from component_types configuration
 
 ## Workflow
 
@@ -62,6 +65,9 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/calibration-log.md` | After Phase 3 calibration | Full-dimension comparison log (detailed tables for human review and pattern analysis) |
 | `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Concise structured index for Phase 1 automated quick-lookup |
 | `.claude/ecw/state/instincts.md` | After Phase 3 calibration | Learned heuristic rules, injected by SessionStart when confidence > 0.7 |
+| `.claude/ecw/knowledge-ops/doc-tracker.md` | After each knowledge-track run | Doc utilization tracking records (hit/miss/redundant/misleading) |
+| `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |
+| `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
 
 ### Knowledge Files (populate as needed)
 
@@ -128,6 +134,9 @@ Reference `templates/CLAUDE.md.snippet` for the template.
 | ecw:impl-verify | After implementation (P0-P2) | `/ecw:impl-verify` |
 | ecw:biz-impact-analysis | After impl-verify | `/ecw:biz-impact-analysis [range]` |
 | ecw:cross-review | — | `/ecw:cross-review` (manual optional) |
+| ecw:knowledge-audit | — | `/ecw:knowledge-audit` (manual, periodic) |
+| ecw:knowledge-track | — | `/ecw:knowledge-track` (manual, post-task) |
+| ecw:knowledge-repomap | — | `/ecw:knowledge-repomap` (manual, after refactors) |
 
 | Command | Description |
 |---------|------------|

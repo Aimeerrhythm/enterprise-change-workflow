@@ -9,6 +9,9 @@ PreToolUse 拦截 TaskUpdate(status=completed)：
 5. 知识文档同步提醒（业务代码改了但对应域知识文档没动 → 定向提醒）
 6. TDD 测试覆盖提醒（BizService/Manager 改了但无对应测试文件 → 定向提醒；ecw.yml tdd.check_test_files 控制开关）
 7. impl-verify 执行状态检查（session-data 下无 impl-verify-findings.md → 提醒先执行 impl-verify）
+8. 知识库过时引用提醒（stale-refs.md 存在 → 提醒文档中有过时类引用）
+9. doc-tracker misleading 提醒（doc-tracker.md 近期有 doc-misleading → 提醒更新对应文档）
+10. Repo Map 刷新提醒（component_types 相关文件有结构变更 → 提醒刷新 repo-map）
 技术检查 1-4 失败 → 阻止完成；通过 → 放行 + 注入语义验证提醒 + 知识文档定向提醒 + TDD 测试覆盖提醒。
 """
 
@@ -74,6 +77,18 @@ _MESSAGES = {
         "`ecw:impl-verify` 可能尚未执行。"
         "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
     ),
+    "stale_refs_reminder": (
+        "知识库审计发现 {count} 条过时引用（详见 `{path}`）。"
+        "建议更新相关文档或运行 `/ecw:knowledge-audit` 重新审计。"
+    ),
+    "doc_misleading_reminder": (
+        "近期 doc-tracker 记录了 doc-misleading 事件，以下文档可能与代码不一致：\n{file_list}"
+    ),
+    "repomap_refresh_reminder": (
+        "本次变更涉及组件结构文件（新增/删除/重命名），"
+        "建议运行 `/ecw:knowledge-repomap` 刷新代码结构索引。"
+    ),
+    "km_header": "\n\n---\n\n**[知识库维护提醒]**\n\n",
 }
 
 
@@ -126,11 +141,13 @@ def check(input_data, config=None):
     # Non-essential reminders: skip at "minimal" profile (P3)
     knowledge_reminders = []
     test_reminders = []
+    km_reminders = []
     impl_verify_ran = True
     if profile != "minimal":
         knowledge_reminders = check_knowledge_doc_freshness(cwd, source_modified)
         test_reminders = check_test_coverage(cwd, source_modified)
         impl_verify_ran = check_impl_verify_executed(cwd)
+        km_reminders = check_knowledge_maintenance(cwd, source_modified)
 
     all_warnings = (compile_warnings or []) + (test_warnings or [])
 
@@ -138,7 +155,7 @@ def check(input_data, config=None):
         return ("block", _format_fail_message(issues))
     return ("continue", _format_pass_message(
         len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders,
-        impl_verify_ran
+        impl_verify_ran, km_reminders
     ))
 
 
@@ -477,6 +494,81 @@ def check_test_coverage(cwd, modified):
     return reminders
 
 
+def check_knowledge_maintenance(cwd, modified):
+    """知识库维护提醒：消费 audit/track/repomap 产出数据。返回提醒列表（不阻止完成）。"""
+    reminders = []
+
+    cfg = _read_ecw_config(cwd)
+    km = cfg.get("knowledge_maintenance", {})
+
+    # 1. stale-refs: audit 产出的过时引用
+    stale_refs_path = ".claude/ecw/state/stale-refs.md"
+    stale_refs_full = os.path.join(cwd, stale_refs_path)
+    if os.path.isfile(stale_refs_full):
+        try:
+            with open(stale_refs_full, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            stale_count = content.count("| ")
+            # 减去表头行（每个表有 2 行表头: header + separator）
+            table_count = content.count("| Doc ")
+            stale_count = max(0, stale_count - table_count * 2)
+            if stale_count > 0:
+                reminders.append(
+                    _MESSAGES["stale_refs_reminder"].format(
+                        count=stale_count, path=stale_refs_path
+                    )
+                )
+        except Exception:
+            pass
+
+    # 2. doc-tracker: 近期 misleading 事件
+    tracker_path = ".claude/ecw/knowledge-ops/doc-tracker.md"
+    tracker_full = os.path.join(cwd, tracker_path)
+    if os.path.isfile(tracker_full):
+        try:
+            with open(tracker_full, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            misleading_files = []
+            for line in content.split("\n"):
+                if "doc-misleading" in line.lower():
+                    # 提取文档路径: "**doc-misleading**: path/to/doc §section → ..."
+                    m = re.search(r'\*\*doc-misleading\*\*:\s*(\S+)', line)
+                    if m:
+                        misleading_files.append(m.group(1))
+            if misleading_files:
+                file_list = "\n".join(f"  - `{f}`" for f in misleading_files[-5:])
+                reminders.append(
+                    _MESSAGES["doc_misleading_reminder"].format(file_list=file_list)
+                )
+        except Exception:
+            pass
+
+    # 3. repo-map 刷新: 检测 component_types 相关文件有结构变更（新增/删除/重命名）
+    component_types = cfg.get("component_types", [])
+    if component_types and modified:
+        component_suffixes = []
+        for ct in component_types:
+            name = ct.get("name", "")
+            if name:
+                component_suffixes.append(name + ".java")
+
+        if component_suffixes:
+            structural_change = False
+            for f in modified:
+                basename = os.path.basename(f)
+                if any(basename.endswith(s) for s in component_suffixes):
+                    structural_change = True
+                    break
+
+            if structural_change:
+                repomap_path = ".claude/ecw/knowledge-ops/repo-map.md"
+                repomap_full = os.path.join(cwd, repomap_path)
+                if os.path.isfile(repomap_full):
+                    reminders.append(_MESSAGES["repomap_refresh_reminder"])
+
+    return reminders
+
+
 def _format_fail_message(issues):
     """Format technical check failure message."""
     msg = _MESSAGES["fail_header"]
@@ -488,7 +580,7 @@ def _format_fail_message(issues):
 
 def _format_pass_message(modified_count, deleted_count, warnings=None,
                          knowledge_reminders=None, test_reminders=None,
-                         impl_verify_ran=True):
+                         impl_verify_ran=True, km_reminders=None):
     """Format technical check pass message with optional reminders."""
     msg = _MESSAGES["pass_header"].format(modified=modified_count, deleted=deleted_count)
     if not impl_verify_ran:
@@ -502,6 +594,9 @@ def _format_pass_message(modified_count, deleted_count, warnings=None,
     if test_reminders:
         msg += _MESSAGES["tdd_header"]
         msg += "\n".join(f"- {r}" for r in test_reminders)
+    if km_reminders:
+        msg += _MESSAGES["km_header"]
+        msg += "\n".join(f"- {r}" for r in km_reminders)
     return msg
 
 
@@ -518,11 +613,11 @@ def output_fail(issues):
 
 
 def output_pass(modified_count, deleted_count, warnings=None, knowledge_reminders=None,
-                test_reminders=None, impl_verify_ran=True):
+                test_reminders=None, impl_verify_ran=True, km_reminders=None):
     """技术检查通过 → 放行 + 语义验证提醒 + 编译警告 + 知识文档定向提醒 + TDD 测试覆盖提醒"""
     result = {"systemMessage": _format_pass_message(
         modified_count, deleted_count, warnings, knowledge_reminders, test_reminders,
-        impl_verify_ran
+        impl_verify_ran, km_reminders
     )}
     print(json.dumps(result, ensure_ascii=False))
 

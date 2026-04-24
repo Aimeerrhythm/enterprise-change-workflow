@@ -4,6 +4,22 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [0.9.9] - 2026-04-24
+
+### 新功能
+
+- **知识库维护能力** — 新增 3 个 Skill + 配套脚本 + verify-completion hook 闭环
+  - `ecw:knowledge-audit`：知识库健康度审计（内容构成分析 + 三条件合规 + 新鲜度检测），产出 stale-refs 供 hook 消费
+  - `ecw:knowledge-track`：文档利用追踪（hit/miss/redundant/misleading/code-derived），积累数据量化知识库 ROI
+  - `ecw:knowledge-repomap`：代码结构索引自动生成，从 ecw.yml component_types 驱动
+  - `check-freshness.sh`：检测知识库文档中引用的 Java 类名是否存在 + last-verified 超期
+  - `generate-repo-map.sh`：自动提取组件类名和方法签名，按目录分组输出
+  - `verify-completion` hook 新增 `check_knowledge_maintenance()`：消费 stale-refs / doc-tracker misleading / 组件结构变更三个信号
+- **ecw-init 集成** — scanner 步骤后自动生成 doc-tracker 模板 + repo-map
+- **ecw-upgrade Check H** — 检测 knowledge_maintenance 配置段
+- **biz-impact-analysis 下游提示** — Phase 3 前提示运行 knowledge-track
+- **ecw.yml 新增 knowledge_maintenance 配置段** — stale_days、repomap_group_by_dir
+
 ## [0.9.8] - 2026-04-22
 
 ### 重构

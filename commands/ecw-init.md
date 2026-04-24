@@ -287,6 +287,10 @@ Skip if language is not Java or `--skip-scanners` was passed.
 
 Same as Scaffold Step 6: Offer to run Java scan scripts under `scripts/java/`.
 
+After scanners complete (or if skipped), also:
+1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
+2. **Generate Repo Map**: Run `bash scripts/java/generate-repo-map.sh <project_root> .claude/ecw/ecw.yml` to auto-generate the code structure index.
+
 ## Attach Step 8: Output Summary
 
 Output structured summary (same format as Scaffold Step 7), with these differences:
@@ -558,6 +562,10 @@ Ask user: "Run all scanners" / "Skip scanners"
 
 If running: Check for scan scripts under `scripts/java/`; execute if present.
 
+After scanners complete (or if skipped), also:
+1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
+2. **Generate Repo Map**: Run `bash scripts/java/generate-repo-map.sh <project_root> .claude/ecw/ecw.yml` to auto-generate the code structure index.
+
 ## Scaffold Step 7: Output Summary
 
 ```markdown
@@ -594,6 +602,12 @@ If running: Check for scan scripts under `scripts/java/`; execute if present.
 | Directory | Files | Status |
 |-----------|-------|--------|
 | `.claude/knowledge/{domain-id}/` | 00-index.md, common/business-rules.md, common/data-model.md | Created |
+
+#### Knowledge Maintenance Files
+| File | Status |
+|------|--------|
+| `.claude/ecw/knowledge-ops/doc-tracker.md` | Created |
+| `.claude/ecw/knowledge-ops/repo-map.md` | Created (Java projects only) |
 
 #### CLAUDE.md Integration
 | Action | Status |

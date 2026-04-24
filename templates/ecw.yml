@@ -2,7 +2,7 @@
 # 本文件定义项目的 ECW 配置。由 /ecw-init 生成，可手动编辑。
 
 # ECW 配置版本（由 /ecw-init 或 /ecw-upgrade 自动写入，勿手动修改）
-ecw_version: "0.9.8"
+ecw_version: "0.9.9"
 
 project:
   name: "Your Project Name"          # 项目名称，用于 agent prompt 中的上下文
@@ -118,6 +118,18 @@ paths:
   calibration_log: ".claude/ecw/calibration-log.md"            # Phase 3 校准历史
   calibration_history: ".claude/ecw/state/calibration-history.md"  # Phase 3 校准记录（Phase 1 参考）
   instincts: ".claude/ecw/state/instincts.md"                      # Phase 3 提取的 instinct（SessionStart 注入）
+
+# 知识库维护配置
+# 控制 knowledge-audit、knowledge-track、knowledge-repomap 的行为。
+knowledge_maintenance:
+  # 文档中引用的类名超过此天数未验证则标记为"待验证"。
+  stale_days: 90
+  # repo-map 按 search_path 下子目录分组（true）还是平铺所有匹配文件（false）。
+  repomap_group_by_dir: true
+  # 以下路径为固定约定，无需配置：
+  # repo-map → .claude/ecw/knowledge-ops/repo-map.md
+  # doc-tracker → .claude/ecw/knowledge-ops/doc-tracker.md
+  # stale-refs → .claude/ecw/state/stale-refs.md
 
 # 模型路由配置
 # 控制各工作流阶段使用的 Claude 模型。项目可按需覆盖默认值以优化成本。

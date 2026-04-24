@@ -934,3 +934,251 @@ class TestArtifactFilteringInCheck:
                         mock_ref.assert_called_once_with(str(tmp_project), "src/Main.java")
                         # check_java_compilation receives only source files
                         mock_compile.assert_called_once_with(str(tmp_project), ["src/Main.java"])
+
+
+# ══════════════════════════════════════════════════════
+# check_knowledge_maintenance
+# ══════════════════════════════════════════════════════
+
+class TestCheckKnowledgeMaintenance:
+    """Tests for the knowledge maintenance reminder system (stale-refs, doc-tracker, repo-map)."""
+
+    # ── stale-refs ──
+
+    def test_stale_refs_file_produces_reminder(self, hook_module, tmp_project):
+        """stale-refs.md with entries → reminder."""
+        state_dir = tmp_project / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "stale-refs.md").write_text(
+            "# Knowledge Stale References\n\n"
+            "## Stale Class References\n\n"
+            "| Doc | Class | Status |\n"
+            "|-----|-------|--------|\n"
+            "| knowledge/order/rules.md | `OrderBizServiceImpl` | Not found in codebase |\n"
+            "| knowledge/order/rules.md | `OldManagerImpl` | Not found in codebase |\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        assert len(reminders) == 1
+        assert "过时引用" in reminders[0]
+
+    def test_no_stale_refs_file_no_reminder(self, hook_module, tmp_project):
+        """No stale-refs.md → no stale reminder."""
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        stale_reminders = [r for r in reminders if "过时引用" in r]
+        assert stale_reminders == []
+
+    def test_empty_stale_refs_no_reminder(self, hook_module, tmp_project):
+        """stale-refs.md exists but empty → no stale reminder."""
+        state_dir = tmp_project / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "stale-refs.md").write_text(
+            "# Knowledge Stale References\n\nNo issues found.\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        stale_reminders = [r for r in reminders if "过时引用" in r]
+        assert stale_reminders == []
+
+    # ── doc-tracker misleading ──
+
+    def test_doc_misleading_produces_reminder(self, hook_module, tmp_project):
+        """doc-tracker with doc-misleading entries → reminder."""
+        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
+        km_dir.mkdir(parents=True, exist_ok=True)
+        (km_dir / "doc-tracker.md").write_text(
+            "# 文档利用追踪\n\n## 记录\n\n"
+            "### 2026-04-23 - 修复入库\n"
+            "- **doc-misleading**: .claude/knowledge/inbound/receive.md §状态机 → 状态值与代码不一致\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
+        assert len(misleading_reminders) == 1
+        assert "receive.md" in misleading_reminders[0]
+
+    def test_doc_tracker_no_misleading_no_reminder(self, hook_module, tmp_project):
+        """doc-tracker with only doc-hit entries → no misleading reminder."""
+        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
+        km_dir.mkdir(parents=True, exist_ok=True)
+        (km_dir / "doc-tracker.md").write_text(
+            "# 文档利用追踪\n\n## 记录\n\n"
+            "### 2026-04-23 - 正常任务\n"
+            "- **doc-hit**: .claude/knowledge/order/rules.md §并发控制 → 帮助了任务\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
+        assert misleading_reminders == []
+
+    def test_no_doc_tracker_file_no_reminder(self, hook_module, tmp_project):
+        """No doc-tracker.md → no misleading reminder."""
+        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
+        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
+        assert misleading_reminders == []
+
+    # ── repo-map refresh ──
+
+    def test_component_file_change_produces_repomap_reminder(self, hook_module, tmp_project):
+        """Component type file changed + repo-map exists → refresh reminder."""
+        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
+        km_dir.mkdir(parents=True, exist_ok=True)
+        (km_dir / "repo-map.md").write_text("# Repo Map\n")
+
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "component_types:\n"
+            "  - name: BizService\n"
+            "    grep_pattern: \"class {name}\"\n"
+            "    search_path: src/main/java/\n"
+            "  - name: Manager\n"
+            "    grep_pattern: \"class {name}\"\n"
+            "    search_path: src/main/java/\n"
+            "knowledge_maintenance:\n"
+            "  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(
+            str(tmp_project),
+            ["src/main/java/com/biz/order/OrderBizService.java"]
+        )
+        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
+        assert len(repomap_reminders) == 1
+
+    def test_non_component_file_no_repomap_reminder(self, hook_module, tmp_project):
+        """Non-component file changed → no repo-map reminder."""
+        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
+        km_dir.mkdir(parents=True, exist_ok=True)
+        (km_dir / "repo-map.md").write_text("# Repo Map\n")
+
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "component_types:\n"
+            "  - name: BizService\n"
+            "    grep_pattern: \"class {name}\"\n"
+            "    search_path: src/main/java/\n"
+            "knowledge_maintenance:\n"
+            "  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(
+            str(tmp_project),
+            ["src/main/java/com/util/Helper.java"]
+        )
+        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
+        assert repomap_reminders == []
+
+    def test_no_repomap_file_no_reminder(self, hook_module, tmp_project):
+        """Component file changed but no repo-map file exists → no reminder."""
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "component_types:\n"
+            "  - name: BizService\n"
+            "    grep_pattern: \"class {name}\"\n"
+            "    search_path: src/main/java/\n"
+            "knowledge_maintenance:\n"
+            "  stale_days: 90\n"
+        )
+
+        reminders = hook_module.check_knowledge_maintenance(
+            str(tmp_project),
+            ["src/main/java/com/biz/OrderBizService.java"]
+        )
+        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
+        assert repomap_reminders == []
+
+    def test_no_component_types_no_repomap_reminder(self, hook_module, tmp_project):
+        """No component_types in config → no repo-map reminder."""
+        reminders = hook_module.check_knowledge_maintenance(
+            str(tmp_project),
+            ["src/main/java/com/biz/OrderBizService.java"]
+        )
+        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
+        assert repomap_reminders == []
+
+    # ── integration with check() ──
+
+    def test_km_reminders_in_check_output(self, hook_module, tmp_project):
+        """check() includes km_reminders in pass message."""
+        state_dir = tmp_project / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "stale-refs.md").write_text(
+            "| Doc | Class | Status |\n|---|---|---|\n"
+            "| rules.md | `OldClass` | Not found |\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "verification:\n  run_tests: false\n"
+            "paths:\n  knowledge_root: .claude/knowledge/\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "standard"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["src/Main.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "知识库维护提醒" in message
+
+    def test_minimal_profile_skips_km_reminders(self, hook_module, tmp_project):
+        """P3 (minimal) profile skips knowledge maintenance reminders."""
+        state_dir = tmp_project / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "stale-refs.md").write_text(
+            "| Doc | Class | Status |\n|---|---|---|\n"
+            "| rules.md | `OldClass` | Not found |\n"
+        )
+        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
+        ecw_yml.write_text(
+            "project:\n  name: test\n  language: java\n"
+            "verification:\n  run_tests: false\n"
+            "paths:\n  knowledge_root: .claude/knowledge/\n"
+            "knowledge_maintenance:\n  stale_days: 90\n"
+        )
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "minimal"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["src/Main.java"], [])):
+            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
+                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
+                    action, message = hook_module.check(input_data, config)
+                    assert action == "continue"
+                    assert "知识库维护提醒" not in message
