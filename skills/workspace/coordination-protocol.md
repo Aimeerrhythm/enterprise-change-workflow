@@ -31,10 +31,11 @@ Status values:
 Coordinator polls via Bash:
 
 ```bash
+wf_id="{wf-id}"
 for i in $(seq 1 360); do
   all_done=true
   for service in {service_list}; do
-    if [ ! -f "${service}/status.json" ]; then
+    if [ ! -f "${service}/.claude/ecw/session-data/${wf_id}/status.json" ]; then
       all_done=false
     fi
   done
@@ -61,4 +62,4 @@ If a service doesn't complete within 30 minutes:
 | workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/workspace-analysis-task.md` | coordinator | Phase 1 end |
 | analysis-report.md | `{ws}/{svc}/.claude/ecw/analysis-report.md` | child session | Phase 2 end |
 | confirmed-contract.md | `{ws}/{svc}/.claude/ecw/confirmed-contract.md` | coordinator | Phase 3 end |
-| status.json | `{ws}/{svc}/status.json` | child session | Phase 4 end |
+| status.json | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/status.json` | child session | Phase 4 end |

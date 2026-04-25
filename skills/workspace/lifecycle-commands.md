@@ -14,9 +14,11 @@ Detailed process for create, status, push, destroy sub-commands.
 ```
 Step 1: Parse service list + requirement
   - Extract service names from arguments or user's natural language input
-  - Extract requirement description from user's input
+  - Extract requirement description from user's input — this is REQUIRED.
     (e.g. "订单取消后需要释放wms的库存" from the user's message)
-  - Save requirement for later use in workspace.yml and run command
+  - If requirement cannot be extracted from the input → AskUserQuestion to get it
+    before proceeding. An empty requirement blocks Phase 1 and makes the workspace useless.
+  - Save requirement for writing to workspace.yml in Step 8
 
 Step 2: Service discovery
   - For each service name, scan parent directory's children for matching directory name
@@ -34,8 +36,9 @@ Step 3: Branch conflict detection
 
 Step 4: User confirmation ★ MANDATORY
   - AskUserQuestion (language follows output_language):
-    Show workspace name, path, service table (service | source | base branch | workspace branch),
+    Show workspace name, path, requirement text, service table (service | source | base branch | workspace branch),
     plus any warnings. Ask user to confirm or modify.
+  - If requirement is empty at this step → STOP. Do not proceed without a requirement.
 
 Step 5: Create workspace directory
   - Path: {parent_of_current_dir}/workspaces/{name}-{YYYYMMDD}/
@@ -54,6 +57,12 @@ Step 8: Generate configuration files
   - workspace.yml → {workspace}/.claude/ecw/workspace.yml (include requirement description)
   - CLAUDE.md → {workspace}/CLAUDE.md
   - mkdir -p {workspace}/.claude/ecw/session-data/
+
+  For each service worktree, update .gitignore (Issue 21 — ECW artifacts must not be committed):
+    1. Check if {workspace}/{service}/.gitignore exists; create if not
+    2. Check if ".claude/ecw/session-data/" line exists; append if not
+    3. Check if ".claude/ecw/state/" line exists; append if not
+    Comment to add: "# ECW workspace session artifacts"
 
 Step 9: Auto-enter workspace and start run
   - Use terminal adapter to open a new tab/split
