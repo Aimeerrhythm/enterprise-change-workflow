@@ -4,11 +4,29 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-# 更新日志
+## [1.1.0] - 2026-04-25
 
-本文件记录项目的所有重要变更。
+### 改进
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
+- **`ecw:workspace` Phase 1 信息源约束重构** — Phase 1 信息源限制为 `workspace.yml.requirement` 文本，禁止使用任何代码读取工具（Read/Bash/Glob/Grep/Explore）；产出物不得包含类名/方法名/SQL；coordinator 无法确定的内容标为 Open Question 交 Phase 2 调查，根除 coordinator 越权分析代码导致 workspace-analysis-task.md 变为实现指令的问题
+- **`ecw:workspace` workspace-analysis-task.md 模板完善** — 新增 Cross-Service Context（供 child session risk-classifier 独立判级）、Analysis Strategy（ECW-ready 优先读 knowledge，ECW-absent 直接扫代码）、Plan Note、Stale Plans Notice、Session State Updates（3 个里程碑更新节点）
+- **`ecw:workspace` MQ/Dubbo 执行顺序分离** — Phase 3 契约对齐后，MQ 场景所有服务并行启动；Dubbo 场景 Layer 1 完成 + mvn install 后 Layer 2 才开始
+- **`ecw:workspace` child session 权限** — 启动命令统一改为 `--permission-mode bypassPermissions`，消除 ECW 过程文件写入时的权限弹窗
+- **`ecw:workspace` Phase 5 验证深度扩展** — MQ 验证新增字段类型、nullable、Topic 名称一致性；Dubbo 验证扩展为完整方法签名
+- **`ecw:workspace` status.json 路径修正** — 从服务根目录移至 `{service}/.claude/ecw/session-data/{wf-id}/status.json`，消除 git 工作树污染
+- **`ecw:workspace` create 需求强制捕获** — Step 1 提取需求，Step 4 为空则拦截
+- **`ecw:workspace` .gitignore 自动配置** — create Step 8 为每个服务 worktree 追加 ECW session-data/state ignore 规则
+- **`ecw:workspace` Phase 6 知识追踪提示** — 流程完成后提示运行 `/ecw:knowledge-track`
+- **`ecw:workspace` 文件名统一** — `workspace-task.md` 全部更名为 `workspace-analysis-task.md`
+- **UTF-8 编码约束** — SKILL.md 全局禁止 uXXXX Unicode 转义序列
+- **`templates/change-risk-classification.md` MQ 规则细化** — 拆分为 4 种子场景（破坏性 P0 / Consumer 新 Topic P1 / Consumer 新字段驱动业务逻辑 P1 / 向后兼容新增字段 P2）
+- **`ecw:workspace` Subagent Ledger 更新** — Phase 1 完成后自动将 Explore agents 标记为 complete
+- **`ecw:workspace` session-state Phase 命名规范** — 必须按 SKILL.md Phase 1-6 编号记录
+
+### 修复
+
+- **`ecw:workspace` status.json completed_at 时间戳** — 写入当前实际时间，不使用 workflow ID 内嵌时间
+- **`ecw:workspace` start.sh 需求参数移除** — coordinator run 直接读 workspace.yml.requirement，规避特殊字符引号转义问题
 
 ## [1.0.0] - 2026-04-24
 

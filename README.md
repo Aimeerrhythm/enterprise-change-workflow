@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
 
 [中文文档](README.zh-CN.md)
 
@@ -163,7 +163,7 @@ When changes span **2+ independent repositories** (e.g., provider + consumer ser
 | `ecw:knowledge-audit` | Manual, periodic | Knowledge base health check: stale references, three-criteria compliance, content composition |
 | `ecw:knowledge-track` | Manual, post-task | Doc utilization tracking (hit/miss/redundant/misleading), quantifies knowledge base ROI |
 | `ecw:knowledge-repomap` | Manual, after refactors | Auto-generate code structure index from ecw.yml component_types |
-| `ecw:workspace` | Manual only (`/ecw:workspace`) | **Multi-repo workspace**: git worktree isolation + 6-Phase coordinator (business decomposition → per-service code analysis → contract alignment → task self-decomposition + parallel implementation → cross-service verification → push). Child sessions own task decomposition; coordinator owns contract alignment. Original requirement passed verbatim to prevent distortion. |
+| `ecw:workspace` | Manual only (`/ecw:workspace`) | **Multi-repo workspace**: git worktree isolation + 6-Phase coordinator (Phase 1 business-only decomposition, NO code reading → per-service code analysis with knowledge-first strategy → contract alignment with MQ/Dubbo dispatch sequencing → parallel implementation → cross-service field/signature verification → push). Child sessions use `bypassPermissions`, own task decomposition, and update session-state at milestones. MQ changes run parallel after contract alignment; Dubbo runs Layer 1 → Layer 2 serially. |
 
 ### Agents (7)
 
