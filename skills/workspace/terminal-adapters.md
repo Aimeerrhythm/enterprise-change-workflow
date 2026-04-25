@@ -84,5 +84,9 @@ tmux split-window -h "cd {service_path} && claude '...' --name {service}-worker 
 Print commands for user to run in new terminal windows (language follows output_language):
 
 ```
-1. cd {workspace}/{service} && claude "Read .claude/ecw/workspace-task.md and execute." --name {service}-worker --permission-mode acceptEdits
+Phase 2 (analysis):
+  cd {workspace}/{service} && claude "Read .claude/ecw/workspace-analysis-task.md and execute Phase 2 analysis." --name {service}-analyst --permission-mode acceptEdits
+
+Phase 4 (implementation — after confirmed-contract.md written):
+  cd {workspace}/{service} && claude "Read .claude/ecw/confirmed-contract.md and execute Phase 4 implementation. Write status to .claude/ecw/session-data/{wf-id}/status.json when done." --name {service}-worker --permission-mode acceptEdits
 ```

@@ -13,6 +13,8 @@ Manage cross-service workspaces and coordinate multi-session parallel developmen
 
 **Output language**: Read `ecw.yml` → `project.output_language`. All user-facing text follows this language. If unavailable, detect from user's input language. Pass `output_language` to every dispatched agent prompt.
 
+**File encoding**: All files written by coordinator or child sessions must use native UTF-8 characters. Never use Unicode escape sequences (uXXXX or \uXXXX format) for any characters including Chinese. Write characters directly as-is.
+
 **Core principle:** Workspace = infrastructure (git worktree), Coordinator = orchestration (Phase-Gate flow), per-service ECW = execution (unchanged). Three layers, orthogonal.
 
 **Announce at start:** "Using ecw:workspace to [create workspace / coordinate cross-service development / ...]."
@@ -99,32 +101,39 @@ Gate-out: User confirms
 
 ### Phase 1: Business Decomposition (Coordinator only, NO code analysis)
 
+**Information constraint**: Phase 1 uses ONLY `workspace.yml.requirement` text and the user's stated business context. No code reading of any kind is permitted — no Read, Bash, Glob, Grep, or Explore tools. If code-level detail is needed to answer a question, that question is an Open Question for Phase 2, not something to resolve here.
+
+**Output standard**: cross-service-plan.md and workspace-analysis-task.md must contain ONLY business-level content — service roles, interaction types, open questions. Any class name, method name, field name, or SQL in Phase 1 output is a violation.
+
 ```
 Gate-in: Pre-flight confirmed
 Process:
   1. Read workspace.yml → original requirement + service list
-  2. Coordinator decomposes requirement purely from business perspective:
-     - What is each service responsible for?
+     (This is the ONLY information source for Phase 1)
+
+  2. Decompose requirement from pure business perspective:
+     - What is each service responsible for in this change?
      - Which services are Provider (data/event source) vs Consumer?
-     - What cross-service interactions are needed?
-     - What interaction patterns are involved? (Dubbo / MQ / both)
-     NOTE: Do NOT read any service code in this phase.
-           Ambiguous interaction patterns should be explicitly flagged, not guessed.
+     - What cross-service interaction is needed? (MQ / Dubbo / unclear)
+     If interaction type cannot be determined from the requirement alone → mark as "unclear",
+     Phase 2 child session will investigate. Do NOT read code to guess.
 
   3. AskUserQuestion: present per-service business responsibilities.
      For each service show:
        - Role (Provider / Consumer / Both)
-       - Business responsibility (1-2 sentences)
+       - Business responsibility (1-2 sentences, business language only)
        - Interaction type (Dubbo / MQ / unclear — flag for Phase 2)
      Options: "Confirm" / "Adjust"
 
-  4. Once confirmed, write cross-service-plan.md (business layer):
+  4. Once confirmed, write cross-service-plan.md (business layer only):
      Location: .claude/ecw/session-data/{wf-id}/cross-service-plan.md
      Content: per-service roles, interaction patterns, open questions for Phase 2
+     Encoding: native UTF-8, no escape sequences
 
   5. Write workspace-analysis-task.md for each service:
      Location: {service}/.claude/ecw/workspace-analysis-task.md
      Content (see template below)
+     Encoding: native UTF-8, no escape sequences
 
 Gate-out: cross-service-plan.md + workspace-analysis-task.md exist for all services
 ```
@@ -132,33 +141,47 @@ Gate-out: cross-service-plan.md + workspace-analysis-task.md exist for all servi
 **workspace-analysis-task.md template:**
 
 ```markdown
-## Original Requirement (full text, no paraphrasing)
-{verbatim from user input}
+## Original Requirement (verbatim — do not paraphrase)
+{exact text from workspace.yml.requirement}
 
-## Coordinator's Initial Assessment (hypothesis — verify against your code)
-- Your role: {Provider/Consumer/Both}
-- Your responsibility: {1-2 sentences from Phase 1}
-- Interaction pattern: {Dubbo/MQ/unclear}
+## Coordinator's Business Assessment (hypothesis — verify against your code)
+- Your role: {Provider / Consumer / Both}
+- Your business responsibility: {1-2 sentences, business language only — no class names or method names}
+- Interaction type: {Dubbo / MQ / unclear}
+
+## Cross-Service Context (for risk classification)
+- Interaction type: {MQ / Dubbo / unclear}
+- Contract change type: {new field (backward compatible) / field removal / signature change / new topic / other}
+- Other services involved:
+  {for each other service: name → role → what they plan to do}
+
+## Analysis Strategy
+ECW Status: {ECW-ready / ECW-partial / ECW-absent}
+{if ECW-ready or ECW-partial}:
+  Read .claude/knowledge/<relevant domain>/ FIRST.
+  Scan source code only for gaps not covered by knowledge docs.
+{if ECW-absent}:
+  No knowledge files available. Scan source code directly.
 
 ## Other Services Context
-{for each other service: their role and what they plan to do}
+{for each other service: their role and business responsibility from Phase 1}
 
-## Open Questions (flagged by Coordinator)
-{any ambiguities about this service that need code analysis to resolve}
+## Open Questions (flagged by Coordinator — needs code analysis to resolve)
+{any ambiguities that Phase 2 must investigate, e.g. unclear interaction type, unknown entry points}
 
-## Your Task (Phase 2 — Analysis Only)
-1. Read your codebase to find the correct implementation entry points
-2. Verify or correct the Coordinator's assessment — you have authority to override
-3. Identify specific class + method for each change point
-4. Determine the interaction pattern with other services (if unclear)
-5. Output your technical plan in analysis-report.md
-6. DO NOT implement anything yet — wait for contract alignment
+## Your Task (Phase 2 — Analysis Only, do NOT implement yet)
+1. Follow the Analysis Strategy above — knowledge files first if ECW-ready
+2. Find the correct implementation entry points yourself (class + method + reason)
+3. Verify or correct the Coordinator's business assessment — you have authority to override
+4. Determine the interaction pattern if marked unclear
+5. Write your technical plan to .claude/ecw/analysis-report.md
+6. DO NOT implement anything — wait for confirmed-contract.md from coordinator
 
 ## Output Format
 Write analysis-report.md to .claude/ecw/analysis-report.md with:
-  - Confirmed role (and corrections if any)
-  - Implementation entry points (class + method + reason)
-  - Your proposed interaction pattern (if previously unclear)
+  - Confirmed role (and corrections to coordinator's assessment if any)
+  - Implementation entry points (class + method + reason, found by your own analysis)
+  - Proposed interaction pattern (if was unclear)
   - Any concerns or blockers
 ```
 
@@ -239,16 +262,25 @@ Process:
        - Based on own code analysis (from Phase 2) + confirmed contract
        - Coordinator does NOT decompose — child session owns this
     3. Execute plan: implement → test → ecw:impl-verify
-    4. Write status.json when complete
+    4. Write status.json when complete:
+       Location: {service}/.claude/ecw/session-data/{wf-id}/status.json
+       (wf-id is in workspace-analysis-task.md **Workflow ID** field)
+       completed_at: use current actual time ($(date -Iseconds) or equivalent),
+                     NOT the workflow ID timestamp
 
-  Execution order (per confirmed-contract.md):
-    Layer 1: Provider services first (complete + mvn install/deploy before Layer 2)
-    Layer 2: Consumer services in parallel
+  Execution order (based on interaction_pattern in confirmed-contract.md):
+    MQ interaction:
+      → All services start in parallel after Phase 3 contract confirmation
+      → No dependency on other services' compiled artifacts
+    Dubbo interaction:
+      → Layer 1 (Provider) first: complete + mvn install/deploy before Layer 2 starts
+      → Layer 2 (Consumer) after: needs Provider API Jar to compile
 
-  Poll: check {service}/status.json every 5 seconds, timeout 30 minutes.
+  Poll: check {service}/.claude/ecw/session-data/{wf-id}/status.json every 5 seconds,
+        timeout 30 minutes.
   Failed → AskUserQuestion: retry / skip / abort
 
-Gate-out: status.json exists for all services
+Gate-out: status.json exists for all services at .claude/ecw/session-data/{wf-id}/
 ```
 
 ---
@@ -256,7 +288,7 @@ Gate-out: status.json exists for all services
 ### Phase 5: Cross-Service Verification
 
 ```
-Gate-in: status.json exists for all services
+Gate-in: status.json exists at {service}/.claude/ecw/session-data/{wf-id}/ for all services
 Process:
   Each service's ecw:impl-verify already ran inside child sessions.
   Coordinator performs additional cross-service checks:
@@ -276,7 +308,10 @@ Gate-out: All checks pass (or user accepts known issues)
 Gate-in: Phase 5 passed
 Process:
   1. Aggregate status.json + git log per service
-  2. Present summary: commits, files, deploy order (from confirmed-contract.md)
+  2. Present summary:
+     - Commits, files changed per service
+     - Deploy order (from confirmed-contract.md)
+     - ECW coverage per service: ECW-ready (full flow) or ECW-absent (impl-verify only)
   3. AskUserQuestion: Push now or later?
 Gate-out: Workflow complete
 ```
@@ -298,11 +333,12 @@ Gate-out: Workflow complete
 ## Never Rules
 
 - **Never skip Phase gates** — artifact must exist before next Phase
-- **Never analyze code in Phase 1** — business decomposition must be code-free; code analysis belongs to child sessions in Phase 2
+- **Never use code-reading tools in Phase 1** — Phase 1 information source is workspace.yml requirement ONLY. No Read, Bash, Glob, Grep, or Explore tools. If code detail is needed to answer a question, it's an Open Question for Phase 2, not something to resolve in Phase 1.
+- **Never put code-level detail in Phase 1 output** — class names, method names, field names, SQL in cross-service-plan.md or workspace-analysis-task.md are Phase 1 violations.
 - **Never have coordinator write implementation tasks** — child sessions own task decomposition via ecw:writing-plans; coordinator distorts when it specifies "which class/method"
 - **Never paraphrase the original requirement** — pass verbatim text to child sessions; paraphrasing loses intent
 - **Never resolve contract conflicts without user** — architecture decisions (sync vs async, who owns what) require human judgment
-- **Never run Provider + Consumer layers in parallel** — Consumer depends on Provider's API Jar
+- **Never run Provider + Consumer in parallel for Dubbo** — Consumer depends on Provider's API Jar. For MQ, parallel execution after Phase 3 contract confirmation is correct.
 - **Never use `keystroke` on macOS** — clipboard paste only (input method corruption)
 - **Never assume terminal type** — detect or fall back to manual
 
@@ -310,8 +346,9 @@ Gate-out: Workflow complete
 
 | Your Thought | Reality |
 |-------------|---------|
+| "I'll just quickly scan the code in Phase 1 to confirm the interaction pattern" | Phase 1 is information-constrained: workspace.yml only. If you can't determine the pattern from the requirement, mark it "unclear" and let Phase 2 investigate. Scanning code in Phase 1 produces class-level detail that belongs to child sessions — and your scan will be incomplete anyway. |
 | "I'll just write the implementation task for the service, it'll be faster" | Coordinator doesn't know the service's internal structure. Child sessions do. Pre-written tasks will have wrong class/method locations. |
-| "The business decomposition is obvious, skip Phase 1 confirmation" | Interaction patterns (Dubbo vs MQ, sync vs async) are often ambiguous. Get user confirmation before code analysis. |
+| "The business decomposition is obvious, skip Phase 1 confirmation" | Interaction patterns (Dubbo vs MQ, sync vs async) are often ambiguous. Get user confirmation before Phase 2 starts. |
 | "The contract conflict is minor, I'll just pick one side" | Even minor contract decisions (field name, type) affect multiple services. Always surface to user. |
 | "Phase 2 child sessions are taking too long, I'll analyze the code myself" | Coordinator doesn't have the service-specific knowledge that child sessions + ECW knowledge files provide. |
 | "Only one service changed its contract, I'll update only that one" | Contract changes cascade. If wms changes DTO, both sci AND ofc might be affected. Check all consumers. |
