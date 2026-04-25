@@ -109,7 +109,7 @@ User proposes requirement / change / bug
 | `ecw:knowledge-audit` | Manual, periodic | Knowledge base health check: stale references, three-criteria compliance, content composition |
 | `ecw:knowledge-track` | Manual, post-task | Doc utilization tracking (hit/miss/redundant/misleading), quantifies knowledge base ROI |
 | `ecw:knowledge-repomap` | Manual, after refactors | Auto-generate code structure index from ecw.yml component_types |
-| `ecw:workspace` | Manual only (`/ecw:workspace`) | **Multi-repo workspace**: git worktree isolation + Phase-Gate coordinator + multi-session parallel implementation across independent services |
+| `ecw:workspace` | Manual only (`/ecw:workspace`) | **Multi-repo workspace**: git worktree isolation + 6-Phase coordinator (business decomposition → per-service code analysis → contract alignment → task self-decomposition + parallel implementation → cross-service verification → push). Child sessions own task decomposition; coordinator owns contract alignment. Original requirement passed verbatim to prevent distortion. |
 
 ### Agents (7)
 
@@ -295,14 +295,11 @@ ECW relies on knowledge files in your project to make accurate domain judgments 
 
 ## Supported Project Types
 
-`ecw.yml` adapts to different tech stacks via `component_types` and `scan_patterns`:
+ECW currently supports **Java/Spring** projects. The `component_types` and `scan_patterns` in `ecw.yml` are configured for Java conventions:
 
 | Tech Stack | Typical Component Types | Scan Patterns |
 |-----------|------------------------|---------------|
 | **Java/Spring** | BizService, Manager, DO, Controller, Mapper | @Resource, @DubboReference, RocketMQ |
-| **Go** | Handler, Repository, Service | import, interface |
-| **Node/TypeScript** | Service, Controller, Middleware | import/require, EventEmitter |
-| **Python** | Service, Repository, Handler | import, Celery |
 
 ## Project Structure
 
@@ -320,9 +317,13 @@ enterprise-change-workflow/
 │   ├── impl-orchestration/      # Subagent-driven plan execution (risk-aware review)
 │   ├── systematic-debugging/    # Domain-knowledge-driven debugging
 │   ├── spec-challenge/          # Adversarial review (challenge-response cycles)
-│   ├── impl-verify/             # Implementation correctness verification (multi-round convergence, up to 5 rounds)
+│   ├── impl-verify/             # Implementation correctness verification (multi-round convergence)
 │   ├── cross-review/            # Cross-file consistency verification (manual optional tool)
-│   └── biz-impact-analysis/     # Business impact analysis (5-step structured)
+│   ├── biz-impact-analysis/     # Business impact analysis (5-step structured)
+│   ├── knowledge-audit/         # Knowledge base health audit
+│   ├── knowledge-track/         # Doc utilization tracking
+│   ├── knowledge-repomap/       # Code structure index auto-generation
+│   └── workspace/               # Multi-repo workspace (6-Phase coordinator)
 ├── agents/                      # 7 agent definitions
 │   ├── biz-impact-analysis.md   # Impact analysis agent
 │   ├── spec-challenge.md        # Adversarial review agent
@@ -359,20 +360,26 @@ enterprise-change-workflow/
 │   ├── calibration-log.md       # Calibration history template
 │   ├── ecw-path-mappings.md     # Path mapping template
 │   ├── CLAUDE.md.snippet        # CLAUDE.md integration snippet
+│   ├── workspace.yml            # Workspace config template
+│   ├── workspace-claude.md      # Workspace CLAUDE.md template
+│   ├── cross-service-plan.md    # Cross-service change plan template
+│   ├── service-task.md          # Per-service task template
 │   ├── knowledge/               # Knowledge file templates
 │   │   ├── common/              # Cross-domain common knowledge (6 files)
 │   │   └── domain/              # Domain-level knowledge (3 files)
 │   └── rules/                   # Engineering rule templates
-│       ├── common/              # Universal rules (security, testing, coding-style, performance, design-patterns, ecw-development)
+│       ├── common/              # Universal rules
 │       └── java/                # Java-specific rules
 ├── scripts/
 │   ├── java/                    # Java/Spring project scanners (3 scripts)
+│   ├── check-freshness.sh       # Detect stale knowledge file references
+│   ├── generate-repo-map.sh     # Auto-extract component signatures for repo map
 │   └── README.md                # Scanner output format specification
 ├── docs/                        # Design reference and advisory docs
 │   └── design-reference.md      # Token budgets, model selection, context management guidelines
 ├── tests/                       # Three-layer test suite
 │   ├── Makefile                 # lint / test-hook / eval-* targets
-│   ├── static/                  # Layer 1: Python static lint (21 checks) + pytest unit tests (654 cases)
+│   ├── static/                  # Layer 1: Python static lint (21 checks) + pytest unit tests (700 cases)
 │   └── eval/                    # Layer 2: promptfoo behavioral eval (4 suites: risk-classifier/domain-collab/tdd/impl-verify)
 ├── CLAUDE.md                    # Plugin-level guidance
 ├── CHANGELOG.md                 # Version history

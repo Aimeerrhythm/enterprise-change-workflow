@@ -70,9 +70,11 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |
 | `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
 | `.claude/ecw/workspace.yml` | After workspace create | Workspace config: services, branches, build settings (workspace root only) |
-| `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run Phase 1-3 | Cross-service change plan: dependencies, contracts, execution order |
-| `{service}/.claude/ecw/workspace-task.md` | Before workspace run Phase 4 | Per-service task dispatched to child session |
-| `{service}/status.json` | After child session completes | Child session completion marker, read by coordinator |
+| `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run Phase 1 + updated Phase 3 | Cross-service business decomposition → finalized with contracts + execution order |
+| `{service}/.claude/ecw/workspace-analysis-task.md` | After workspace run Phase 1 | Per-service analysis task: original requirement (verbatim) + coordinator's hypothesis |
+| `{service}/.claude/ecw/analysis-report.md` | After workspace run Phase 2 (child session) | Per-service technical plan: entry points, interaction pattern, concerns |
+| `{service}/.claude/ecw/confirmed-contract.md` | After workspace run Phase 3 | Final aligned contracts for this service; triggers Phase 4 implementation |
+| `{service}/status.json` | After workspace run Phase 4 (child session) | Child session completion marker, read by coordinator |
 
 ### Knowledge Files (populate as needed)
 
