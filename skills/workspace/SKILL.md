@@ -136,6 +136,7 @@ Process:
      Encoding: native UTF-8, no escape sequences
 
 Gate-out: cross-service-plan.md + workspace-analysis-task.md exist for all services
+         Update session-state.md: Phase 1 → ✅ 完成; Subagent Ledger Explore agents → complete
 ```
 
 **workspace-analysis-task.md template:**
@@ -183,6 +184,21 @@ Write analysis-report.md to .claude/ecw/analysis-report.md with:
   - Implementation entry points (class + method + reason, found by your own analysis)
   - Proposed interaction pattern (if was unclear)
   - Any concerns or blockers
+
+## Plan Note
+This workspace-analysis-task.md serves as the Plan for this workflow.
+Do NOT run ecw:writing-plans unless you discover tasks beyond the confirmed-contract.md scope.
+If you do run it, create a new plan file — do not overwrite this task file.
+
+## Stale Plans Notice
+Ignore any files in .claude/plans/ that predate this workspace session (wf-id: {wf-id}).
+They belong to other workflows. Only act on plans tagged with this wf-id.
+
+## Session State Updates
+Update .claude/ecw/session-data/{wf-id}/session-state.md at these points:
+- Phase 2 complete: record confirmed role + entry points summary
+- Phase 4 implementation done: record files changed + commit list
+- impl-verify passed: record verification result (pass / must-fix count)
 ```
 
 ---
@@ -194,7 +210,7 @@ Gate-in: workspace-analysis-task.md exists for all services
 Process:
   1. Open one terminal split/tab per service via terminal adapter (see ./terminal-adapters.md)
      Command: cd {ws}/{svc} && claude "Read .claude/ecw/workspace-analysis-task.md and execute Phase 2 analysis."
-              --name {svc}-analyst --permission-mode acceptEdits
+              --name {svc}-analyst --permission-mode bypassPermissions
 
   2. Child sessions run in parallel (interactive — user can observe and intervene):
      - ECW-ready services: use knowledge files first, then scan code for gaps
@@ -240,11 +256,17 @@ Process:
      - Write confirmed-contract.md for EACH affected service:
        Location: {service}/.claude/ecw/confirmed-contract.md
        Content: final contract decisions relevant to this service + execution order
+       Must include: interaction_pattern field (mq / dubbo) for Phase 4 dispatch logic
 
-  5. Notify child sessions (still open from Phase 2):
-     Coordinator writes confirmed-contract.md → child sessions poll for it
+  5. Dispatch order (controlled by coordinator, NOT by child sessions):
+     MQ interaction:
+       → Write all confirmed-contract.md files at once → all child sessions start in parallel
+     Dubbo interaction:
+       → Write Layer 1 (Provider) confirmed-contract.md first
+       → Wait for Layer 1 status.json before writing Layer 2 confirmed-contract.md
+       → Layer 2 starts only after Layer 1 completes + mvn install/deploy
 
-Gate-out: confirmed-contract.md exists for all services
+Gate-out: confirmed-contract.md exists for all services (Layer 1 only, for Dubbo)
 ```
 
 ---
@@ -292,9 +314,17 @@ Gate-in: status.json exists at {service}/.claude/ecw/session-data/{wf-id}/ for a
 Process:
   Each service's ecw:impl-verify already ran inside child sessions.
   Coordinator performs additional cross-service checks:
-    a. Dubbo: Provider interface signature = Consumer call signature
-    b. MQ: Producer DTO fields = Consumer DTO fields
-    c. Maven: Consumer pom.xml API Jar version = Provider published version
+
+  MQ checks:
+    a. Producer DTO field name = Consumer DTO field name (exact match)
+    b. Producer DTO field type = Consumer DTO field type (e.g. String ↔ String)
+    c. Nullable annotation consistent (both nullable or both required)
+    d. Topic name: Producer publish topic = Consumer subscribe topic
+
+  Dubbo checks:
+    a. Provider interface method signature = Consumer call signature
+       (method name, parameter types, return type, exception declarations)
+    b. Maven: Consumer pom.xml API Jar version = Provider published version
 
   All pass → proceed. Issues → present findings, suggest which service to fix.
 Gate-out: All checks pass (or user accepts known issues)
@@ -313,8 +343,15 @@ Process:
      - Deploy order (from confirmed-contract.md)
      - ECW coverage per service: ECW-ready (full flow) or ECW-absent (impl-verify only)
   3. AskUserQuestion: Push now or later?
+  4. Optional: Suggest user run /ecw:knowledge-track in each child session to record
+     which knowledge docs were actually used in this workflow.
 Gate-out: Workflow complete
 ```
+
+**Session-state Phase naming note** (Issue 8):
+coordinator's session-state.md Phase Status table must use SKILL.md Phase numbers (1-6).
+Do not invent custom phase names. If coordinator compresses Phase 1-3 into fewer steps,
+annotate the Artifact column to explain (e.g. "Phase 1+2+3 compressed — code-free business decomp only").
 
 ---
 
