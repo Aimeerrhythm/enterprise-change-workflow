@@ -65,9 +65,9 @@ Step 8: Generate configuration files
     Comment to add: "# ECW workspace session artifacts"
 
 Step 9: Auto-enter workspace and start run
-  - Use terminal adapter to open a new tab/split
-  - Paste command (via clipboard):
-    cd {workspace_path} && claude "/ecw:workspace run '{requirement_description}'"
+  - Use terminal adapter (see ./terminal-adapters.md) to open new tab and run start.sh
+  - start.sh runs: cd {workspace_path} && claude "/ecw:workspace run"
+    (run reads requirement from workspace.yml — no need to pass as argument)
   - If terminal adapter fails → fallback: print command for user to copy
   - Current session's create work is done
 ```
