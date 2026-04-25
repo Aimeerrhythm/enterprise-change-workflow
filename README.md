@@ -89,6 +89,60 @@ User proposes requirement / change / bug
   Mark complete → Completion Verification Hook (automatic checks)
 ```
 
+### Multi-Repo Workspace (Cross-Service Development)
+
+When changes span **2+ independent repositories** (e.g., provider + consumer services), use `ecw:workspace` instead of the standard single-repo flow. The workspace coordinator manages business decomposition, contract alignment, and parallel multi-session implementation.
+
+**When to use**: Cross-repo changes with interface dependencies (Dubbo, MQ). **When NOT to use**: single-repo multi-module changes (use standard flow), monorepo services (use `ecw:domain-collab`).
+
+```
+/ecw:workspace create service-a ../service-b
+        |
+  Pre-flight — ECW readiness check per service
+        |
+  Phase 1 — Business Decomposition (Coordinator, NO code reading)
+        |     Per-service roles (Provider/Consumer), interaction patterns
+        |     Output: cross-service-plan.md + workspace-analysis-task.md per service
+        |     [User confirms responsibilities]
+        |
+  Phase 2 — Per-Service Code Analysis (Child sessions, parallel)
+        |     Each service opens a terminal split, runs its own analysis
+        |     Output: analysis-report.md per service
+        |
+  Phase 3 — Contract Alignment + Conflict Resolution
+        |     Cross-validate: MQ topics/DTOs, Dubbo signatures, ownership
+        |     Conflicts → user decides
+        |     Output: confirmed-contract.md per service
+        |
+  Phase 4 — Per-Service Implementation (Child sessions)
+        |     Layer 1: Provider services (complete + publish API Jar)
+        |     Layer 2: Consumer services (parallel)
+        |     Each runs: ecw:writing-plans → implement → ecw:impl-verify
+        |     Output: status.json per service
+        |
+  Phase 5 — Cross-Service Verification
+        |     Dubbo signature match, MQ DTO compatibility, Maven version alignment
+        |
+  Phase 6 — Summary & Push
+              Aggregate changes, confirm deploy order, batch push
+```
+
+**Sub-commands:**
+
+| Command | Description |
+|---------|-------------|
+| `create <services...>` | Create workspace with git worktree isolation, auto-start run |
+| `run "<requirement>"` | Execute 6-Phase coordinator flow |
+| `status` | Show all services' git + session status |
+| `push` | Batch push with per-service confirmation |
+| `destroy` | Clean up worktrees + workspace directory |
+
+**Key design principles:**
+- **Code-free Phase 1** — business decomposition happens before any code analysis, preventing premature optimization
+- **Verbatim requirement passing** — original requirement preserved without paraphrasing to prevent intent loss
+- **Child session autonomy** — each service decomposes its own tasks; coordinator only aligns contracts
+- **User gates at every architectural decision** — contract conflicts, interaction patterns, and push confirmation all surface to user
+
 ## Components
 
 ### Skills (15)
