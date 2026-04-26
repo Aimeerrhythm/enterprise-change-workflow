@@ -4,6 +4,16 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.0] - 2026-04-26
+
+### 修复
+
+- **`ecw:workspace` terminal-adapters Phase 2 脚本名修正** — Phase 2 脚本名从 `start-{service}.sh` 更正为 `start-{service}-analysis.sh`，与 Issue 27 规范一致
+- **`ecw:workspace` terminal-adapters Phase 2 路径修正** — child session prompt 里的 `workspace-analysis-task.md` 路径从 `.claude/ecw/` 更正为 `.claude/ecw/session-data/{wf-id}/`（Issue 27）
+- **`ecw:workspace` terminal-adapters 新增 Phase 4 脚本段落** — Ghostty/tmux/Manual adapter 均补充 `start-{service}-impl.sh` 生成示例，区分 ECW-ready（含 `/ecw:knowledge-track`）和 ECW-absent（不含）两种 prompt（Issue 30）
+- **`ecw:workspace` lifecycle-commands create Step 8 CLAUDE.md 生成约束** — 明确使用 `templates/workspace-claude.md` 作为 STATIC 模板，仅做占位符字符串替换，需求文本从 `workspace.yml` 原文复制，禁止 AI 重新生成中文，消除 create 阶段 uXXXX 编码问题（Issue 18B）
+- **`templates/workspace-claude.md` 静态模板声明** — 文件顶部增加 HTML 注释，明确该文件为 STATIC TEMPLATE，禁止 AI 生成中文内容，需求文本必须从 workspace.yml 原文复制（Issue 18B）
+
 ## [1.1.0] - 2026-04-25
 
 ### 改进
@@ -600,4 +610,6 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 [0.2.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.1.0
+[1.2.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.0
+[1.1.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.0.0

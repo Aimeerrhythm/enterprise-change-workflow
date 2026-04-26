@@ -56,6 +56,10 @@ Step 7: Pre-trust workspace directories
 Step 8: Generate configuration files
   - workspace.yml → {workspace}/.claude/ecw/workspace.yml (include requirement description)
   - CLAUDE.md → {workspace}/CLAUDE.md
+    Use templates/workspace-claude.md as a STATIC template.
+    Fill ONLY placeholder variables by plain string substitution.
+    Copy requirement text verbatim from workspace.yml — do NOT re-generate in Chinese.
+    This eliminates uXXXX encoding issues in the create phase.
   - mkdir -p {workspace}/.claude/ecw/session-data/
 
   For each service worktree, update .gitignore (Issue 21 — ECW artifacts must not be committed):

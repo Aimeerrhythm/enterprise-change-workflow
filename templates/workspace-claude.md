@@ -1,3 +1,4 @@
+<!-- STATIC TEMPLATE — Fill {PLACEHOLDERS} by string substitution only. Do NOT use AI to generate Chinese content. Requirement text: verbatim copy from workspace.yml. -->
 # {WORKSPACE_NAME} — Cross-Service Workspace
 
 This is an ECW multi-repo workspace. Multiple services are assembled here via git worktree for cross-service development.
