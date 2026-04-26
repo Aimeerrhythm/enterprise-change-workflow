@@ -8,6 +8,10 @@
 
 > Give AI the ability to "change one line of code, trace the full-chain impact" in large projects.
 
+## Design Principles
+
+See [docs/design-principles.md](docs/design-principles.md) — core idea: every scaffolding layer must pass the "model-upgrade test." Amplifiers get stronger with better models; crutches become dead weight.
+
 ## What Problem Does It Solve
 
 AI coding assistants excel at independent changes, but in large multi-module projects, modifying one component can cascade across multiple business domains. Typical pain points:
