@@ -59,7 +59,9 @@ If a service doesn't complete within 30 minutes:
 | workspace.yml | `{ws}/.claude/ecw/workspace.yml` | create command | workspace creation |
 | CLAUDE.md | `{ws}/CLAUDE.md` | create command | workspace creation |
 | cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Phase 1 + updated Phase 3 |
-| workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/workspace-analysis-task.md` | coordinator | Phase 1 end |
-| analysis-report.md | `{ws}/{svc}/.claude/ecw/analysis-report.md` | child session | Phase 2 end |
-| confirmed-contract.md | `{ws}/{svc}/.claude/ecw/confirmed-contract.md` | coordinator | Phase 3 end |
+| workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` | coordinator | Phase 1 end |
+| start-{svc}-analysis.sh | `{ws}/.claude/ecw/start-{svc}-analysis.sh` | coordinator | Phase 2 start |
+| analysis-report.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/analysis-report.md` | child session | Phase 2 end |
+| confirmed-contract.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md` | coordinator | Phase 3 end |
+| start-{svc}-impl.sh | `{ws}/.claude/ecw/start-{svc}-impl.sh` | coordinator | Phase 4 start |
 | status.json | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/status.json` | child session | Phase 4 end |

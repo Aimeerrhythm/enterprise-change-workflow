@@ -74,9 +74,9 @@ Pre-flight → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase
 |-------|--------------|------------|----------|
 | Pre-flight | User confirms readiness | — | interactive |
 | Phase 1 | `cross-service-plan.md` (business layer only) | Coordinator | `session-data/{wf-id}/` |
-| Phase 2 | `analysis-report.md` per service | Child sessions | `{service}/.claude/ecw/` |
-| Phase 3 | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/` |
-| Phase 4 | `status.json` per service | Child sessions | `{service}/` |
+| Phase 2 | `analysis-report.md` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
+| Phase 3 | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/session-data/{wf-id}/` |
+| Phase 4 | `status.json` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
 | Phase 5 | Compatibility checks pass | Coordinator | interactive |
 
 **Enforcement**: At each Phase start, verify previous artifact exists. Missing → STOP, report — do not backfill silently.
@@ -131,7 +131,7 @@ Process:
      Encoding: native UTF-8, no escape sequences
 
   5. Write workspace-analysis-task.md for each service:
-     Location: {service}/.claude/ecw/workspace-analysis-task.md
+     Location: {service}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md
      Content (see template below)
      Encoding: native UTF-8, no escape sequences
 
@@ -175,30 +175,24 @@ ECW Status: {ECW-ready / ECW-partial / ECW-absent}
 2. Find the correct implementation entry points yourself (class + method + reason)
 3. Verify or correct the Coordinator's business assessment — you have authority to override
 4. Determine the interaction pattern if marked unclear
-5. Write your technical plan to .claude/ecw/analysis-report.md
-6. DO NOT implement anything — wait for confirmed-contract.md from coordinator
+5. Write your technical plan to .claude/ecw/session-data/{wf-id}/analysis-report.md
+6. Phase 2 analysis is done after writing analysis-report.md. Do NOT proceed to implementation.
+   A new session will be opened by the coordinator for Phase 4 implementation.
 
 ## Output Format
-Write analysis-report.md to .claude/ecw/analysis-report.md with:
+Write analysis-report.md to .claude/ecw/session-data/{wf-id}/analysis-report.md with:
   - Confirmed role (and corrections to coordinator's assessment if any)
   - Implementation entry points (class + method + reason, found by your own analysis)
   - Proposed interaction pattern (if was unclear)
   - Any concerns or blockers
-
-## Plan Note
-This workspace-analysis-task.md serves as the Plan for this workflow.
-Do NOT run ecw:writing-plans unless you discover tasks beyond the confirmed-contract.md scope.
-If you do run it, create a new plan file — do not overwrite this task file.
 
 ## Stale Plans Notice
 Ignore any files in .claude/plans/ that predate this workspace session (wf-id: {wf-id}).
 They belong to other workflows. Only act on plans tagged with this wf-id.
 
 ## Session State Updates
-Update .claude/ecw/session-data/{wf-id}/session-state.md at these points:
+Update .claude/ecw/session-data/{wf-id}/session-state.md at:
 - Phase 2 complete: record confirmed role + entry points summary
-- Phase 4 implementation done: record files changed + commit list
-- impl-verify passed: record verification result (pass / must-fix count)
 ```
 
 ---
@@ -206,23 +200,26 @@ Update .claude/ecw/session-data/{wf-id}/session-state.md at these points:
 ### Phase 2: Per-Service Code Analysis (Child sessions, interactive, parallel)
 
 ```
-Gate-in: workspace-analysis-task.md exists for all services
+Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
 Process:
-  1. Open one terminal split/tab per service via terminal adapter (see ./terminal-adapters.md)
-     Command: cd {ws}/{svc} && claude "Read .claude/ecw/workspace-analysis-task.md and execute Phase 2 analysis."
-              --name {svc}-analyst --permission-mode bypassPermissions
+  1. Generate Phase 2 start scripts and open one terminal tab per service
+     via terminal adapter (see ./terminal-adapters.md § Phase 2 Scripts)
+
+     Script prompt: "Read .claude/ecw/session-data/{wf-id}/workspace-analysis-task.md and execute Phase 2 analysis."
+     Flags: --name {svc}-analyst --permission-mode bypassPermissions
 
   2. Child sessions run in parallel (interactive — user can observe and intervene):
      - ECW-ready services: use knowledge files first, then scan code for gaps
      - ECW-absent services: scan source code directly
      - Each session identifies: specific class/method, interaction pattern, concerns
-     - Each session writes analysis-report.md when done
+     - Each session writes analysis-report.md and then EXITS (Phase 2 is done)
 
-  3. Poll for completion: check {service}/.claude/ecw/analysis-report.md every 5 seconds
+  3. Poll for completion: check {service}/.claude/ecw/session-data/{wf-id}/analysis-report.md
+     every 5 seconds
 
   4. Coordinator reads all analysis-report.md files
 
-Gate-out: analysis-report.md exists for all services
+Gate-out: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
 ```
 
 ---
@@ -230,7 +227,7 @@ Gate-out: analysis-report.md exists for all services
 ### Phase 3: Contract Alignment + Conflict Resolution
 
 ```
-Gate-in: analysis-report.md exists for all services
+Gate-in: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
 Process:
   1. Coordinator reads all analysis-report.md files
   2. Cross-validate for conflicts:
@@ -254,58 +251,78 @@ Process:
   4. Once all contracts aligned:
      - Update cross-service-plan.md with final contracts
      - Write confirmed-contract.md for EACH affected service:
-       Location: {service}/.claude/ecw/confirmed-contract.md
-       Content: final contract decisions relevant to this service + execution order
-       Must include: interaction_pattern field (mq / dubbo) for Phase 4 dispatch logic
+       Location: {service}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md
+       Encoding: native UTF-8, no escape sequences
+       Content scope — ONLY cross-service contract layer:
+         - field names, field types, nullable annotations
+         - topic names / interface signatures
+         - interaction_pattern (mq / dubbo) for Phase 4 dispatch logic
+         - execution order (layer assignment)
+         - impl-verify requirement: "impl-verify MUST pass before writing status.json"
+       Content exclusion — do NOT include:
+         - class names, method names, internal implementation entry points
+           (these are in analysis-report.md, owned by child sessions)
+         - task decomposition or implementation steps
+           (child sessions own this via ecw:writing-plans)
 
-  5. Dispatch order (controlled by coordinator, NOT by child sessions):
-     MQ interaction:
-       → Write all confirmed-contract.md files at once → all child sessions start in parallel
-     Dubbo interaction:
-       → Write Layer 1 (Provider) confirmed-contract.md first
-       → Wait for Layer 1 status.json before writing Layer 2 confirmed-contract.md
-       → Layer 2 starts only after Layer 1 completes + mvn install/deploy
-
-Gate-out: confirmed-contract.md exists for all services (Layer 1 only, for Dubbo)
+Gate-out: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
 ```
-
----
-
-### Phase 4: Per-Service Task Decomposition + Implementation (Child sessions)
+### Phase 4: Per-Service Implementation (NEW child sessions, parallel or layered)
 
 ```
-Gate-in: confirmed-contract.md exists for all services
+Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
 Process:
-  Child sessions (still open from Phase 2) detect confirmed-contract.md and proceed:
+  Phase 2 sessions have exited. Coordinator opens NEW Phase 4 child sessions.
+
+  1. Generate Phase 4 start scripts via terminal adapter (see ./terminal-adapters.md):
+
+     For ECW-ready / ECW-partial services (have CLAUDE.md + BLOCKING RULE):
+       Prompt: "Read .claude/ecw/session-data/{wf-id}/confirmed-contract.md and
+                .claude/ecw/session-data/{wf-id}/analysis-report.md.
+                Implement the changes described in the contract.
+                After implementation: run /ecw:impl-verify.
+                After impl-verify passes: run /ecw:knowledge-track.
+                Then write status.json to .claude/ecw/session-data/{wf-id}/status.json."
+       Flags: --name {svc}-impl --permission-mode bypassPermissions
+       Note: ECW BLOCKING RULE auto-drives risk-classifier and writing-plans.
+             The explicit prompt serves as goal definition and fallback guidance.
+
+     For ECW-absent services (no CLAUDE.md / no BLOCKING RULE):
+       Prompt: "Read .claude/ecw/session-data/{wf-id}/confirmed-contract.md and
+                .claude/ecw/session-data/{wf-id}/analysis-report.md.
+                Implement the changes described in the contract.
+                After implementation: run /ecw:impl-verify.
+                After impl-verify passes: write status.json to
+                .claude/ecw/session-data/{wf-id}/status.json."
+       Flags: --name {svc}-impl --permission-mode bypassPermissions
+
+  2. Dispatch order (based on interaction_pattern in confirmed-contract.md):
+     MQ interaction:
+       -> Open ALL Phase 4 sessions in parallel (no compile dependency)
+     Dubbo interaction:
+       -> Open Layer 1 (Provider) sessions first
+       -> Wait for Layer 1 status.json at .claude/ecw/session-data/{wf-id}/
+       -> After Layer 1: run mvn install/deploy in Provider worktree
+       -> Then open Layer 2 (Consumer) sessions
 
   Per service (each child session independently):
-    1. Read confirmed-contract.md — this is the authoritative contract
-    2. Run ecw:writing-plans to decompose into concrete Tasks:
-       - Based on own code analysis (from Phase 2) + confirmed contract
-       - Coordinator does NOT decompose — child session owns this
-    3. Execute plan: implement → test → ecw:impl-verify
-    4. Write status.json when complete:
+    a. Read confirmed-contract.md -- authoritative cross-service contract
+    b. Read analysis-report.md -- own service's code analysis from Phase 2
+    c. Decompose into tasks:
+       ECW-ready: ecw:writing-plans auto-triggered by BLOCKING RULE
+       ECW-absent: manual decomposition based on analysis-report.md
+    d. Implement -> test -> ecw:impl-verify
+    e. ECW-ready only: run /ecw:knowledge-track after impl-verify passes
+    f. Write status.json:
        Location: {service}/.claude/ecw/session-data/{wf-id}/status.json
-       (wf-id is in workspace-analysis-task.md **Workflow ID** field)
-       completed_at: use current actual time ($(date -Iseconds) or equivalent),
-                     NOT the workflow ID timestamp
-
-  Execution order (based on interaction_pattern in confirmed-contract.md):
-    MQ interaction:
-      → All services start in parallel after Phase 3 contract confirmation
-      → No dependency on other services' compiled artifacts
-    Dubbo interaction:
-      → Layer 1 (Provider) first: complete + mvn install/deploy before Layer 2 starts
-      → Layer 2 (Consumer) after: needs Provider API Jar to compile
+       completed_at: current actual time ($(date -Iseconds)), NOT workflow ID timestamp
 
   Poll: check {service}/.claude/ecw/session-data/{wf-id}/status.json every 5 seconds,
         timeout 30 minutes.
-  Failed → AskUserQuestion: retry / skip / abort
+  Failed -> AskUserQuestion: retry / skip / abort
 
 Gate-out: status.json exists for all services at .claude/ecw/session-data/{wf-id}/
 ```
-
----
 
 ### Phase 5: Cross-Service Verification
 
@@ -343,8 +360,9 @@ Process:
      - Deploy order (from confirmed-contract.md)
      - ECW coverage per service: ECW-ready (full flow) or ECW-absent (impl-verify only)
   3. AskUserQuestion: Push now or later?
-  4. Optional: Suggest user run /ecw:knowledge-track in each child session to record
-     which knowledge docs were actually used in this workflow.
+  4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track ran in Phase 4
+     (after impl-verify, before status.json). Report which services completed
+     knowledge-track and which skipped it (ECW-absent services skip by design).
 Gate-out: Workflow complete
 ```
 
