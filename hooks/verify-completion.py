@@ -25,6 +25,7 @@ import sys
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ecw_config import read_ecw_config as _read_ecw_config  # noqa: E402
+from marker_utils import CheckpointStore  # noqa: E402
 
 try:
     import yaml
@@ -453,15 +454,11 @@ def check_knowledge_doc_freshness(cwd, modified):
 
 
 def check_impl_verify_executed(cwd):
-    """检查 session-data 下是否存在 impl-verify-findings.md，判断 impl-verify 是否已执行。"""
-    session_data = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if not os.path.isdir(session_data):
+    """Return True if impl-verify-findings.md exists in any workflow subdir."""
+    store = CheckpointStore.from_latest_workflow(cwd)
+    if store is None:
         return False
-    for workflow_dir in os.listdir(session_data):
-        findings = os.path.join(session_data, workflow_dir, "impl-verify-findings.md")
-        if os.path.isfile(findings):
-            return True
-    return False
+    return store.exists("impl-verify-findings")
 
 
 def check_test_coverage(cwd, modified):

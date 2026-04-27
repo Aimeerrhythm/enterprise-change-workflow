@@ -19,7 +19,7 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -68,44 +68,19 @@ def _extract_state_fields(content):
 
 
 def _get_checkpoint_files(cwd):
-    """List session-data/ checkpoint files sorted by mtime (newest first).
-
-    Supports workflow-id subdirectories (D-3 isolation): scans the most recent
-    subdirectory first. Falls back to root session-data/ for backward compat.
-    """
-    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if not os.path.isdir(session_data_dir):
+    """List session-data/ checkpoint files sorted by mtime (newest first)."""
+    store = CheckpointStore.from_latest_workflow(cwd)
+    if store is None:
         return []
-
-    files = []
-    try:
-        # Check for workflow-id subdirectories first
-        subdirs = []
-        root_files = []
-        for name in os.listdir(session_data_dir):
-            full = os.path.join(session_data_dir, name)
-            if os.path.isdir(full):
-                subdirs.append((full, os.path.getmtime(full), name))
-            elif os.path.isfile(full) and name.endswith(".md"):
-                root_files.append((full, os.path.getmtime(full), name))
-
-        if subdirs:
-            # Use the most recent subdirectory
-            subdirs.sort(key=lambda x: x[1], reverse=True)
-            latest_dir = subdirs[0][0]
-            subdir_name = subdirs[0][2]
-            for name in os.listdir(latest_dir):
-                full = os.path.join(latest_dir, name)
-                if os.path.isfile(full) and name.endswith(".md"):
-                    files.append((full, os.path.getmtime(full), name))
-        else:
-            # Backward compat: scan root session-data/
-            files = root_files
-    except Exception:
-        return []
-
-    files.sort(key=lambda x: x[1], reverse=True)
-    return files[:MAX_CHECKPOINTS]
+    paths = store.list(return_paths=True)
+    result = []
+    for p in paths:
+        try:
+            result.append((p, os.path.getmtime(p), os.path.basename(p)))
+        except Exception:
+            pass
+    result.sort(key=lambda x: x[1], reverse=True)
+    return result[:MAX_CHECKPOINTS]
 
 
 def _summarize_checkpoint(filepath, name):

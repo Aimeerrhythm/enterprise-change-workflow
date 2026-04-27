@@ -18,49 +18,21 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore  # noqa: E402
 
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
 
 
 def _get_session_data_files(cwd):
-    """List .md files in session-data/ directory.
-
-    Supports workflow-id subdirectories (D-3 isolation): scans the most recent
-    subdirectory first. Falls back to root session-data/ for backward compat.
-    """
-    session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
-    if not os.path.isdir(session_data_dir):
+    """List .md files in session-data/ directory as relative paths."""
+    store = CheckpointStore.from_latest_workflow(cwd)
+    if store is None:
         return []
-
-    files = []
-    try:
-        # Check for workflow-id subdirectories
-        subdirs = []
-        root_files = []
-        for name in sorted(os.listdir(session_data_dir)):
-            full = os.path.join(session_data_dir, name)
-            if os.path.isdir(full):
-                subdirs.append((full, os.path.getmtime(full), name))
-            elif os.path.isfile(full) and name.endswith(".md"):
-                rel = os.path.relpath(full, cwd)
-                root_files.append(rel)
-
-        if subdirs:
-            # Use the most recent subdirectory
-            subdirs.sort(key=lambda x: x[1], reverse=True)
-            latest_dir = subdirs[0][0]
-            for name in sorted(os.listdir(latest_dir)):
-                full = os.path.join(latest_dir, name)
-                if os.path.isfile(full) and name.endswith(".md"):
-                    rel = os.path.relpath(full, cwd)
-                    files.append(rel)
-        else:
-            files = root_files
-    except Exception:
-        pass
-    return files
+    return [
+        os.path.relpath(p, cwd)
+        for p in store.list(return_paths=True)
+    ]
 
 
 def _append_compact_marker(state_path):

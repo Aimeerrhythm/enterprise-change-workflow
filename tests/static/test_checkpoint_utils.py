@@ -76,8 +76,20 @@ def test_from_latest_workflow_picks_newest(marker_module, tmp_path):
 
 
 def test_from_latest_workflow_returns_none_when_no_session_data(marker_module, tmp_path):
+    """No session-data directory at all → None."""
     store = marker_module.CheckpointStore.from_latest_workflow(str(tmp_path))
     assert store is None
+
+
+def test_from_latest_workflow_legacy_root_files(marker_module, tmp_path):
+    """No subdirectories but root .md files → fallback store with workflow_id=''."""
+    sd = tmp_path / ".claude" / "ecw" / "session-data"
+    sd.mkdir(parents=True)
+    (sd / "requirements-summary.md").write_text("req")
+    store = marker_module.CheckpointStore.from_latest_workflow(str(tmp_path))
+    assert store is not None
+    assert store.workflow_id == ""
+    assert "requirements-summary" in store.list()
 
 
 def test_list_returns_paths(marker_module, project):

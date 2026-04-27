@@ -167,15 +167,21 @@ class CheckpointStore:
     def __init__(self, cwd: str, workflow_id: str) -> None:
         self.cwd = cwd
         self.workflow_id = workflow_id
-        self._dir = os.path.join(
-            cwd, ".claude", "ecw", "session-data", workflow_id
-        )
+        # workflow_id="" means files live directly in session-data/ (legacy)
+        if workflow_id:
+            self._dir = os.path.join(
+                cwd, ".claude", "ecw", "session-data", workflow_id
+            )
+        else:
+            self._dir = os.path.join(cwd, ".claude", "ecw", "session-data")
 
     @classmethod
     def from_latest_workflow(cls, cwd: str) -> "CheckpointStore | None":
         """Return a store pointing to the most recent workflow-id subdirectory.
 
-        Returns None if no session-data directory or no subdirectories exist.
+        Falls back to the root session-data/ directory for backward compat
+        when no subdirectories exist but root .md files are present.
+        Returns None if session-data directory does not exist.
         """
         session_data_dir = os.path.join(cwd, ".claude", "ecw", "session-data")
         if not os.path.isdir(session_data_dir):
@@ -188,7 +194,8 @@ class CheckpointStore:
         except Exception:
             return None
         if not subdirs:
-            return None
+            # Backward compat: fall back to root session-data/ files
+            return cls(cwd, "")
         latest = sorted(subdirs, reverse=True)[0]
         return cls(cwd, latest)
 
