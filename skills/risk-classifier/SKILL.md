@@ -25,7 +25,7 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 ## Bug Fix Routing
 
-Bug fixes go through this skill for risk pre-assessment, then chain to `ecw:systematic-debugging`. See Skill Interaction for full routing. All levels skip ecw:requirements-elicitation.
+Bug fixes go through this skill for risk pre-assessment, then chain to `ecw:systematic-debugging`. See `./workflow-routes.yml` for full routing. All levels skip ecw:requirements-elicitation.
 
 ## When to Use
 
@@ -41,27 +41,14 @@ Bug fixes go through this skill for risk pre-assessment, then chain to `ecw:syst
 
 ## Skill Interaction
 
-**This skill is the entry point for all change-type tasks.** After Phase 1, link to downstream skills based on risk level:
+**This skill is the entry point for all change-type tasks.** After Phase 1, link to downstream skills based on risk level.
 
-### Requirement Changes — Single Domain (Step 1 matches 0~1 domains)
-
-| Risk Level | Downstream Skills |
-|-----------|-------------------|
-| P0 (Critical) | → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1 (High) | → `ecw:requirements-elicitation` → **Phase 2** → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P2 (Medium) | → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` |
-| P3 (Low) | → Direct implementation (TDD recommended but not mandatory) |
-
-### Requirement Changes — Cross-Domain (Step 1 matches 2+ domains)
-
-When requirements span multiple business domains, use `ecw:domain-collab` (multi-domain collaboration analysis) **instead of** `ecw:requirements-elicitation`. ecw:domain-collab already includes per-domain deep analysis + Coordinator cross-validation, producing sufficient output to drive plan writing.
-
-| Risk Level | Downstream Skills |
-|-----------|-------------------|
-| P0 (Critical) | → `ecw:domain-collab` (multi-domain) → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P1 (High) | → `ecw:domain-collab` (multi-domain) → **Phase 2** → `ecw:writing-plans` → `ecw:spec-challenge` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` → **Phase 3** |
-| P2 (Medium) | → `ecw:domain-collab` (multi-domain) → `ecw:writing-plans` → **TDD:RED** → Implementation(GREEN) → `ecw:impl-verify` → `ecw:biz-impact-analysis` (suggested) |
-| P3 (Low) | → `ecw:domain-collab` (multi-domain, simplified output) → Direct implementation (TDD recommended but not mandatory) |
+Read `./workflow-routes.yml` for the complete routing matrix, including:
+- Requirement changes (single-domain and cross-domain routing)
+- Bug fix routing
+- Fast track routing
+- Implementation strategy selection (direct vs ecw:impl-orchestration)
+- Post-implementation task creation rules
 
 > **Determination method:** During Step 1 domain identification, check the project CLAUDE.md domain routing section (keyword→domain mapping table) and count matched domains. 2+ domain matches = cross-domain requirement.
 >
@@ -69,40 +56,14 @@ When requirements span multiple business domains, use `ecw:domain-collab` (multi
 
 ### Implementation Strategy Selection
 
-The "Implementation(GREEN)" in routing tables requires choosing implementation approach based on three dimensions: Task count, file count, and domain count:
-
-| Condition | Strategy | Rationale |
-|-----------|----------|-----------|
-| Plan Tasks ≤ 3, involved files ≤ 5, single domain | **Direct implementation** (complete sequentially in main session) | Few tasks + few files; subagent dispatch overhead not worthwhile |
-| Plan Tasks ≤ 3, but involved files ≥ 6 | **`ecw:impl-orchestration`** | File operations intensive; coordinator context will overflow |
-| Plan Tasks ≤ 3, but ≥ 2 domains' code modifications | **`ecw:impl-orchestration`** | Cross-domain file spread increases context consumption |
-| Plan Tasks 4-8, P0/P1 | **`ecw:impl-orchestration`** | Many complex tasks; subagent parallelism adds value |
-| Plan Tasks 4-8, P2 | **Direct implementation** | Medium risk; parallelization overhead unnecessary |
-| Plan Tasks > 8, P0/P1 | **`ecw:impl-orchestration`**, merge simple Tasks | Avoid subagent count explosion |
-| P3 | **Direct implementation** | Low risk, no Plan |
-| Bug fix, involved files ≤ 5 | **Direct implementation** | Usually single-point fix, no parallelism needed |
-| Bug fix, involved files ≥ 6 | **`ecw:impl-orchestration`** | Complex bug fix spanning many files |
-
 **Implementation strategy is determined after ecw:writing-plans completes, before entering implementation.** Based on three dimensions from the Plan file: (1) Task count, (2) total unique files involved across all Tasks, (3) number of domains whose code is modified. Scan all Tasks in the Plan to count files: aggregate `file_path` references in each Task, deduplicate, and count unique files. Count domains by mapping file paths through `ecw-path-mappings.md`.
 
-**Rules for merging simple Tasks** (when Plan Tasks > 8):
-- **Mergeable** (batch to 1-2 subagents): Single-file changes with no conditional branching — enum/constant definitions, DTO/VO new fields, Mapper single methods, config changes, doc sync
-- **Must be independent**: Tasks involving state machines, cross-domain interfaces, multi-file coordination, conditional branching, or core business logic
+See `./workflow-routes.yml` `impl_strategy` section for the full decision matrix.
 
 **Relationship with impl-verify**:
 - `ecw:impl-orchestration` has built-in per-task spec review + code quality review (P0), providing **immediate feedback** during implementation to prevent error cascading
 - `ecw:impl-verify` performs cross-validation from requirements/domain knowledge/Plan/engineering standards **after all implementation completes** — a higher-level correctness check
 - The two complement each other; neither replaces the other
-
-### Bug Fix Changes
-
-| Risk Level | Downstream Skills |
-|-----------|-------------------|
-| Any level | → invoke `ecw:systematic-debugging` (locate root cause) → **TDD:RED** (write reproduction test) → Fix(GREEN) → mvn test → `ecw:impl-verify` → ecw:biz-impact-analysis (P0/P1) → **Phase 3** |
-
-Bug fixes skip ecw:requirements-elicitation, but risk level still determines post-fix ecw:biz-impact-analysis requirements.
-
-**Phase 2** executes automatically after requirement analysis (ecw:requirements-elicitation / ecw:domain-collab) completes, before ecw:writing-plans (see Phase 2 section below).
 
 ---
 
@@ -114,64 +75,11 @@ After user describes requirement, **before the first downstream skill triggers**
 
 ### Execution Steps
 
-#### Step 1: Keyword Extraction & Domain Identification
-
-Extract from user's requirement description:
-- **Business keywords** → Map to domains via project CLAUDE.md domain routing table (keyword→domain mapping); count matched domains for single/cross-domain routing (see Skill Interaction)
-- **Operation keywords** → Determine operation type (CRUD, state changes, message format, etc.)
-- **Sensitive words** → Read ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Quick Reference keyword→level mapping; any match → at least P1
-
-#### Step 2: Quick Shared Resource Check
-
-Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`. If file missing, log `[Warning: {file} not found]` and skip. Read risk factors §Factor 1 for domain dependency thresholds.
-
-Phase 1 checks §3 (shared resources) + §2 (MQ topology, only if user mentions MQ). Does not check §1/§4/§5 (deferred to Phase 2). **P2 single-domain**: if shared resources or MQ write-ops found, **upgrade to P1 immediately**.
-
-#### Step 3: Composite Assessment
-
-```
-Total Risk = max(Keyword Estimated Level, Shared Resource Level)
-Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domain"
-```
-
-Full three-dimensional factors in ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses first two dimensions only.
-
-**Calibration history**: Check `.claude/ecw/state/calibration-history.md` — scan last 10 entries for keyword overlap, adjust ±1 level max if systematic deviation found. Log adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history]`. If file missing or empty, skip silently.
-
-If information insufficient, **default to P2**. Look up routing in Skill Interaction.
+Read `./prompts/phase1-steps.md` for Phase 1 reasoning steps (keyword extraction, shared resource check, composite assessment).
 
 ### Phase 1 Output Format
 
-First output a brief assessment (no more than 5 lines):
-
-```markdown
-## Change Risk Pre-Assessment (Phase 1)
-
-**P{X}** | {single-domain/cross-domain} ({domain list}) | {multi-domain collab/B/none} | {one-line rationale}
-
-Downstream routing: {full routing chain, e.g., ecw:domain-collab(multi-domain) → Phase 2 → ecw:writing-plans → TDD:RED → Implementation(GREEN) → ecw:biz-impact-analysis → Phase 3}
-```
-
-Then check ecw.yml `auto_flow.auto_confirm`:
-
-**If `auto_confirm: true`** — Skip AskUserQuestion. Output:
-```
-[Auto-Flow] Risk: P{X} | {single-domain/cross-domain} ({domain list}) | Route: {routing chain}. Auto-proceeding...
-```
-Then **immediately invoke** the next downstream skill (same as "Proceed" path below). The user can interrupt at any time if they disagree with the classification.
-
-**If `auto_confirm: false` (default)** or `auto_flow` section missing — use `AskUserQuestion` tool for user confirmation:
-
-```
-Question: "Risk level P{X}, proceed with the above workflow?"
-Options:
-  1. "Proceed (Recommended)" — Execute with current level and routing
-  2. "Adjust level" — Upgrade or downgrade risk level (will ask target level after selection)
-  3. "Analysis only" — Complete impact analysis without entering implementation
-  4. "Emergency fix" — Use fast track, skip full workflow
-```
-
-> **CRITICAL — Auto-Continue Rule**: When user selects "Proceed", you MUST **immediately invoke** the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). Do NOT output any text like "下一步…是否继续？", "Ready to proceed?", or any form of confirmation prompt. The user's selection of "Proceed" IS the confirmation — no second confirmation is needed. This applies to ALL subsequent skill transitions in the routing chain: after domain-collab completes, after Phase 2 completes, etc. — always immediately invoke the next skill without asking.
+Read `./phase1-output-template.md` for output format and user confirmation flow.
 
 ### State Persistence
 
@@ -183,13 +91,7 @@ Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) 
 
 ### Route Task Creation
 
-After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission:
-
-| Risk Level | Tasks to Create |
-|-----------|----------------|
-| P0/P1 | `ecw:impl-verify` → `ecw:biz-impact-analysis` → `Phase 3 Calibration` |
-| P2 | `ecw:impl-verify` (biz-impact-analysis suggested but not mandatory) |
-| P3 | None |
+After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
 
 **Creation method**: Use TaskCreate tool, set blockedBy dependency chain. **After all Tasks are created, update `session-state.md`'s `Post-Implementation Tasks` field with actual Task IDs** (e.g., `impl-verify(#3) → biz-impact-analysis(#4)`):
 
@@ -214,27 +116,9 @@ After Phase 1 user confirmation, create pending Tasks for **post-implementation*
 
 Key points: Retain Phase 1 to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`) → Phase 3 calibration (tagged `[Fast Track]`).
 
-### Fast Track Routing Table
+### Fast Track Output
 
-| Risk Level | Downstream Skills |
-|-----------|-------------------|
-| Any level | → Phase 1 quick confirmation → lean plan (skip requirement elicitation, spec-challenge, TDD) → implementation + mvn test → `ecw:impl-verify` → `ecw:biz-impact-analysis` (tagged `[Fast Track]`) → Phase 3 calibration |
-
-### Fast Track Output Format
-
-Append to Phase 1 output:
-
-```markdown
-### Mode: Fast Track
-
-> Entered emergency fix mode. Skipping full requirement elicitation, spec-challenge, and TDD.
-> Will run ecw:biz-impact-analysis post-fix.
-
-### Quick Confirmation (3 questions)
-1. What is the issue symptom and impact scope?
-2. Fix approach (what to change, how to change)?
-3. Is there a temporary mitigation already deployed?
-```
+Read `./fast-track-output-template.md` for fast track output format.
 
 ---
 
@@ -257,16 +141,6 @@ Append to Phase 1 output:
 
 **Important:** When outputting Phase 1, add "Phase 2 Precise Classification" to TaskCreate todo list to prevent omission.
 
-### Execution Steps
-
-#### [Subagent] Step 1: Extract Changed Component List from Requirement Analysis
-
-Extract all components to be modified from requirement analysis results:
-- ecw:requirements-elicitation → Extract entities/components from "Data Changes" and "Workflow" sections of requirement summary
-- ecw:domain-collab → Extract class names and resource names from each domain's `affected_components` YAML field
-
-> Information granularity is class-level (not method-level), sufficient for dependency graph queries.
-
 ### Subagent Dispatch
 
 Coordinator dispatches a single subagent to execute Steps 1-4:
@@ -280,77 +154,28 @@ Coordinator dispatches a single subagent to execute Steps 1-4:
 
 > **Knowledge file robustness**: Pass all paths to subagent. Missing files → subagent logs `[Warning: {file} not found]` and continues with available data (see Error Handling).
 
-**Subagent executes** Steps 1-4 internally and returns structured YAML:
-
-```yaml
-risk_level: P{X}
-phase1_level: P{Y}
-level_change: upgraded | downgraded | unchanged
-affected_domains: [domain1, domain2]
-classification_factors:
-  impact_scope: {level: P{X}, details: "..."}
-  change_type: {level: P{X}, details: "..."}
-  business_sensitivity: {level: P{X}, details: "..."}
-dependency_graph:
-  cross_domain_calls: [{from: X, to: Y, method: Z}]
-  mq_impacts: [{topic: T, publishers: [...], consumers: [...]}]
-  shared_resources: [{resource: R, consumers: [...]}]
-  external_impacts: [{system: S, direction: inbound|outbound, interface: I}]
-  e2e_paths: [{path_name: P, affected_step: S}]
-upgrade_reason: "..."  # if upgraded
-```
-
-**Return value validation**: Coordinator verifies required fields (`risk_level`, `phase1_level`, `level_change`, `affected_domains`, `classification_factors`) exist in the YAML. If validation fails:
-1. Log to Ledger: `[FAILED: phase2-subagent, reason: invalid return format]`
-2. Retry once with the same model
-3. If retry also fails: use Phase 1 level as final level, mark Phase 2 as `[degraded: format error]`, continue to writing-plans
-
-**Coordinator receives YAML**, then:
-- Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
-- Output Phase 2 report in the defined format
-- Write checkpoint to `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (see Session Data Path Convention for path resolution)
+**Subagent return schema**: Read `./phase2-subagent-schema.md` for the expected YAML structure and validation rules.
 
 **Model**: `model: sonnet` (default from `models.defaults.verification`; configurable via ecw.yml). Reason: dependency graph query is rule-based lookup, not creative reasoning.
 
 **Timeout**: 180s. If subagent has not returned within this time, terminate and fall back to Phase 1 level (see Error Handling).
 
-#### [Subagent] Step 2: Full Dependency Graph Query
+### Execution Steps
 
-**Knowledge summary priority read**: If `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` exists (generated by domain-collab), read cross-domain dependency info from that file first. Only read original knowledge files when summary file does not exist or has insufficient information.
+Read `./prompts/phase2-subagent-steps.md` for the subagent's reasoning steps (component extraction, dependency graph query, change type analysis, re-assessment).
 
-For each affected class/method:
-
-| Query | Data Source | Purpose |
-|-------|------------|---------|
-| Cross-domain calls | §1 `cross-domain-calls.md` | Who calls this class? Who does this class call? (2 hops) |
-| MQ impact | §2 `mq-topology.md` | What consumers/publishers for involved Topics? |
-| Shared resource fanout | §3 `shared-resources.md` | Full list of consumer domains |
-| External systems | §4 `external-systems.md` | Inbound/outbound interface impact |
-| End-to-end paths | §5 `e2e-paths.md` | Which path, which step affected |
-
-#### [Subagent] Step 3: Change Type Analysis
-
-Analyze change patterns described in the plan:
-- Does it involve state machine changes?
-- Does it delete/rename public methods?
-- Does it modify method signatures?
-- Does it involve SQL write-operation changes?
-
-#### [Subagent] Step 4: Re-assess Risk Level
-
-```
-Phase 2 Level = max(Impact Scope, Change Type, Business Sensitivity)
-```
-
-Reference the three-dimensional factor table in the file specified by ecw.yml `paths.risk_factors`.
-
-#### Step 5: Compare with Phase 1, Handle Upgrades/Downgrades
+### Step 5: Compare with Phase 1, Handle Upgrades/Downgrades
 
 | Scenario | Action |
 |----------|--------|
 | Phase 2 > Phase 1 (upgrade) | **Mandatory**: Inform user, backfill missing workflow steps |
 | Phase 2 < Phase 1 (downgrade) | **Suggested**: Inform user that downstream workflow can be simplified, user decides |
 | Phase 2 = Phase 1 | Confirm assessment, continue execution |
+
+**Coordinator receives YAML**, then:
+- Execute Step 5 (compare + handle upgrades/downgrades) based on YAML data
+- Output Phase 2 report in the defined format
+- Write checkpoint to `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` (see Session Data Path Convention for path resolution)
 
 ### Phase 2 Output Format
 
@@ -381,41 +206,7 @@ After ecw:biz-impact-analysis completes, executed by the current session's workf
 
 ### Execution Steps
 
-#### Step 1: Compare Predicted vs. Actual
-
-Extract actual impact metrics from biz-impact-analysis report, compare with Phase 1/Phase 2 predictions:
-
-| Dimension | Phase 1 Predicted | Phase 2 Precise | biz-impact-analysis Actual | Deviation |
-|-----------|------------------|-----------------|---------------------------|-----------|
-| Affected domain count | {predicted} | {refined} | {actual} | {+/-N} |
-| Cross-domain calls | {predicted} | {refined} | {actual} | {+/-N} |
-| MQ Topics | {predicted} | {refined} | {actual} | {+/-N} |
-| External systems | {predicted} | {refined} | {actual} | {+/-N} |
-| End-to-end paths | {predicted} | {refined} | {actual} | {+/-N} |
-| Changed file count | — | — | {actual} | — |
-
-#### Step 2: Determine Prediction Accuracy
-
-Based on biz-impact-analysis actual impact scope, use the three-dimensional factor table (Impact Scope / Change Type / Business Sensitivity) in `change-risk-classification.md` to reverse-derive "actual appropriate level". Compare against Phase 2 level (if Phase 2 was executed) or Phase 1 level:
-
-| Scenario | Determination |
-|----------|--------------|
-| Predicted level = actual appropriate level | **Accurate** |
-| Over-predicted (e.g., P0 but actually only 1 domain, 0 MQ) | **Over-alert** |
-| Under-predicted (e.g., P2 but actually 3+ domains, multiple MQ) | **Missed** |
-
-#### Step 3: Output Calibration Suggestions
-
-**Before generating Phase 3 output**, Read `./phase3-output-template.md` for the three output format variants (significant deviation with suggestions, accurate prediction, minor deviation). Choose the variant matching the determination from Step 2.
-
-#### Steps 4-6: Persist Calibration Records
-
-After outputting calibration suggestions (Step 3), persist results to three files. Read `./phase3-calibration-formats.md` for the exact format of each:
-- Step 4: Append to `calibration-log.md` (full-dimension comparison log)
-- Step 5: Append to `calibration-history.md` (quick-lookup structured index for Phase 1)
-- Step 6: Extract/update instincts in `instincts.md` (heuristic rules for future predictions)
-
-> Write failure handling for all three: Retry once → still fails → output content in conversation and continue workflow.
+Read `./prompts/phase3-steps.md` for Phase 3 reasoning steps (compare predicted vs actual, determine accuracy, output suggestions, persist records).
 
 ### Notes
 
@@ -453,23 +244,19 @@ In addition to automatic triggering, the following manual scenarios are supporte
 
 ## Common Mistakes
 
-| Mistake | Consequence | Correction |
-|---------|------------|------------|
-| Phase 1 proceeded without waiting for user confirmation | User cannot adjust level | Must wait for user confirmation before invoking downstream skills |
-| P0 change skipped ecw:spec-challenge | Plan blind spots unexposed | Roll back, run ecw:spec-challenge |
-| Phase 2 upgrade did not backfill workflow | High-risk change went through low-risk workflow | Upgrade is mandatory; must backfill |
-| Downgrade applied without user confirmation | Workflow simplified without human approval | Downgrade is suggested; requires human confirmation |
-| Only checked keywords, skipped §3 | Missed shared resource impact | Phase 1 must check §3 |
-| Cross-domain requirement routed to ecw:requirements-elicitation | Missing per-domain independent analysis and cross-validation | 2+ domain matches must route to ecw:domain-collab |
-| Forgot ecw:biz-impact-analysis after impl-verify | Business impact of code changes not assessed | P0/P1 changes must invoke `/biz-impact-analysis` after impl-verify |
-| P0-P2 change skipped TDD:RED | No failing test to prove test effectiveness | Test-first is a structural requirement, not optional |
-| Bug fix without reproduction test | Fix correctness cannot be automatically verified | Write reproduction test first (RED), then fix to make it pass (GREEN) |
-| Skipped Phase 3 after biz-impact-analysis | Prediction deviation not discovered; rules cannot improve | Must execute Phase 3 calibration after biz-impact-analysis report |
-| Phase 3 suggestion applied without user confirmation | Single change may be coincidental; auto-modification may introduce bias | Phase 3 only outputs suggestions; user decides whether to adopt |
+Read `./prompts/common-mistakes.md` for anti-patterns to avoid.
 
 ## Supplementary Files
 
-- `session-state-format.md` — Session state file template, marker conventions, working mode definitions, context advisory
+- `workflow-routes.yml` — Routing matrix (single source of truth) + implementation strategy + post-impl tasks
+- `prompts/phase1-steps.md` — Phase 1 reasoning steps
+- `prompts/phase2-subagent-steps.md` — Phase 2 subagent reasoning steps
+- `prompts/phase3-steps.md` — Phase 3 calibration reasoning steps
+- `prompts/common-mistakes.md` — Anti-patterns checklist
+- `phase1-output-template.md` — Phase 1 output format and confirmation flow
 - `phase2-output-template.md` — Phase 2 precise classification report format
+- `phase2-subagent-schema.md` — Phase 2 subagent YAML return schema
 - `phase3-output-template.md` — Phase 3 calibration output (3 variants by determination)
 - `phase3-calibration-formats.md` — Steps 4-6 file formats: calibration-log, calibration-history, instincts
+- `fast-track-output-template.md` — Fast track output format
+- `session-state-format.md` — Session state file template, marker conventions, working mode definitions, context advisory

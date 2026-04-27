@@ -1,0 +1,229 @@
+# ECW Workflow Routing Matrix — Single Source of Truth
+#
+# Defines the expected routing for each {risk_level, domain_mode, change_type} combination.
+# Referenced by: SKILL.md (runtime routing), lint_skills.py (validation).
+#
+# Fields:
+#   level: P0 | P1 | P2 | P3
+#   mode: single-domain | cross-domain | any
+#   type: requirement | bug | fast-track
+#   chain: ordered list of workflow steps (skills + phase markers)
+#   must_exclude: skills that MUST NOT appear in the routing chain
+
+# ── Requirement Changes — Single Domain ──
+
+routes:
+  - level: P0
+    mode: single-domain
+    type: requirement
+    chain:
+      - requirements-elicitation
+      - "Phase 2"
+      - writing-plans
+      - spec-challenge
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [domain-collab]
+
+  - level: P1
+    mode: single-domain
+    type: requirement
+    chain:
+      - requirements-elicitation
+      - "Phase 2"
+      - writing-plans
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [domain-collab, spec-challenge]
+
+  - level: P2
+    mode: single-domain
+    type: requirement
+    chain:
+      - writing-plans
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+    must_exclude: [domain-collab, requirements-elicitation, spec-challenge, biz-impact-analysis]
+
+  - level: P3
+    mode: single-domain
+    type: requirement
+    chain: []
+    notes: "Direct implementation (TDD recommended but not mandatory)"
+    must_exclude: [domain-collab, requirements-elicitation, writing-plans, spec-challenge]
+
+  # ── Requirement Changes — Cross-Domain ──
+  # When requirements span 2+ domains, use domain-collab instead of requirements-elicitation.
+
+  - level: P0
+    mode: cross-domain
+    type: requirement
+    chain:
+      - domain-collab
+      - "Phase 2"
+      - writing-plans
+      - spec-challenge
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [requirements-elicitation]
+
+  - level: P1
+    mode: cross-domain
+    type: requirement
+    chain:
+      - domain-collab
+      - "Phase 2"
+      - writing-plans
+      - spec-challenge
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [requirements-elicitation]
+
+  - level: P2
+    mode: cross-domain
+    type: requirement
+    chain:
+      - domain-collab
+      - writing-plans
+      - "TDD:RED"
+      - "Implementation(GREEN)"
+      - impl-verify
+    notes: "biz-impact-analysis suggested but not mandatory"
+    must_exclude: [requirements-elicitation, spec-challenge]
+
+  - level: P3
+    mode: cross-domain
+    type: requirement
+    chain:
+      - domain-collab
+    notes: "Simplified output, then direct implementation (TDD recommended)"
+    must_exclude: [requirements-elicitation, writing-plans, spec-challenge]
+
+  # ── Bug Fix Changes ──
+  # All levels skip requirements-elicitation. Risk level determines post-fix requirements.
+
+  - level: P0
+    mode: any
+    type: bug
+    chain:
+      - systematic-debugging
+      - "TDD:RED"
+      - "Fix(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
+
+  - level: P1
+    mode: any
+    type: bug
+    chain:
+      - systematic-debugging
+      - "TDD:RED"
+      - "Fix(GREEN)"
+      - impl-verify
+      - biz-impact-analysis
+      - "Phase 3"
+    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
+
+  - level: P2
+    mode: any
+    type: bug
+    chain:
+      - systematic-debugging
+      - "TDD:RED"
+      - "Fix(GREEN)"
+      - impl-verify
+    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
+
+  - level: P3
+    mode: any
+    type: bug
+    chain:
+      - systematic-debugging
+      - "TDD:RED"
+      - "Fix(GREEN)"
+      - impl-verify
+    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
+
+  # ── Fast Track Changes ──
+  # Production incident emergency fix. Retain Phase 1, skip full workflow.
+
+  - level: any
+    mode: any
+    type: fast-track
+    chain:
+      - "Phase 1 quick confirmation"
+      - "lean plan"
+      - "Implementation + mvn test"
+      - impl-verify
+      - biz-impact-analysis
+    notes: "Skip requirement elicitation, spec-challenge, TDD. biz-impact-analysis tagged [Fast Track]."
+    must_exclude: [requirements-elicitation, spec-challenge, domain-collab]
+
+# ── Implementation Strategy Selection ──
+# Determines direct implementation vs ecw:impl-orchestration.
+# Evaluated after ecw:writing-plans completes, based on Plan dimensions.
+
+impl_strategy:
+  - condition: "tasks <= 3 AND files <= 5 AND domains == 1"
+    strategy: direct
+    rationale: "Few tasks + few files; subagent dispatch overhead not worthwhile"
+
+  - condition: "tasks <= 3 AND files >= 6"
+    strategy: impl-orchestration
+    rationale: "File operations intensive; coordinator context will overflow"
+
+  - condition: "tasks <= 3 AND domains >= 2"
+    strategy: impl-orchestration
+    rationale: "Cross-domain file spread increases context consumption"
+
+  - condition: "tasks 4-8 AND level in [P0, P1]"
+    strategy: impl-orchestration
+    rationale: "Many complex tasks; subagent parallelism adds value"
+
+  - condition: "tasks 4-8 AND level == P2"
+    strategy: direct
+    rationale: "Medium risk; parallelization overhead unnecessary"
+
+  - condition: "tasks > 8 AND level in [P0, P1]"
+    strategy: impl-orchestration
+    rationale: "Merge simple Tasks to avoid subagent count explosion"
+    merge_rules:
+      mergeable: "Single-file changes with no conditional branching — enum/constant definitions, DTO/VO new fields, Mapper single methods, config changes, doc sync"
+      must_be_independent: "Tasks involving state machines, cross-domain interfaces, multi-file coordination, conditional branching, or core business logic"
+
+  - condition: "level == P3"
+    strategy: direct
+    rationale: "Low risk, no Plan"
+
+  - condition: "type == bug AND files <= 5"
+    strategy: direct
+    rationale: "Usually single-point fix, no parallelism needed"
+
+  - condition: "type == bug AND files >= 6"
+    strategy: impl-orchestration
+    rationale: "Complex bug fix spanning many files"
+
+# ── Cross-Domain Determination ──
+cross_domain_rule: "During Phase 1 Step 1, check project CLAUDE.md domain routing table. 2+ domain matches = cross-domain."
+
+# ── Post-Implementation Task Creation ──
+post_impl_tasks:
+  P0: [impl-verify, biz-impact-analysis, "Phase 3 Calibration"]
+  P1: [impl-verify, biz-impact-analysis, "Phase 3 Calibration"]
+  P2: [impl-verify]
+  P3: []
