@@ -74,8 +74,6 @@ Before dispatching the first Task, run a build/test pre-flight to catch pre-exis
 4. **Record result** in session-state.md: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
 5. On success or user-approved continue: proceed to Dependency Graph Construction
 
-**Rationale:** In the WMS P0 session, a pre-existing compilation issue wasn't caught until Task 4, costing 17 min of wasted dispatch+review cycles. Pre-flight catches this at minute 0.
-
 ## Dependency Graph Construction
 
 Before dispatching any task, build a dependency graph to determine which tasks can run in parallel.
@@ -222,27 +220,7 @@ If issues found for any task:
 
 ### Phase 4: Code Quality Review (P0 Only)
 
-For P0 risk level, after ALL spec reviews pass, dispatch code quality reviews in parallel:
-
-```
-Agent(description: "Code quality review for Task N"):
-  Review the implementation for Task N.
-
-  Files changed: [list from implementer report]
-
-  Check:
-  - Each file has one clear responsibility
-  - Units decomposed for independent testing
-  - Following file structure from plan
-  - Clean, maintainable code
-  - Names clear and accurate
-  - No overbuilding (YAGNI)
-  - Tests verify behavior (not mock behavior)
-
-  Report: Strengths, Issues (Critical/Important/Minor), Assessment (Approved/Needs Fix)
-```
-
-If issues found → fix sequentially on current branch → re-review (max 2 rounds per task).
+Read `./prompts/code-quality-review-template.md` for the P0 code quality review dispatch template and criteria.
 
 ### Phase 5: Complete Layer
 
@@ -263,47 +241,7 @@ If issues found → fix sequentially on current branch → re-review (max 2 roun
 
 ## Implementer Prompt Construction
 
-Dispatch with `subagent_type: "ecw:implementer"` (base instructions auto-injected). Pass in `prompt`:
-- Full task text (don't make subagent read plan file)
-- Scene-setting context (where this fits, dependencies, what prior layers already built)
-- ECW domain context (domain name, knowledge file paths, risk level)
-- TDD requirement (if `tdd.enabled` in ecw.yml)
-- Working directory
-- **For worktree dispatch**: "You are in an isolated worktree. Implement, test, and commit. Your changes will be merged after review."
-- **Completed layer context**: Briefly list what prior layers implemented (file names + one-line summary), so the implementer understands what already exists
-- **Engineering rules** (if ecw.yml `rules.enabled: true`): Include in prompt: "Engineering rules are at `{rules.path}`. Read applicable rules before implementing. Your code will be verified against these rules in impl-verify Round 4."
-
-**Model selection and timeout:**
-
-| Task Type | Model | Timeout | Criteria |
-|-----------|-------|---------|----------|
-| Mechanical tasks | `model:` from `models.defaults.mechanical` (default: `"haiku"`) | 60s | 1-2 files, clear spec, no conditional branching (enum/constant definitions, DTO fields, config changes) |
-| Integration/design tasks | `model:` from `models.defaults.implementation` (default: `"sonnet"`) | 180s | Multi-file coordination, judgment needed, business logic |
-| Architecture tasks | `model:` from `models.defaults.analysis` (default: `"opus"`) | 300s | Cross-module structural decisions, complex state machines, deep reasoning required |
-
-Default to `models.defaults.implementation` when classification is ambiguous.
-
-**Agent-side execution limits** (enforced inside implementer.md): Implementer hard-stops at 100 tool calls and 15 source file reads. If a task is too large for these limits, split it before dispatching — do not rely on coordinator-side timeout alone.
-
-If implementer times out, terminate and re-dispatch with simplified task scope or escalate model (see Error Handling).
-
-## Handle Implementer Status
-
-**DONE:** Proceed to merge (parallel) or spec review (serial fallback).
-
-**DONE_WITH_CONCERNS:** Read concerns. If about correctness/scope, address before review. If observations, note and proceed.
-
-**NEEDS_CONTEXT:** Provide missing context and re-dispatch (in worktree mode, re-dispatch to same worktree path if possible; otherwise create new worktree).
-
-**BLOCKED:** Assess:
-1. Context problem → provide more context, re-dispatch
-2. Task too hard → re-dispatch with more capable model
-3. Task too large → break into smaller pieces
-4. Plan wrong → use AskUserQuestion to discuss with user
-
-**Re-dispatch limit**: Same task can be re-dispatched at most **2 times** after BLOCKED. If still BLOCKED after 2 re-dispatches, escalate to user via AskUserQuestion with full context of what was tried.
-
-**Never** ignore escalation or force same model to retry without changes.
+Read `./prompts/implementer-prompt-guide.md` for prompt construction guidelines, model selection, timeout rules, and implementer status handling.
 
 ## Loop Safety Controls
 
@@ -326,6 +264,14 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 
 > This mirrors the auto-route pattern used by impl-verify → biz-impact-analysis. The user has already approved the workflow at risk-classifier time; re-asking at each transition wastes turns.
 
+## Task Merging
+
+If plan has many small tasks, consider merging per risk-classifier rules:
+- Single-file + no conditional branch logic = can merge
+- State machine / cross-domain / multi-file = must stay independent
+
+Reference `workflow-routes.yml` `impl_strategy` section for authoritative rules. Do not redefine here.
+
 ## Error Handling
 
 | Scenario | Handling |
@@ -339,49 +285,11 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 | Post-merge compile failure | Identify which merge introduced the issue (bisect last N merges). Fix inline or re-dispatch implementer for the offending task |
 | Layer fully times out | Terminate remaining agents. Retry timed-out tasks with simplified scope. If still failing, escalate to user |
 
-## Never Rules
+## Anti-Patterns
 
-- Start implementation on main/master without explicit user consent
-- Skip spec compliance review
-- Proceed with unfixed spec issues
-- Make subagent read plan file (provide full text)
-- Skip scene-setting context
-- Ignore subagent questions
-- Accept "close enough" on spec compliance
-- Skip review loops (issues found = fix = re-review)
-- Let self-review replace actual review (both needed)
-- **Start code quality review before spec compliance passes** (wrong order)
-- Move to next task while review has open issues
-- **Skip fact-forcing gate** — implementers must quote task requirements before editing and check cross-domain file ownership
-- **Dispatch parallel tasks that share files** — file-conflict detection must prevent this; if missed, merge will fail
-- **Send parallel Agent calls in separate messages** — all same-layer dispatches go in ONE message
-- **Implement any task directly as coordinator** — always dispatch implementer subagents, even for the last remaining task or serial fallback. The coordinator coordinates; subagents implement. Implementing directly bypasses ecw.yml `models` config (coordinator runs on its own model, not the configured `implementation` model) and gateguard hook enforcement
-- **Edit source code to fix spec review issues** — dispatch a repair implementer subagent instead. Same reason: coordinator edits bypass models config and hooks
-
-## Task Merging
-
-If plan has many small tasks, consider merging per risk-classifier rules:
-- Single-file + no conditional branch logic = can merge
-- State machine / cross-domain / multi-file = must stay independent
-
-Reference risk-classifier "实现策略选择" section for authoritative rules. Do not redefine here.
-
-## Common Rationalizations
-
-| Your Thought | Reality |
-|-------------|---------|
-| "These tasks are independent enough to skip dependency graph construction" | File-level conflicts are invisible from task descriptions. Two tasks touching the same file will cause merge conflicts. Build the graph. |
-| "Single-message dispatch is awkward, I'll send them separately" | Sequential dispatch defeats parallelism. All same-layer tasks MUST go in one message. This is the entire point of parallel execution. |
-| "Spec review passed, no need for code quality review at P0" | P0 error cost is extreme. Spec review checks correctness; code quality review checks maintainability. Both are mandatory at P0. |
-| "The implementer said DONE, I trust the report" | Implementer reports may be incomplete or optimistic. Spec reviewer must read actual code independently. |
-| "Pre-flight check failed but it's probably pre-existing" | Pre-existing failures cause cascading confusion across task dispatches. Fix or get user approval before proceeding. |
-| "Task is BLOCKED after 2 retries, but one more try might work" | 2 re-dispatches is the hard limit. Escalate to user. Retrying without changes wastes budget. |
-| "Only 2-3 tasks left, easier to just implement them myself" | Coordinator implementing directly bypasses ecw.yml `models` config (uses coordinator's model instead of configured `implementation` model) and skips gateguard hook enforcement. Always dispatch subagents — even for a single remaining task. |
-| "Spec review found a small fix, I'll edit it inline instead of dispatching" | Coordinator editing code directly has the same bypass problem. Dispatch a repair implementer subagent — it takes 30s and respects the configured model + hooks. |
+Read `./prompts/anti-patterns.md` for never-rules and common rationalizations to avoid.
 
 ## ecw.yml Configuration
-
-New configuration fields for parallel execution:
 
 ```yaml
 impl_orchestration:
@@ -397,3 +305,6 @@ When `parallel: false`, the orchestrator uses the serial fallback mode throughou
 
 - `process-diagram.md` — DOT visual overview of Setup → Per-Layer Cycle → impl-verify flow
 - `loop-safety-reference.md` — Iteration limits, global budget, stall/error/timeout detection rules
+- `prompts/implementer-prompt-guide.md` — Prompt construction, model selection, status handling
+- `prompts/code-quality-review-template.md` — P0 code quality review dispatch template
+- `prompts/anti-patterns.md` — Never rules + common rationalizations
