@@ -54,13 +54,45 @@ Step 7: Pre-trust workspace directories
   - Triggers trust dialog (one-time per directory)
 
 Step 8: Generate configuration files
-  - workspace.yml → {workspace}/.claude/ecw/workspace.yml (include requirement description)
-  - CLAUDE.md → {workspace}/CLAUDE.md
-    Use templates/workspace-claude.md as a STATIC template.
-    Fill ONLY placeholder variables by plain string substitution.
-    Copy requirement text verbatim from workspace.yml — do NOT re-generate in Chinese.
-    This eliminates uXXXX encoding issues in the create phase.
-  - mkdir -p {workspace}/.claude/ecw/session-data/
+
+  > **Permission notice**: Writing to workspace `.claude/` directory triggers Claude Code
+  > sensitive-file permission prompts. Select the "allow all" option when first prompted:
+  > - "allow all edits in ecw/ during this session (shift+tab)" — ecw/ file writes
+  > - "allow Claude to edit its own settings" — settings files
+  > - "don't ask again for similar commands in [workspace path]" — mkdir bash commands
+  > One selection covers all remaining writes in the same session.
+
+  Write files in this order (settings.local.json first — its allow rules prevent prompts
+  for the run session that follows):
+
+  a. settings.local.json → {workspace}/.claude/settings.local.json
+     Inject allow rules for all coordinator and child-session ecw writes.
+     Build the JSON dynamically from the workspace service list:
+     ```json
+     {
+       "permissions": {
+         "allow": [
+           "Bash(mkdir -p .claude/",
+           "Write(.claude/ecw/**)",
+           "Bash(mkdir -p {svc1}/.claude/",
+           "Write({svc1}/.claude/ecw/**)",
+           "Bash(mkdir -p {svc2}/.claude/",
+           "Write({svc2}/.claude/ecw/**)"
+         ]
+       }
+     }
+     ```
+     Replace {svc1}, {svc2}, ... with actual service IDs from the confirmed service list.
+     This file is read when the run session starts, preventing prompts during all
+     phase artifact writes (session-state.md, cross-service-plan.md, confirmed-contract.md, etc.).
+
+  b. workspace.yml → {workspace}/.claude/ecw/workspace.yml (include requirement description)
+  c. CLAUDE.md → {workspace}/CLAUDE.md
+     Use templates/workspace-claude.md as a STATIC template.
+     Fill ONLY placeholder variables by plain string substitution.
+     Copy requirement text verbatim from workspace.yml — do NOT re-generate in Chinese.
+     This eliminates uXXXX encoding issues in the create phase.
+  d. mkdir -p {workspace}/.claude/ecw/session-data/
 
   For each service worktree, update .gitignore (Issue 21 — ECW artifacts must not be committed):
     1. Check if {workspace}/{service}/.gitignore exists; create if not
