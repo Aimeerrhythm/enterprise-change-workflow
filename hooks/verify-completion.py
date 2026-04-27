@@ -455,10 +455,17 @@ def check_knowledge_doc_freshness(cwd, modified):
 
 def check_impl_verify_executed(cwd):
     """Return True if impl-verify-findings.md exists in any workflow subdir."""
-    store = CheckpointStore.from_latest_workflow(cwd)
-    if store is None:
+    session_data = os.path.join(cwd, ".claude", "ecw", "session-data")
+    if not os.path.isdir(session_data):
         return False
-    return store.exists("impl-verify-findings")
+    try:
+        for entry in os.listdir(session_data):
+            if os.path.isdir(os.path.join(session_data, entry)):
+                if CheckpointStore(cwd, entry).exists("impl-verify-findings"):
+                    return True
+    except Exception:
+        pass
+    return False
 
 
 def check_test_coverage(cwd, modified):

@@ -7,14 +7,16 @@ import pytest
 HOOKS_DIR = Path(__file__).resolve().parent.parent.parent / "hooks"
 
 
-@pytest.fixture
-def marker_module():
-    spec = importlib.util.spec_from_file_location(
-        "marker_utils", HOOKS_DIR / "marker_utils.py"
-    )
+def _load_module(name, filename):
+    spec = importlib.util.spec_from_file_location(name, HOOKS_DIR / filename)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+@pytest.fixture
+def marker_module():
+    return _load_module("marker_utils", "marker_utils.py")
 
 
 @pytest.fixture
@@ -100,7 +102,7 @@ def test_list_returns_paths(marker_module, project):
     assert any("session-state.md" in p for p in paths)
 
 
-# ── Integration: functions that now delegate to CheckpointStore ──
+# ── CheckpointStore: additional cases ──
 
 def test_get_checkpoint_files_no_session_data(marker_module, tmp_path):
     """CheckpointStore.from_latest_workflow returns None when session-data absent."""
@@ -117,3 +119,28 @@ def test_get_checkpoint_files_with_subdir(marker_module, tmp_path):
     assert store is not None
     paths = store.list(return_paths=True)
     assert len(paths) == 2
+
+
+# ── check_impl_verify_executed: cross-workflow search regression test ──
+
+@pytest.fixture
+def verify_module():
+    return _load_module("verify_completion", "verify-completion.py")
+
+
+def test_check_impl_verify_executed_finds_in_older_workflow(verify_module, tmp_path):
+    """check_impl_verify_executed must search ALL workflow subdirs, not just the latest."""
+    old_wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260425-0900"
+    new_wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    old_wf.mkdir(parents=True)
+    new_wf.mkdir(parents=True)
+    # findings exist only in the OLDER workflow dir
+    (old_wf / "impl-verify-findings.md").write_text("findings")
+    assert verify_module.check_impl_verify_executed(str(tmp_path)) is True
+
+
+def test_check_impl_verify_executed_false_when_absent(verify_module, tmp_path):
+    wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    wf.mkdir(parents=True)
+    (wf / "session-state.md").write_text("state")
+    assert verify_module.check_impl_verify_executed(str(tmp_path)) is False

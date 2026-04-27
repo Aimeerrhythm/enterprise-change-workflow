@@ -132,21 +132,6 @@ def update_session_state_section(cwd, name, new_inner):
         return False
 
 
-# ---------------------------------------------------------------------------
-# Checkpoint file names known to ECW
-# ---------------------------------------------------------------------------
-CHECKPOINT_NAMES = {
-    "session-state",
-    "phase2-assessment",
-    "knowledge-summary",
-    "requirements-summary",
-    "domain-collab-report",
-    "impl-verify-findings",
-    "spec-challenge-report",
-    "cross-service-plan",
-}
-
-
 class CheckpointStore:
     """Unified read/write/exists/list API for ECW session-data checkpoint files.
 
@@ -233,7 +218,7 @@ class CheckpointStore:
         except Exception:
             return False
 
-    def list(self, return_paths: bool = False) -> list:
+    def list(self, return_paths: bool = False) -> "list[str]":
         """List checkpoint files in this workflow's session-data directory.
 
         Args:
