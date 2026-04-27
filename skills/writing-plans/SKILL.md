@@ -162,7 +162,7 @@ After saving the plan, determine and persist implementation strategy, then route
 
 **1. Spec Challenge needed?** (P0; P1 cross-domain only)
 → "Plan saved. Next: `ecw:spec-challenge` for adversarial review before implementation."
-→ **Auto-proceed**: Immediately invoke `ecw:spec-challenge` — do NOT use AskUserQuestion or wait for user confirmation. Skip steps 2-4 below; execution choice is handled by spec-challenge's Post-Review section after review completes.
+→ Invoke `ecw:spec-challenge`. Skip steps 2-4 below; execution choice is handled by spec-challenge's Post-Review section after review completes.
 
 **2. TDD phase?** (P0-P2 when `tdd.enabled: true`, and spec-challenge NOT needed)
 → Remind that implementation should follow `ecw:tdd`.
@@ -176,7 +176,7 @@ The implementation strategy was already determined and written to session-state.
 | `subagent-driven` | Invoke `ecw:tdd` first (if `tdd.enabled: true`), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly. |
 | `direct` | Invoke `ecw:tdd` to begin the first Plan Task's RED phase. |
 
-> **CRITICAL — Auto-Continue Rule**: Do NOT use AskUserQuestion to offer execution strategy choice. The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update session-state.md `Next` field, then **immediately invoke** the next skill. The user already confirmed the workflow during Phase 1. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to AskUserQuestion for user choice (backward compatibility).
+> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update session-state.md `Next` field, then invoke the next skill. If `Auto-Continue` field is missing or `no` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
 
 ## Supplementary Files
 

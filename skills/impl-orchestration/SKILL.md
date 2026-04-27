@@ -253,16 +253,14 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 
 **Do NOT dispatch a final code reviewer.** ECW uses `ecw:impl-verify` (4-Round multi-dimensional verification) which is more comprehensive.
 
-**Auto-route to impl-verify — do NOT ask user for confirmation:**
+**Downstream Handoff — route to impl-verify:**
 
 1. Call `TaskList` to check for pending tasks
 2. If a pending `ecw:impl-verify` task exists (created by risk-classifier with blockedBy dependency on implementation tasks):
    - Mark it `in_progress` via TaskUpdate
-   - **Immediately** invoke `ecw:impl-verify` using the Skill tool — no AskUserQuestion, no "shall I continue?"
+   - Invoke `ecw:impl-verify` using the Skill tool
 3. If no pending impl-verify task exists, invoke `ecw:impl-verify` directly via Skill tool
 4. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
-
-> This mirrors the auto-route pattern used by impl-verify → biz-impact-analysis. The user has already approved the workflow at risk-classifier time; re-asking at each transition wastes turns.
 
 ## Task Merging
 

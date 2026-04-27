@@ -29,4 +29,4 @@ Options:
   4. "Emergency fix" — Use fast track, skip full workflow
 ```
 
-> **CRITICAL — Auto-Continue Rule**: When user selects "Proceed", you MUST **immediately invoke** the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). Do NOT output any text like "下一步…是否继续？", "Ready to proceed?", or any form of confirmation prompt. The user's selection of "Proceed" IS the confirmation — no second confirmation is needed. This applies to ALL subsequent skill transitions in the routing chain: after domain-collab completes, after Phase 2 completes, etc. — always immediately invoke the next skill without asking.
+> **Downstream Handoff**: When user selects "Proceed", invoke the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). The auto-continue hook handles subsequent skill transitions.

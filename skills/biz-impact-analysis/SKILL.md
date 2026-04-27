@@ -106,14 +106,14 @@ When `ecw:impl-verify` completes:
 After biz-impact-analysis report is output:
 
 > **Knowledge utilization tracking**: If ecw.yml `paths.knowledge_root` exists (ECW-ready session):
-> **Immediately invoke** `ecw:knowledge-track`. Do NOT output a suggestion or wait for user response.
-> Mark the biz-impact-analysis Task as complete; then proceed to the Auto-Continue Rule below.
+> Invoke `ecw:knowledge-track`.
+> Mark the biz-impact-analysis Task as complete; then proceed to the downstream handoff below.
 
-> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md, update `Next` field, then:
-> - **P0/P1**: **Immediately invoke** `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Do NOT output "analysis complete, shall I calibrate?" or any confirmation. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
+> **Downstream Handoff**: Read risk level from session-state.md, update `Next` field, then:
+> - **P0/P1**: Invoke `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
 > - **P2**: Suggest executing Phase 3 (not mandatory; user decides).
 > - **P3**: No Phase 3 needed.
-> - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
+> - If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 

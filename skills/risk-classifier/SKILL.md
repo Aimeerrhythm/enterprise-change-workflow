@@ -181,7 +181,7 @@ Read `./prompts/phase2-subagent-steps.md` for the subagent's reasoning steps (co
 
 **Before generating Phase 2 report**, Read `./phase2-output-template.md` for the exact output structure.
 
-> **CRITICAL — Phase 2 Auto-Continue**: After outputting the Phase 2 report and writing the checkpoint, **immediately invoke** the next skill in the routing chain (typically `ecw:writing-plans`). Do NOT output text asking "是否继续", "Ready?", or any confirmation. The Auto-Continue rule from Phase 1 still applies — the user already confirmed the full workflow.
+> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `Next` field and invoke the next skill in the routing chain (typically `ecw:writing-plans`).
 
 ---
 

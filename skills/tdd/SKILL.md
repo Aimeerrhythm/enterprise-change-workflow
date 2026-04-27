@@ -94,7 +94,7 @@ When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e
 **Action — do these two things only, then stop:**
 
 1. Update `session-state.md` MODE marker to `implementation`
-2. **Immediately invoke `ecw:impl-orchestration`** via Skill tool — no other work, no AskUserQuestion
+2. Invoke `ecw:impl-orchestration` via Skill tool
 
 TDD protocol (Iron Law, risk-aware enforcement, cycle rules) is embedded into each implementer's prompt by `ecw:impl-orchestration`. Do NOT execute any TDD cycle in the coordinator when strategy is subagent-driven.
 
@@ -137,7 +137,7 @@ After all TDD cycles for the current Plan Task complete (all tests GREEN):
    - If next Plan Task exists: Begin TDD RED phase for the next Task immediately
    - If all Plan Tasks complete: Proceed to impl-verify
 
-> **CRITICAL — Auto-Continue Rule**: After the final Plan Task's GREEN phase completes (all implementation tasks done), update session-state.md `Next` field to `ecw:impl-verify`, then **immediately invoke** `ecw:impl-verify`. Do NOT output "implementation complete, shall I verify?" or any confirmation prompt. The user already approved the full workflow during Phase 1. If a pending `ecw:impl-verify` Task exists in TaskList, mark it `in_progress` first. If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
+> **Downstream Handoff**: After the final Plan Task's GREEN phase completes, update session-state.md `Next` field to `ecw:impl-verify`, then invoke `ecw:impl-verify`. If a pending `ecw:impl-verify` Task exists in TaskList, mark it `in_progress` first. If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
 
 ## Error Handling
 

@@ -193,14 +193,12 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 ### Post-Review: Auto-Continue to Implementation
 
-After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and **immediately proceed to implementation** — do NOT ask the user whether to continue or start a new session. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
+After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and proceed to implementation. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-> **CRITICAL — Auto-Continue Rule**: When `Auto-Continue` is `yes` in session-state.md:
-> - Update session-state.md `Next` field, then **immediately invoke** the next skill based on Implementation Strategy:
->   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
->   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
-> - Do NOT output additional confirmation text. The user already confirmed the workflow during Phase 1.
-> - If `Auto-Continue` field is missing or `no`, fall back to showing strategy recommendation and waiting for user direction (backward compatibility).
+> **Downstream Handoff**: When `Auto-Continue` is `yes` in session-state.md, update `Next` field, then invoke the next skill based on Implementation Strategy:
+> - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
+> - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
+> - If `Auto-Continue` field is missing or `no`, show strategy recommendation and wait for user direction (backward compatibility).
 
 ### Manual Trigger
 
