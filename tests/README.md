@@ -93,9 +93,7 @@ API 直调方式：将 SKILL.md 作为 system prompt 注入，用户输入作为
 
 SKILL.md 中的路由表是 markdown 散文格式，不是结构化数据。自动解析需要维护一个 markdown parser，解析器本身也需要测试，维护成本 > 手写 golden fixture。
 
-所以选择手工维护 `routing_matrix.yaml`（13 条路由规则）和 `anchor_keywords.yaml`（11 个 skill 的锚点），作为"这些 SKILL.md 应该包含什么"的参考真值。
-
-代价是修改路由表后需要手动同步 fixture。收益是 fixture 本身就是对路由规则的二次确认——写 fixture 的过程就是 review 路由变更的过程。
+路由规则已统一定义在 `skills/risk-classifier/workflow-routes.yml`（Single Source of Truth），lint 和测试直接读取该文件校验。`anchor_keywords.yaml`（11 个 skill 的锚点）手工维护，作为"这些 SKILL.md 应该包含什么"的参考真值。
 
 ### 5. 为什么明确放弃 E2E 全链路测试
 
@@ -159,7 +157,7 @@ make -C tests clean       # 清理缓存
 | 11 | Agent/Prompt 模板引用 | 引用的 .md 模板文件不存在 |
 | 12 | CLAUDE.md 一致性 | Skill Trigger 表与 skills/ 目录不匹配 |
 | 13 | Token 统计 | Prompt 过长（>20K tokens）导致遵循度下降 |
-| 14 | 路由矩阵验证 | SKILL.md 路由表 vs routing_matrix.yaml golden fixture |
+| 14 | 路由矩阵验证 | workflow-routes.yml 内部一致性（chain vs must_include/must_exclude） |
 
 支持单项运行：
 
@@ -235,11 +233,11 @@ cd tests/eval && npx promptfoo eval && npx promptfoo view
 ```
 SKILL.md 变更
 │
-├─ 路由表变更 ──────────────────→ static/routing_matrix.yaml
+├─ 路由表变更 ──────────────────→ skills/risk-classifier/workflow-routes.yml
 │                                  eval/scenarios/*.yaml（相关场景的断言）
 │
 ├─ 新增/删除 Skill ────────────→ static/anchor_keywords.yaml
-│                                  static/routing_matrix.yaml
+│                                  skills/risk-classifier/workflow-routes.yml
 │                                  eval/scenarios/（可能需要新增场景）
 │
 ├─ 核心关键词/段落标题变更 ───→ static/anchor_keywords.yaml
@@ -279,15 +277,18 @@ rollback-plans:
 
 **Step 2 — 更新路由矩阵（如果新 skill 出现在路由链中）：**
 
-编辑 `static/routing_matrix.yaml`，在相关路由规则的 `must_include` 中加入新 skill：
+编辑 `skills/risk-classifier/workflow-routes.yml`，在相关路由的 `chain` 和 `must_include` 中加入新 skill：
 
 ```yaml
 - level: P0
   mode: single-domain
   type: requirement
-  must_include:
+  chain:
     - ...existing...
     - rollback-plans   # ← 新增
+  must_include:
+    - ...existing...
+    - rollback-plans   # ← 同步新增
 ```
 
 **Step 3 — 更新 eval 场景断言（如果需要）：**
@@ -313,7 +314,7 @@ make -C tests eval-quick # 如果改了 P0 场景断言，验证通过
 
 **Checklist：**
 - [ ] `anchor_keywords.yaml` 新增条目
-- [ ] `routing_matrix.yaml` 更新相关路由规则（如适用）
+- [ ] `workflow-routes.yml` 更新相关路由规则（如适用）
 - [ ] `eval/scenarios/` 更新相关场景断言（如适用）
 - [ ] CLAUDE.md Skill Trigger Conditions 表同步（lint 会自动检查）
 
@@ -323,28 +324,38 @@ make -C tests eval-quick # 如果改了 P0 场景断言，验证通过
 
 假设把 P1 单域需求从"不走 spec-challenge"改为"走 spec-challenge"。
 
-**Step 1 — 修改 SKILL.md**（你的实际变更）
+**Step 1 — 修改 workflow-routes.yml**（路由规则的唯一定义位置）
 
-**Step 2 — 同步 routing_matrix.yaml：**
+编辑 `skills/risk-classifier/workflow-routes.yml`：
 
 ```yaml
 # 修改前
 - level: P1
   mode: single-domain
   type: requirement
-  must_exclude:
-    - spec-challenge   # ← 删除这行
+  chain:
+    - requirements-elicitation
+    - "Phase 2"
+    - writing-plans
+    - ...
+  must_include: [requirements-elicitation, writing-plans, impl-verify, biz-impact-analysis]
+  must_exclude: [domain-collab, spec-challenge]  # ← 移除 spec-challenge
 
 # 修改后
 - level: P1
   mode: single-domain
   type: requirement
-  must_include:
-    - ...existing...
-    - spec-challenge   # ← 新增到 must_include
+  chain:
+    - requirements-elicitation
+    - "Phase 2"
+    - writing-plans
+    - spec-challenge   # ← 新增到 chain
+    - ...
+  must_include: [requirements-elicitation, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
+  must_exclude: [domain-collab]
 ```
 
-**Step 3 — 同步 eval 场景断言：**
+**Step 2 — 同步 eval 场景断言：**
 
 编辑 `eval/scenarios/s06-p1-single-domain.yaml`：
 
@@ -367,7 +378,7 @@ make -C tests eval-quick # 如果改了 P0 场景断言，验证通过
   metric: routing_includes_spec_challenge
 ```
 
-**Step 4 — 验证：**
+**Step 3 — 验证：**
 
 ```bash
 make -C tests lint       # routing-matrix 检查应通过
@@ -375,7 +386,7 @@ make -C tests eval-quick # S6 场景应通过
 ```
 
 **Checklist：**
-- [ ] `routing_matrix.yaml` 同步 must_include/must_exclude
+- [ ] `workflow-routes.yml` 同步 chain/must_include/must_exclude
 - [ ] `eval/scenarios/` 中受影响的场景断言更新
 - [ ] `make lint` + `make eval-quick` 通过
 
@@ -549,9 +560,9 @@ jobs:
 
 **`make lint` 报路由矩阵不匹配**
 
-检查 `skills/risk-classifier/SKILL.md` 的路由表是否与 `static/routing_matrix.yaml` 一致。这是最常见的 lint 失败原因——修改了路由表但忘记同步 golden fixture。
+检查 `skills/risk-classifier/workflow-routes.yml` 的 chain/must_include/must_exclude 是否内部一致。这是最常见的 lint 失败原因——修改了 chain 但忘记同步 must_include/must_exclude。
 
-修复：对照 SKILL.md 路由表更新 `routing_matrix.yaml` 的 must_include/must_exclude。
+修复：确保 must_include 中的每个 skill 都出现在 chain 中，must_exclude 中的 skill 不出现在 chain 中。
 
 **`make lint` 报锚点关键词缺失**
 
@@ -593,7 +604,6 @@ tests/
 ├── README.md                         # 本文件
 ├── static/
 │   ├── lint_skills.py                # Layer 1: 14 项静态检查（~880 行）
-│   ├── routing_matrix.yaml           # 路由 golden fixture（13 条规则）
 │   ├── anchor_keywords.yaml          # 锚点关键词（11 个 skill）
 │   ├── conftest.py                   # pytest fixtures
 │   ├── test_verify_completion.py     # Layer 1b: 56 个 hook 单元测试

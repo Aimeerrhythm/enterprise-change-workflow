@@ -1,7 +1,7 @@
 # ECW Workflow Traces — Golden Fixture
 #
 # Defines the expected complete workflow trace for each {risk_level, domain_scope, change_type}
-# routing combination. Cross-validated against routing_matrix.yaml and data_contracts.yaml
+# routing combination. Cross-validated against workflow-routes.yml and data_contracts.yaml
 # by test_workflow_simulator.py.
 #
 # Fields:
