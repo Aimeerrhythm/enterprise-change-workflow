@@ -95,6 +95,9 @@ Process:
   AskUserQuestion: show readiness table (language follows output_language).
   If any ECW-absent → Options: "Continue with source scan" / "Pause to init ECW"
 Gate-out: User confirms
+          Write initial session-state.md:
+            Location: .claude/ecw/session-data/{wf-id}/session-state.md
+            Content: Pre-flight → ✅ 完成; all subsequent phases → ⏳ 待开始
 ```
 
 ---
@@ -135,8 +138,15 @@ Process:
      Content (see template below)
      Encoding: native UTF-8, no escape sequences
 
-Gate-out: cross-service-plan.md + workspace-analysis-task.md exist for all services
-         Update session-state.md: Phase 1 → ✅ 完成; Subagent Ledger Explore agents → complete
+  6. Update session-state.md:
+     - Phase 1 row → ✅ 完成
+     - Subagent Ledger: record Explore agents as complete
+     (This step is mandatory — gate-out verifies it)
+
+Gate-out: ALL of the following must be true:
+  - cross-service-plan.md exists at session-data/{wf-id}/
+  - workspace-analysis-task.md exists for all services
+  - session-state.md Phase 1 row = ✅ 完成
 ```
 
 **workspace-analysis-task.md template:**
@@ -190,9 +200,9 @@ Write analysis-report.md to .claude/ecw/session-data/{wf-id}/analysis-report.md 
 Ignore any files in .claude/plans/ that predate this workspace session (wf-id: {wf-id}).
 They belong to other workflows. Only act on plans tagged with this wf-id.
 
-## Session State Updates
-Update .claude/ecw/session-data/{wf-id}/session-state.md at:
-- Phase 2 complete: record confirmed role + entry points summary
+## Exit Criterion
+Your task is complete when analysis-report.md is written and the session exits.
+Do NOT update coordinator's session-state.md — the coordinator owns that file exclusively.
 ```
 
 ---
@@ -201,6 +211,7 @@ Update .claude/ecw/session-data/{wf-id}/session-state.md at:
 
 ```
 Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
+         Self-check: if session-state.md Phase 1 ≠ ✅ 完成 → update it now before proceeding
 Process:
   1. Generate Phase 2 start scripts and open one terminal tab per service
      via terminal adapter (see ./terminal-adapters.md § Phase 2 Scripts)
@@ -219,7 +230,13 @@ Process:
 
   4. Coordinator reads all analysis-report.md files
 
-Gate-out: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
+  5. Update session-state.md:
+     - Phase 2 row → ✅ 完成
+     - Subagent Ledger: record analyst child sessions as complete
+
+Gate-out: ALL of the following must be true:
+  - analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
+  - session-state.md Phase 2 row = ✅ 完成
 ```
 
 ---
@@ -228,8 +245,8 @@ Gate-out: analysis-report.md exists for all services at .claude/ecw/session-data
 
 ```
 Gate-in: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
+         Self-check: if session-state.md Phase 2 ≠ ✅ 完成 → update it now before proceeding
 Process:
-  1. Coordinator reads all analysis-report.md files
   2. Cross-validate for conflicts:
 
      a. MQ contracts:
@@ -265,12 +282,18 @@ Process:
          - task decomposition or implementation steps
            (child sessions own this via ecw:writing-plans)
 
-Gate-out: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
+  5. Update session-state.md:
+     - Phase 3 row → ✅ 完成
+
+Gate-out: ALL of the following must be true:
+  - confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
+  - session-state.md Phase 3 row = ✅ 完成
 ```
 ### Phase 4: Per-Service Implementation (NEW child sessions, parallel or layered)
 
 ```
 Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
+         Self-check: if session-state.md Phase 3 ≠ ✅ 完成 → update it now before proceeding
 Process:
   Phase 2 sessions have exited. Coordinator opens NEW Phase 4 child sessions.
 
@@ -321,13 +344,21 @@ Process:
         timeout 30 minutes.
   Failed -> AskUserQuestion: retry / skip / abort
 
-Gate-out: status.json exists for all services at .claude/ecw/session-data/{wf-id}/
+  After all status.json received:
+  Update session-state.md:
+    - Phase 4 row → ✅ 完成
+    - Subagent Ledger: record impl child sessions as complete
+
+Gate-out: ALL of the following must be true:
+  - status.json exists for all services at .claude/ecw/session-data/{wf-id}/
+  - session-state.md Phase 4 row = ✅ 完成
 ```
 
 ### Phase 5: Cross-Service Verification
 
 ```
 Gate-in: status.json exists at {service}/.claude/ecw/session-data/{wf-id}/ for all services
+         Self-check: if session-state.md Phase 4 ≠ ✅ 完成 → update it now before proceeding
 Process:
   Each service's ecw:impl-verify already ran inside child sessions.
   Coordinator performs additional cross-service checks:
@@ -344,7 +375,12 @@ Process:
     b. Maven: Consumer pom.xml API Jar version = Provider published version
 
   All pass → proceed. Issues → present findings, suggest which service to fix.
+
+  Update session-state.md:
+    - Phase 5 row → ✅ 完成
+
 Gate-out: All checks pass (or user accepts known issues)
+          session-state.md Phase 5 row = ✅ 完成
 ```
 
 ---
@@ -353,6 +389,7 @@ Gate-out: All checks pass (or user accepts known issues)
 
 ```
 Gate-in: Phase 5 passed
+         Self-check: if session-state.md Phase 5 ≠ ✅ 完成 → update it now before proceeding
 Process:
   1. Aggregate status.json + git log per service
   2. Present summary:
@@ -363,6 +400,9 @@ Process:
   4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track is auto-invoked
      by impl-verify on pass. Report which services completed
      knowledge-track and which skipped it (ECW-absent services skip by design).
+  5. Update session-state.md:
+     - Phase 6 row → ✅ 完成
+     - MODE → complete
 Gate-out: Workflow complete
 ```
 
@@ -387,6 +427,7 @@ annotate the Artifact column to explain (e.g. "Phase 1+2+3 compressed — code-f
 
 ## Never Rules
 
+- **Never let child sessions write coordinator's session-state.md** — coordinator is the sole owner of `.claude/ecw/session-data/{wf-id}/session-state.md`. Child sessions only write their own artifacts (analysis-report.md, status.json). State updates are always done by the coordinator at gate transitions.
 - **Never skip Phase gates** — artifact must exist before next Phase
 - **Never use code-reading tools in Phase 1** — Phase 1 information source is workspace.yml requirement ONLY. No Read, Bash, Glob, Grep, or Explore tools. If code detail is needed to answer a question, it's an Open Question for Phase 2, not something to resolve in Phase 1.
 - **Never put code-level detail in Phase 1 output** — class names, method names, field names, SQL in cross-service-plan.md or workspace-analysis-task.md are Phase 1 violations.
