@@ -99,7 +99,7 @@ When `ecw:impl-verify` completes:
 2. Dispatch biz-impact-analysis agent based on the same diff range
 3. Output business impact analysis report
 
-**Mandatory for P0/P1 changes**; suggested for P2+. The routing chain output by ecw:risk-classifier Phase 1 already includes `ecw:impl-verify + ecw:biz-impact-analysis`, and Phase 1 adds them to TaskCreate todo list.
+**Mandatory for P0/P1 changes**; P2 cross-domain suggested, P2 single-domain excluded (see `workflow-routes.yml` for authoritative routing). Phase 1 adds post-implementation tasks to TaskCreate based on risk level.
 
 ## Integration with Phase 3
 

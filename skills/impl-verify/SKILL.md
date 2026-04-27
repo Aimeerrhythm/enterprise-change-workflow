@@ -166,9 +166,10 @@ Read `./prompts/round-checklists.md` — Round 4 section for the engineering sta
 
 After convergence (zero must-fix findings in the most recent round):
 
-> **CRITICAL — Auto-Continue Rule**: Read risk level from session-state.md (if unavailable, default to P0), update `Next` field, then:
+> **CRITICAL — Auto-Continue Rule**: Read risk level and domain mode from session-state.md (if unavailable, default to P0), update `Next` field, then:
 > - **P0/P1**: **Immediately invoke** `ecw:biz-impact-analysis`. Do NOT output "verification passed, shall I analyze business impact?" or any confirmation. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList. (knowledge-track runs after biz-impact-analysis completes)
-> - **P2**: If ecw.yml `paths.knowledge_root` exists, **immediately invoke** `ecw:knowledge-track`. Then output suggestion to run biz-impact-analysis; wait for user decision.
+> - **P2 cross-domain**: If ecw.yml `paths.knowledge_root` exists, **immediately invoke** `ecw:knowledge-track`. Then output suggestion to run biz-impact-analysis; wait for user decision.
+> - **P2 single-domain**: If ecw.yml `paths.knowledge_root` exists, **immediately invoke** `ecw:knowledge-track`. No biz-impact-analysis suggestion (excluded per workflow-routes.yml).
 > - **P3**: If ecw.yml `paths.knowledge_root` exists, **immediately invoke** `ecw:knowledge-track`. No further downstream handoff.
 > - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 

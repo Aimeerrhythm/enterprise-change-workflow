@@ -196,10 +196,10 @@ Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. 
 
 **Do not skip Phase 2 for P0/P1 and go directly to writing-plans** — collaboration analysis may discover cross-domain dependencies not foreseen in Phase 1, requiring level upgrade.
 
-Handoff flow:
+Handoff flow (see `skills/risk-classifier/workflow-routes.yml` for complete routing):
 ```
-P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plans → [P0/P1 cross-domain: ecw:spec-challenge] → Implementation
-P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify → ecw:biz-impact-analysis (suggested)
+P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plans → ...
+P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify
 ```
 
 **Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
