@@ -80,10 +80,16 @@ def _load_yaml(name: str):
 
 
 def _read_skill(skill_name: str) -> str:
-    p = SKILLS_DIR / skill_name / "SKILL.md"
+    skill_dir = SKILLS_DIR / skill_name
+    p = skill_dir / "SKILL.md"
     if not p.exists():
         return ""
-    return p.read_text(encoding="utf-8")
+    content = p.read_text(encoding="utf-8")
+    prompts_dir = skill_dir / "prompts"
+    if prompts_dir.is_dir():
+        for md in sorted(prompts_dir.glob("*.md")):
+            content += "\n" + md.read_text(encoding="utf-8")
+    return content
 
 
 def _key_mentioned_in(key: str, content: str) -> bool:

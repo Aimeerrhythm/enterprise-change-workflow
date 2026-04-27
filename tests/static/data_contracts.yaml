@@ -229,9 +229,9 @@ skills:
       - key: cross-service-plan
         path_pattern: ".claude/ecw/session-data/{wf-id}/cross-service-plan.md"
       - key: workspace-analysis-task
-        path_pattern: "{service}/.claude/ecw/workspace-analysis-task.md"
+        path_pattern: "{service}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md"
       - key: confirmed-contract
-        path_pattern: "{service}/.claude/ecw/confirmed-contract.md"
+        path_pattern: "{service}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md"
     reads:
       - key: workspace-yml
         path_pattern: ".claude/ecw/workspace.yml"
