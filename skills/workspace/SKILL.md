@@ -204,14 +204,27 @@ ECW Status: {ECW-ready / ECW-partial / ECW-absent}
 5. Write your technical plan to .claude/ecw/session-data/{wf-id}/analysis-report.md
 
 ### Wait for Phase 3 (Coordinator Contract Alignment)
-After writing analysis-report.md, poll for confirmed-contract.md:
+After writing analysis-report.md, poll for confirmed-contract.md.
+Maximum wait: 60 minutes. If exceeded, pause and wait for manual intervention.
+
 ```bash
-for i in $(seq 1 720); do
-  [ -f ".claude/ecw/session-data/{wf-id}/confirmed-contract.md" ] && echo "FOUND" && break
+wf_id="{wf-id}"
+max_iterations=720   # 60 min (720 x 5s)
+for i in $(seq 1 $max_iterations); do
+  [ -f ".claude/ecw/session-data/${wf_id}/confirmed-contract.md" ] && echo "FOUND" && break
+  # Print status every 5 minutes (60 iterations)
+  [ $((i % 60)) -eq 0 ] && echo "Still waiting for confirmed-contract.md... ($((i * 5 / 60))min elapsed)"
   sleep 5
 done
+[ ! -f ".claude/ecw/session-data/${wf_id}/confirmed-contract.md" ] && echo "TIMEOUT"
 ```
-If not found after 60 minutes, notify user and wait for intervention.
+
+If result is TIMEOUT (60min exceeded):
+- Announce: "Polling timeout: confirmed-contract.md not found after 60 minutes. Coordinator may have exited or be waiting for user input. Session is paused."
+- Use AskUserQuestion: "Continue waiting 30 more minutes?" / "Abort this session"
+- On "Continue waiting": run another 360-iteration polling loop, then repeat the question if still not found
+- On "Abort": exit session cleanly without writing any further artifacts
+
 Once confirmed-contract.md appears → read it and proceed to Phase 4.
 
 ### Phase 4: Implementation
@@ -234,7 +247,18 @@ Use non-blocking dependency scheduling:
   - Not found → skip for now, continue with other tasks
   - Found → execute
 - After completing all independent tasks, retry any skipped tasks
-- If api-ready.json still absent → poll and wait, then proceed
+- If api-ready.json still absent → poll with 30-minute timeout:
+  ```bash
+  wf_id="{wf-id}"
+  provider_path="{provider_service_path}"
+  for i in $(seq 1 360); do
+    [ -f "${provider_path}/.claude/ecw/session-data/${wf_id}/api-ready.json" ] && echo "FOUND" && break
+    [ $((i % 60)) -eq 0 ] && echo "Waiting for Provider api-ready.json... ($((i * 5 / 60))min elapsed)"
+    sleep 5
+  done
+  [ ! -f "${provider_path}/.claude/ecw/session-data/${wf_id}/api-ready.json" ] && echo "TIMEOUT"
+  ```
+  If TIMEOUT: AskUserQuestion "Continue waiting 15 more minutes?" / "Abort this session"
 
 **After all tasks done (all scenarios):**
 - ECW-ready: ecw:impl-verify is auto-triggered by BLOCKING RULE. After pass, ecw:knowledge-track runs automatically.
@@ -387,7 +411,7 @@ Process:
   After all status.json received:
   Update session-state.md:
     - Phase 4 row → ✅ 完成
-    - Subagent Ledger: record impl child sessions as complete
+    - Subagent Ledger: update service child sessions (same sessions from Phase 2) to complete
 
 Gate-out: ALL of the following must be true:
   - status.json exists for all services at .claude/ecw/session-data/{wf-id}/
