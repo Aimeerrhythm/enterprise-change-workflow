@@ -242,10 +242,6 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
 | `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` / `instincts.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
-## Common Mistakes
-
-Read `./prompts/common-mistakes.md` for anti-patterns to avoid.
-
 ## Supplementary Files
 
 - `workflow-routes.yml` — Routing matrix (single source of truth) + implementation strategy + post-impl tasks
