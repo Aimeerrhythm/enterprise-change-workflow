@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.6] - 2026-04-27
+
+### 修复
+
+- **测试用例同步（CheckpointStore + Downstream Handoff）** — 修复 34 个失败测试用例，使其与最新组件设计保持一致：
+  - `test_auto_continue.py`：`critical.*auto-continue` → `downstream handoff` 格式匹配
+  - `test_model_routing.py`：区分严格 `models.defaults` 引用和委托给 prompt 文件的 skill
+  - `test_phase2_subagent.py`：YAML 字段检测改为读 `phase2-subagent-schema.md`，`[Subagent]` 标记改为叙述性文字检测
+  - `test_requirements_elicitation.py`：termination limits 改为检测 `questioning-guide.md` 引用
+  - `test_spec_challenge.py`：session split 检测改为 post-review auto-continue
+  - `test_strategy_selection.py`：策略规则从 SKILL.md 正文改为读 `workflow-routes.yml`
+  - `test_systematic_debugging.py`：`debug-evidence` 改为 checkpoint + `investigation-steps.md`，Iron Law 改为 case-insensitive 检测
+
+- **CheckpointStore（Issue #5）** — 新增 `CheckpointStore` 类（`hooks/marker_utils.py`），统一 checkpoint 读写 API：
+  - 提供 `read / write / exists / list` 四个方法，替换原有分散的文件操作
+  - `hooks/verify-completion.py` 和 `hooks/session-start.py` 迁移至 CheckpointStore；修复 impl-verify 回归
+
 ## [1.2.5] - 2026-04-27
 
 ### 重构
