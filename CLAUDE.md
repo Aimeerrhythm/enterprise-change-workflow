@@ -104,6 +104,10 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 >
 > `ecw:cross-review` as a manual optional tool (`/ecw:cross-review`) is suitable for cross-file structural consistency checks in document-heavy changes; not in the required workflow.
 
+## Skill Auto-Continue Mechanism
+
+Skill-to-skill chaining (e.g., domain-collab → Phase 2 → writing-plans) is enforced by the `auto-continue` PostToolUse hook (`hooks/auto-continue.py`), not by prompt instructions in individual Skill files. The hook fires after each ECW Skill loads, reads `session-state.md` `Auto-Continue` field, and injects the remaining routing chain as `systemMessage`. Individual Skills only contain a compact "Downstream Handoff" block with per-risk-level routing logic.
+
 ## Documentation Sync Rules
 
 **Must sync corresponding knowledge files after code changes. Check by change layer:**
