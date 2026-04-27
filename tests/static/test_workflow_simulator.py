@@ -1,15 +1,15 @@
 """ECW Workflow Simulator — Cross-Validation Tests
 
-Verifies consistency between routing_matrix.yaml, data_contracts.yaml,
+Verifies consistency between workflow-routes.yml, data_contracts.yaml,
 and workflow_traces.yaml golden fixtures. No LLM calls required.
 
 Tests:
-1. Trace skill chains satisfy routing_matrix must_include/must_exclude
+1. Trace skill chains satisfy workflow-routes.yml must_include/must_exclude
 2. Mode transitions are monotonically non-decreasing
 3. Checkpoint writes match data_contracts.yaml declarations
 4. Read dependencies are satisfied by upstream writers in each chain
 5. Ask-user skills match data_contracts.yaml ask_user_question flags
-6. Every routing_matrix entry has a corresponding trace
+6. Every workflow-routes.yml entry has a corresponding trace
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 TESTS_STATIC = Path(__file__).resolve().parent
+SKILLS_DIR = ROOT / "skills"
 
 MODE_ORDER = {"analysis": 0, "planning": 1, "implementation": 2, "verification": 3}
 
@@ -49,6 +50,13 @@ def _load_yaml(name: str):
     path = TESTS_STATIC / name
     if not path.exists():
         pytest.skip(f"{name} not found")
+    with open(path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def _load_yaml_path(path: Path):
+    if not path.exists():
+        pytest.skip(f"{path} not found")
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -82,7 +90,8 @@ def traces():
 
 @pytest.fixture(scope="module")
 def routing_matrix():
-    return _load_yaml("routing_matrix.yaml")
+    data = _load_yaml_path(SKILLS_DIR / "risk-classifier" / "workflow-routes.yml")
+    return data["routes"]
 
 
 @pytest.fixture(scope="module")
@@ -95,7 +104,7 @@ def contracts():
 # ═══════════════════════════════════════════
 
 class TestTraceRoutingConsistency:
-    """Traces must satisfy routing_matrix must_include/must_exclude."""
+    """Traces must satisfy workflow-routes.yml must_include/must_exclude."""
 
     @staticmethod
     def _find_route(routing_matrix, level, mode, change_type):
@@ -121,7 +130,7 @@ class TestTraceRoutingConsistency:
                 routing_matrix, inp["risk_level"], inp["domain_scope"], inp["change_type"]
             )
             if route is None:
-                violations.append(f"{trace['name']}: no matching route in routing_matrix")
+                violations.append(f"{trace['name']}: no matching route in workflow-routes.yml")
                 continue
 
             for skill in route.get("must_include", []):
@@ -295,7 +304,7 @@ class TestAskUserConsistency:
 # ═══════════════════════════════════════════
 
 class TestRouteCompleteness:
-    """Every routing_matrix entry must have at least one matching trace."""
+    """Every workflow-routes.yml entry must have at least one matching trace."""
 
     def test_all_routes_covered(self, traces, routing_matrix):
         uncovered = []

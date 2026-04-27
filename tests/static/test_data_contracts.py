@@ -100,7 +100,12 @@ def contracts():
 
 @pytest.fixture(scope="module")
 def routing_matrix():
-    return _load_yaml("routing_matrix.yaml")
+    path = SKILLS_DIR / "risk-classifier" / "workflow-routes.yml"
+    if not path.exists():
+        pytest.skip("workflow-routes.yml not found")
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data["routes"]
 
 
 @pytest.fixture(scope="module")
