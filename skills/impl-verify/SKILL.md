@@ -93,7 +93,7 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 **Each Round subagent receives:**
 - Changed file list (from coordinator)
 - Round-specific reference material paths (not content — the subagent reads them)
-- Verification checklist for that Round
+- Verification checklist for that Round (Read `./prompts/round-checklists.md` and pass the relevant Round section)
 - Output format specification
 
 **Each Round subagent returns** structured findings:
@@ -124,103 +124,21 @@ summary: "One-line summary of this round"
 
 ## Execution Protocol
 
-### Round 1 — Requirements ↔ Code (Bidirectional Tracing) [Subagent]
+### Round 1 — Requirements ↔ Code [Subagent]
 
-**Goal**: Every requirement is correctly implemented; every code change has requirement backing.
+Read `./prompts/round-checklists.md` — Round 1 section for the full bidirectional tracing checklist.
 
-**A→B Direction (Requirements→Code)**:
+### Round 2 — Domain Knowledge ↔ Code [Subagent]
 
-1. Extract all requirement items from requirement document (feature points, business rules, data changes, boundary conditions)
-2. For each requirement, locate code implementation (file:line)
-3. **Don't just confirm existence — verify logic**:
-   - Do conditional branches match the requirement's conditions?
-   - Are boundary values handled per requirements?
-   - Do data changes match requirement-described fields/types/constraints?
-   - Are error scenarios handled per requirements?
-4. Tag results:
-   - ✅ Correct — logic matches
-   - ⚠️ Deviation — implementation differs from requirement (describe the deviation) → **must-fix**
-   - ❌ Missing — not implemented → **must-fix**
+Read `./prompts/round-checklists.md` — Round 2 section for the domain rule alignment checklist.
 
-**B→A Direction (Code→Requirements)**:
+### Round 3 — Plan ↔ Code [Subagent]
 
-1. Scan all added/modified code in `git diff`
-2. For each significant change (new method, modified logic, new class, new field), trace back to requirement or design decision
-3. Tag results:
-   - ✅ Has backing — maps to specific requirement item
-   - ❓ No backing — no corresponding item in requirement document → **needs confirmation** (may be scope creep, or may be a reasonable implementation detail)
+Read `./prompts/round-checklists.md` — Round 3 section for the plan decision verification checklist.
 
-### Round 2 — Domain Knowledge ↔ Code (Rule Alignment) [Subagent]
+### Round 4 — Engineering Standards ↔ Code [Subagent]
 
-> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
-
-**Goal**: Code implementation is consistent with domain-level business rules and data model.
-
-**Operations**:
-
-1. Locate the domain of changed code via `ecw-path-mappings.md`
-2. Read that domain's `business-rules.md` and `data-model.md`. **Only read sections relevant to diff changes**: state machine section (if diff involves state changes), validation rules section (if diff involves validation logic), concurrency section (if diff involves lock operations), idempotency section (if diff involves MQ consumers). If unsure which sections are relevant, read the full file.
-3. Compare item by item:
-
-| Dimension | Reference Source | What to Check |
-|-----------|-----------------|---------------|
-| **State machine** | business-rules.md state machine section | Do code state transitions = document definitions? Any illegal jumps? Do side effects (notifications/MQ) match? |
-| **Validation rules** | business-rules.md validation section | Does code validation logic = document constraints? Are required fields, value ranges, formats consistent? |
-| **Concurrency control** | business-rules.md concurrency section | Does code lock pattern (optimistic/pessimistic/distributed) = document rules? |
-| **Idempotency** | business-rules.md idempotency section | Do MQ consumers / API endpoints deduplicate per document? |
-| **Data model** | data-model.md | Do new field types/constraints/defaults = document definitions? Do enum values = document enums? |
-| **Cross-domain interaction** | business-rules.md cross-domain section | Do cross-domain calls go through document-defined Facade? Do parameters/return values match? |
-
-4. Tag inconsistencies: deviation description + severity (**must-fix** or **suggestion**)
-
-### Round 3 — Plan ↔ Code (Decision Verification) [Subagent]
-
-> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
-
-**Goal**: Every design decision in the Plan is followed in code.
-
-**Operations**:
-
-1. Read Plan file, extract all design decisions (architecture choices, reuse directives, execution order, error handling strategy, test requirements)
-2. Verify each:
-
-| Decision Type | Verification Method |
-|--------------|-------------------|
-| Architecture choice | Plan says "use strategy pattern" → Did code use strategy pattern (not if-else chain)? |
-| Reuse directive | Plan says "reuse XxxManager.doSomething()" → Did code call that method (not re-implement)? |
-| Execution order | Plan says "send MQ after state change" → Is MQ send after state update? |
-| Error handling | Plan says "log + alert on failure, don't block" → Does catch block implement this? |
-| Test coverage | Plan listed test scenarios → Do corresponding test cases exist for all? |
-| Test quality | Do tests include precise assertions (assertThat / assertEquals) rather than just println or Assert.notNull? |
-| Test-first | Were test files produced before or in the same batch as implementation code? (reference git log; non-blocking hint) |
-
-3. Tag deviations → **must-fix** (test-first is **suggestion** level, does not block convergence)
-
-### Round 4 — Engineering Standards ↔ Code (Quality Review) [Subagent]
-
-> Each subagent reads code changes independently using targeted `git diff -- {file}` for files relevant to its verification dimension.
-
-**Goal**: Code quality meets project engineering standards. Absorbs code-reviewer responsibilities.
-
-**Operations**:
-
-1. Scan changed code against project existing patterns and engineering standards:
-
-| Dimension | What to Check |
-|-----------|---------------|
-| **Naming consistency** | Do new class/method/variable names match project existing patterns? |
-| **Duplicate code** | Are there opportunities to reuse existing methods? Any large duplications with other classes? |
-| **Method complexity** | Does a single method have too many responsibilities and need splitting? Is nesting depth excessive? |
-| **Layering violation** | Controller directly calling Mapper? Service directly operating HTTP request? |
-| **Dependency direction** | Does it introduce reverse dependency (lower layer calling upper layer)? |
-| **Error handling pattern** | Consistent with project existing error handling pattern (unified exception types, error code conventions)? |
-| **Resource management** | Are database connections/file handles/streams properly closed? |
-
-2. **Severity tagging**:
-   - **must-fix**: Layering violations, resource leaks, severe duplication (50+ lines of identical logic), reverse dependencies
-   - **suggestion**: Method too long, naming could be better, minor duplication, extractable but not urgent
-
-If ecw.yml `rules.enabled: true`: pass engineering rules files from `rules.path` (default `.claude/ecw/rules/`) to the Round 4 subagent. Verification against `[must-follow]` rules → must-fix; `[recommended]` rules → suggestion.
+Read `./prompts/round-checklists.md` — Round 4 section for the engineering standards quality review checklist.
 
 ### Round N+ (Conditional Trigger) — Fix Re-Verification
 
@@ -254,14 +172,9 @@ After convergence (zero must-fix findings in the most recent round):
 > - **P3**: If ecw.yml `paths.knowledge_root` exists, **immediately invoke** `ecw:knowledge-track`. No further downstream handoff.
 > - If `Auto-Continue` field is missing or `no` in session-state.md, fall back to waiting for user confirmation (backward compatibility).
 
-## Severity Definitions
+## Severity Definitions and Verification Discipline
 
-| Severity | Definition | Blocks Convergence | Typical Scenarios |
-|----------|-----------|-------------------|-------------------|
-| **must-fix** | Not fixing will cause functional errors, data corruption, security vulnerabilities, or severe architectural issues | Yes | State machine missing transition, validation omission, exception swallowed, resource leak, layering violation, cross-domain contract violation |
-| **suggestion** | Fixing improves code quality and maintainability but does not affect functional correctness | No | Method too long, inconsistent naming, minor duplication, extractable common method |
-
-**Judgment principle**: If unsure whether it's must-fix or suggestion, ask yourself: **Will this issue cause a bug or incident in production?** Yes → must-fix. No → suggestion.
+Read `./prompts/common-rationalizations.md` for severity definitions, the must-fix/suggestion judgment principle, and the common rationalization guard (iron law).
 
 ## Risk Level Behavior Differences
 
@@ -295,23 +208,6 @@ Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. 
 | `impl-verify-findings.md` write failure | Retry once → still fails: output findings in conversation to preserve for convergence tracking |
 | `git diff` command failure | Verify git state with `git status` → if not in a git repo or no changes: notify user and exit |
 
-## Common Rationalizations — You Are Bypassing Verification
-
-When these thoughts occur, **stop** — you are rationalizing skipping or weakening verification:
-
-| Your Thought | Reality |
-|-------------|---------|
-| "This is a reasonable implementation detail, not a deviation" | If the requirement explicitly specifies behavior, implementation differences are deviations. Tag ⚠️ not ✅ |
-| "The requirement was unclear, so it's not a miss" | Tag as ❓ needs confirmation, not ignore. Ambiguous requirements are risk, not exemption |
-| "This must-fix doesn't really have much impact, let me tag it suggestion" | Return to severity definition: Will it cause a bug or incident in production? Yes → must-fix. Do not downgrade |
-| "Round 4 is all suggestion-level, let me skip it" | Round 4 can also find resource leaks, layering violations — these are must-fix. Must execute |
-| "Previous rounds were clean, later rounds are just formality" | Each round covers different dimensions. Round 1 passing does not mean Round 2 will pass |
-| "Too many fixes, let me mark as passed and fix next time" | Convergence condition is zero must-fix, not "close enough." This is non-negotiable |
-| "I didn't change this code, no need to verify" | Everything in git diff gets verified. Your changes may break assumptions of surrounding code |
-| "Tests all pass, logic must be fine" | Tests passing ≠ logic correct. Tests may not cover that path. impl-verify checks logic, not test results |
-
-**Iron law: Convergence condition (zero must-fix) cannot be achieved by the verifier self-downgrading severity. Only fixing code achieves convergence.**
-
 ## Constraints
 
 - **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention.
@@ -330,3 +226,5 @@ For focused attention in each Round, Read `./deviation-patterns.md` for the 14 m
 
 - `output-templates.md` — Per-round findings format, zero-findings format, final pass summary, output constraints
 - `deviation-patterns.md` — 14 common implementation deviation patterns by Round
+- `prompts/round-checklists.md` — Round 1-4 verification checklists (subagent reasoning instructions)
+- `prompts/common-rationalizations.md` — Severity definitions and verification discipline guard (iron law)
