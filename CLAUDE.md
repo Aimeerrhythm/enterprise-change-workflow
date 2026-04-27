@@ -29,8 +29,10 @@ ecw:risk-classifier (Phase 1 quick pre-assessment)
   ├─ P2 → ecw:writing-plans
   ├─ P3 → Direct implementation
   └─ Bug → ecw:systematic-debugging
-Post-implementation → ecw:impl-verify → ecw:biz-impact-analysis → [P0/P1: Phase 3 feedback calibration]
+Post-implementation → ecw:impl-verify → [P0/P1: ecw:biz-impact-analysis → Phase 3 feedback calibration]
 ```
+
+> Complete routing matrix (including per-level must_include/must_exclude): `skills/risk-classifier/workflow-routes.yml`
 
 ## Dependencies
 
