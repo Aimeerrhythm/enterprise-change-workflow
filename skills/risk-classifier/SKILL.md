@@ -171,19 +171,6 @@ Options:
   4. "Emergency fix" — Use fast track, skip full workflow
 ```
 
-If **P0/P1 involving inventory, state machines, MQ, or other high-sensitivity changes**, prepend a multi-select confirmation question before the options:
-
-```
-Question: "Do any of the following apply? (affects risk assessment)"
-multiSelect: true
-Options:
-  1. "Pre-release freeze period" — Currently in release freeze window
-  2. "External system coordination needed" — Requires other teams to co-release
-  3. "None of the above" — Neither applies
-```
-
-After user selection, execute the corresponding route directly without re-confirmation.
-
 > **CRITICAL — Auto-Continue Rule**: When user selects "Proceed", you MUST **immediately invoke** the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). Do NOT output any text like "下一步…是否继续？", "Ready to proceed?", or any form of confirmation prompt. The user's selection of "Proceed" IS the confirmation — no second confirmation is needed. This applies to ALL subsequent skill transitions in the routing chain: after domain-collab completes, after Phase 2 completes, etc. — always immediately invoke the next skill without asking.
 
 ### State Persistence
