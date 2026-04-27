@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.7] - 2026-04-27
+
+### 维护
+
+- **Common Mistakes 迁移（Issue #7）** — 删除 `risk-classifier/SKILL.md` 中残留的 `## Common Mistakes` 段落，与 `requirements-elicitation` 保持一致（guardrail 仅在 Supplementary Files 中引用外置文件 `prompts/common-mistakes.md`），Skill 主文件不再内嵌 Common Mistakes 段落
+
 ## [1.2.6] - 2026-04-27
 
 ### 修复
