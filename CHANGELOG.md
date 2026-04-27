@@ -4,6 +4,15 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.5] - 2026-04-27
+
+### 重构
+
+- **Auto-Continue 确定性机制（Issue #5）** — 将各 Skill 中重复 14 次的 `CRITICAL — Auto-Continue Rule` Prompt 块替换为 PostToolUse Hook 驱动的确定性机制：
+  - 新增 `hooks/auto-continue.py`：Skill 加载时读取 `session-state.md`，注入剩余路由链为 `systemMessage`
+  - 10 个 SKILL.md 精简为紧凑的 `Downstream Handoff` 块（保留路由逻辑，删除 CRITICAL/MUST/immediately 等强调措辞）
+  - 贯彻 `design-principles.md` "确定性优先于概率性"原则
+
 ## [1.2.4] - 2026-04-27
 
 ### 重构
