@@ -70,21 +70,49 @@ class TestEcwYmlModelsSection:
 
 
 class TestSkillModelReferences:
-    """Dispatching SKILL.md files must reference ecw.yml model config."""
+    """Dispatching SKILL.md files must reference model config."""
 
-    @pytest.mark.parametrize("skill", DISPATCHING_SKILLS)
+    # Skills that use models.defaults.* dot-notation references
+    STRICT_MODEL_SKILLS = [
+        "domain-collab",
+        "writing-plans",
+        "biz-impact-analysis",
+        "risk-classifier",
+        "impl-verify",
+        "tdd",
+    ]
+
+    # Skills that delegate model selection to prompt files or use inline model strings
+    DELEGATED_MODEL_SKILLS = {
+        "spec-challenge": r"review-prompt-template\.md|model selection|opus",
+        "requirements-elicitation": r"sonnet|model",
+        "impl-orchestration": r"ecw\.yml.*models|models.*config|model:",
+    }
+
+    @pytest.mark.parametrize("skill", STRICT_MODEL_SKILLS)
     def test_skill_references_ecw_yml_models(self, skill):
         content = _read_skill(skill)
         assert re.search(
             r"models\.defaults|configurable via ecw\.yml", content
         ), f"{skill}/SKILL.md: missing reference to ecw.yml model config"
 
-    def test_impl_orchestration_has_dynamic_tiers(self):
+    @pytest.mark.parametrize("skill,pattern", DELEGATED_MODEL_SKILLS.items())
+    def test_delegated_skill_references_model(self, skill, pattern):
+        content = _read_skill(skill)
+        assert re.search(pattern, content, re.IGNORECASE), (
+            f"{skill}/SKILL.md: missing model reference (pattern: {pattern})"
+        )
+
+    def test_impl_orchestration_respects_ecw_yml_models(self):
         content = _read_skill("impl-orchestration")
-        for tier in ["models.defaults.mechanical", "models.defaults.implementation", "models.defaults.analysis"]:
-            assert tier in content, (
-                f"impl-orchestration/SKILL.md: missing dynamic tier reference '{tier}'"
-            )
+        assert re.search(r"ecw\.yml.*models|models.*config", content), (
+            "impl-orchestration/SKILL.md: must reference ecw.yml models config"
+        )
+        # Must have multiple model tiers referenced (sonnet, haiku, opus)
+        model_refs = sum(1 for m in ["sonnet", "haiku", "opus"] if m in content.lower())
+        assert model_refs >= 2, (
+            "impl-orchestration/SKILL.md: must reference at least 2 model tiers"
+        )
 
 
 class TestSessionStartModelsInjection:

@@ -2,74 +2,73 @@
 import re
 
 import pytest
+import yaml
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+SKILL_DIR = ROOT / "skills" / "risk-classifier"
+
+
+def _load_workflow_routes():
+    """Load workflow-routes.yml — single source of truth for impl_strategy."""
+    path = SKILL_DIR / "workflow-routes.yml"
+    assert path.exists(), "workflow-routes.yml not found"
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 class TestStrategySelectionRules:
-    """Verify risk-classifier has multi-dimensional strategy rules."""
+    """Verify risk-classifier has multi-dimensional strategy rules in workflow-routes.yml."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
-        self.content = (ROOT / "skills" / "risk-classifier" / "SKILL.md").read_text()
+        self.content = (SKILL_DIR / "SKILL.md").read_text()
+        self.routes = _load_workflow_routes()
+        self.strategies = self.routes.get("impl_strategy", [])
+
+    def _conditions(self):
+        return [s.get("condition", "").lower() for s in self.strategies]
 
     def test_has_file_count_dimension(self):
         """Strategy must consider file count, not just task count."""
-        # The table should mention "files" as a dimension
-        assert "files" in self.content.lower() or "file" in self.content.lower()
-        # Specifically check for the threshold
-        section = self._get_strategy_section()
-        assert "files" in section.lower(), "Strategy section must reference file count"
+        assert any("file" in c for c in self._conditions()), \
+            "workflow-routes.yml impl_strategy must reference file count"
 
     def test_has_domain_count_dimension(self):
         """Strategy must consider number of domains modified."""
-        section = self._get_strategy_section()
-        assert "domain" in section.lower(), "Strategy section must reference domain count"
+        assert any("domain" in c for c in self._conditions()), \
+            "workflow-routes.yml impl_strategy must reference domain count"
 
     def test_low_task_high_file_routes_to_orchestration(self):
         """<=3 tasks but >=6 files should use impl-orchestration."""
-        section = self._get_strategy_section()
-        # Check that there's a rule combining low task count with high file count -> orchestration
-        assert "impl-orchestration" in section, "Must have orchestration route"
-        # The key pattern: tasks <= 3 AND files >= 6 -> orchestration
-        lines = section.split('\n')
-        found = False
-        for line in lines:
-            lower = line.lower()
-            if ('3' in line or '<= 3' in line) and ('file' in lower) and ('orchestration' in lower or 'subagent' in lower):
-                found = True
-                break
-        assert found, "Must have rule: Tasks<=3 + files>=6 -> orchestration"
+        found = any(
+            "3" in c and "file" in c and
+            s.get("strategy") == "impl-orchestration"
+            for c, s in zip(self._conditions(), self.strategies)
+        )
+        assert found, "Must have rule: Tasks<=3 + files>=6 -> impl-orchestration"
 
     def test_low_task_low_file_stays_direct(self):
         """<=3 tasks with <=5 files should stay direct."""
-        section = self._get_strategy_section()
-        lines = section.split('\n')
-        found = False
-        for line in lines:
-            lower = line.lower()
-            if ('3' in line or '<= 3' in line) and ('5' in line or '<= 5' in line) and ('direct' in lower):
-                found = True
-                break
+        found = any(
+            "3" in c and "5" in c and s.get("strategy") == "direct"
+            for c, s in zip(self._conditions(), self.strategies)
+        )
         assert found, "Must have rule: Tasks<=3 + files<=5 -> direct"
 
     def test_three_dimension_description(self):
-        """Strategy must describe the three-dimension evaluation method."""
-        section = self._get_strategy_section()
-        lower = section.lower()
-        # Should mention scanning plan for file counts
+        """Strategy section in SKILL.md must describe the three-dimension evaluation."""
+        lower = self.content.lower()
         assert "task" in lower and "file" in lower and "domain" in lower, \
             "Strategy description must mention all three dimensions"
 
     def test_original_rules_preserved(self):
-        """Existing rules for Tasks 4-8 and Tasks > 8 must still exist."""
-        section = self._get_strategy_section()
-        assert "4-8" in section, "Tasks 4-8 rule must be preserved"
-        assert "P3" in section, "P3 direct rule must be preserved"
+        """Existing rules for Tasks 4-8 and P3 must still exist in workflow-routes.yml."""
+        conditions = self._conditions()
+        strategies = [s.get("strategy") for s in self.strategies]
+        assert any("4-8" in c for c in conditions), "Tasks 4-8 rule must be preserved"
+        assert "direct" in strategies, "P3/direct strategy must be preserved"
 
     def _get_strategy_section(self):
-        """Extract the Implementation Strategy Selection section."""
         start = self.content.find("### Implementation Strategy Selection")
         if start == -1:
             pytest.fail("Cannot find Implementation Strategy Selection section")
@@ -113,7 +112,10 @@ class TestTddSubagentDelegation:
 
     def test_iron_law_still_exists(self):
         """Iron Law must be preserved (regression)."""
-        assert "NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST" in self.content
+        lower = self.content.lower()
+        assert re.search(r'iron law', lower) and re.search(
+            r'no production code.{0,30}failing test|failing test.{0,30}production code', lower
+        ), "Iron Law (no production code without a failing test first) must be present"
 
 
 class TestTddRiskAwareEnforcement:

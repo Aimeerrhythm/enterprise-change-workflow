@@ -46,9 +46,10 @@ class TestSpecChallengeArchitecture:
         assert "spec-challenge-report.md" in self.content
 
     def test_has_session_split_recommendation(self):
-        """Must recommend session split after review completion."""
-        assert "session" in self.lower and "split" in self.lower or \
-               "new session" in self.lower
+        """Post-review must describe continuation path — auto-continue replacing session split."""
+        assert "post-review" in self.lower and (
+            re.search(r'auto.?continue|implementation|downstream handoff', self.lower)
+        ), "Must describe post-review continuation (auto-continue to implementation)"
 
     def test_has_timeout(self):
         """Must specify timeout for agent dispatch (300s)."""
@@ -112,13 +113,13 @@ class TestSpecChallengeSessionContinuity:
         self.lower = self.content.lower()
 
     def test_auto_continue_to_implementation(self):
-        """Must auto-continue to implementation, not ask about session split."""
+        """Must auto-continue to implementation via Downstream Handoff."""
         has_auto_continue = bool(
-            re.search(r'auto.?continue', self.lower)
-            and re.search(r'immediately invoke', self.lower)
+            re.search(r'downstream handoff', self.lower)
+            and re.search(r'auto.?continue|invoke.{0,60}(ecw:tdd|impl)', self.lower)
         )
         assert has_auto_continue, \
-            "Must auto-continue to implementation after review"
+            "Must have Downstream Handoff describing auto-continue to implementation"
 
     def test_no_session_split_ask(self):
         """Must NOT use AskUserQuestion for session split decision."""

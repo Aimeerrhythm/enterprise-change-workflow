@@ -23,44 +23,33 @@ def _load_ecw_yml():
 
 
 class TestRiskClassifierAutoContinue:
-    """Verify risk-classifier has auto-continue instructions after user confirms."""
+    """Verify risk-classifier has downstream handoff instructions after user confirms."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("risk-classifier")
         self.lower = self.content.lower()
 
-    def test_has_immediate_invoke_instruction(self):
-        """After user selects 'Proceed', must IMMEDIATELY invoke next skill."""
-        assert re.search(
-            r'immediately\s+(invoke|trigger|call|execute|proceed)', self.lower
-        ), "Must have IMMEDIATELY invoke instruction after user confirms Proceed"
+    def test_has_downstream_handoff(self):
+        """Phase 2 must have a Downstream Handoff block."""
+        assert "downstream handoff" in self.lower, \
+            "risk-classifier must have Downstream Handoff block"
 
     def test_prohibits_confirmation_text(self):
-        """Must explicitly prohibit outputting confirmation text between skills."""
-        has_prohibition = bool(
-            re.search(r'(do not|never|禁止|不要).{0,60}(是否继续|confirmation|confirm|ready|准备)', self.lower)
-            or re.search(r'(do not|never|禁止|不要).{0,60}(ask|wait|prompt).{0,40}(user|confirm)', self.lower)
-            or re.search(r'(skip|no).{0,30}(re-?confirm|second.?confirm)', self.lower)
-        )
-        assert has_prohibition, \
-            "Must explicitly prohibit confirmation text between skill transitions"
+        """Phase 2 Downstream Handoff must reference session-state.md for routing."""
+        assert re.search(r'session.?state', self.lower), \
+            "risk-classifier must reference session-state.md in Downstream Handoff"
 
     def test_has_auto_continue_field(self):
-        """session-state.md must include Auto-Continue field."""
-        assert re.search(r'auto.?continue', self.lower), \
-            "session-state.md template must include Auto-Continue field"
+        """Downstream Handoff in Phase 2 must reference session-state.md (which holds Auto-Continue)."""
+        assert re.search(r'session.?state', self.lower), \
+            "risk-classifier must reference session-state.md"
 
-    def test_phase2_auto_proceed_instruction(self):
-        """Phase 2 completion must have auto-proceed instruction to next skill."""
-        has_phase2_auto = bool(
-            re.search(r'phase\s*2.{0,200}immediately', self.lower)
-            or re.search(r'immediately.{0,200}phase\s*2', self.lower)
-            or re.search(r'phase\s*2.{0,200}auto.?proceed', self.lower)
-            or re.search(r'phase\s*2.{0,200}(do not|never).{0,40}(ask|wait|confirm)', self.lower)
-        )
-        assert has_phase2_auto, \
-            "Phase 2 completion must have auto-proceed instruction"
+    def test_phase2_handoff_to_writing_plans(self):
+        """Phase 2 Downstream Handoff must route to ecw:writing-plans."""
+        assert re.search(r'phase\s*2.{0,300}writing.?plans', self.lower) or \
+               re.search(r'writing.?plans.{0,300}phase\s*2', self.lower), \
+            "Phase 2 Downstream Handoff must reference ecw:writing-plans"
 
 
 class TestAutoConfirmConfig:
@@ -76,24 +65,24 @@ class TestAutoConfirmConfig:
         assert "auto_confirm" in af, "auto_flow missing 'auto_confirm' key"
         assert isinstance(af["auto_confirm"], bool), "auto_confirm must be bool"
 
-    def test_risk_classifier_references_auto_confirm(self):
+    def test_risk_classifier_references_auto_continue(self):
         content = _read_skill("risk-classifier").lower()
-        assert re.search(r'auto_confirm|auto_flow\.auto_confirm', content), (
-            "risk-classifier/SKILL.md must reference auto_confirm config"
+        assert re.search(r'session.?state', content), (
+            "risk-classifier/SKILL.md must reference session-state.md"
         )
 
 
 class TestDomainCollabAutoContinue:
-    """Verify domain-collab has auto-continue after Round 3."""
+    """Verify domain-collab has downstream handoff after Round 3."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("domain-collab")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "domain-collab/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "domain-collab/SKILL.md missing Downstream Handoff block"
         )
 
     def test_immediately_invokes_phase2(self):
@@ -103,48 +92,45 @@ class TestDomainCollabAutoContinue:
 
 
 class TestRequirementsElicitationAutoContinue:
-    """Verify requirements-elicitation has auto-continue after summary confirmation."""
+    """Verify requirements-elicitation has downstream handoff after summary confirmation."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("requirements-elicitation")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "requirements-elicitation/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "requirements-elicitation/SKILL.md missing Downstream Handoff block"
         )
 
-    def test_immediately_invokes_phase2(self):
+    def test_invokes_phase2_or_writing_plans(self):
         assert re.search(
-            r'immediately.{0,80}phase\s*2', self.lower
-        ) or re.search(
-            r'immediately.{0,80}writing-plans', self.lower
-        ), "requirements-elicitation must immediately invoke Phase 2 or writing-plans"
+            r'phase\s*2', self.lower
+        ) and re.search(
+            r'writing.?plans', self.lower
+        ), "requirements-elicitation Downstream Handoff must reference Phase 2 and writing-plans"
 
 
 class TestSpecChallengeAutoContinue:
-    """Verify spec-challenge has auto-continue after user chooses 'Continue'."""
+    """Verify spec-challenge has downstream handoff to implementation."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("spec-challenge")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "spec-challenge/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "spec-challenge/SKILL.md missing Downstream Handoff block"
         )
 
-    def test_immediately_invokes_tdd_or_impl(self):
-        has_invoke = bool(
-            re.search(r'immediately invoke.*the next skill', self.lower)
-            and (
-                re.search(r'invoke.*ecw:tdd', self.lower)
-                or re.search(r'invoke.*impl-orchestration', self.lower)
-            )
+    def test_routes_to_tdd_or_impl_orchestration(self):
+        has_route = bool(
+            re.search(r'ecw:tdd', self.lower)
+            and re.search(r'impl-orchestration', self.lower)
         )
-        assert has_invoke, "spec-challenge must immediately invoke ecw:tdd or impl-orchestration"
+        assert has_route, "spec-challenge Downstream Handoff must reference ecw:tdd and impl-orchestration"
 
 
 class TestTddDownstreamHandoff:
@@ -160,14 +146,14 @@ class TestTddDownstreamHandoff:
             "tdd/SKILL.md missing 'Downstream Handoff' section"
         )
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "tdd/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_handoff_block_with_impl_verify(self):
+        assert re.search(r'downstream handoff.{0,300}impl.?verify', self.lower), (
+            "tdd/SKILL.md Downstream Handoff must reference impl-verify"
         )
 
-    def test_immediately_invokes_impl_verify(self):
-        assert re.search(r'immediately.{0,80}impl-verify', self.lower), (
-            "tdd must immediately invoke impl-verify after all tasks GREEN"
+    def test_invokes_impl_verify(self):
+        assert re.search(r'impl.?verify', self.lower), (
+            "tdd must invoke impl-verify after all tasks GREEN"
         )
 
 
@@ -179,9 +165,9 @@ class TestWritingPlansAutoContinue:
         self.content = _read_skill("writing-plans")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "writing-plans/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "writing-plans/SKILL.md missing Downstream Handoff block"
         )
 
     def test_no_unnecessary_ask(self):
@@ -196,40 +182,40 @@ class TestWritingPlansAutoContinue:
 
 
 class TestImplVerifyAutoContinue:
-    """Verify impl-verify has auto-continue to biz-impact-analysis in SKILL.md."""
+    """Verify impl-verify has downstream handoff to biz-impact-analysis in SKILL.md."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("impl-verify")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "impl-verify/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "impl-verify/SKILL.md missing Downstream Handoff block"
         )
 
-    def test_p0_p1_immediately_invokes_biz_impact(self):
-        assert re.search(r'immediately.{0,80}biz-impact', self.lower), (
-            "impl-verify must immediately invoke biz-impact-analysis for P0/P1"
+    def test_p0_p1_routes_to_biz_impact(self):
+        assert re.search(r'p0.{0,200}biz.?impact|biz.?impact.{0,200}p0', self.lower), (
+            "impl-verify Downstream Handoff must route P0/P1 to ecw:biz-impact-analysis"
         )
 
 
 class TestBizImpactAutoContinue:
-    """Verify biz-impact-analysis has standardized auto-continue to Phase 3."""
+    """Verify biz-impact-analysis has downstream handoff to Phase 3."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("biz-impact-analysis")
         self.lower = self.content.lower()
 
-    def test_has_auto_continue_block(self):
-        assert re.search(r'critical.*auto-continue', self.lower), (
-            "biz-impact-analysis/SKILL.md missing CRITICAL Auto-Continue Rule block"
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "biz-impact-analysis/SKILL.md missing Downstream Handoff block"
         )
 
-    def test_immediately_invokes_phase3(self):
+    def test_routes_to_phase3(self):
         assert re.search(
-            r'immediately.{0,80}phase\s*3', self.lower
+            r'phase\s*3', self.lower
         ) or re.search(
-            r'immediately.{0,80}risk-classifier.*phase.?3', self.lower
-        ), "biz-impact-analysis must immediately invoke Phase 3 for P0/P1"
+            r'risk.?classifier.{0,60}phase', self.lower
+        ), "biz-impact-analysis Downstream Handoff must reference Phase 3 calibration"

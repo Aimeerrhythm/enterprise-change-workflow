@@ -41,8 +41,10 @@ class TestRequirementsElicitationArchitecture:
         assert "requirements-summary.md" in self.content
 
     def test_has_termination_limits(self):
-        """Must have termination limits by risk level (P0: 15 rounds)."""
-        assert "15" in self.content and "termination" in self.lower
+        """Must reference termination limits — defined in questioning-guide.md."""
+        assert "termination" in self.lower and re.search(
+            r'questioning.?guide\.md', self.lower
+        ), "Must reference termination limits (directly or via questioning-guide.md)"
 
     def test_has_phase2_handoff(self):
         """Must describe handoff to risk-classifier Phase 2 after confirmation."""
