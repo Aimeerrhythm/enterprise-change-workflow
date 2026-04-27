@@ -142,7 +142,7 @@ Reference `templates/CLAUDE.md.snippet` for the template.
 | ecw:biz-impact-analysis | After impl-verify | `/ecw:biz-impact-analysis [range]` |
 | ecw:cross-review | — | `/ecw:cross-review` (manual optional) |
 | ecw:knowledge-audit | — | `/ecw:knowledge-audit` (manual, periodic) |
-| ecw:knowledge-track | — | `/ecw:knowledge-track` (manual, post-task) |
+| ecw:knowledge-track | P0/P1: after biz-impact-analysis; P2/P3: after impl-verify pass (ECW-ready sessions) | `/ecw:knowledge-track` (manual) |
 | ecw:knowledge-repomap | — | `/ecw:knowledge-repomap` (manual, after refactors) |
 | ecw:workspace | User mentions multiple services/repos for cross-service development | `/ecw:workspace create\|run\|status\|push\|destroy` |
 
