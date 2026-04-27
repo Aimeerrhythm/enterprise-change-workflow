@@ -62,47 +62,9 @@ digraph spec_challenge {
 
 For blind spot annotations: Confirm whether they need to be explicitly noted in the document.
 
-## Agent Dispatch Prompt Template
+## Agent Dispatch
 
-When dispatching the spec-challenge agent, Coordinator first determines `{affected_domains}`:
-- **Auto-trigger**: Get domain list from current session's domain-collab report or risk-classifier output
-- **Manual trigger**: Extract domain keywords from document content, match against project CLAUDE.md domain routing table; if undeterminable, set to "please infer involved domains from document content"
-
-**Model selection**: `model: opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Reason: adversarial review demands the strongest reasoning to find blind spots, logical gaps, and missed edge cases in plan design.
-
-Use the following prompt structure:
-
-```
-Please review a technical plan document.
-
-## Document to Review
-
-File path: {document file path}
-
-Please read the file yourself to get the full content.
-
-## Project Context
-
-Read `.claude/ecw/ecw.yml` to get project.name, read ecw.yml `paths.domain_registry` to get domain list.
-Project knowledge documents are in the directory specified by ecw.yml `paths.knowledge_root`.
-Cross-domain call relationships are recorded in `cross-domain-rules.md` under ecw.yml `paths.knowledge_common`.
-
-Domains involved in the plan: {affected_domains}
-Read relevant knowledge files for the above domains as needed to verify plan accuracy. Do not read all knowledge files at once.
-
-## Source Code Reading Limits (CRITICAL — prevent timeout)
-
-Read at most **10 source files** total. For each file, prefer Grep with limited context (`-A 5`) over full Read. Only Read full files for core interfaces or classes that directly participate in the change. Do NOT read complete implementations of large service classes — read class signatures and method signatures only. Knowledge files do not count toward this limit.
-
-## Review Requirements
-
-Review each dimension (accuracy, information quality, boundaries & blind spots, robustness) one by one.
-Strictly follow the prescribed output format for the review report.
-
-Please output the review report in Chinese.
-```
-
-**Timeout**: 300s (adversarial review reads plan + multiple knowledge files). If Agent has not returned, terminate and offer retry (see Error Handling).
+Read `./prompts/review-prompt-template.md` for the complete agent dispatch prompt template, model selection, and timeout configuration.
 
 ## User Confirmation Flow Details
 
@@ -201,13 +163,7 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 
 ## Common Rationalizations
 
-| Your Thought | Reality |
-|-------------|---------|
-| "The plan is well-structured, probably no fatal flaws" | Well-structured plans with logical gaps are more dangerous than rough plans with sound logic. Structure is not correctness. |
-| "The reviewer is being too harsh, these are edge cases" | Edge cases in P0/P1 changes become production incidents. The reviewer's job is to find them. |
-| "User disagreed with the finding, so it's not important" | User drives decisions, but disagreement must come with technical rationale. Record the disagreement; do not silently drop the finding. |
-| "Plan revision is a quick fix, I'll use Edit" | Large plan files (50-80KB) break Edit's exact-match replacement. Use Write for full overwrite. |
-| "I'll skip the session split recommendation, user knows what to do" | Context management checkpoints are handled by PreCompact hook. Do not re-introduce session split AskUserQuestion — auto-continue to implementation. |
+Read `./prompts/common-rationalizations.md` for anti-patterns to avoid.
 
 ## Workflow Integration
 
@@ -249,3 +205,8 @@ After spec-challenge completes and user confirms review results (Plan updated), 
 ### Manual Trigger
 
 At any time, run `/spec-challenge <file path>` on any spec/plan file.
+
+## Supplementary Files
+
+- `prompts/review-prompt-template.md` — Agent dispatch prompt template, model selection, timeout
+- `prompts/common-rationalizations.md` — Common anti-patterns to avoid

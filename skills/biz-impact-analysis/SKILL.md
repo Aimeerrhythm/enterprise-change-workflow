@@ -41,44 +41,9 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 5. **Auto-backfill knowledge base** — If the agent's report contains "Unregistered Cross-Domain Calls", execute the knowledge backfill procedure (see [Knowledge Auto-Backfill](#knowledge-auto-backfill) below)
 6. **Present analysis report** — Output the agent's formatted report directly; append backfill summary if any calls were added
 
-## Agent Dispatch Prompt Template
+## Agent Dispatch
 
-When dispatching the biz-impact-analysis agent, use the following prompt structure:
-
-```
-Please analyze the business impact of the following code changes.
-
-## Diff Range
-
-{diff_range}
-
-## Changed File Summary (Coordinator Preprocessed Results)
-
-{git_diff_stat_output}
-
-## Domain Identification Results
-
-{file_to_domain_mapping}
-
-## Instructions
-
-Execute your 5-step analysis process.
-Note: Full diff content has been preprocessed by Coordinator, providing file list and domain identification.
-In Step 1, only execute `git diff {diff_range} -- {file_path}` for files that need method signature change inspection.
-In Step 3 incremental scan, only read specific change content for files matching scan_patterns.
-Do not execute `git diff {diff_range}` for full change content on all files.
-
-Please output the impact analysis report in Chinese.
-```
-
-## Argument Parsing Rules
-
-| Input | Diff Command |
-|-------|-------------|
-| `/biz-impact-analysis` | `git diff master...HEAD` |
-| `/biz-impact-analysis HEAD~3` | `git diff HEAD~3...HEAD` |
-| `/biz-impact-analysis abc123` | `git diff abc123...HEAD` |
-| `/biz-impact-analysis abc123 def456` | `git diff abc123...def456` |
+Read `./prompts/agent-prompt-template.md` for the agent dispatch prompt structure and argument parsing rules.
 
 ## Knowledge Auto-Backfill
 
@@ -177,13 +142,7 @@ Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-
 
 ## Common Rationalizations
 
-| Your Thought | Reality |
-|-------------|---------|
-| "Changes are in one domain, no cross-domain impact" | Single-domain changes can affect shared resources consumed by other domains. Always check shared resources and end-to-end paths. |
-| "The knowledge files are probably up to date" | Knowledge docs drift from code. Reverse validation catches stale entries. Skip it and the report includes phantom dependencies. |
-| "No MQ or external references, so skip those sections" | Correct to skip if scan confirms no hits. But note it explicitly in Analysis Coverage — silent skips are the most dangerous blind spots. |
-| "This is a low-risk query change, impact is minimal" | Query logic changes can affect downstream filtering. Medium risk, not minimal. Check end-to-end paths. |
-| "Report is getting long but I need to include everything" | Conciseness is a hard constraint. Prioritize action items (max 3). Move verbose details to structured tables. |
+Read `./prompts/common-rationalizations.md` for anti-patterns to avoid.
 
 ## Notes
 
