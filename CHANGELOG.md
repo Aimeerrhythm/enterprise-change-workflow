@@ -6,6 +6,15 @@
 
 ## [1.2.3] - 2026-04-27
 
+### 重构
+
+- **流程定义与 Prompt 模板分离（Issue #3）** — 将 11 个 SKILL.md 中混合的三种关注点（流程逻辑/思考指令/输出模板）拆分为独立文件：
+  - `workflow-routes.yml`：声明式路由矩阵，取代 SKILL.md 内联表格成为 single source of truth
+  - `prompts/` 子目录：模型相关的推理指令（可按模型版本替换）
+  - 输出模板文件补齐（phase1-output-template.md、fast-track-output-template.md、phase2-subagent-schema.md）
+  - SKILL.md 总行数从 4,038 缩减到 2,848（-30%）
+  - lint_skills.py 更新：anchor keywords / routing matrix / data contracts 检查适配新目录结构
+
 ### 修复
 
 - **`ecw:risk-classifier` 移除高敏感前置确认问题** — 删除 P0/P1 变更时弹出的"发版冻结期/需外部协同"多选确认，该问题在需求分析阶段重复收集且打断流程；相关信息在后续 ecw:requirements-elicitation 阶段自然覆盖
