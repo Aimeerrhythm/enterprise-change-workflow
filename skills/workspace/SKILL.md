@@ -277,15 +277,16 @@ Process:
   1. Generate Phase 4 start scripts via terminal adapter (see ./terminal-adapters.md):
 
      For ECW-ready / ECW-partial services (have CLAUDE.md + BLOCKING RULE):
-       Prompt: "Read .claude/ecw/session-data/{wf-id}/confirmed-contract.md and
-                .claude/ecw/session-data/{wf-id}/analysis-report.md.
-                Implement the changes described in the contract.
-                After implementation: run /ecw:impl-verify.
-                After impl-verify passes: run /ecw:knowledge-track.
-                Then write status.json to .claude/ecw/session-data/{wf-id}/status.json."
+       Prompt: "You have a new implementation task for this service.
+                Context:
+                - Cross-service contract: .claude/ecw/session-data/{wf-id}/confirmed-contract.md
+                - Your service's code analysis: .claude/ecw/session-data/{wf-id}/analysis-report.md
+                Implement all changes required by the contract.
+                When complete, write status.json to .claude/ecw/session-data/{wf-id}/status.json."
        Flags: --name {svc}-impl --permission-mode bypassPermissions
-       Note: ECW BLOCKING RULE auto-drives risk-classifier and writing-plans.
-             The explicit prompt serves as goal definition and fallback guidance.
+       Note: BLOCKING RULE drives the full internal ECW flow autonomously:
+             risk-classifier → writing-plans → tdd → impl → impl-verify → knowledge-track.
+             Only status.json is specified explicitly as the coordinator's completion signal.
 
      For ECW-absent services (no CLAUDE.md / no BLOCKING RULE):
        Prompt: "Read .claude/ecw/session-data/{wf-id}/confirmed-contract.md and
@@ -311,9 +312,8 @@ Process:
     c. Decompose into tasks:
        ECW-ready: ecw:writing-plans auto-triggered by BLOCKING RULE
        ECW-absent: manual decomposition based on analysis-report.md
-    d. Implement -> test -> ecw:impl-verify
-    e. ECW-ready only: run /ecw:knowledge-track after impl-verify passes
-    f. Write status.json:
+    d. Implement -> test -> ecw:impl-verify (-> ecw:knowledge-track auto-invoked by impl-verify for ECW-ready)
+    e. Write status.json:
        Location: {service}/.claude/ecw/session-data/{wf-id}/status.json
        completed_at: current actual time ($(date -Iseconds)), NOT workflow ID timestamp
 
@@ -360,8 +360,8 @@ Process:
      - Deploy order (from confirmed-contract.md)
      - ECW coverage per service: ECW-ready (full flow) or ECW-absent (impl-verify only)
   3. AskUserQuestion: Push now or later?
-  4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track ran in Phase 4
-     (after impl-verify, before status.json). Report which services completed
+  4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track is auto-invoked
+     by impl-verify on pass. Report which services completed
      knowledge-track and which skipped it (ECW-absent services skip by design).
 Gate-out: Workflow complete
 ```
