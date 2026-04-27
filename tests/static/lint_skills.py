@@ -290,7 +290,7 @@ def check_routing_dag(result: LintResult):
 # ══════════════════════════════════════════════════════
 
 def check_anchor_keywords(result: LintResult):
-    """Each skill must contain its critical anchor keywords."""
+    """Each skill must contain its critical anchor keywords (in SKILL.md or prompts/ subdir)."""
     anchors_file = TESTS_STATIC / "anchor_keywords.yaml"
     anchors = load_yaml_file(anchors_file)
     if anchors is None:
@@ -298,17 +298,24 @@ def check_anchor_keywords(result: LintResult):
         return
 
     for skill_name, keywords in anchors.items():
-        skill_md = SKILLS_DIR / skill_name / "SKILL.md"
+        skill_dir = SKILLS_DIR / skill_name
+        skill_md = skill_dir / "SKILL.md"
         if not skill_md.exists():
             result.error(f"[anchors] skills/{skill_name}/SKILL.md does not exist")
             continue
 
-        content = skill_md.read_text(encoding="utf-8")
+        # Collect content from SKILL.md and all files in prompts/ subdirectory
+        all_content = skill_md.read_text(encoding="utf-8")
+        prompts_dir = skill_dir / "prompts"
+        if prompts_dir.exists():
+            for prompt_file in prompts_dir.glob("*.md"):
+                all_content += "\n" + prompt_file.read_text(encoding="utf-8")
+
         for kw in keywords:
-            if kw not in content:
+            if kw not in all_content:
                 result.error(
-                    f"[anchors] skills/{skill_name}/SKILL.md: "
-                    f"missing required anchor keyword '{kw}'"
+                    f"[anchors] skills/{skill_name}: "
+                    f"missing required anchor keyword '{kw}' (checked SKILL.md + prompts/)"
                 )
 
 
@@ -421,9 +428,17 @@ def check_cross_skill_consistency(result: LintResult):
             )
 
     # Check 2: Implementation Strategy thresholds should be consistent
-    strategy_skills = ["risk-classifier", "writing-plans", "impl-orchestration"]
+    # risk-classifier now uses workflow-routes.yml for strategy rules
+    strategy_skills = ["writing-plans", "impl-orchestration"]
+    routes_file = SKILLS_DIR / "risk-classifier" / "workflow-routes.yml"
     threshold_pattern = re.compile(r"Tasks?\s*[≤<>≥]=?\s*(\d+)")
     thresholds_by_skill: dict[str, set[str]] = {}
+
+    if routes_file.exists():
+        routes_content = routes_file.read_text(encoding="utf-8")
+        if "impl_strategy" in routes_content:
+            matches = threshold_pattern.findall(routes_content)
+            thresholds_by_skill["risk-classifier"] = set(matches)
 
     for skill_name in strategy_skills:
         skill_md = SKILLS_DIR / skill_name / "SKILL.md"
@@ -710,20 +725,38 @@ def check_token_stats(result: LintResult):
 # ══════════════════════════════════════════════════════
 
 def check_routing_matrix(result: LintResult):
-    """Verify risk-classifier routing tables match golden routing matrix."""
+    """Verify routing golden fixture matches workflow-routes.yml (the single source of truth)."""
     matrix_file = TESTS_STATIC / "routing_matrix.yaml"
     matrix = load_yaml_file(matrix_file)
     if matrix is None:
         result.warn("[routing] routing_matrix.yaml not found or PyYAML not installed, skipping")
         return
 
-    rc_path = SKILLS_DIR / "risk-classifier" / "SKILL.md"
-    if not rc_path.exists():
-        result.error("[routing] risk-classifier/SKILL.md not found")
+    # Primary validation: check against workflow-routes.yml
+    routes_file = SKILLS_DIR / "risk-classifier" / "workflow-routes.yml"
+    routes_data = load_yaml_file(routes_file)
+
+    if routes_data is None:
+        result.error("[routing] skills/risk-classifier/workflow-routes.yml not found")
         return
 
-    rc_content = rc_path.read_text(encoding="utf-8")
+    routes = routes_data.get("routes", [])
+    if not routes:
+        result.error("[routing] workflow-routes.yml has no routes defined")
+        return
 
+    # Build lookup from workflow-routes.yml
+    routes_lookup = {}
+    for route in routes:
+        level = route.get("level", "")
+        mode = route.get("mode", "")
+        rtype = route.get("type", "")
+        chain = route.get("chain", [])
+        must_exclude = route.get("must_exclude", [])
+        key = (level, mode, rtype)
+        routes_lookup[key] = {"chain": chain, "must_exclude": must_exclude}
+
+    # Validate each routing_matrix.yaml entry against workflow-routes.yml
     for entry in matrix:
         level = entry.get("level", "")
         mode = entry.get("mode", "")
@@ -731,97 +764,40 @@ def check_routing_matrix(result: LintResult):
         must_include = entry.get("must_include", [])
         must_exclude = entry.get("must_exclude", [])
 
-        # Find the relevant routing table section
-        if change_type == "requirement":
-            if mode == "single-domain":
-                section_marker = "Requirement Changes — Single Domain"
-            elif mode == "cross-domain":
-                section_marker = "Requirement Changes — Cross-Domain"
-            else:
-                continue
-        elif change_type == "bug":
-            section_marker = "Bug Fix Changes"
-        elif change_type == "fast-track":
-            section_marker = "Fast Track Routing Table"
-        else:
+        key = (level, mode, change_type)
+        route = routes_lookup.get(key)
+
+        if route is None:
+            result.error(
+                f"[routing] routing_matrix.yaml defines {change_type}/{level}/{mode} "
+                f"but no matching route in workflow-routes.yml"
+            )
             continue
 
-        # Find the section
-        section_start = rc_content.find(section_marker)
-        if section_start == -1:
-            # Try alternate markers
-            alt_markers = {
-                "Requirement Changes — Single Domain": "Single Domain",
-                "Requirement Changes — Cross-Domain": "Cross-Domain",
-                "Bug Fix Changes": "Bug Fix",
-                "Fast Track Routing Table": "Fast Track",
-            }
-            alt = alt_markers.get(section_marker)
-            if alt:
-                section_start = rc_content.find(alt)
-            if section_start == -1:
-                result.error(f"[routing] risk-classifier missing section for '{section_marker}'")
-                continue
+        chain_skills = [s for s in route["chain"] if not s.startswith(("Phase", "TDD", "Implementation", "Fix", "lean"))]
 
-        # Extract a focused section — stop at next ### heading
-        section_end = rc_content.find("\n###", section_start + len(section_marker))
-        if section_end == -1:
-            section_end = section_start + 3000
-        section = rc_content[section_start:min(section_end, section_start + 3000)]
-
-        # For requirement types, find the specific risk level row
-        if change_type == "requirement" and level != "any":
-            # Look for the level in a table row: | P0 (Critical) | → `ecw:xxx` → ... |
-            level_pattern = re.compile(
-                rf"\|\s*{re.escape(level)}\s*\([^)]*\)\s*\|(.+?)(?:\n|$)"
-            )
-            level_match = level_pattern.search(section)
-            if level_match:
-                row_content = level_match.group(1)
-            else:
-                result.error(
-                    f"[routing] risk-classifier: {section_marker} section missing "
-                    f"row for {level}"
-                )
-                continue
-        else:
-            # For bug/fast-track, use the whole section
-            row_content = section
-
-        # Check must_include
         for skill in must_include:
-            if skill not in row_content:
+            if skill not in chain_skills:
                 result.error(
-                    f"[routing] risk-classifier {change_type}/{level}/{mode}: "
-                    f"routing must include '{skill}' but not found in row"
+                    f"[routing] workflow-routes.yml {change_type}/{level}/{mode}: "
+                    f"routing must include '{skill}' but not found in chain"
                 )
 
-        # Check must_exclude — only flag when skill appears in a routing chain context
-        # (→ ecw:skill or → `ecw:skill`), not in narrative text like "skip ecw:X"
         for skill in must_exclude:
-            # Look for skill in routing arrow context: → `ecw:skill` or → ecw:skill
-            routing_pattern = re.compile(
-                rf"→\s*`?ecw:{re.escape(skill)}`?"
-                rf"|`ecw:{re.escape(skill)}`\s*→"
+            if skill in chain_skills:
+                result.error(
+                    f"[routing] workflow-routes.yml {change_type}/{level}/{mode}: "
+                    f"routing must NOT include '{skill}' but found in chain"
+                )
+
+    # Also validate that SKILL.md references workflow-routes.yml
+    rc_path = SKILLS_DIR / "risk-classifier" / "SKILL.md"
+    if rc_path.exists():
+        rc_content = rc_path.read_text(encoding="utf-8")
+        if "workflow-routes.yml" not in rc_content:
+            result.error(
+                "[routing] risk-classifier/SKILL.md does not reference workflow-routes.yml"
             )
-            if change_type == "requirement":
-                # For requirement routing tables, a simpler check works:
-                # the skill must appear in the specific table row
-                if f"ecw:{skill}" in row_content:
-                    result.error(
-                        f"[routing] risk-classifier {change_type}/{level}/{mode}: "
-                        f"routing must NOT include '{skill}' but found in row"
-                    )
-            else:
-                # For bug/fast-track sections, only match in routing table rows (| ... |)
-                for line in row_content.split("\n"):
-                    stripped = line.strip()
-                    if stripped.startswith("|") and routing_pattern.search(stripped):
-                        result.error(
-                            f"[routing] risk-classifier {change_type}/{level}/{mode}: "
-                            f"routing must NOT include '{skill}' but found in routing table"
-                        )
-                        break
 
 
 # ══════════════════════════════════════════════════════
@@ -1077,10 +1053,16 @@ def check_data_contracts(result: LintResult):
         content = skill_md.read_text(encoding="utf-8")
 
         for entry in spec.get("writes", []) or []:
-            if entry["path_pattern"] not in content:
+            # Check SKILL.md and prompts/ subdirectory for write path patterns
+            all_content = content
+            prompts_dir = SKILLS_DIR / skill_name / "prompts"
+            if prompts_dir.exists():
+                for prompt_file in prompts_dir.glob("*.md"):
+                    all_content += "\n" + prompt_file.read_text(encoding="utf-8")
+            if entry["path_pattern"] not in all_content:
                 result.error(
                     f"[data-contracts] skills/{skill_name}: writes '{entry['key']}' "
-                    f"with path_pattern '{entry['path_pattern']}' not found in SKILL.md"
+                    f"with path_pattern '{entry['path_pattern']}' not found in SKILL.md or prompts/"
                 )
 
         for entry in spec.get("reads", []) or []:
