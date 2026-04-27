@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.3] - 2026-04-27
+
+### 修复
+
+- **`ecw:risk-classifier` 移除高敏感前置确认问题** — 删除 P0/P1 变更时弹出的"发版冻结期/需外部协同"多选确认，该问题在需求分析阶段重复收集且打断流程；相关信息在后续 ecw:requirements-elicitation 阶段自然覆盖
+
 ## [1.2.2] - 2026-04-27
 
 ### 修复
