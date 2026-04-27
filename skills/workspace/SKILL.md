@@ -11,7 +11,12 @@ argument-hint: create <services...> | run "<requirement>" | status | push | dest
 
 Manage cross-service workspaces and coordinate multi-session parallel development. Each service runs its own independent ECW flow; this Skill handles workspace lifecycle and master coordination.
 
-**Output language**: Read `ecw.yml` → `project.output_language`. All user-facing text follows this language. If unavailable, detect from user's input language. Pass `output_language` to every dispatched agent prompt.
+**Output language**: Read `output_language` for the workspace session:
+1. Try any ECW-ready service's `.claude/ecw/ecw.yml` → `project.output_language`
+2. Fallback: `workspace.yml` → `output_language`
+3. Fallback: detect from user's input language
+
+All coordinator-written files (cross-service-plan.md, workspace-analysis-task.md, confirmed-contract.md, session-state.md) must use this language for all headings, labels, and descriptive text. Pass `output_language` value explicitly in every dispatched child session prompt and in workspace-analysis-task.md.
 
 **File encoding**: All files written by coordinator or child sessions must use native UTF-8 characters. Never use Unicode escape sequences (uXXXX or \uXXXX format) for any characters including Chinese. Write characters directly as-is.
 
@@ -151,26 +156,14 @@ Gate-out: ALL of the following must be true:
 
 **workspace-analysis-task.md template:**
 
-> **Language rule**: Before writing, check `output_language` from workspace.yml.
-> - `zh-CN` → translate ALL section headers, labels, and instruction text to Chinese. No English section headers or instruction sentences in the output file. Technical terms (class names, method names, ECW status values like `ECW-ready`) stay as-is.
-> - `en` → use the template as-is.
-> Mixed-language output (Chinese content under English headers) is NOT acceptable.
->
-> **zh-CN header reference** (use these exact translations):
-> | English | 中文 |
-> |---------|------|
-> | Original Requirement (verbatim — do not paraphrase) | 原始需求（逐字照抄，不得意译） |
-> | Coordinator's Business Assessment (hypothesis — verify against your code) | 协调者业务评估（假设——请对照代码核实） |
-> | Cross-Service Context (for risk classification) | 跨服务上下文（用于风险定级） |
-> | Analysis Strategy | 分析策略 |
-> | Other Services Context | 其他服务上下文 |
-> | Open Questions (flagged by Coordinator — needs code analysis to resolve) | 待确认问题（协调者标记——需代码分析解答） |
-> | Your Task (Phase 2 — Analysis Only, do NOT implement yet) | 你的任务（Phase 2 — 仅分析，不要开始实现） |
-> | Output Format | 输出格式 |
-> | Stale Plans Notice | 历史 Plan 免责声明 |
-> | Exit Criterion | 退出条件 |
+> When writing this file, coordinator must translate ALL section headers and instruction text
+> into `output_language`. The template below uses English as the reference spec.
 
 ```markdown
+## Workspace Analysis Task — {service}
+
+output_language: {value from ecw.yml or workspace.yml}
+
 ## Original Requirement (verbatim — do not paraphrase)
 {exact text from workspace.yml.requirement}
 
@@ -214,6 +207,7 @@ Write analysis-report.md to .claude/ecw/session-data/{wf-id}/analysis-report.md 
   - Implementation entry points (class + method + reason, found by your own analysis)
   - Proposed interaction pattern (if was unclear)
   - Any concerns or blockers
+All headings and labels in analysis-report.md must follow output_language above.
 
 ## Stale Plans Notice
 Ignore any files in .claude/plans/ that predate this workspace session (wf-id: {wf-id}).

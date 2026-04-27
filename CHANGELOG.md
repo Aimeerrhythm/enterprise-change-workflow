@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.2] - 2026-04-27
+
+### 修复
+
+- **`ecw:workspace` workspace-analysis-task.md 半英半中问题** — 修正 output_language 来源描述（优先读 ECW-ready 服务的 `ecw.yml → project.output_language`，fallback 到 `workspace.yml → output_language`，与其他 skill 保持一致）；模板顶部增加显式 `output_language` 参数，coordinator 写文件时按该参数翻译所有标题和指令文字；子 session 读 output_language 参数决定 analysis-report.md 的语言
+
 ## [1.2.1] - 2026-04-27
 
 ### 修复
