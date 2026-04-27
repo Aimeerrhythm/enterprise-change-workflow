@@ -4,6 +4,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.1] - 2026-04-27
+
+### 修复
+
+- **`ecw:workspace` session-state.md 更新机制彻底修复** — coordinator 成为 session-state.md 唯一写入方；Pre-flight gate-out 写入初始状态；Phase 1-6 每个 Phase 增加显式 Update 步骤；每个 gate-out 将 session-state ✅ 纳入前置条件（artifact + state 双验证）；每个 gate-in 加 Self-check 在中断恢复后自动补写遗漏状态；workspace-analysis-task.md 模板删除子 session 写 coordinator state 的指令
+
 ## [1.2.0] - 2026-04-26
 
 ### 修复
