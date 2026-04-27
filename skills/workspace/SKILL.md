@@ -175,6 +175,8 @@ output_language: {value from ecw.yml or workspace.yml}
 ## Cross-Service Context (for risk classification)
 - Interaction type: {MQ / Dubbo / unclear}
 - Contract change type: {new field (backward compatible) / field removal / signature change / new topic / other}
+- Your layer (Dubbo only): {1 = Provider / 2 = Consumer / N/A}
+- Provider service path (Dubbo Consumer only): {workspace-relative path to Provider service, e.g. ../ofc — N/A if not Dubbo Consumer}
 - Other services involved:
   {for each other service: name → role → what they plan to do}
 
@@ -192,14 +194,52 @@ ECW Status: {ECW-ready / ECW-partial / ECW-absent}
 ## Open Questions (flagged by Coordinator — needs code analysis to resolve)
 {any ambiguities that Phase 2 must investigate, e.g. unclear interaction type, unknown entry points}
 
-## Your Task (Phase 2 — Analysis Only, do NOT implement yet)
+## Your Task — Full Flow (Phase 2 Analysis → Phase 4 Implementation)
+
+### Phase 2: Analysis
 1. Follow the Analysis Strategy above — knowledge files first if ECW-ready
 2. Find the correct implementation entry points yourself (class + method + reason)
 3. Verify or correct the Coordinator's business assessment — you have authority to override
 4. Determine the interaction pattern if marked unclear
 5. Write your technical plan to .claude/ecw/session-data/{wf-id}/analysis-report.md
-6. Phase 2 analysis is done after writing analysis-report.md. Do NOT proceed to implementation.
-   A new session will be opened by the coordinator for Phase 4 implementation.
+
+### Wait for Phase 3 (Coordinator Contract Alignment)
+After writing analysis-report.md, poll for confirmed-contract.md:
+```bash
+for i in $(seq 1 720); do
+  [ -f ".claude/ecw/session-data/{wf-id}/confirmed-contract.md" ] && echo "FOUND" && break
+  sleep 5
+done
+```
+If not found after 60 minutes, notify user and wait for intervention.
+Once confirmed-contract.md appears → read it and proceed to Phase 4.
+
+### Phase 4: Implementation
+Read confirmed-contract.md to determine your interaction pattern and layer, then follow the matching path below.
+
+**MQ (all services parallel):**
+Proceed to implementation immediately. No cross-service dependency.
+
+**Dubbo — Provider (layer 1):**
+1. Implement API layer first (interfaces + DTOs defined in the contract)
+2. Run `mvn install` for the API module only
+3. Write api-ready.json → `.claude/ecw/session-data/{wf-id}/api-ready.json`
+4. Continue with Service layer implementation without waiting for Consumer
+
+**Dubbo — Consumer (layer 2):**
+Use non-blocking dependency scheduling:
+- Decompose all tasks from the contract and analysis-report.md
+- For each task: if it requires Provider's API (imports Dubbo interface/DTO), check
+  `{provider_service_path}/.claude/ecw/session-data/{wf-id}/api-ready.json`
+  - Not found → skip for now, continue with other tasks
+  - Found → execute
+- After completing all independent tasks, retry any skipped tasks
+- If api-ready.json still absent → poll and wait, then proceed
+
+**After all tasks done (all scenarios):**
+- ECW-ready: ecw:impl-verify is auto-triggered by BLOCKING RULE. After pass, ecw:knowledge-track runs automatically.
+- ECW-absent: run `/ecw:impl-verify` manually. After pass, run `/ecw:knowledge-track`.
+- Write status.json → `.claude/ecw/session-data/{wf-id}/status.json`
 
 ## Output Format
 Write analysis-report.md to .claude/ecw/session-data/{wf-id}/analysis-report.md with:
@@ -214,7 +254,7 @@ Ignore any files in .claude/plans/ that predate this workspace session (wf-id: {
 They belong to other workflows. Only act on plans tagged with this wf-id.
 
 ## Exit Criterion
-Your task is complete when analysis-report.md is written and the session exits.
+Your task is complete when status.json is written. The session then exits.
 Do NOT update coordinator's session-state.md — the coordinator owns that file exclusively.
 ```
 
@@ -226,17 +266,19 @@ Do NOT update coordinator's session-state.md — the coordinator owns that file 
 Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
          Self-check: if session-state.md Phase 1 ≠ ✅ 完成 → update it now before proceeding
 Process:
-  1. Generate Phase 2 start scripts and open one terminal tab per service
-     via terminal adapter (see ./terminal-adapters.md § Phase 2 Scripts)
+  1. Generate per-service start scripts and open one terminal tab per service
+     via terminal adapter (see ./terminal-adapters.md § Service Scripts)
 
-     Script prompt: "Read .claude/ecw/session-data/{wf-id}/workspace-analysis-task.md and execute Phase 2 analysis."
+     Script name: start-{svc}.sh
+     Script prompt: "Read .claude/ecw/session-data/{wf-id}/workspace-analysis-task.md and follow all instructions."
      Flags: --name {svc}-analyst --permission-mode bypassPermissions
 
   2. Child sessions run in parallel (interactive — user can observe and intervene):
      - ECW-ready services: use knowledge files first, then scan code for gaps
      - ECW-absent services: scan source code directly
      - Each session identifies: specific class/method, interaction pattern, concerns
-     - Each session writes analysis-report.md and then EXITS (Phase 2 is done)
+     - Each session writes analysis-report.md, then polls for confirmed-contract.md
+       and continues into Phase 4 implementation (same session — no restart needed)
 
   3. Poll for completion: check {service}/.claude/ecw/session-data/{wf-id}/analysis-report.md
      every 5 seconds
@@ -302,53 +344,38 @@ Gate-out: ALL of the following must be true:
   - confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
   - session-state.md Phase 3 row = ✅ 完成
 ```
-### Phase 4: Per-Service Implementation (NEW child sessions, parallel or layered)
+### Phase 4: Per-Service Implementation (analysis sessions continue, parallel or layered)
 
 ```
 Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
          Self-check: if session-state.md Phase 3 ≠ ✅ 完成 → update it now before proceeding
 Process:
-  Phase 2 sessions have exited. Coordinator opens NEW Phase 4 child sessions.
+  Analysis sessions detect confirmed-contract.md via polling and continue into Phase 4 automatically.
+  Coordinator does NOT generate new Phase 4 scripts — no user action needed at this phase.
 
-  1. Generate Phase 4 start scripts via terminal adapter (see ./terminal-adapters.md):
+  Each service session reads confirmed-contract.md and follows the dispatch path defined there:
 
-     For ECW-ready / ECW-partial services (have CLAUDE.md + BLOCKING RULE):
-       Prompt: "You have a new implementation task for this service.
-                Context:
-                - Cross-service contract: .claude/ecw/session-data/{wf-id}/confirmed-contract.md
-                - Your service's code analysis: .claude/ecw/session-data/{wf-id}/analysis-report.md
-                Implement all changes required by the contract.
-                When complete, write status.json to .claude/ecw/session-data/{wf-id}/status.json."
-       Flags: --name {svc}-impl --permission-mode bypassPermissions
-       Note: BLOCKING RULE drives the full internal ECW flow autonomously:
-             risk-classifier → writing-plans → tdd → impl → impl-verify → knowledge-track.
-             Only status.json is specified explicitly as the coordinator's completion signal.
+  MQ interaction:
+    Both sessions proceed to implementation in parallel immediately on detecting confirmed-contract.md.
 
-     For ECW-absent services (no CLAUDE.md / no BLOCKING RULE):
-       Prompt: "Read .claude/ecw/session-data/{wf-id}/confirmed-contract.md and
-                .claude/ecw/session-data/{wf-id}/analysis-report.md.
-                Implement the changes described in the contract.
-                After implementation: run /ecw:impl-verify.
-                After impl-verify passes: write status.json to
-                .claude/ecw/session-data/{wf-id}/status.json."
-       Flags: --name {svc}-impl --permission-mode bypassPermissions
-
-  2. Dispatch order (based on interaction_pattern in confirmed-contract.md):
-     MQ interaction:
-       -> Open ALL Phase 4 sessions in parallel (no compile dependency)
-     Dubbo interaction:
-       -> Open Layer 1 (Provider) sessions first
-       -> Wait for Layer 1 status.json at .claude/ecw/session-data/{wf-id}/
-       -> After Layer 1: run mvn install/deploy in Provider worktree
-       -> Then open Layer 2 (Consumer) sessions
+  Dubbo interaction:
+    Provider (layer 1):
+      Implements API layer first (interfaces + DTOs) → mvn install API jar
+      → writes api-ready.json → continues with Service layer (no waiting for Consumer)
+    Consumer (layer 2):
+      Uses non-blocking dependency scheduling:
+      - Works through all independent tasks immediately
+      - Defers any task requiring Provider API (Dubbo calls) until api-ready.json appears
+      - Retries skipped tasks after all independent tasks complete
+      - If api-ready.json still absent at end → polls and waits, then finishes
 
   Per service (each child session independently):
-    a. Read confirmed-contract.md -- authoritative cross-service contract
-    b. Read analysis-report.md -- own service's code analysis from Phase 2
+    a. Read confirmed-contract.md — authoritative cross-service contract
+    b. Read analysis-report.md — own service's code analysis from Phase 2
     c. Decompose into tasks:
        ECW-ready: ecw:writing-plans auto-triggered by BLOCKING RULE
        ECW-absent: manual decomposition based on analysis-report.md
-    d. Implement -> test -> ecw:impl-verify (-> ecw:knowledge-track auto-invoked by impl-verify for ECW-ready)
+    d. Implement → test → ecw:impl-verify (→ ecw:knowledge-track auto-invoked for ECW-ready)
     e. Write status.json:
        Location: {service}/.claude/ecw/session-data/{wf-id}/status.json
        completed_at: current actual time ($(date -Iseconds)), NOT workflow ID timestamp
@@ -447,7 +474,8 @@ annotate the Artifact column to explain (e.g. "Phase 1+2+3 compressed — code-f
 - **Never have coordinator write implementation tasks** — child sessions own task decomposition via ecw:writing-plans; coordinator distorts when it specifies "which class/method"
 - **Never paraphrase the original requirement** — pass verbatim text to child sessions; paraphrasing loses intent
 - **Never resolve contract conflicts without user** — architecture decisions (sync vs async, who owns what) require human judgment
-- **Never run Provider + Consumer in parallel for Dubbo** — Consumer depends on Provider's API Jar. For MQ, parallel execution after Phase 3 contract confirmation is correct.
+- **Never run Provider + Consumer in parallel for Dubbo without api-ready.json** — Consumer must use non-blocking scheduling: skip Dubbo-dependent tasks until Provider writes api-ready.json, work on independent tasks first. For MQ, full parallel execution is correct.
+- **Never generate Phase 4 start scripts** — Analysis sessions continue into Phase 4 automatically after detecting confirmed-contract.md. The coordinator does not open new sessions at Phase 4.
 - **Never use `keystroke` on macOS** — clipboard paste only (input method corruption)
 - **Never assume terminal type** — detect or fall back to manual
 

@@ -26,6 +26,19 @@ Status values:
 - `failed`: implementation attempted but encountered errors
 - `blocked`: cannot proceed, needs coordinator/user intervention
 
+## api-ready.json Schema
+
+Written by Provider child session after `mvn install` of API module. Read by Consumer child session for dependency scheduling. Dubbo only.
+
+```json
+{
+  "service": "{provider_service_id}",
+  "api_module": "{maven_module_name}",
+  "version": "{maven_version}",
+  "published_at": "{ISO-8601 timestamp}"
+}
+```
+
 ## Polling Mechanism
 
 Coordinator polls via Bash:
@@ -60,8 +73,8 @@ If a service doesn't complete within 30 minutes:
 | CLAUDE.md | `{ws}/CLAUDE.md` | create command | workspace creation |
 | cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Phase 1 + updated Phase 3 |
 | workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` | coordinator | Phase 1 end |
-| start-{svc}-analysis.sh | `{ws}/.claude/ecw/start-{svc}-analysis.sh` | coordinator | Phase 2 start |
+| start-{svc}.sh | `{ws}/.claude/ecw/start-{svc}.sh` | coordinator | Phase 2 start |
 | analysis-report.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/analysis-report.md` | child session | Phase 2 end |
 | confirmed-contract.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md` | coordinator | Phase 3 end |
-| start-{svc}-impl.sh | `{ws}/.claude/ecw/start-{svc}-impl.sh` | coordinator | Phase 4 start |
+| api-ready.json | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/api-ready.json` | Provider child session | Phase 4 (Dubbo only — after mvn install API jar) |
 | status.json | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/status.json` | child session | Phase 4 end |
