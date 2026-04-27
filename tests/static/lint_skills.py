@@ -725,14 +725,7 @@ def check_token_stats(result: LintResult):
 # ══════════════════════════════════════════════════════
 
 def check_routing_matrix(result: LintResult):
-    """Verify routing golden fixture matches workflow-routes.yml (the single source of truth)."""
-    matrix_file = TESTS_STATIC / "routing_matrix.yaml"
-    matrix = load_yaml_file(matrix_file)
-    if matrix is None:
-        result.warn("[routing] routing_matrix.yaml not found or PyYAML not installed, skipping")
-        return
-
-    # Primary validation: check against workflow-routes.yml
+    """Verify workflow-routes.yml internal consistency (single source of truth)."""
     routes_file = SKILLS_DIR / "risk-classifier" / "workflow-routes.yml"
     routes_data = load_yaml_file(routes_file)
 
@@ -745,52 +738,41 @@ def check_routing_matrix(result: LintResult):
         result.error("[routing] workflow-routes.yml has no routes defined")
         return
 
-    # Build lookup from workflow-routes.yml
-    routes_lookup = {}
+    phase_prefixes = ("Phase", "TDD", "Implementation", "Fix", "lean")
+    existing_skills = {d.name for d in SKILLS_DIR.iterdir() if d.is_dir() and (d / "SKILL.md").exists()}
+
     for route in routes:
         level = route.get("level", "")
         mode = route.get("mode", "")
         rtype = route.get("type", "")
         chain = route.get("chain", [])
+        must_include = route.get("must_include", [])
         must_exclude = route.get("must_exclude", [])
-        key = (level, mode, rtype)
-        routes_lookup[key] = {"chain": chain, "must_exclude": must_exclude}
+        tag = f"{rtype}/{level}/{mode}"
 
-    # Validate each routing_matrix.yaml entry against workflow-routes.yml
-    for entry in matrix:
-        level = entry.get("level", "")
-        mode = entry.get("mode", "")
-        change_type = entry.get("type", "")
-        must_include = entry.get("must_include", [])
-        must_exclude = entry.get("must_exclude", [])
+        chain_skills = [s for s in chain if not s.startswith(phase_prefixes)]
 
-        key = (level, mode, change_type)
-        route = routes_lookup.get(key)
-
-        if route is None:
-            result.error(
-                f"[routing] routing_matrix.yaml defines {change_type}/{level}/{mode} "
-                f"but no matching route in workflow-routes.yml"
-            )
-            continue
-
-        chain_skills = [s for s in route["chain"] if not s.startswith(("Phase", "TDD", "Implementation", "Fix", "lean"))]
-
+        # must_include items must appear in chain
         for skill in must_include:
             if skill not in chain_skills:
-                result.error(
-                    f"[routing] workflow-routes.yml {change_type}/{level}/{mode}: "
-                    f"routing must include '{skill}' but not found in chain"
-                )
+                result.error(f"[routing] {tag}: must_include '{skill}' not found in chain")
 
+        # must_exclude items must not appear in chain
         for skill in must_exclude:
             if skill in chain_skills:
-                result.error(
-                    f"[routing] workflow-routes.yml {change_type}/{level}/{mode}: "
-                    f"routing must NOT include '{skill}' but found in chain"
-                )
+                result.error(f"[routing] {tag}: must_exclude '{skill}' found in chain")
 
-    # Also validate that SKILL.md references workflow-routes.yml
+        # chain skills should reference known skill directories
+        for skill in chain_skills:
+            if skill not in existing_skills:
+                result.warn(f"[routing] {tag}: chain references unknown skill '{skill}'")
+
+        # must_include and must_exclude must not overlap
+        overlap = set(must_include) & set(must_exclude)
+        if overlap:
+            result.error(f"[routing] {tag}: overlap between must_include and must_exclude: {overlap}")
+
+    # Validate that SKILL.md references workflow-routes.yml
     rc_path = SKILLS_DIR / "risk-classifier" / "SKILL.md"
     if rc_path.exists():
         rc_content = rc_path.read_text(encoding="utf-8")
