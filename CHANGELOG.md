@@ -4,6 +4,21 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.4] - 2026-04-27
+
+### 重构
+
+- **路由表 Single Source of Truth（Issue #4）** — `workflow-routes.yml` 成为路由规则唯一权威源：
+  - 每条路由增加 `must_include` 字段，同时承载完整链条和约束条件
+  - 删除 `tests/static/routing_matrix.yaml`，lint 和测试直接读 `workflow-routes.yml`
+  - CLAUDE.md 流程图修正（biz-impact-analysis 标注为 P0/P1 only）并引用 workflow-routes.yml
+  - 模板 P2 行修正：移除误导性的 biz-impact-analysis 引用
+  - 下游 SKILL.md 精简路由自描述，impl-verify P2 行为按 domain_mode 区分单域/跨域
+
+### 修复
+
+- **TestWriterPaths 测试失败** — workspace path_pattern 补全 `session-data/{wf-id}/` 路径段；`_read_skill` 适配 prompt 分离架构，同时读取 prompts/ 目录
+
 ## [1.2.3] - 2026-04-27
 
 ### 重构
