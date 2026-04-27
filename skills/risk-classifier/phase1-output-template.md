@@ -16,7 +16,7 @@ Then check ecw.yml `auto_flow.auto_confirm`:
 ```
 [Auto-Flow] Risk: P{X} | {single-domain/cross-domain} ({domain list}) | Route: {routing chain}. Auto-proceeding...
 ```
-Then **immediately invoke** the next downstream skill (same as "Proceed" path below). The user can interrupt at any time if they disagree with the classification.
+Then invoke the next downstream skill (same as "Proceed" path below). The user can interrupt at any time if they disagree with the classification.
 
 **If `auto_confirm: false` (default)** or `auto_flow` section missing — use `AskUserQuestion` tool for user confirmation:
 
