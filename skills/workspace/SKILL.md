@@ -151,6 +151,25 @@ Gate-out: ALL of the following must be true:
 
 **workspace-analysis-task.md template:**
 
+> **Language rule**: Before writing, check `output_language` from workspace.yml.
+> - `zh-CN` → translate ALL section headers, labels, and instruction text to Chinese. No English section headers or instruction sentences in the output file. Technical terms (class names, method names, ECW status values like `ECW-ready`) stay as-is.
+> - `en` → use the template as-is.
+> Mixed-language output (Chinese content under English headers) is NOT acceptable.
+>
+> **zh-CN header reference** (use these exact translations):
+> | English | 中文 |
+> |---------|------|
+> | Original Requirement (verbatim — do not paraphrase) | 原始需求（逐字照抄，不得意译） |
+> | Coordinator's Business Assessment (hypothesis — verify against your code) | 协调者业务评估（假设——请对照代码核实） |
+> | Cross-Service Context (for risk classification) | 跨服务上下文（用于风险定级） |
+> | Analysis Strategy | 分析策略 |
+> | Other Services Context | 其他服务上下文 |
+> | Open Questions (flagged by Coordinator — needs code analysis to resolve) | 待确认问题（协调者标记——需代码分析解答） |
+> | Your Task (Phase 2 — Analysis Only, do NOT implement yet) | 你的任务（Phase 2 — 仅分析，不要开始实现） |
+> | Output Format | 输出格式 |
+> | Stale Plans Notice | 历史 Plan 免责声明 |
+> | Exit Criterion | 退出条件 |
+
 ```markdown
 ## Original Requirement (verbatim — do not paraphrase)
 {exact text from workspace.yml.requirement}
