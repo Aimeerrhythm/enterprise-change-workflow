@@ -251,8 +251,8 @@ Process:
   workspace-analysis-task-template.md — coordinator does not need to manage dispatch.
 
   Poll: check {service}/.claude/ecw/session-data/{wf-id}/status.json every 5 seconds,
-        timeout 30 minutes.
-  Failed -> AskUserQuestion: retry / skip / abort
+        timeout 120 minutes.
+  Failed -> AskUserQuestion: continue waiting 30 more minutes / skip this service / abort
 
   After all status.json received:
   Update session-state.md:
