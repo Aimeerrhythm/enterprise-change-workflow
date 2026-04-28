@@ -14,7 +14,7 @@ After a plan/design document is produced, dispatch the `spec-challenge` agent fo
 
 **Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
 
-**Mode switch**: Update session-state.md MODE marker to `planning`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: planning` / `<!-- ECW:MODE:END -->`.
 
 ## Trigger
 
@@ -195,10 +195,12 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and proceed to implementation. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-> **Downstream Handoff**: When `Auto-Continue` is `yes` in session-state.md, update `Next` field, then invoke the next skill based on Implementation Strategy:
-> - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
-> - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
-> - If `Auto-Continue` field is missing or `no`, show strategy recommendation and wait for user direction (backward compatibility).
+> **Downstream Handoff**: Read risk level and `Auto-Continue` from session-state.md (if session-state.md is unavailable, default to P0 and wait for user direction). Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> - **P0/P1 (Auto-Continue: yes)**: Invoke the next skill based on Implementation Strategy:
+>   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
+>   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
+> - **P2/P3 (manual trigger)**: spec-challenge does not auto-route to implementation for P2/P3. Present findings and wait for user direction.
+> - **If `Auto-Continue` field is missing or `no`**: Show strategy recommendation and wait for user direction (backward compatibility).
 
 ### Manual Trigger
 

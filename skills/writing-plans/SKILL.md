@@ -13,7 +13,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 **Announce at start:** "Using ecw:writing-plans to create the implementation plan."
 
-**Mode switch**: Update session-state.md MODE marker to `planning`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: planning` / `<!-- ECW:MODE:END -->`.
 
 ## Plan Mode — Do Not Use
 

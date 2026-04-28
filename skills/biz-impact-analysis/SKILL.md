@@ -11,7 +11,7 @@ description: |
 
 After code changes are complete, dispatch the `biz-impact-analysis` agent to analyze the impact of changes on business processes.
 
-**Mode switch**: Update session-state.md MODE marker to `verification`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: verification` / `<!-- ECW:MODE:END -->`.
 
 **Announce at start:** "Using ecw:biz-impact-analysis to assess business impact of code changes."
 

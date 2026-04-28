@@ -14,7 +14,7 @@ After implementation completes and before marking the task done, perform multi-d
 
 **Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `impl-verify-findings.md` follow this language. Pass to dispatched verifier agent prompts.
 
-**Mode switch**: Update session-state.md MODE marker to `verification`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: verification` / `<!-- ECW:MODE:END -->`.
 
 ## Why This Is Needed
 
