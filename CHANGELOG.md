@@ -4,6 +4,26 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.9] - 2026-04-28
+
+### 修复
+
+- **session-state STATUS 标记强制写入** — `risk-classifier` SKILL.md 写入指令明确要求必须使用 `<!-- ECW:STATUS:START/END -->` 标记块；缺失时 auto-continue hook 静默失效导致整条技能链断裂
+- **6 个下游技能 Downstream Handoff** — `tdd/writing-plans/domain-collab/requirements-elicitation/impl-verify/biz-impact-analysis` 更新 `Next` 字段时均未指定须在 STATUS 标记块内更新，现已修正
+- **systematic-debugging 缺失 Downstream Handoff** — Bug 修复完成后不会自动路由到 `ecw:impl-verify`，现补充完整
+- **`_remaining_route` 技能不在路由链时返回完整链** — 应返回 `[]`，否则 auto-continue 会注入"重跑整个工作流"的指令
+- **auto-continue hook 读取限制 4096 字节** — Subagent Ledger 积累后文件超 4096 字节会截断 STATUS 块，hook 静默失效；扩大至 16384 字节
+- **verify-completion Java 检查未受 ecw_configured 守卫** — 非 ECW 项目若有 pom.xml 会误触发 Java 编译检查；现在只在 ecw.yml 存在时执行
+- **verify-completion grep -rl 无 -F** — 文件路径中的 `.` 被当作正则元字符可能产生误报；改为 `grep -rlF`
+- **spec-challenge Downstream Handoff 缺少 P2/P3 分支和 standalone fallback** — 手动触发时无差异化处理，session-state.md 不存在时无 fallback；现已补充
+- **11 个技能 Mode switch 缺少 ECW:MODE 标记语法** — 仅文字描述"更新 MODE marker"，session-start.py/pre-compact.py 解析会失败；现全部改为显式标记语法
+- **biz-impact-analysis P2 分支未区分域模式** — P2 cross-domain 应建议 Phase 3，P2 single-domain 不应；现拆分为两个分支
+
+### 测试
+
+- **新增 38 个测试用例（811 → 849）**，覆盖：session-state STATUS 标记写入格式验证、`_remaining_route` 边界场景、auto-continue hook 行为、impl-orchestration 变体路由路径、ecw_configured Java 检查守卫回归测试、策略选择临界值精确数值断言、ECW:MODE 标记语法全技能静态检查
+- **`data_contracts.yaml`** — `impl-orchestration` writes 补充 session-state Ledger 写操作
+
 ## [1.2.8] - 2026-04-28
 
 ### 修复
