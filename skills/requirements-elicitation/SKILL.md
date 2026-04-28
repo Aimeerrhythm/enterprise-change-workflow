@@ -19,7 +19,7 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."
 
-**Mode switch**: Update session-state.md MODE marker to `analysis` (if session-state.md exists).
+**Mode switch**: Update the MODE marker in session-state.md (if session-state.md exists): `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`.
 
 ## When to Use
 

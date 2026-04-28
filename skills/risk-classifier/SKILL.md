@@ -17,7 +17,7 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 **Announce at start:** "Using ecw:risk-classifier to classify change risk level."
 
-**Mode switch**: Update session-state.md MODE marker to `analysis`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`.
 
 ## TDD Phase Notes
 

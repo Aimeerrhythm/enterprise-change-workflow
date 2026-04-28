@@ -721,6 +721,64 @@ class TestProfileAwareness:
                     assert action == "continue"
                     assert "TDD 测试覆盖提醒" not in message
 
+
+class TestEcwConfiguredGuard:
+    """verify-completion must skip Java checks when ecw.yml is absent.
+
+    Regression guard for the fix: compile_issues = check_java_compilation(...) if ecw_configured else ([], [])
+    Without this guard, Java checks fire on non-ECW projects and produce false positives.
+    """
+
+    def test_java_compilation_not_called_without_ecw_yml(self, hook_module, tmp_path):
+        """check_java_compilation must NOT be called when ecw.yml is absent."""
+        # Use bare tmp_path — no ecw.yml created
+        assert not (tmp_path / ".claude" / "ecw" / "ecw.yml").exists()
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_path),
+        }
+        config = {"_runtime_profile": "standard"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["src/Foo.java"], [])):
+            with patch.object(hook_module, "check_java_compilation",
+                              return_value=([], [])) as mock_compile:
+                with patch.object(hook_module, "check_java_tests",
+                                  return_value=([], [])) as mock_tests:
+                    hook_module.check(input_data, config)
+                    mock_compile.assert_not_called(), (
+                        "check_java_compilation must not be called when ecw.yml is absent"
+                    )
+                    mock_tests.assert_not_called(), (
+                        "check_java_tests must not be called when ecw.yml is absent"
+                    )
+
+    def test_java_compilation_called_with_ecw_yml(self, hook_module, tmp_project):
+        """check_java_compilation MUST be called when ecw.yml exists and Java files changed."""
+        ecw_dir = tmp_project / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True, exist_ok=True)
+        (ecw_dir / "ecw.yml").write_text("project:\n  language: java\n")
+
+        input_data = {
+            "tool_name": "TaskUpdate",
+            "tool_input": {"status": "completed"},
+            "cwd": str(tmp_project),
+        }
+        config = {"_runtime_profile": "standard"}
+
+        with patch.object(hook_module, "get_changed_files",
+                          return_value=(["src/Foo.java"], [])):
+            with patch.object(hook_module, "check_java_compilation",
+                              return_value=([], [])) as mock_compile:
+                with patch.object(hook_module, "check_java_tests",
+                                  return_value=([], [])):
+                    hook_module.check(input_data, config)
+                    mock_compile.assert_called_once(), (
+                        "check_java_compilation must be called when ecw.yml exists"
+                    )
+
     def test_strict_profile_includes_all_checks(self, hook_module, tmp_project):
         """P0 (strict) profile runs all checks including reminders."""
         domain_dir = tmp_project / ".claude" / "knowledge" / "order"

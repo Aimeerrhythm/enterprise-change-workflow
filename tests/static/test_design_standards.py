@@ -170,6 +170,34 @@ class TestEcwDevelopmentRule:
 # ── Design Reference Document ──
 
 
+class TestModeSwitchMarkerSyntax:
+    """Skills that have a Mode switch must use ECW:MODE:START/END marker syntax.
+
+    Background: session-start.py and pre-compact.py parse the MODE section via
+    read_marker_section('MODE'). If a skill writes plain text instead of the marker
+    block, the hook cannot extract the working mode for recovery messages.
+    """
+
+    @pytest.mark.parametrize(
+        "skill_dir", _all_skills(), ids=lambda d: d.name
+    )
+    def test_mode_switch_uses_ecw_marker(self, skill_dir):
+        content = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+        lower = content.lower()
+
+        if "mode switch" not in lower:
+            return  # skill has no mode switch — skip
+
+        has_marker = "ecw:mode:start" in lower or "<!-- ecw:mode:" in lower
+        assert has_marker, (
+            f"{skill_dir.name}/SKILL.md has a 'Mode switch' instruction but does not "
+            f"specify the ECW:MODE:START/END marker syntax. "
+            f"session-start.py parses working mode via read_marker_section('MODE') — "
+            f"plain text updates break recovery. "
+            f"Add: `<!-- ECW:MODE:START -->` / `- **Working Mode**: {{mode}}` / `<!-- ECW:MODE:END -->`"
+        )
+
+
 class TestDesignReference:
     DOC_PATH = DOCS_DIR / "design-reference.md"
 

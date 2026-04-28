@@ -47,6 +47,52 @@ class TestStrategySelectionRules:
         )
         assert found, "Must have rule: Tasks<=3 + files>=6 -> impl-orchestration"
 
+    def test_file_threshold_is_exactly_6(self):
+        """The files threshold for impl-orchestration must be exactly 6, not 5.
+
+        Changing files>=6 to files>=5 would silently break the boundary:
+        5-file changes would incorrectly route to impl-orchestration.
+        This test parses the numeric threshold directly from workflow-routes.yml.
+        """
+        import re
+        orch_conditions = [
+            c for c, s in zip(self._conditions(), self.strategies)
+            if s.get("strategy") == "impl-orchestration" and "file" in c
+        ]
+        assert orch_conditions, "No impl-orchestration rule with file condition found"
+
+        for cond in orch_conditions:
+            # Extract the numeric threshold after "files" (e.g. "files >= 6" or "files>=6")
+            match = re.search(r'files\s*>=\s*(\d+)', cond)
+            if match:
+                threshold = int(match.group(1))
+                assert threshold == 6, (
+                    f"impl-orchestration file threshold must be exactly 6, got {threshold}. "
+                    f"Condition: '{cond}'"
+                )
+
+    def test_direct_file_threshold_is_exactly_5(self):
+        """The files threshold for direct strategy must be exactly <=5, not <=6.
+
+        Symmetric guard: if someone changes files<=5 to files<=6, the boundary
+        between direct and impl-orchestration collapses.
+        """
+        import re
+        direct_conditions = [
+            c for c, s in zip(self._conditions(), self.strategies)
+            if s.get("strategy") == "direct" and "file" in c and "task" in c
+        ]
+        assert direct_conditions, "No direct strategy rule with file+task condition found"
+
+        for cond in direct_conditions:
+            match = re.search(r'files\s*<=\s*(\d+)', cond)
+            if match:
+                threshold = int(match.group(1))
+                assert threshold == 5, (
+                    f"direct strategy file threshold must be exactly 5, got {threshold}. "
+                    f"Condition: '{cond}'"
+                )
+
     def test_low_task_low_file_stays_direct(self):
         """<=3 tasks with <=5 files should stay direct."""
         found = any(

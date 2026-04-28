@@ -13,7 +13,7 @@ Execute plan by dispatching subagents per task in dependency-aware parallel laye
 
 **Announce at start:** "Using ecw:impl-orchestration to execute the plan with parallel layer dispatch."
 
-**Mode switch**: Update session-state.md MODE marker to `implementation`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: implementation` / `<!-- ECW:MODE:END -->`.
 
 ## When to Use
 

@@ -49,3 +49,21 @@ class TestRequirementsElicitationArchitecture:
     def test_has_phase2_handoff(self):
         """Must describe handoff to risk-classifier Phase 2 after confirmation."""
         assert "phase 2" in self.lower
+
+    def test_has_standalone_fallback(self):
+        """Must define behavior when session-state.md is absent (standalone invocation).
+
+        Without this, /ecw:requirements-elicitation called manually has undefined behavior —
+        no risk level to read, no session-state to update Next field in.
+        """
+        has_fallback = any(phrase in self.lower for phrase in [
+            "standalone",
+            "session-state.md absent",
+            "session-state.md exists",
+            "if session-state",
+            "unavailable",
+        ])
+        assert has_fallback, (
+            "requirements-elicitation/SKILL.md must define standalone fallback — "
+            "what to do when session-state.md does not exist (standalone /ecw:requirements-elicitation)"
+        )

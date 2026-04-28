@@ -24,7 +24,7 @@ All coordinator-written files (cross-service-plan.md, workspace-analysis-task.md
 
 **Announce at start:** "Using ecw:workspace to [create workspace / coordinate cross-service development / ...]."
 
-**Mode switch**: Update session-state.md MODE marker to `analysis` (during Phase 1-3) or `implementation` (during Phase 4).
+**Mode switch**: Update the MODE marker in session-state.md at each phase: Phase 1-3 use `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`; Phase 4 use `<!-- ECW:MODE:START -->` / `- **Working Mode**: implementation` / `<!-- ECW:MODE:END -->`.
 
 ## Trigger
 

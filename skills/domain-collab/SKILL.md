@@ -18,7 +18,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 **Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
 
-**Mode switch**: Update session-state.md MODE marker to `analysis`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`.
 
 ## Trigger
 
