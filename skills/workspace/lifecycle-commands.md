@@ -71,13 +71,13 @@ Step 8: Generate configuration files
      {
        "permissions": {
          "allow": [
-           "Bash(mkdir -p {workspace_path}/.claude/",
+           "Bash(mkdir -p {workspace_path}/.claude/)",
            "Write({workspace_path}/.claude/ecw/*)",
            "Write({workspace_path}/.claude/ecw/session-data/*/*)",
-           "Bash(mkdir -p {workspace_path}/{svc1}/.claude/",
+           "Bash(mkdir -p {workspace_path}/{svc1}/.claude/)",
            "Write({workspace_path}/{svc1}/.claude/ecw/*)",
            "Write({workspace_path}/{svc1}/.claude/ecw/session-data/*/*)",
-           "Bash(mkdir -p {workspace_path}/{svc2}/.claude/",
+           "Bash(mkdir -p {workspace_path}/{svc2}/.claude/)",
            "Write({workspace_path}/{svc2}/.claude/ecw/*)",
            "Write({workspace_path}/{svc2}/.claude/ecw/session-data/*/*)"
          ]
