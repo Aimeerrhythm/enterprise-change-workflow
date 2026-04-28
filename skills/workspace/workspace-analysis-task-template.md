@@ -74,6 +74,10 @@ Once confirmed-contract.md appears → read it and proceed to Phase 4.
 ### Phase 4: Implementation
 Before writing any code, invoke `ecw:risk-classifier`. Read `confirmed-contract.md` and `analysis-report.md` as the change context.
 
+**Workspace wf-id override**: When ecw:risk-classifier reaches its "State Persistence" step (write session-state.md), do NOT generate a new timestamp as workflow-id. Instead, use the workspace `{wf-id}` from this task file and write to:
+`.claude/ecw/session-data/{wf-id}/session-state.md`
+This ensures coordinator can observe your ECW flow progress at a known path. Continue updating this same file as each ECW skill completes (mode switches, Subagent Ledger entries, etc.).
+
 Read confirmed-contract.md to determine your interaction pattern and layer, then follow the matching path below.
 
 **MQ (all services parallel):**
