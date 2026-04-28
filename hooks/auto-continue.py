@@ -34,14 +34,18 @@ def _parse_field(status_text, field_name):
 
 
 def _remaining_route(routing, current_skill):
-    """Extract steps after current_skill in the routing chain."""
+    """Extract steps after current_skill in the routing chain.
+
+    Returns [] when current_skill is not found, not the full chain —
+    injecting the full chain would cause the model to re-run the entire workflow.
+    """
     if not routing:
         return []
     steps = [s.strip() for s in routing.split("→")]
     for i, step in enumerate(steps):
         if current_skill in step or step in current_skill:
             return steps[i + 1:]
-    return steps
+    return []
 
 
 def main():
@@ -68,7 +72,7 @@ def main():
 
     try:
         with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(4096)
+            content = f.read(16384)  # STATUS block is near top; 16KB covers large ledger entries
     except Exception:
         print(json.dumps({"result": "continue"}))
         return

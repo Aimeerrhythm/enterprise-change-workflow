@@ -4,6 +4,8 @@ Validates:
 1. session-state-format.md has Next field in STATUS section
 2. pre-compact.py extracts Next field for precise recovery
 3. session-start.py includes Next field in recovery hint
+4. risk-classifier SKILL.md write instruction explicitly requires ECW:STATUS markers
+5. auto-continue hook silently no-ops on malformed session-state (no STATUS block)
 """
 import importlib.util
 import re
@@ -114,3 +116,121 @@ class TestSessionStartNextField:
             "_extract_state_fields must extract 'next_skill' from **Next** field"
         )
         assert fields["next_skill"] == "ecw:impl-verify"
+
+
+RISK_CLASSIFIER_SKILL = SKILLS_DIR / "risk-classifier" / "SKILL.md"
+
+
+class TestRiskClassifierWriteInstruction:
+    """risk-classifier SKILL.md must explicitly require ECW:STATUS markers in write instruction.
+
+    Rationale: If the write instruction only says 'read the template', the model may
+    write a plain-Markdown session-state.md that the auto-continue hook cannot parse,
+    silently breaking the downstream skill chain.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = RISK_CLASSIFIER_SKILL.read_text(encoding="utf-8")
+
+    def test_write_instruction_mentions_status_marker(self):
+        assert "ECW:STATUS:START" in self.content, (
+            "risk-classifier SKILL.md write instruction must explicitly name "
+            "'ECW:STATUS:START' marker — 'read the template' alone is not enough"
+        )
+
+    def test_write_instruction_explains_consequence(self):
+        # Must tell the model WHY markers are required (hook failure consequence)
+        assert any(phrase in self.content for phrase in [
+            "hook", "auto-continue", "silent", "chain"
+        ]), (
+            "risk-classifier SKILL.md must explain the consequence of omitting markers "
+            "(hook failure / broken skill chain) so the model treats it as non-negotiable"
+        )
+
+
+class TestAutoContinueMarkerDependency:
+    """auto-continue hook must silently no-op when session-state has no STATUS block.
+
+    This is the known failure mode: wrong-format session-state causes hook to do
+    nothing, leaving the model without routing guidance. The hook behaviour itself
+    is correct (fail-safe), but the test documents the gap so regressions are visible.
+    """
+
+    @pytest.fixture
+    def auto_continue(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_noop_on_missing_status_block(self, auto_continue, tmp_path, monkeypatch):
+        """Hook must return continue (not inject systemMessage) when STATUS block absent."""
+        import json, io
+
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
+        state_dir.mkdir(parents=True)
+        (state_dir / "session-state.md").write_text(
+            "# ECW Session State\n"
+            "<!-- MODE: analysis -->\n"
+            "## Metadata\n"
+            "- Risk Level: P1\n"
+            "- Next: ecw:requirements-elicitation\n"
+        )
+
+        payload = json.dumps({
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:risk-classifier"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+
+        auto_continue.main()
+        output = json.loads("".join(captured))
+        assert "systemMessage" not in output, (
+            "Hook must NOT inject systemMessage when STATUS block is absent — "
+            "this is the known silent-failure mode that breaks skill chaining"
+        )
+
+    def test_injects_routing_on_valid_status_block(self, auto_continue, tmp_path, monkeypatch):
+        """Hook must inject systemMessage when STATUS block is present and Auto-Continue: yes."""
+        import json, io
+
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
+        state_dir.mkdir(parents=True)
+        (state_dir / "session-state.md").write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "- **Risk Level**: P1\n"
+            "- **Auto-Continue**: yes\n"
+            "- **Routing**: ecw:risk-classifier → ecw:requirements-elicitation → ecw:writing-plans\n"
+            "- **Next**: ecw:requirements-elicitation\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+
+        payload = json.dumps({
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:risk-classifier"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+
+        auto_continue.main()
+        output = json.loads("".join(captured))
+        assert "systemMessage" in output, (
+            "Hook must inject systemMessage when STATUS block present and Auto-Continue: yes"
+        )
+        assert "ecw:requirements-elicitation" in output["systemMessage"], (
+            "systemMessage must reference the next skill in the routing chain"
+        )

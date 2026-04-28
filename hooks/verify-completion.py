@@ -131,12 +131,12 @@ def check(input_data, config=None):
         for filepath in source_deleted:
             issues.extend(check_stale_references(cwd, filepath))
 
-    compile_issues, compile_warnings = check_java_compilation(cwd, source_modified)
+    compile_issues, compile_warnings = check_java_compilation(cwd, source_modified) if ecw_configured else ([], [])
     issues.extend(compile_issues)
 
     test_issues, test_warnings = [], []
     if not compile_issues:
-        test_issues, test_warnings = check_java_tests(cwd, source_modified)
+        test_issues, test_warnings = check_java_tests(cwd, source_modified) if ecw_configured else ([], [])
         issues.extend(test_issues)
 
     # Non-essential reminders: skip at "minimal" profile (P3)
@@ -258,9 +258,9 @@ def check_stale_references(cwd, deleted_file):
     skip_dirs = {".claude/specs/"}
 
     try:
-        # 用完整相对路径 grep，而不是 basename
+        # 用完整相对路径 grep，而不是 basename；-F 防止路径中的 . 被当作正则元字符
         r = subprocess.run(
-            ["grep", "-rl", deleted_file,
+            ["grep", "-rlF", deleted_file,
              "--include=*.md", "--include=*.yml",
              "--include=*.yaml", "--include=*.json",
              ".claude/"],

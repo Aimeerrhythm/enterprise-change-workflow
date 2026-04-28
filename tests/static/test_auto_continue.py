@@ -3,6 +3,7 @@
 Verifies that all skills have explicit auto-continue instructions
 to prevent redundant confirmation prompts between skill transitions.
 """
+import importlib.util
 import re
 
 import pytest
@@ -12,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 SKILLS_DIR = ROOT / "skills"
 TEMPLATES_DIR = ROOT / "templates"
+HOOKS_DIR = ROOT / "hooks"
 
 
 def _read_skill(name):
@@ -219,3 +221,123 @@ class TestBizImpactAutoContinue:
         ) or re.search(
             r'risk.?classifier.{0,60}phase', self.lower
         ), "biz-impact-analysis Downstream Handoff must reference Phase 3 calibration"
+
+
+class TestRemainingRouteUnit:
+    """Unit tests for _remaining_route in auto-continue.py.
+
+    Critical edge cases:
+    - skill not found in routing → must return [], not the full chain
+    - empty routing → return []
+    - skill at last position → return []
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.fn = mod._remaining_route
+
+    def test_normal_middle_skill(self):
+        routing = "ecw:risk-classifier → ecw:requirements-elicitation → ecw:writing-plans → ecw:tdd"
+        result = self.fn(routing, "ecw:requirements-elicitation")
+        assert result == ["ecw:writing-plans", "ecw:tdd"]
+
+    def test_skill_at_last_position(self):
+        routing = "ecw:risk-classifier → ecw:writing-plans → ecw:tdd"
+        result = self.fn(routing, "ecw:tdd")
+        assert result == []
+
+    def test_skill_not_in_routing_returns_empty(self):
+        """Must return [] — NOT the full chain. Returning full chain would re-run whole workflow."""
+        routing = "ecw:risk-classifier → ecw:writing-plans → ecw:tdd"
+        result = self.fn(routing, "ecw:domain-collab")
+        assert result == [], (
+            "_remaining_route must return [] when skill not found, "
+            "not the full chain (which would re-run the entire workflow)"
+        )
+
+    def test_empty_routing(self):
+        assert self.fn("", "ecw:risk-classifier") == []
+        assert self.fn(None, "ecw:risk-classifier") == []
+
+    def test_skill_at_first_position(self):
+        routing = "ecw:risk-classifier → ecw:requirements-elicitation → ecw:writing-plans"
+        result = self.fn(routing, "ecw:risk-classifier")
+        assert result == ["ecw:requirements-elicitation", "ecw:writing-plans"]
+
+
+class TestSystematicDebuggingAutoContinue:
+    """systematic-debugging must have a Downstream Handoff block routing to impl-verify."""
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = _read_skill("systematic-debugging")
+        self.lower = self.content.lower()
+
+    def test_has_downstream_handoff_block(self):
+        assert "downstream handoff" in self.lower, (
+            "systematic-debugging/SKILL.md missing Downstream Handoff block — "
+            "bug fix workflow will truncate and never reach impl-verify"
+        )
+
+    def test_routes_to_impl_verify(self):
+        assert "impl-verify" in self.lower or "ecw:impl-verify" in self.lower, (
+            "systematic-debugging Downstream Handoff must route to ecw:impl-verify"
+        )
+
+
+class TestDownstreamHandoffStatusMarker:
+    """Downstream Handoff in all active skills must require STATUS marker when updating Next.
+
+    Background: auto-continue hook reads session-state.md via read_marker_section('STATUS').
+    If the model updates Next outside the STATUS block, the hook silently fails and
+    the auto-continue chain breaks. Each skill's Downstream Handoff must explicitly
+    require the update to be inside ECW:STATUS:START/END.
+    """
+
+    SKILLS_TO_CHECK = [
+        "tdd",
+        "writing-plans",
+        "domain-collab",
+        "requirements-elicitation",
+        "impl-verify",
+        "biz-impact-analysis",
+    ]
+
+    @pytest.mark.parametrize("skill_name", SKILLS_TO_CHECK)
+    def test_downstream_handoff_requires_status_marker(self, skill_name):
+        content = _read_skill(skill_name)
+        lower = content.lower()
+
+        # Find the section-level "## Downstream Handoff" header (not inline references)
+        handoff_start = -1
+        for m in re.finditer(r'##\s+downstream handoff', lower):
+            handoff_start = m.start()
+            break
+
+        # Fall back to blockquote-style "> **Downstream Handoff**"
+        if handoff_start == -1:
+            m = re.search(r'>\s+\*\*downstream handoff\*\*', lower)
+            if m:
+                handoff_start = m.start()
+
+        assert handoff_start != -1, f"{skill_name}/SKILL.md missing Downstream Handoff block"
+
+        handoff_section = lower[handoff_start:handoff_start + 2000]
+        has_marker_ref = any(phrase in handoff_section for phrase in [
+            "ecw:status:start",
+            "status:start",
+            "marker block",
+            "within the",
+            "status marker",
+        ])
+        assert has_marker_ref, (
+            f"{skill_name}/SKILL.md Downstream Handoff says 'update Next field' "
+            f"but does not require the update to be inside the ECW:STATUS:START/END "
+            f"marker block — auto-continue hook will silently fail if model writes "
+            f"Next outside the marker"
+        )

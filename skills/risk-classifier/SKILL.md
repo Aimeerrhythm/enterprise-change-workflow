@@ -87,6 +87,8 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 
 **Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 
+**REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`Risk Level`, `Auto-Continue`, `Routing`, `Next`, etc.). Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks parse only the marker-delimited sections. Writing without markers causes silent hook failure and breaks the entire downstream skill chain.
+
 Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
 
 ### Route Task Creation

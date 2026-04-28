@@ -109,7 +109,7 @@ After biz-impact-analysis report is output:
 > Invoke `ecw:knowledge-track`.
 > Mark the biz-impact-analysis Task as complete; then proceed to the downstream handoff below.
 
-> **Downstream Handoff**: Read risk level from session-state.md, update `Next` field, then:
+> **Downstream Handoff**: Read risk level from session-state.md, update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
 > - **P0/P1**: Invoke `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
 > - **P2**: Suggest executing Phase 3 (not mandatory; user decides).
 > - **P3**: No Phase 3 needed.

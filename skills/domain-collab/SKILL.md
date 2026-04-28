@@ -204,7 +204,7 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 
 **Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
 
-> **Downstream Handoff**: After Round 3 completes and report is output, update session-state.md `Next` field, then invoke the next skill:
+> **Downstream Handoff**: After Round 3 completes and report is output, update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill:
 > - **P0/P1**: Invoke risk-classifier Phase 2.
 > - **P2**: Invoke `ecw:writing-plans`.
 > - If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
