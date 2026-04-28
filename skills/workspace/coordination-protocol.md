@@ -57,11 +57,11 @@ for i in $(seq 1 360); do
 done
 ```
 
-Timeout: 30 minutes (360 iterations x 5 seconds).
+Timeout: 120 minutes (1440 iterations x 5 seconds).
 
 ## Timeout Handling
 
-If a service doesn't complete within 30 minutes:
+If a service doesn't complete within 120 minutes:
 1. Notify user (language follows output_language)
 2. AskUserQuestion: Continue waiting / Skip this service / Abort all
 

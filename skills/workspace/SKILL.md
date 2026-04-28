@@ -263,6 +263,9 @@ Process:
 
 Gate-out: ALL of the following must be true:
   - status.json exists for all services at .claude/ecw/session-data/{wf-id}/
+  - Each status.json contains required fields: service, status, summary, files_changed, commits, error
+    (verify with: cat {service}/.claude/ecw/session-data/{wf-id}/status.json | python3 -c
+     "import json,sys; d=json.load(sys.stdin); missing=[f for f in ['service','status','summary','files_changed','commits','error'] if f not in d]; print('MISSING:',missing) if missing else print('OK')")
   - session-state.md Phase 4 row = ✅ 完成
 ```
 

@@ -110,6 +110,18 @@ Use non-blocking dependency scheduling:
 - ECW-ready: ecw:impl-verify is auto-triggered by BLOCKING RULE. After pass, ecw:knowledge-track runs automatically.
 - ECW-absent: run `/ecw:impl-verify` manually. After pass, run `/ecw:knowledge-track`.
 - Write status.json → `.claude/ecw/session-data/{wf-id}/status.json`
+  Use exactly this schema (fill in values, do not add or rename fields):
+  ```json
+  {
+    "service": "{service_id}",
+    "status": "completed",
+    "summary": "one sentence describing what was implemented",
+    "files_changed": ["relative/path/to/File.java"],
+    "commits": ["abc1234 commit message"],
+    "error": null
+  }
+  ```
+  If implementation failed, set `"status": "failed"` and put the error message in `"error"`.
 
 ## Output Format
 Write analysis-report.md to .claude/ecw/session-data/{wf-id}/analysis-report.md with:
