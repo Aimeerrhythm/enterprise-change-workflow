@@ -45,7 +45,7 @@ Coordinator polls via Bash:
 
 ```bash
 wf_id="{wf-id}"
-for i in $(seq 1 360); do
+for i in $(seq 1 1440); do
   all_done=true
   for service in {service_list}; do
     if [ ! -f "${service}/.claude/ecw/session-data/${wf_id}/status.json" ]; then
