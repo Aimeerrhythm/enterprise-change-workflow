@@ -231,6 +231,8 @@ Process:
            (these are in analysis-report.md, owned by child sessions)
          - task decomposition or implementation steps
            (child sessions own this via ecw:writing-plans)
+         - multiple implementation options or "A or B" choices
+           (if unsure, surface to user via AskUserQuestion before writing)
 
   4. Update session-state.md:
      - Phase 3 row → ✅ 完成

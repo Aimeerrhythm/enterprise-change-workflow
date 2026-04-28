@@ -2,6 +2,7 @@
 
 ## Never Rules
 
+- **Never leave implementation options in confirmed-contract.md** — the contract must specify exactly one approach. If the coordinator is unsure which approach to take, surface the decision to the user via AskUserQuestion before writing the contract. Leaving "A or B" choices in the contract shifts an architecture decision onto the child session, making implementation non-reproducible.
 - **Never let child sessions write coordinator's session-state.md** — coordinator is the sole owner of `.claude/ecw/session-data/{wf-id}/session-state.md`. Child sessions only write their own artifacts (analysis-report.md, status.json). State updates are always done by the coordinator at gate transitions.
 - **Never skip Phase gates** — artifact must exist before next Phase
 - **Never use code-reading tools in Phase 1** — Phase 1 information source is workspace.yml requirement ONLY. No Read, Bash, Glob, Grep, or Explore tools. If code detail is needed to answer a question, it's an Open Question for Phase 2, not something to resolve in Phase 1.
