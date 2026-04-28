@@ -52,6 +52,11 @@ def anti_patterns_md():
     return (SKILL_DIR / "prompts" / "anti-patterns.md").read_text(encoding="utf-8")
 
 
+@pytest.fixture(scope="module")
+def analysis_task_template_md():
+    return (SKILL_DIR / "workspace-analysis-task-template.md").read_text(encoding="utf-8")
+
+
 # ---------------------------------------------------------------------------
 # TestWorkspaceSubcommands — sub-command surface
 # ---------------------------------------------------------------------------
@@ -272,6 +277,18 @@ class TestCoordinationProtocol:
     def test_skill_md_references_coordination_protocol(self, skill_lower):
         """SKILL.md must reference coordination-protocol.md."""
         assert "coordination-protocol.md" in skill_lower
+
+    def test_child_session_state_in_artifact_locations(self, coordination_md):
+        """coordination-protocol.md Artifact Locations must list child session-state.md.
+
+        Child sessions write session-state.md at the workspace wf-id path so the
+        coordinator can observe per-service ECW flow progress at a known location.
+        """
+        lower = coordination_md.lower()
+        assert "session-state.md" in lower, \
+            "child session-state.md missing from coordination-protocol.md Artifact Locations"
+        assert re.search(r'session-state\.md.{0,80}child|child.{0,80}session-state\.md', lower), \
+            "child session-state.md not clearly attributed to child session in artifact table"
 
 
 # ---------------------------------------------------------------------------
@@ -576,3 +593,41 @@ class TestStatusJsonGateOutValidation:
     def test_gate_out_uses_validation_command(self, skill_lower):
         """Phase 4 gate-out must show a concrete validation command."""
         assert re.search(r'python3|jq|missing', skill_lower)
+
+
+# ---------------------------------------------------------------------------
+# TestAnalysisTaskTemplate — child session wf-id and session-state behavior
+# ---------------------------------------------------------------------------
+
+class TestAnalysisTaskTemplate:
+    """workspace-analysis-task-template.md must enforce workspace wf-id usage."""
+
+    def test_wf_id_override_instruction_present(self, analysis_task_template_md):
+        """Phase 4 must instruct child session to use workspace wf-id, not a new timestamp.
+
+        Without this override, risk-classifier generates its own timestamp wf-id and writes
+        session-state.md to an unknown path, making child session progress invisible to coordinator.
+        """
+        lower = analysis_task_template_md.lower()
+        assert re.search(
+            r'wf.?id.{0,100}(override|workspace|do not generate|not.{0,20}timestamp|not.{0,20}new)',
+            lower,
+        ) or re.search(
+            r'(override|workspace wf.?id|do not generate).{0,100}wf.?id',
+            lower,
+        ), "wf-id override instruction missing from Phase 4 of workspace-analysis-task-template.md"
+
+    def test_child_session_state_path_uses_workspace_wf_id(self, analysis_task_template_md):
+        """Child session must write session-state.md under the workspace wf-id path."""
+        assert re.search(
+            r'\.claude/ecw/session-data/\{wf-id\}/session-state\.md',
+            analysis_task_template_md,
+        ), "child session-state.md path with {wf-id} not found in template Phase 4"
+
+    def test_no_coordinator_session_state_update(self, analysis_task_template_md):
+        """Child session must NOT update coordinator's session-state.md."""
+        lower = analysis_task_template_md.lower()
+        assert re.search(
+            r'(do not|not).{0,30}(coordinator.{0,30}session.?state|update.{0,30}coordinator)',
+            lower,
+        ), "template must explicitly forbid child session from updating coordinator's session-state.md"
