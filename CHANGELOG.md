@@ -4,6 +4,16 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.8] - 2026-04-28
+
+### 修复
+
+- **workspace Phase 4 缺少风险评估入口（Issue #12）** — `workspace-analysis-task-template.md` Phase 4 开头新增 `ecw:risk-classifier` 调用指令，子会话以 `confirmed-contract.md` + `analysis-report.md` 作为变更上下文，后续 ECW 流程由 auto-continue 自动驱动
+- **lifecycle-commands.md Bash 权限规则括号缺失（Issue #10）** — 补全 `Bash(mkdir -p ...)` 规则中缺失的右括号，修复权限规则语法错误
+- **workspace 轮询超时过短（Issue #13）** — 将 `confirmed-contract.md` 等待超时从 60 分钟延长至 180 分钟，`api-ready.json` 等待超时从 30 分钟延长至 60 分钟，协调者 Phase 4 轮询超时从 30 分钟延长至 120 分钟；同步修正 `coordination-protocol.md` 轮询示例代码迭代次数（360→1440）
+- **confirmed-contract.md 允许多选项导致实现不可复现（Issue #16）** — `SKILL.md` Phase 3 content exclusion 新增禁止写多选项规则；`anti-patterns.md` Never Rules 新增对应条目，明确不确定时须通过 AskUserQuestion 向用户确认后再写契约
+- **status.json schema 约束无人执行（Issue #15）** — `workspace-analysis-task-template.md` 新增填空式 schema 模板，子会话按模板填写；`SKILL.md` Phase 4 gate-out 新增 python3 字段存在性校验，缺少必填字段时阻断流程
+
 ## [1.2.7] - 2026-04-27
 
 ### 维护
