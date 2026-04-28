@@ -252,3 +252,58 @@ traces:
         - {skill: risk-classifier-phase3, key: calibration-history}
         - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier]
+
+  # ── Implementation Strategy: subagent-driven (impl-orchestration replaces tdd) ──
+  # Triggered when Plan has tasks 4-8 + P0/P1, or tasks > 8, or files >= 6.
+  # Same routing chain as tdd variant but tdd replaced by impl-orchestration.
+  # must_include/must_exclude from workflow-routes.yml are still satisfied.
+
+  - name: "P0 single-domain requirement (impl-orchestration)"
+    input: {risk_level: P0, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - requirements-elicitation
+        - risk-classifier-phase2
+        - writing-plans
+        - spec-challenge
+        - impl-orchestration
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: requirements-elicitation, key: requirements-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: spec-challenge, key: spec-challenge-report}
+        - {skill: impl-orchestration, key: session-state}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, impl-orchestration]
+
+  - name: "P1 single-domain requirement (impl-orchestration)"
+    input: {risk_level: P1, domain_scope: single-domain, change_type: requirement}
+    expected:
+      skill_chain:
+        - risk-classifier
+        - requirements-elicitation
+        - risk-classifier-phase2
+        - writing-plans
+        - impl-orchestration
+        - impl-verify
+        - biz-impact-analysis
+        - risk-classifier-phase3
+      checkpoint_writes:
+        - {skill: risk-classifier, key: session-state}
+        - {skill: requirements-elicitation, key: requirements-summary}
+        - {skill: risk-classifier-phase2, key: phase2-assessment}
+        - {skill: writing-plans, key: plan-file}
+        - {skill: impl-orchestration, key: session-state}
+        - {skill: impl-verify, key: impl-verify-findings}
+        - {skill: risk-classifier-phase3, key: calibration-log}
+        - {skill: risk-classifier-phase3, key: calibration-history}
+        - {skill: risk-classifier-phase3, key: instincts}
+      ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, impl-orchestration]

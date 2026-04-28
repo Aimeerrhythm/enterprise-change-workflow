@@ -131,7 +131,11 @@ skills:
     ask_user_question: true
 
   impl-orchestration:
-    writes: []
+    writes:
+      - key: session-state
+        path_pattern: "session-state.md"
+        fields: [Subagent Ledger]
+        condition: "always — batch-updates LEDGER marker after each dispatch layer"
     reads:
       - key: session-state
         fields: [Risk Level, Implementation Strategy]

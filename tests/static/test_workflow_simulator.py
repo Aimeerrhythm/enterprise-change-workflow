@@ -327,3 +327,93 @@ class TestRouteCompleteness:
                 uncovered.append(f"{change_type}/{level}/{mode}")
 
         assert not uncovered, f"Routing entries without traces: {uncovered}"
+
+
+# ═══════════════════════════════════════════
+# Test 7: impl-orchestration variant traces
+# ═══════════════════════════════════════════
+
+class TestImplOrchestrationVariant:
+    """impl-orchestration replaces tdd when implementation strategy is subagent-driven.
+
+    Validates:
+    - impl-orchestration traces satisfy the same routing matrix must_include/must_exclude
+      as their tdd counterparts
+    - impl-orchestration is NOT present in tdd-based traces (mutual exclusivity)
+    - impl-orchestration traces include a session-state ledger write
+    - tdd is absent from impl-orchestration traces
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_fixtures(self, traces, routing_matrix, contracts):
+        self.all_traces = traces
+        self.routing_matrix = routing_matrix
+        self.contracts = contracts
+        self.orch_traces = [
+            t for t in traces if "impl-orchestration" in t["name"]
+        ]
+
+    def test_orch_traces_exist(self):
+        assert self.orch_traces, (
+            "No impl-orchestration variant traces found in workflow_traces.yaml. "
+            "Add traces for the subagent-driven implementation strategy path."
+        )
+
+    def test_orch_traces_satisfy_routing_matrix(self):
+        violations = []
+        for trace in self.orch_traces:
+            inp = trace["input"]
+            chain_skills = {
+                s.replace("-phase2", "").replace("-phase3", "")
+                for s in trace["expected"]["skill_chain"]
+            }
+            for entry in self.routing_matrix:
+                e_level = entry.get("level", "any")
+                e_mode = entry.get("mode", "any")
+                e_type = entry.get("type", "")
+                if not ((e_level == inp["risk_level"] or e_level == "any") and
+                        (e_mode == inp["domain_scope"] or e_mode == "any") and
+                        e_type == inp["change_type"]):
+                    continue
+                for skill in entry.get("must_include", []):
+                    if skill not in chain_skills:
+                        violations.append(
+                            f"{trace['name']}: must_include '{skill}' missing"
+                        )
+                for skill in entry.get("must_exclude", []):
+                    if skill in chain_skills:
+                        violations.append(
+                            f"{trace['name']}: must_exclude '{skill}' present"
+                        )
+                break
+        assert not violations, "impl-orchestration trace routing violations:\n" + "\n".join(violations)
+
+    def test_orch_traces_exclude_tdd(self):
+        for trace in self.orch_traces:
+            assert "tdd" not in trace["expected"]["skill_chain"], (
+                f"{trace['name']}: tdd must not appear alongside impl-orchestration — "
+                "these are mutually exclusive implementation strategies"
+            )
+
+    def test_orch_traces_include_ledger_write(self):
+        for trace in self.orch_traces:
+            writes = trace["expected"].get("checkpoint_writes", [])
+            has_ledger = any(
+                w["skill"] == "impl-orchestration" and w["key"] == "session-state"
+                for w in writes
+            )
+            assert has_ledger, (
+                f"{trace['name']}: impl-orchestration must declare a session-state "
+                "checkpoint write (Subagent Ledger update)"
+            )
+
+    def test_tdd_traces_exclude_orch(self):
+        tdd_traces = [
+            t for t in self.all_traces
+            if "impl-orchestration" not in t["name"]
+            and "tdd" in t["expected"]["skill_chain"]
+        ]
+        for trace in tdd_traces:
+            assert "impl-orchestration" not in trace["expected"]["skill_chain"], (
+                f"{trace['name']}: impl-orchestration must not appear in tdd-based traces"
+            )
