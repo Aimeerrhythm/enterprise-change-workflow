@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 200" width="920" height="200" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <!-- Background -->
+  <rect width="920" height="200" fill="#F7FAFC" rx="10"/>
+
+  <!-- Ghost step slots (aligned full width, to show "unused" depth) -->
+  <!-- 8 slots × 106px starting at x=60 -->
+  <rect x="60"  y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="166" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="272" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="378" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="484" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="590" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="696" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="802" y="8"   width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+
+  <rect x="60"  y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="166" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="272" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="378" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="484" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="590" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="696" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="802" y="56"  width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+
+  <rect x="60"  y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="166" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="272" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="378" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="484" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="590" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="696" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="802" y="104" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+
+  <rect x="60"  y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="166" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="272" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="378" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="484" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="590" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="696" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+  <rect x="802" y="152" width="94" height="30" rx="5" fill="#EDF2F7" opacity="0.6"/>
+
+  <!-- ========== P0 Row (y=8, red, 8 active steps) ========== -->
+  <rect x="8" y="8" width="44" height="30" rx="5" fill="#FED7D7"/>
+  <text x="30" y="28" text-anchor="middle" font-size="12" font-weight="700" fill="#C53030">P0</text>
+
+  <rect x="60"  y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="107" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Req. Elicit</text>
+  <text x="159" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="166" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="213" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Phase 2</text>
+  <text x="265" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="272" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="319" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Plan</text>
+  <text x="371" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="378" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="425" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Spec Review</text>
+  <text x="477" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="484" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="531" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impl</text>
+  <text x="583" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="590" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="637" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Verify</text>
+  <text x="689" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="696" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="743" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impact</text>
+  <text x="795" y="27" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="802" y="8" width="94" height="30" rx="5" fill="#E53E3E"/>
+  <text x="849" y="28" text-anchor="middle" font-size="10" font-weight="600" fill="white">Calibrate</text>
+
+  <!-- ========== P1 Row (y=56, orange, 6 active steps) ========== -->
+  <rect x="8" y="56" width="44" height="30" rx="5" fill="#FEEBC8"/>
+  <text x="30" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="#9C4221">P1</text>
+
+  <rect x="60"  y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="107" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Req./Collab</text>
+  <text x="159" y="75" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="166" y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="213" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Phase 2</text>
+  <text x="265" y="75" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="272" y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="319" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Plan</text>
+  <text x="371" y="75" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="378" y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="425" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impl</text>
+  <text x="477" y="75" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="484" y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="531" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Verify</text>
+  <text x="583" y="75" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="590" y="56" width="94" height="30" rx="5" fill="#DD6B20"/>
+  <text x="637" y="76" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impact</text>
+
+  <!-- ========== P2 Row (y=104, amber, 3 active steps) ========== -->
+  <rect x="8" y="104" width="44" height="30" rx="5" fill="#FEFCBF"/>
+  <text x="30" y="124" text-anchor="middle" font-size="12" font-weight="700" fill="#975A16">P2</text>
+
+  <rect x="60"  y="104" width="94" height="30" rx="5" fill="#D69E2E"/>
+  <text x="107" y="124" text-anchor="middle" font-size="10" font-weight="600" fill="white">Plan</text>
+  <text x="159" y="123" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="166" y="104" width="94" height="30" rx="5" fill="#D69E2E"/>
+  <text x="213" y="124" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impl</text>
+  <text x="265" y="123" text-anchor="middle" font-size="13" fill="#A0AEC0">›</text>
+
+  <rect x="272" y="104" width="94" height="30" rx="5" fill="#D69E2E"/>
+  <text x="319" y="124" text-anchor="middle" font-size="10" font-weight="600" fill="white">Verify</text>
+
+  <!-- ========== P3 Row (y=152, green, 1 active step) ========== -->
+  <rect x="8" y="152" width="44" height="30" rx="5" fill="#C6F6D5"/>
+  <text x="30" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#276749">P3</text>
+
+  <rect x="60"  y="152" width="94" height="30" rx="5" fill="#38A169"/>
+  <text x="107" y="172" text-anchor="middle" font-size="10" font-weight="600" fill="white">Impl</text>
+</svg>
