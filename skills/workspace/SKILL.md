@@ -247,7 +247,7 @@ Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-da
 Process:
   Analysis sessions detect confirmed-contract.md via polling and continue into Phase 4 automatically.
   Coordinator does NOT generate new Phase 4 scripts — no user action needed at this phase.
-  Child session behavior (MQ parallel / Dubbo non-blocking scheduling) is defined in
+  Child session behavior (risk-classifier entry + MQ parallel / Dubbo non-blocking scheduling) is defined in
   workspace-analysis-task-template.md — coordinator does not need to manage dispatch.
 
   Poll: check {service}/.claude/ecw/session-data/{wf-id}/status.json every 5 seconds,

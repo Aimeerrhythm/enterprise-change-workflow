@@ -72,6 +72,8 @@ If result is TIMEOUT (60min exceeded):
 Once confirmed-contract.md appears → read it and proceed to Phase 4.
 
 ### Phase 4: Implementation
+Before writing any code, invoke `ecw:risk-classifier`. Read `confirmed-contract.md` and `analysis-report.md` as the change context.
+
 Read confirmed-contract.md to determine your interaction pattern and layer, then follow the matching path below.
 
 **MQ (all services parallel):**
