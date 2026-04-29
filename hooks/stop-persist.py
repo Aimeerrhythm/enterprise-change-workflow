@@ -177,6 +177,14 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
+    # Skip update when no tool calls occurred — pure text responses don't
+    # represent real progress and updating Last Updated + Activity in that
+    # case creates noise that masks actual phase transitions (Issue #21).
+    tool_calls = input_data.get("tool_calls", [])
+    if not tool_calls:
+        print(json.dumps({"result": "continue"}))
+        return
+
     state_path = find_session_state(cwd)
     if not state_path:
         # No active session-state — nothing to persist

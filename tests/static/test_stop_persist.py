@@ -149,6 +149,27 @@ class TestStopPersistMain:
                 output = json.loads(mock_print.call_args[0][0])
                 assert output["result"] == "continue"
 
+    def test_skips_update_when_no_tool_calls(self, stop_persist, tmp_path):
+        """Pure text responses (no tool calls) must not update session-state.md.
+
+        Updating Last Updated on every assistant turn creates noise that masks
+        real phase transitions and makes it impossible to distinguish active work
+        from idle model output (Issue #21).
+        """
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-ab12"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        original = "# ECW Session State\n- **Risk Level**: P1\n"
+        state_file.write_text(original)
+
+        input_data = {"cwd": str(tmp_path), "tool_calls": []}
+        with patch("json.load", return_value=input_data):
+            with patch("builtins.print"):
+                stop_persist.main()
+
+        assert state_file.read_text() == original, (
+            "stop-persist must not modify session-state.md when tool_calls is empty"
+        )
 
 
 

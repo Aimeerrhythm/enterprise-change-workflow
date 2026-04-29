@@ -104,6 +104,49 @@ def find_session_state(cwd):
     return None
 
 
+def update_status_fields(content, fields):
+    """Update specific **Field**: value lines within the STATUS marker block.
+
+    Only modifies fields that already exist in the block; leaves all other
+    fields and surrounding file content untouched.
+
+    Args:
+        content: Full file content.
+        fields: Dict mapping exact Markdown field names (e.g. "Current Phase")
+                to their new values.
+
+    Returns:
+        Updated file content.
+    """
+    status = read_marker_section(content, "STATUS")
+    if status is None:
+        return content
+
+    updated_status = status
+    for field_name, new_value in fields.items():
+        pattern = re.compile(
+            rf'(\*\*{re.escape(field_name)}\*\*:\s*).+',
+            re.MULTILINE,
+        )
+        if pattern.search(updated_status):
+            updated_status = pattern.sub(rf'\g<1>{new_value}', updated_status)
+
+    return update_marker_section(content, "STATUS", updated_status)
+
+
+def update_mode(content, mode_value):
+    """Update the Working Mode in the MODE marker section.
+
+    Args:
+        content: Full file content.
+        mode_value: New mode string (e.g. "planning", "verification").
+
+    Returns:
+        Updated file content.
+    """
+    return update_marker_section(content, "MODE", f"- **Working Mode**: {mode_value}")
+
+
 def update_session_state_section(cwd, name, new_inner):
     """Find session-state.md and update a marker section in-place.
 

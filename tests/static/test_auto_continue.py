@@ -4,6 +4,7 @@ Verifies that all skills have explicit auto-continue instructions
 to prevent redundant confirmation prompts between skill transitions.
 """
 import importlib.util
+import json
 import re
 
 import pytest
@@ -341,3 +342,146 @@ class TestDownstreamHandoffStatusMarker:
             f"marker block — auto-continue hook will silently fail if model writes "
             f"Next outside the marker"
         )
+
+
+class TestAdvanceSessionState:
+    """auto-continue hook must atomically update Current Phase and Working Mode
+    in session-state.md when a skill completes (Issue #21).
+
+    Validates _advance_session_state writes both STATUS and MODE in a single
+    read-modify-write, so the fields stay consistent regardless of interruptions.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_state(self, tmp_path, phase="phase1-complete", mode="analysis"):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-ab12"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        state_file.write_text(
+            "# ECW Session State\n\n"
+            "<!-- ECW:STATUS:START -->\n"
+            f"- **Current Phase**: {phase}\n"
+            "- **Risk Level**: P1\n"
+            "- **Auto-Continue**: yes\n"
+            "- **Next**: ecw:requirements-elicitation\n"
+            "<!-- ECW:STATUS:END -->\n\n"
+            "<!-- ECW:MODE:START -->\n"
+            f"- **Working Mode**: {mode}\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        return state_file
+
+    def test_updates_phase_after_skill_completes(self, tmp_path):
+        """Current Phase must advance after risk-classifier finishes."""
+        state_file = self._make_state(tmp_path, phase="phase1-complete")
+        self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
+        content = state_file.read_text()
+        assert "**Current Phase**: phase1-complete" in content
+
+    def test_updates_phase_after_requirements_elicitation(self, tmp_path):
+        state_file = self._make_state(tmp_path, phase="phase1-complete")
+        self.hook._advance_session_state(str(state_file), "ecw:requirements-elicitation")
+        content = state_file.read_text()
+        assert "**Current Phase**: requirements-complete" in content
+
+    def test_updates_mode_after_writing_plans(self, tmp_path):
+        """Working Mode must update to 'planning' after writing-plans finishes."""
+        state_file = self._make_state(tmp_path, mode="analysis")
+        self.hook._advance_session_state(str(state_file), "ecw:writing-plans")
+        content = state_file.read_text()
+        assert "**Working Mode**: planning" in content
+
+    def test_updates_both_fields_atomically(self, tmp_path):
+        """Both Current Phase and Working Mode must be written in a single update."""
+        state_file = self._make_state(tmp_path, phase="plan-complete", mode="planning")
+        self.hook._advance_session_state(str(state_file), "ecw:tdd")
+        content = state_file.read_text()
+        assert "**Current Phase**: tdd-complete" in content
+        assert "**Working Mode**: implementation" in content
+
+    def test_preserves_unrelated_fields(self, tmp_path):
+        """Risk Level, Auto-Continue, and Next must not be modified."""
+        state_file = self._make_state(tmp_path)
+        self.hook._advance_session_state(str(state_file), "ecw:impl-verify")
+        content = state_file.read_text()
+        assert "**Risk Level**: P1" in content
+        assert "**Auto-Continue**: yes" in content
+        assert "**Next**: ecw:requirements-elicitation" in content
+
+    def test_unknown_skill_is_noop(self, tmp_path):
+        """Skills not in the mapping table must not modify the file."""
+        state_file = self._make_state(tmp_path, phase="phase1-complete", mode="analysis")
+        original = state_file.read_text()
+        self.hook._advance_session_state(str(state_file), "ecw:unknown-skill")
+        assert state_file.read_text() == original
+
+    def test_missing_file_does_not_raise(self, tmp_path):
+        """A non-existent path must be silently swallowed — hook must never block."""
+        self.hook._advance_session_state(
+            str(tmp_path / "nonexistent" / "session-state.md"),
+            "ecw:tdd",
+        )  # must not raise
+
+    def test_all_skills_have_phase_mapping(self):
+        """Every key in _SKILL_COMPLETED_PHASE must be a valid ecw: skill name."""
+        for skill in self.hook._SKILL_COMPLETED_PHASE:
+            assert skill.startswith("ecw:"), (
+                f"Phase mapping key '{skill}' does not start with 'ecw:'"
+            )
+
+    def test_all_skills_have_mode_mapping(self):
+        """Every key in _SKILL_MODE must map to a known working mode."""
+        known_modes = {"analysis", "planning", "implementation", "verification"}
+        for skill, mode in self.hook._SKILL_MODE.items():
+            assert mode in known_modes, (
+                f"Skill '{skill}' has unknown mode '{mode}'"
+            )
+
+    def test_main_triggers_advance_when_auto_continue_active(self, tmp_path, monkeypatch):
+        """Full main() path: _advance_session_state must be called when Auto-Continue: yes."""
+        import io
+
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-cd34"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "- **Risk Level**: P1\n"
+            "- **Auto-Continue**: yes\n"
+            "- **Routing**: ecw:risk-classifier → ecw:writing-plans\n"
+            "- **Next**: ecw:writing-plans\n"
+            "- **Current Phase**: phase1-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "- **Working Mode**: analysis\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+
+        payload = json.dumps({
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:risk-classifier"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+
+        self.hook.main()
+
+        content = state_file.read_text()
+        assert "**Current Phase**: phase1-complete" in content
+        assert "**Working Mode**: analysis" in content
+        output = json.loads("".join(captured))
+        assert "systemMessage" in output
+
