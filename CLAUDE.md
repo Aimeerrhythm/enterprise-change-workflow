@@ -37,7 +37,6 @@ Post-implementation → ecw:impl-verify → [P0/P1: ecw:biz-impact-analysis → 
 ## Dependencies
 
 - **No external plugin dependencies** — ECW is self-contained with all Skills (writing-plans, tdd, systematic-debugging, impl-orchestration, etc.); no other plugins needed.
-- **BLOCKING RULE — Skill trigger priority**: When user proposes any change, requirement, or bug fix, invoke `ecw:risk-classifier` IMMEDIATELY — before reading code, before reading documentation, before any analysis. This is the unified entry point; all downstream workflow depth is determined by its classification result. Skipping this step means the entire ECW workflow will not activate.
 
 ## Project Configuration
 
@@ -136,7 +135,7 @@ Reference `templates/CLAUDE.md.snippet` for the template.
 
 | Skill | Auto Trigger | Manual Trigger |
 |-------|-------------|---------------|
-| ecw:risk-classifier | User proposes change/requirement/bug | `/ecw:risk-classifier` |
+| ecw:risk-classifier | — | `/ecw:risk-classifier` |
 | ecw:domain-collab | risk-classifier routes (cross-domain) | `/ecw:domain-collab <description>` |
 | ecw:requirements-elicitation | risk-classifier routes (single-domain P0/P1) | `/ecw:requirements-elicitation` |
 | ecw:writing-plans | After requirement analysis/Phase 2 (P0-P2) | `/ecw:writing-plans` |
