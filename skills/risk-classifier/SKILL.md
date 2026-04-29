@@ -83,7 +83,7 @@ Read `./phase1-output-template.md` for output format and user confirmation flow.
 
 ### State Persistence
 
-After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md`. The `{workflow-id}` is the `Created` timestamp in `YYYYMMDD-HHmm` format — create the directory on first write.
+After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
 
 **Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 

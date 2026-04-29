@@ -41,8 +41,8 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 - **Mode**: {single-domain/cross-domain}
 - **Routing**: {full routing chain}
 - **Current Phase**: phase1-complete
-- **Created**: {YYYY-MM-DD HH:mm}
-- **Workflow ID**: {YYYYMMDD-HHmm}
+- **Created**: {YYYY-MM-DD}
+- **Workflow ID**: {YYYYMMDD-xxxx}
 - **Implementation Strategy**: TBD
 - **Post-Implementation Tasks**: {e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 - **Auto-Continue**: yes
