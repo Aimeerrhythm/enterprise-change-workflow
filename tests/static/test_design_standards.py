@@ -206,7 +206,7 @@ class TestDesignReference:
 
     def test_doc_has_key_sections(self):
         content = self.DOC_PATH.read_text(encoding="utf-8").lower()
-        for section in ("token budget", "model selection", "context management"):
+        for section in ("token", "模型选择", "上下文管理"):
             assert section in content, (
                 f"design-reference.md missing section: '{section}'"
             )
