@@ -13,8 +13,8 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 - **Mode**: {single-domain/cross-domain}
 - **Routing**: {full routing chain}
 - **Current Phase**: phase1-complete
-- **Created**: {YYYY-MM-DD HH:mm}
-- **Workflow ID**: {YYYYMMDD-HHmm}
+- **Created**: {YYYY-MM-DD}
+- **Workflow ID**: {YYYYMMDD-xxxx}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 - **Auto-Continue**: yes
@@ -32,6 +32,13 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 |-------|-------|------|-------|-----------|---------|----------|
 <!-- ECW:LEDGER:END -->
 ```
+
+## Workflow ID Generation
+
+- **Date part**: Read from `currentDate` system-reminder (format `YYYY/MM/DD`) — this is injected by the runtime from the user's local clock and is timezone-correct. Convert to `YYYYMMDD`.
+- **Suffix**: 4 random hex characters (e.g., `a3f1`). Never use wall-clock time (HH:mm) — Claude's internal time perception does not track local timezone reliably.
+- **Example**: `20260429-a3f1`
+- **Created field**: Use the date from `currentDate` only, formatted as `YYYY-MM-DD` (no time component).
 
 ## Marker Conventions
 
