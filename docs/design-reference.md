@@ -1,65 +1,65 @@
-# ECW Design Reference
+# ECW 设计参考
 
-Advisory guidance for ECW contributors. Not enforced by lint — see `templates/rules/common/ecw-development.md` for mandatory rules.
+ECW 贡献者的参考指南。本文档不由 lint 强制执行——强制规则见 `templates/rules/common/ecw-development.md`。
 
-## Token Budget Guidelines
+## Token 预算指南
 
-| Skill Type | Target | Examples |
+| Skill 类型 | 目标值 | 示例 |
 |-----------|--------|---------|
-| Simple single-step | ~2,500 tokens | cross-review |
-| Standard multi-step | ~4,000 tokens | requirements-elicitation, tdd, biz-impact-analysis |
-| Complex orchestrator | ~5,000 tokens | risk-classifier, impl-orchestration |
+| 简单单步 | ~2,500 tokens | cross-review |
+| 标准多步 | ~4,000 tokens | requirements-elicitation、tdd、biz-impact-analysis |
+| 复杂编排器 | ~5,000 tokens | risk-classifier、impl-orchestration |
 
-Run `python3 tests/static/lint_skills.py --check tokens` for current actual values. Warning threshold is 20,000 tokens.
+运行 `python3 tests/static/lint_skills.py --check tokens` 查看当前实际值。警告阈值为 20,000 tokens。
 
-## Model Selection Guidelines
+## 模型选择指南
 
-| Model | Use When | Examples |
+| 模型 | 适用场景 | 示例 |
 |-------|----------|---------|
-| opus | Deep reasoning, adversarial review, cross-domain analysis | spec-challenge, biz-impact-analysis, domain-collab Round 1 |
-| sonnet | Implementation, mechanical execution | implementer, TDD cycle subagent, spec-reviewer |
-| haiku | Reserved for lightweight mechanical tasks | Not currently used |
+| opus | 深度推理、对抗性审查、跨域分析 | spec-challenge、biz-impact-analysis、domain-collab Round 1 |
+| sonnet | 实现、机械执行 | implementer、TDD cycle subagent、spec-reviewer |
+| haiku | 保留用于轻量机械任务 | 目前未使用 |
 
-**Principle**: Reasoning density determines model choice, not task "importance". A simple but critical config change still uses sonnet; a complex analysis of a P3 change still uses opus.
+**原则**：模型选择由推理密度决定，而非任务"重要程度"。一个简单但关键的配置变更仍使用 sonnet；一个对 P3 变更的复杂分析仍使用 opus。
 
-Model defaults are configured in `ecw.yml` under `models.defaults.*` and can be overridden per-project.
+模型默认值在 `ecw.yml` 的 `models.defaults.*` 下配置，可按项目覆盖。
 
-## Context Management
+## 上下文管理
 
-- **New session threshold**: Consider splitting when context exceeds ~100K tokens
-- **State source of truth**: `session-state.md` is the sole cross-session recovery state
-- **PreCompact hook**: Automatically saves checkpoints — skills don't need manual checkpoint logic
-- **`Next` field**: Each skill updates this before handoff; pre-compact and session-start hooks use it for precise recovery
+- **新会话阈值**：上下文超过约 100K tokens 时考虑拆分
+- **状态真实来源**：`session-state.md` 是唯一的跨会话恢复状态
+- **PreCompact hook**：自动保存检查点——各 skill 无需手动写检查点逻辑
+- **`Next` 字段**：每个 skill 在交接前更新此字段；pre-compact 和 session-start hook 用它实现精确恢复
 
-## Subagent Scale Classifications
+## Subagent 规模分类
 
-| Scale | Token Range | Typical Use |
+| 规模 | Token 范围 | 典型用途 |
 |-------|------------|-------------|
-| small | <20K tokens | Single-file analysis, targeted verification |
-| medium | 20-80K tokens | Multi-file scanning, domain analysis |
-| large | >80K tokens | Global analysis with multiple knowledge files |
+| small | <20K tokens | 单文件分析、定向验证 |
+| medium | 20-80K tokens | 多文件扫描、域分析 |
+| large | >80K tokens | 包含多个知识文件的全局分析 |
 
-Used in Subagent Ledger entries for capacity planning and timeout calibration.
+用于 Subagent Ledger 条目中的容量规划和超时校准。
 
-## Prompt Engineering Tips
+## Prompt 工程技巧
 
-### Lost-in-Middle Effect
+### Lost-in-Middle 效应
 
-Place critical instructions at the **beginning** and **end** of prompts. Information in the middle receives less attention. For long agent prompts, the Boundary block goes near the end as a final reinforcement.
+将关键指令放在 prompt 的**开头**和**结尾**。位于中间的信息所获注意力较少。对于长 agent prompt，Boundary 块应靠近末尾，作为最后的强化。
 
-### Structured Output
+### 结构化输出
 
-Specify output format explicitly (tables > prose). When the agent must return data, use YAML with a defined schema. When the agent produces a report for humans, use Markdown with required section headers.
+明确指定输出格式（表格优于散文）。当 agent 必须返回数据时，使用带有定义 schema 的 YAML。当 agent 为人类生成报告时，使用带有必要章节标题的 Markdown。
 
-### Common Rationalizations Pattern
+### 常见自我合理化模式
 
-Pre-block Claude's common self-rationalization paths with a "Your Thought → Reality" table. Each entry addresses a specific way the model might shortcut the skill's protocol. Keep entries unique per skill — shared anti-patterns belong in a common location, not duplicated.
+使用"你的想法 → 现实"对照表，预先封堵 Claude 常见的自我合理化路径。每条针对模型可能绕过 skill 协议的一种具体方式。每个 skill 的条目保持唯一——共用的反模式应放在公共位置，不要重复。
 
-### Subagent Boundary Blocks
+### Subagent Boundary 块
 
-Every agent template needs an explicit boundary declaration:
-1. Identity statement ("You are a single-task agent")
-2. Prohibition ("Do not invoke/load/spawn other skills")
-3. Scope limit ("Your only job is...")
+每个 agent 模板需要明确的边界声明：
+1. 身份声明（"你是一个单任务 agent"）
+2. 禁止项（"不要调用/加载/派生其他 skill"）
+3. 范围限制（"你唯一的工作是……"）
 
-Without this, agents may attempt to invoke skills or dispatch sub-agents beyond their scope.
+缺少此声明时，agent 可能尝试调用超出其范围的 skill 或派生子 agent。
