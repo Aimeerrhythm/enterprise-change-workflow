@@ -2,11 +2,15 @@
 """ECW PostToolUse auto-continue hook — deterministic skill chaining.
 
 Fires after each Skill tool invocation. When the loaded skill is an ECW skill
-and session-state.md has Auto-Continue: yes, injects the remaining routing
-chain as a systemMessage so the model chains to the next skill without asking.
+and session-state.md has Auto-Continue: yes:
+  1. Atomically updates Current Phase and Working Mode in session-state.md
+     (single read-modify-write — no scattered patches from skill prompts).
+  2. Injects the remaining routing chain as a systemMessage so the model
+     chains to the next skill without asking.
 
 Replaces the repeated "CRITICAL — Auto-Continue Rule" prompt blocks that were
 scattered across 9+ SKILL.md files (Issue #5).
+Fixes stale Current Phase / Working Mode fields (Issue #21).
 """
 
 import json
@@ -15,13 +19,51 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, read_marker_section  # noqa: E402
+from marker_utils import (  # noqa: E402
+    find_session_state,
+    read_marker_section,
+    update_mode,
+    update_status_fields,
+)
 
 _FIELD_PATTERNS = {
     "auto_continue": r'\*\*Auto-Continue\*\*:\s*(.+)',
     "routing": r'\*\*Routing\*\*:\s*(.+)',
     "next": r'\*\*Next\*\*:\s*(.+)',
     "risk_level": r'\*\*Risk Level\*\*:\s*(P[0-3])',
+}
+
+# Completed-phase value written to Current Phase after a skill finishes.
+# Key: ECW skill name (as passed in tool_input.skill).
+# Value: the phase string to record in the STATUS block.
+_SKILL_COMPLETED_PHASE = {
+    "ecw:risk-classifier":          "phase1-complete",   # Phase 2 overrides via its own write
+    "ecw:requirements-elicitation": "requirements-complete",
+    "ecw:domain-collab":            "domain-collab-complete",
+    "ecw:writing-plans":            "plan-complete",
+    "ecw:spec-challenge":           "spec-challenge-complete",
+    "ecw:tdd":                      "tdd-complete",
+    "ecw:impl-orchestration":       "impl-complete",
+    "ecw:systematic-debugging":     "impl-complete",
+    "ecw:impl-verify":              "verify-complete",
+    "ecw:biz-impact-analysis":      "biz-impact-complete",
+}
+
+# Working Mode associated with each skill while it is active.
+# This is written when the skill *completes* (so the next skill sees the correct
+# incoming mode) rather than at entry, ensuring MODE and STATUS are always
+# consistent with each other.
+_SKILL_MODE = {
+    "ecw:risk-classifier":          "analysis",
+    "ecw:requirements-elicitation": "analysis",
+    "ecw:domain-collab":            "analysis",
+    "ecw:writing-plans":            "planning",
+    "ecw:spec-challenge":           "planning",
+    "ecw:tdd":                      "implementation",
+    "ecw:impl-orchestration":       "implementation",
+    "ecw:systematic-debugging":     "implementation",
+    "ecw:impl-verify":              "verification",
+    "ecw:biz-impact-analysis":      "verification",
 }
 
 
@@ -46,6 +88,33 @@ def _remaining_route(routing, current_skill):
         if current_skill in step or step in current_skill:
             return steps[i + 1:]
     return []
+
+
+def _advance_session_state(state_path, skill_name):
+    """Atomically update Current Phase and Working Mode after a skill completes.
+
+    Single read → in-memory transform → single write. No partial patches.
+    Silently no-ops when the skill has no entry in the mapping tables or the
+    file cannot be read/written — hook errors must never block the workflow.
+    """
+    phase = _SKILL_COMPLETED_PHASE.get(skill_name)
+    mode = _SKILL_MODE.get(skill_name)
+    if not phase and not mode:
+        return
+
+    try:
+        with open(state_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+
+        if phase:
+            content = update_status_fields(content, {"Current Phase": phase})
+        if mode:
+            content = update_mode(content, mode)
+
+        with open(state_path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except Exception:
+        pass  # Never block workflow
 
 
 def main():
@@ -91,6 +160,9 @@ def main():
     risk_level = _parse_field(status, "risk_level") or ""
     next_skill = _parse_field(status, "next") or ""
 
+    # Advance phase and mode atomically before injecting the routing message.
+    _advance_session_state(state_path, skill_name)
+
     remaining = _remaining_route(routing, skill_name)
     remaining_str = " → ".join(remaining) if remaining else ""
 
@@ -114,3 +186,4 @@ if __name__ == "__main__":
         main()
     except Exception:
         print(json.dumps({"result": "continue"}))
+
