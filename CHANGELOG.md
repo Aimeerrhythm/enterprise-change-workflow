@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.11] - 2026-04-30
+
+### 重构
+
+- **session-state 状态字段维护职责移交 hook（Issue #26）** — `Current Phase`、`Next`、`Working Mode` 三个字段不再依赖各 skill SKILL.md 的软约束，改为 `auto-continue` hook 硬写入：PreToolUse 时写入进行中状态（`Current Phase: {skill}`）、从 Routing 链解析并更新 `Next`（含 `TDD:RED → ecw:tdd` alias 映射）、切换 `Working Mode`；PostToolUse 时写入完成状态（`{skill}-complete`）。同时在 `hooks.json` 注册 PreToolUse Skill 入口
+
+### 修复
+
+- **knowledge-track 在 P0/P1 workflow 中未被自动触发（Issue #26）** — `biz-impact-analysis` PostToolUse 后，若 `ecw.yml` 配置了 `paths.knowledge_root` 且风险级别为 P0/P1，hook 自动注入 `ecw:knowledge-track` systemMessage，不再依赖 SKILL.md prompt 软约束触发
+- **spec-challenge 完成后 auto-continue 跳过 systemMessage 注入（Issue #29）** — Fatal Flaw 处理需要强制 AskUserQuestion 逐条确认，注入"do not ask for confirmation"会覆盖该流程；hook 现在对 spec-challenge 只更新 Phase/Mode，不注入 systemMessage
+- **impl-verify 未收敛时 hook 硬拦截 TaskUpdate(completed)（Issue #28）** — impl-verify 存在 must-fix 时，dispatcher hook 拦截 `TaskUpdate(completed)` 并返回阻断提示，双入口防止跳转 biz-impact-analysis；must-fix 清零后自动放行
+- **baseline commit 记录与 diff 精确范围（Issue #27）** — `session-state.md` 新增 `Baseline Commit` 字段，`post-edit-check` hook 在首次写入 session-state.md 时自动注入当前 HEAD hash；`bash-preflight` 拦截 ECW session 中的 `master...HEAD` diff 命令，提示改用 `{baseline}...HEAD` 以获得精确变更范围
+
+### 测试
+
+- **新增 17 个测试用例**：`TestNextSkillFromRouting`（11 case，覆盖 TDD:RED alias、Implementation(GREEN)、Fix(GREEN)、Phase marker 跳过、knowledge-track 识别）、`TestPreToolUseHandler`（5 case）、`TestKnowledgeTrackInjection`（5 case，含 P0/P1 触发、P2 不触发、无 knowledge_root 不触发、Routing 中已有时不重复）
+
 ## [1.2.10] - 2026-04-30
 
 ### 修复
