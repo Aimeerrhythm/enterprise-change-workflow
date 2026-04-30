@@ -89,8 +89,6 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 
 **REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`Risk Level`, `Auto-Continue`, `Routing`, `Next`, etc.). Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks parse only the marker-delimited sections. Writing without markers causes silent hook failure and breaks the entire downstream skill chain.
 
-**Routing chain construction:** Use `./workflow-routes.yml` to determine the chain for the current risk level and mode. For **P0/P1 sessions** where `ecw.yml` `paths.knowledge_root` is configured (ECW-ready project), append `→ ecw:knowledge-track` after `biz-impact-analysis` and before `Phase 3` in the Routing string. This ensures knowledge utilization tracking is included in the auto-continue hook's routing chain. Example: `... → ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3`.
-
 Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
 
 ### Route Task Creation
