@@ -163,6 +163,13 @@ def main():
     # Advance phase and mode atomically before injecting the routing message.
     _advance_session_state(state_path, skill_name)
 
+    # spec-challenge has mandatory per-flaw AskUserQuestion confirmation before proceeding.
+    # Phase/mode updates (above) still apply; only skip systemMessage injection so the
+    # "do not ask for confirmation" directive does not override the SKILL.md flow.
+    if skill_name == "ecw:spec-challenge":
+        print(json.dumps({"result": "continue"}))
+        return
+
     remaining = _remaining_route(routing, skill_name)
     remaining_str = " → ".join(remaining) if remaining else ""
 

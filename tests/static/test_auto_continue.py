@@ -224,6 +224,96 @@ class TestBizImpactAutoContinue:
         ), "biz-impact-analysis Downstream Handoff must reference Phase 3 calibration"
 
 
+class TestSpecChallengeHookBehavior:
+    """spec-challenge must update phase/mode but NOT inject systemMessage (Issue #29).
+
+    Fatal Flaw handling requires mandatory per-flaw AskUserQuestion confirmation.
+    Injecting "do not ask for confirmation" overrides SKILL.md and bypasses that flow.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_state(self, tmp_path, phase="plan-complete"):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-ff01"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "- **Risk Level**: P0\n"
+            "- **Auto-Continue**: yes\n"
+            "- **Routing**: ecw:writing-plans → ecw:spec-challenge → ecw:tdd\n"
+            "- **Next**: ecw:tdd\n"
+            f"- **Current Phase**: {phase}\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "- **Working Mode**: planning\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        return state_file
+
+    def test_phase_advances_to_spec_challenge_complete(self, tmp_path):
+        """Phase must still advance to spec-challenge-complete — hook does this, not SKILL.md."""
+        state_file = self._make_state(tmp_path)
+        self.hook._advance_session_state(str(state_file), "ecw:spec-challenge")
+        content = state_file.read_text()
+        assert "**Current Phase**: spec-challenge-complete" in content
+
+    def test_no_system_message_injected(self, tmp_path, monkeypatch):
+        """main() must NOT output systemMessage for spec-challenge — would bypass AskUserQuestion."""
+        import io
+
+        state_file = self._make_state(tmp_path)
+
+        payload = json.dumps({
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:spec-challenge"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+
+        self.hook.main()
+
+        output = json.loads("".join(captured))
+        assert "systemMessage" not in output, (
+            "auto-continue must not inject systemMessage for spec-challenge — "
+            "doing so overrides mandatory Fatal Flaw confirmation (Issue #29)"
+        )
+
+    def test_phase_still_updated_when_no_system_message(self, tmp_path, monkeypatch):
+        """Phase update and systemMessage skip must both happen in the same main() run."""
+        import io
+
+        state_file = self._make_state(tmp_path, phase="plan-complete")
+
+        payload = json.dumps({
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:spec-challenge"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: None,
+            "flush": lambda self: None,
+        })())
+
+        self.hook.main()
+
+        content = state_file.read_text()
+        assert "**Current Phase**: spec-challenge-complete" in content
+
+
 class TestRemainingRouteUnit:
     """Unit tests for _remaining_route in auto-continue.py.
 
