@@ -378,3 +378,70 @@ class TestSedBypassBlocking:
             os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
             action, msg = bash_preflight.check(inp, JAVA_CONFIG)
         assert action == "block"
+
+
+# ══════════════════════════════════════════════════════
+# Stale Diff Range Detection
+# ══════════════════════════════════════════════════════
+
+SESSION_STATE_WITH_BASELINE = """\
+<!-- ECW:STATUS:START -->
+- **Risk Level**: P1
+- **Baseline Commit**: abc1234567890def
+<!-- ECW:STATUS:END -->
+"""
+
+SESSION_STATE_NO_BASELINE = """\
+<!-- ECW:STATUS:START -->
+- **Risk Level**: P1
+- **Baseline Commit**: TBD
+<!-- ECW:STATUS:END -->
+"""
+
+
+class TestStaleDiffRange:
+
+    def _make_cwd_input(self, command, cwd):
+        return {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": cwd}
+
+    def _write_session_state(self, tmp_path, content):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-test"
+        state_dir.mkdir(parents=True)
+        (state_dir / "session-state.md").write_text(content)
+
+    def test_master_head_blocked_when_baseline_present(self, bash_preflight, tmp_path):
+        self._write_session_state(tmp_path, SESSION_STATE_WITH_BASELINE)
+        inp = self._make_cwd_input("git diff --stat master...HEAD", str(tmp_path))
+        action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "abc1234567890def" in msg
+
+    def test_block_message_contains_corrected_command(self, bash_preflight, tmp_path):
+        self._write_session_state(tmp_path, SESSION_STATE_WITH_BASELINE)
+        inp = self._make_cwd_input("git diff --name-only master...HEAD", str(tmp_path))
+        action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "abc1234567890def...HEAD" in msg
+
+    def test_no_session_passes_through(self, bash_preflight, tmp_path):
+        inp = self._make_cwd_input("git diff master...HEAD", str(tmp_path))
+        action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_tbd_baseline_passes_through(self, bash_preflight, tmp_path):
+        self._write_session_state(tmp_path, SESSION_STATE_NO_BASELINE)
+        inp = self._make_cwd_input("git diff master...HEAD", str(tmp_path))
+        action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_explicit_hash_not_blocked(self, bash_preflight, tmp_path):
+        self._write_session_state(tmp_path, SESSION_STATE_WITH_BASELINE)
+        inp = self._make_cwd_input("git diff abc999...HEAD", str(tmp_path))
+        action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_git_log_not_affected(self, bash_preflight, tmp_path):
+        self._write_session_state(tmp_path, SESSION_STATE_WITH_BASELINE)
+        inp = self._make_cwd_input("git log master...HEAD", str(tmp_path))
+        action, _ = bash_preflight.check(inp)
+        assert action == "continue"
