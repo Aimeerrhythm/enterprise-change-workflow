@@ -332,3 +332,82 @@ class TestPostEditHooksJson:
             if "Edit" in matcher or "Write" in matcher:
                 return
         pytest.fail("PostToolUse matcher must include Edit|Write")
+
+
+# ══════════════════════════════════════════════════════
+# Baseline Commit Injection
+# ══════════════════════════════════════════════════════
+
+SESSION_STATE_TBD = """\
+# ECW Session State
+
+<!-- ECW:STATUS:START -->
+- **Risk Level**: P1
+- **Baseline Commit**: TBD
+- **Auto-Continue**: yes
+<!-- ECW:STATUS:END -->
+"""
+
+SESSION_STATE_ALREADY_SET = """\
+<!-- ECW:STATUS:START -->
+- **Baseline Commit**: existinghash123
+<!-- ECW:STATUS:END -->
+"""
+
+
+class TestBaselineCommitInjection:
+
+    def test_tbd_replaced_with_head_hash(self, post_edit, tmp_path):
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(SESSION_STATE_TBD)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "deadbeef1234567890ab\n"
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        result = state_file.read_text()
+        assert "deadbeef1234567890ab" in result
+        assert "TBD" not in result
+
+    def test_already_set_hash_not_overwritten(self, post_edit, tmp_path):
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(SESSION_STATE_ALREADY_SET)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "newcommithash\n"
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        result = state_file.read_text()
+        assert "existinghash123" in result
+
+    def test_non_session_state_file_skipped(self, post_edit, tmp_path):
+        other_file = tmp_path / "some-other.md"
+        other_file.write_text("**Baseline Commit**: TBD")
+        with patch("subprocess.run") as mock_run:
+            post_edit._inject_baseline_commit(str(other_file), str(tmp_path))
+        assert mock_run.call_count == 0
+
+    def test_git_failure_leaves_file_unchanged(self, post_edit, tmp_path):
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(SESSION_STATE_TBD)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 128
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        assert "TBD" in state_file.read_text()
+
+    def test_no_status_marker_skipped(self, post_edit, tmp_path):
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text("- **Baseline Commit**: TBD\n(no ECW marker)")
+        with patch("subprocess.run") as mock_run:
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        assert mock_run.call_count == 0
+
+    def test_only_fires_on_write_not_edit(self, post_edit, tmp_path):
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(SESSION_STATE_TBD)
+        input_data = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(state_file), "new_string": "x"},
+            "cwd": str(tmp_path),
+        }
+        with patch.object(post_edit, "_inject_baseline_commit") as mock_inject:
+            post_edit.check(input_data)
+        mock_inject.assert_not_called()

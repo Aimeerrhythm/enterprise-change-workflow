@@ -13,6 +13,7 @@ Findings are surfaced as systemMessage warnings, never blocking.
 import json
 import os
 import re
+import subprocess
 import sys
 
 
@@ -75,6 +76,53 @@ SCANNABLE_EXTENSIONS = {
 
 # State file for accumulating modified files
 MODIFIED_FILES_STATE = ".claude/ecw/state/modified-files.txt"
+
+
+def _inject_baseline_commit(filepath, cwd):
+    """If session-state.md was just written with Baseline Commit: TBD, replace with actual HEAD hash.
+
+    Runs git rev-parse HEAD in cwd and updates the file in-place.
+    No-op if file doesn't match, git fails, or hash already present.
+    """
+    if not filepath.endswith("session-state.md"):
+        return
+    try:
+        with open(filepath, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+    except Exception:
+        return
+
+    if "<!-- ECW:STATUS:START -->" not in content:
+        return
+    if not re.search(r'\*\*Baseline Commit\*\*:\s*TBD\b', content):
+        return
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return
+        commit_hash = result.stdout.strip()
+        if not re.fullmatch(r'[0-9a-f]{7,40}', commit_hash):
+            return
+    except Exception:
+        return
+
+    updated = re.sub(
+        r'(\*\*Baseline Commit\*\*:\s*)TBD\b',
+        rf'\g<1>{commit_hash}',
+        content,
+    )
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(updated)
+    except Exception:
+        pass
 
 
 def _get_file_extension(filepath):
@@ -147,6 +195,10 @@ def check(input_data, config=None):
 
     # 1. Accumulate modified file
     _accumulate_modified_file(cwd, rel_path)
+
+    # 1b. Auto-fill Baseline Commit placeholder in new session-state.md files
+    if tool_name == "Write":
+        _inject_baseline_commit(filepath, cwd)
 
     # 2. Scan for anti-patterns (only for scannable file types)
     ext = _get_file_extension(filepath)
