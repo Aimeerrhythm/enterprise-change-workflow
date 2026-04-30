@@ -1,5 +1,16 @@
 # Impl-Verify Output Templates
 
+### All findings are written to `impl-verify-findings.md` after each round. File format:
+
+```markdown
+<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->
+
+### Impl-Verify Round {N} — {dimension name}
+...
+```
+
+Update the first-line marker to `<!-- ECW:VERIFY-STATUS: PASS -->` when convergence is confirmed (zero must-fix in the latest round). The `verify-completion` hook uses this marker to mechanically block task completion.
+
 ## Per-Round Output Format
 
 ```markdown

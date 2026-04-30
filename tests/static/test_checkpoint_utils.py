@@ -121,26 +121,46 @@ def test_get_checkpoint_files_with_subdir(marker_module, tmp_path):
     assert len(paths) == 2
 
 
-# ── check_impl_verify_executed: cross-workflow search regression test ──
+# ── check_impl_verify_convergence: cross-workflow search + status detection tests ──
 
 @pytest.fixture
 def verify_module():
     return _load_module("verify_completion", "verify-completion.py")
 
 
-def test_check_impl_verify_executed_finds_in_older_workflow(verify_module, tmp_path):
-    """check_impl_verify_executed must search ALL workflow subdirs, not just the latest."""
+def test_check_impl_verify_convergence_finds_in_older_workflow(verify_module, tmp_path):
+    """check_impl_verify_convergence must search ALL workflow subdirs, not just the latest."""
     old_wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260425-0900"
     new_wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
     old_wf.mkdir(parents=True)
     new_wf.mkdir(parents=True)
-    # findings exist only in the OLDER workflow dir
-    (old_wf / "impl-verify-findings.md").write_text("findings")
-    assert verify_module.check_impl_verify_executed(str(tmp_path)) is True
+    # findings exist only in the OLDER workflow dir, no HAS-MUST-FIX marker
+    (old_wf / "impl-verify-findings.md").write_text("findings — all clear")
+    assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "pass"
 
 
-def test_check_impl_verify_executed_false_when_absent(verify_module, tmp_path):
+def test_check_impl_verify_convergence_not_run_when_absent(verify_module, tmp_path):
     wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
     wf.mkdir(parents=True)
     (wf / "session-state.md").write_text("state")
-    assert verify_module.check_impl_verify_executed(str(tmp_path)) is False
+    assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "not-run"
+
+
+def test_check_impl_verify_convergence_has_must_fix(verify_module, tmp_path):
+    """Returns 'has-must-fix' when findings file contains the HAS-MUST-FIX marker."""
+    wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    wf.mkdir(parents=True)
+    (wf / "impl-verify-findings.md").write_text(
+        "<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->\n\n### Round 1\n..."
+    )
+    assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "has-must-fix"
+
+
+def test_check_impl_verify_convergence_pass_when_marker_pass(verify_module, tmp_path):
+    """Returns 'pass' when findings file contains the PASS marker."""
+    wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    wf.mkdir(parents=True)
+    (wf / "impl-verify-findings.md").write_text(
+        "<!-- ECW:VERIFY-STATUS: PASS -->\n\n### Round 1\n..."
+    )
+    assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "pass"

@@ -86,6 +86,12 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 3. Collect structured findings YAML from each subagent
 4. Merge findings, deduplicate across Rounds
 5. **Persist findings**: Write merged findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` **before** creating any fix Tasks or presenting to user. Format per finding: severity, Round, file:line, description, expected vs actual, fix suggestion. Update this file after each re-verification round (append new findings, mark fixed ones as `[FIXED]`). This ensures findings survive context compaction.
+
+   **Convergence status marker**: The **first line** of `impl-verify-findings.md` must be one of:
+   - `<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->` — when any unresolved must-fix items exist
+   - `<!-- ECW:VERIFY-STATUS: PASS -->` — when convergence is achieved (zero must-fix in the latest round)
+
+   Update this marker every time the findings file is written or updated. The `verify-completion` hook reads this marker to mechanically block task completion when must-fix items are unresolved.
 6. Present findings to user, handle convergence loop
 
 **Each Round subagent is dispatched with `subagent_type: "ecw:impl-verifier"`**, which auto-injects the agent's base instructions (verification approach, output format, reading limits). Coordinator passes round-specific reference material and verification checklist in the `prompt` parameter.

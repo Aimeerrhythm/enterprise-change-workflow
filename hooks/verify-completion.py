@@ -78,6 +78,11 @@ _MESSAGES = {
         "`ecw:impl-verify` 可能尚未执行。"
         "建议先执行实现正确性验证再标记完成（P3 或纯格式/注释变更可跳过）。"
     ),
+    "impl_verify_must_fix": (
+        "**[ECW Verify]** `impl-verify` 存在未解决的 must-fix 项，"
+        "必须完成 Round N+ 再验证（确认 zero must-fix）后才能标记完成。"
+        "请修复所有 must-fix 项并重新运行 `ecw:impl-verify`。"
+    ),
     "stale_refs_reminder": (
         "知识库审计发现 {count} 条过时引用（详见 `{path}`）。"
         "建议更新相关文档或运行 `/ecw:knowledge-audit` 重新审计。"
@@ -147,7 +152,10 @@ def check(input_data, config=None):
     if profile != "minimal":
         knowledge_reminders = check_knowledge_doc_freshness(cwd, source_modified)
         test_reminders = check_test_coverage(cwd, source_modified)
-        impl_verify_ran = check_impl_verify_executed(cwd)
+        verify_status = check_impl_verify_convergence(cwd)
+        impl_verify_ran = verify_status != "not-run"
+        if verify_status == "has-must-fix":
+            issues.append(_MESSAGES["impl_verify_must_fix"])
         km_reminders = check_knowledge_maintenance(cwd, source_modified)
 
     all_warnings = (compile_warnings or []) + (test_warnings or [])
@@ -453,19 +461,31 @@ def check_knowledge_doc_freshness(cwd, modified):
     return reminders
 
 
-def check_impl_verify_executed(cwd):
-    """Return True if impl-verify-findings.md exists in any workflow subdir."""
+def check_impl_verify_convergence(cwd):
+    """Check impl-verify convergence status from findings file.
+
+    Returns:
+        'has-must-fix' — findings file exists and contains HAS-MUST-FIX marker (hard block)
+        'not-run'      — findings file does not exist (soft reminder)
+        'pass'         — findings file exists without HAS-MUST-FIX marker
+    """
     session_data = os.path.join(cwd, ".claude", "ecw", "session-data")
     if not os.path.isdir(session_data):
-        return False
+        return "not-run"
     try:
         for entry in os.listdir(session_data):
-            if os.path.isdir(os.path.join(session_data, entry)):
-                if CheckpointStore(cwd, entry).exists("impl-verify-findings"):
-                    return True
+            if not os.path.isdir(os.path.join(session_data, entry)):
+                continue
+            store = CheckpointStore(cwd, entry)
+            if not store.exists("impl-verify-findings"):
+                continue
+            content = store.read("impl-verify-findings") or ""
+            if "<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->" in content:
+                return "has-must-fix"
+            return "pass"
     except Exception:
         pass
-    return False
+    return "not-run"
 
 
 def check_test_coverage(cwd, modified):
