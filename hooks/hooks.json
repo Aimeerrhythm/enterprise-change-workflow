@@ -55,6 +55,16 @@
             "timeout": 150
           }
         ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/auto-continue.py\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [

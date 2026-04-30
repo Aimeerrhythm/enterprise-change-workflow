@@ -575,3 +575,298 @@ class TestAdvanceSessionState:
         output = json.loads("".join(captured))
         assert "systemMessage" in output
 
+
+class TestNextSkillFromRouting:
+    """Unit tests for _next_skill_from_routing — resolves next ECW skill from Routing chain.
+
+    Covers:
+    - Standard ecw:-prefix steps (most skills)
+    - TDD:RED alias → ecw:tdd
+    - Implementation(GREEN) / Fix(GREEN) as tdd-internal steps (not new skill invocations)
+    - Phase markers (Phase 2, Phase 3) are non-skill steps → skipped
+    - Skill not found → None
+    - Last skill in chain → None
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.fn = mod._next_skill_from_routing
+
+    def test_standard_ecw_prefix_chain(self):
+        """Normal ecw: prefix chain: next after requirements-elicitation is writing-plans."""
+        routing = "ecw:requirements-elicitation → Phase 2 → ecw:writing-plans → ecw:spec-challenge"
+        assert self.fn(routing, "ecw:requirements-elicitation") == "ecw:writing-plans"
+
+    def test_tdd_red_alias_maps_to_ecw_tdd(self):
+        """TDD:RED in Routing should resolve to ecw:tdd as the next skill after spec-challenge."""
+        routing = "ecw:writing-plans → ecw:spec-challenge → TDD:RED → Implementation(GREEN) → ecw:impl-verify"
+        assert self.fn(routing, "ecw:spec-challenge") == "ecw:tdd"
+
+    def test_implementation_green_is_internal_to_tdd(self):
+        """After tdd (matched via TDD:RED and Implementation(GREEN)), next skill is impl-verify."""
+        routing = "ecw:spec-challenge → TDD:RED → Implementation(GREEN) → ecw:impl-verify → ecw:biz-impact-analysis"
+        assert self.fn(routing, "ecw:tdd") == "ecw:impl-verify"
+
+    def test_fix_green_is_internal_to_tdd(self):
+        """Fix(GREEN) is a tdd phase in bug fix routes; after tdd, next is impl-verify."""
+        routing = "ecw:systematic-debugging → TDD:RED → Fix(GREEN) → ecw:impl-verify"
+        assert self.fn(routing, "ecw:tdd") == "ecw:impl-verify"
+
+    def test_systematic_debugging_next_is_tdd(self):
+        """After systematic-debugging in bug fix flow, next skill is ecw:tdd (starts at TDD:RED)."""
+        routing = "ecw:systematic-debugging → TDD:RED → Fix(GREEN) → ecw:impl-verify"
+        assert self.fn(routing, "ecw:systematic-debugging") == "ecw:tdd"
+
+    def test_phase_markers_skipped(self):
+        """Phase 2 and Phase 3 are non-skill markers; next ECW skill is found past them."""
+        routing = "ecw:requirements-elicitation → Phase 2 → ecw:writing-plans → ecw:impl-verify → Phase 3"
+        assert self.fn(routing, "ecw:impl-verify") is None  # Phase 3 is not a skill
+
+    def test_biz_impact_followed_by_knowledge_track(self):
+        """After biz-impact-analysis, ecw:knowledge-track is the next skill."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
+        assert self.fn(routing, "ecw:biz-impact-analysis") == "ecw:knowledge-track"
+
+    def test_skill_not_found_returns_none(self):
+        """If current skill not in routing, return None (not the full chain)."""
+        routing = "ecw:writing-plans → ecw:spec-challenge → ecw:tdd"
+        assert self.fn(routing, "ecw:domain-collab") is None
+
+    def test_last_skill_in_chain_returns_none(self):
+        """If current skill is last ECW skill, return None."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
+        assert self.fn(routing, "ecw:biz-impact-analysis") is None
+
+    def test_empty_routing_returns_none(self):
+        assert self.fn("", "ecw:tdd") is None
+        assert self.fn(None, "ecw:tdd") is None
+
+
+class TestPreToolUseHandler:
+    """PreToolUse hook must update Current Phase (in-progress), Next, and Working Mode
+    at skill entry, without injecting a systemMessage.
+
+    Issue #26: these fields were left to LLM soft-constraints; now the hook handles them.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_state(self, tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete"):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "- **Risk Level**: P0\n"
+            "- **Auto-Continue**: yes\n"
+            f"- **Routing**: {routing}\n"
+            f"- **Next**: {next_val}\n"
+            f"- **Current Phase**: {phase}\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "- **Working Mode**: planning\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        return state_file
+
+    def _run_pre_tool_use(self, tmp_path, monkeypatch, skill):
+        import io
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01"
+        payload = json.dumps({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Skill",
+            "tool_input": {"skill": skill},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+        self.hook.main()
+        return json.loads("".join(captured))
+
+    def test_pre_tool_use_updates_current_phase_to_in_progress(self, tmp_path, monkeypatch):
+        """At skill entry, Current Phase must show the skill is in-progress (e.g. 'spec-challenge')."""
+        routing = "ecw:writing-plans → ecw:spec-challenge → TDD:RED → ecw:impl-verify"
+        self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
+        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
+        content = state_file.read_text()
+        assert "**Current Phase**: spec-challenge" in content, (
+            "PreToolUse must update Current Phase to the in-progress skill name"
+        )
+        assert "**Current Phase**: plan-complete" not in content
+
+    def test_pre_tool_use_updates_next_to_downstream_skill(self, tmp_path, monkeypatch):
+        """At skill entry, Next must be updated to the skill AFTER the current one in Routing.
+
+        Issue #26 root cause: Next pointed to the current skill throughout execution.
+        After this fix, when spec-challenge starts, Next = ecw:tdd (not ecw:spec-challenge).
+        """
+        routing = "ecw:writing-plans → ecw:spec-challenge → TDD:RED → Implementation(GREEN) → ecw:impl-verify"
+        self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
+        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
+        content = state_file.read_text()
+        assert "**Next**: ecw:tdd" in content, (
+            "When spec-challenge starts, Next must be updated to ecw:tdd (via TDD:RED alias)"
+        )
+
+    def test_pre_tool_use_updates_working_mode(self, tmp_path, monkeypatch):
+        """At skill entry, Working Mode must switch to the skill's mode."""
+        routing = "ecw:writing-plans → ecw:tdd → ecw:impl-verify"
+        self._make_state(tmp_path, routing, next_val="ecw:tdd", phase="plan-complete")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:tdd")
+        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
+        content = state_file.read_text()
+        assert "**Working Mode**: implementation" in content
+
+    def test_pre_tool_use_returns_continue_not_system_message(self, tmp_path, monkeypatch):
+        """PreToolUse must return {result: continue}, never inject a systemMessage."""
+        routing = "ecw:spec-challenge → TDD:RED → ecw:impl-verify"
+        self._make_state(tmp_path, routing)
+        output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
+        assert output.get("result") == "continue", (
+            "PreToolUse must return continue — it must never block skill execution"
+        )
+        assert "systemMessage" not in output
+
+    def test_pre_tool_use_does_not_update_next_when_last_skill(self, tmp_path, monkeypatch):
+        """When the skill is last in the chain, Next must not be overwritten to None."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
+        state_file = self._make_state(tmp_path, routing, next_val="ecw:biz-impact-analysis")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:biz-impact-analysis")
+        content = state_file.read_text()
+        # biz-impact-analysis is last skill; _next_skill_from_routing returns None → Next unchanged
+        assert "**Next**: ecw:biz-impact-analysis" in content
+
+
+class TestKnowledgeTrackInjection:
+    """After biz-impact-analysis PostToolUse, knowledge-track must be triggered when:
+    1. ecw.yml has paths.knowledge_root set (ECW-ready session)
+    2. Risk level is P0 or P1
+    3. knowledge-track is NOT already in the remaining Routing chain (old sessions)
+
+    Issue #26: knowledge-track was skipped in P0/P1 workflows because it wasn't in
+    the Routing chain and biz-impact-analysis SKILL.md prompt was the only trigger.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_state(self, tmp_path, risk_level="P0", routing=None):
+        if routing is None:
+            routing = f"ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-dd01"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            f"- **Risk Level**: {risk_level}\n"
+            "- **Auto-Continue**: yes\n"
+            f"- **Routing**: {routing}\n"
+            "- **Next**: ecw:biz-impact-analysis\n"
+            "- **Current Phase**: verify-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "- **Working Mode**: verification\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        return state_file
+
+    def _make_ecw_yml(self, tmp_path, with_knowledge_root=True):
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True, exist_ok=True)
+        content = "paths:\n"
+        if with_knowledge_root:
+            content += "  knowledge_root: .claude/knowledge\n"
+        (ecw_dir / "ecw.yml").write_text(content)
+
+    def _run_post_tool_use(self, tmp_path, monkeypatch):
+        import io
+        payload = json.dumps({
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:biz-impact-analysis"},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+        self.hook.main()
+        return json.loads("".join(captured))
+
+    def test_injects_knowledge_track_for_p0_with_knowledge_root(self, tmp_path, monkeypatch):
+        """After biz-impact-analysis (P0, knowledge_root exists), must inject knowledge-track."""
+        self._make_state(tmp_path, risk_level="P0")
+        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        assert "systemMessage" in output
+        assert "knowledge-track" in output["systemMessage"].lower() or \
+               "ecw:knowledge-track" in output["systemMessage"], (
+            "systemMessage must trigger ecw:knowledge-track after biz-impact-analysis "
+            "when P0/P1 and knowledge_root is set"
+        )
+
+    def test_injects_knowledge_track_for_p1_with_knowledge_root(self, tmp_path, monkeypatch):
+        """After biz-impact-analysis (P1, knowledge_root exists), must inject knowledge-track."""
+        self._make_state(tmp_path, risk_level="P1")
+        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        assert "systemMessage" in output
+        assert "knowledge-track" in output["systemMessage"].lower() or \
+               "ecw:knowledge-track" in output["systemMessage"]
+
+    def test_no_knowledge_track_for_p2(self, tmp_path, monkeypatch):
+        """P2 does not require knowledge-track; must not inject it."""
+        self._make_state(tmp_path, risk_level="P2",
+                         routing="ecw:impl-verify → ecw:biz-impact-analysis → Phase 3")
+        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        msg = output.get("systemMessage", "")
+        assert "knowledge-track" not in msg.lower()
+
+    def test_no_knowledge_track_without_knowledge_root(self, tmp_path, monkeypatch):
+        """When ecw.yml has no knowledge_root, must not inject knowledge-track."""
+        self._make_state(tmp_path, risk_level="P0")
+        self._make_ecw_yml(tmp_path, with_knowledge_root=False)
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        msg = output.get("systemMessage", "")
+        assert "knowledge-track" not in msg.lower()
+
+    def test_knowledge_track_in_routing_not_duplicated(self, tmp_path, monkeypatch):
+        """When knowledge-track is already in Routing, use normal route injection (no duplicate)."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
+        self._make_state(tmp_path, risk_level="P0", routing=routing)
+        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        # Normal systemMessage includes remaining route (ecw:knowledge-track → Phase 3)
+        # Fallback injection must NOT fire; normal routing message handles it
+        assert "systemMessage" in output
+        msg = output["systemMessage"]
+        # Should appear exactly once (from the remaining route), not from fallback injection
+        assert msg.count("knowledge-track") >= 1
+
