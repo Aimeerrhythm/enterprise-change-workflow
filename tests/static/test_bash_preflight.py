@@ -445,3 +445,184 @@ class TestStaleDiffRange:
         inp = self._make_cwd_input("git log master...HEAD", str(tmp_path))
         action, _ = bash_preflight.check(inp)
         assert action == "continue"
+
+
+# ══════════════════════════════════════════════════════
+# Fix Gate: hooks/*.py changed without tests/
+# ══════════════════════════════════════════════════════
+
+class TestHookCommitGate:
+
+    def _make_cwd_input(self, command, cwd):
+        return {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)}
+
+    def _staged(self, files):
+        """Return a mock subprocess.run that returns the given staged file list."""
+        from unittest.mock import MagicMock
+        result = MagicMock()
+        result.returncode = 0
+        result.stdout = "\n".join(files) + "\n"
+        return result
+
+    def test_hook_staged_no_test_blocks(self, bash_preflight, tmp_path):
+        """hooks/foo.py staged, no tests/static/ staged → block."""
+        inp = self._make_cwd_input("git commit -m 'fix: something'", tmp_path)
+        with patch("subprocess.run", return_value=self._staged(["hooks/verify-completion.py"])):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "Fix Gate" in msg
+        assert "verify-completion.py" in msg
+
+    def test_hook_staged_with_test_passes(self, bash_preflight, tmp_path):
+        """hooks/foo.py + tests/static/test_foo.py both staged → continue."""
+        inp = self._make_cwd_input("git commit -m 'fix: with test'", tmp_path)
+        staged = ["hooks/verify-completion.py", "tests/static/test_verify_completion.py"]
+        with patch("subprocess.run", return_value=self._staged(staged)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_non_hook_change_not_flagged(self, bash_preflight, tmp_path):
+        """skills/ or SKILL.md changes alone don't trigger the hook gate."""
+        inp = self._make_cwd_input("git commit -m 'step 1'", tmp_path)
+        with patch("subprocess.run", return_value=self._staged(["skills/tdd/SKILL.md"])):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_non_commit_command_not_checked(self, bash_preflight, tmp_path):
+        """git push / git status don't trigger the gate."""
+        for cmd in ["git push origin main", "git status", "git log -5"]:
+            inp = self._make_cwd_input(cmd, tmp_path)
+            with patch("subprocess.run", return_value=self._staged(["hooks/foo.py"])):
+                os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+                action, _ = bash_preflight.check(inp)
+            assert action == "continue", f"Should not block: {cmd}"
+
+    def test_override_bypasses_hook_gate(self, bash_preflight, tmp_path):
+        """ECW_ALLOW_DANGEROUS_CMD=1 bypasses the fix gate."""
+        inp = self._make_cwd_input("git commit -m 'emergency'", tmp_path)
+        with patch("subprocess.run", return_value=self._staged(["hooks/auto-continue.py"])):
+            with patch.dict(os.environ, {"ECW_ALLOW_DANGEROUS_CMD": "1"}):
+                action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_empty_staged_passes(self, bash_preflight, tmp_path):
+        """Nothing staged (e.g. empty commit) → no block."""
+        inp = self._make_cwd_input("git commit --allow-empty -m 'chore'", tmp_path)
+        with patch("subprocess.run", return_value=self._staged([])):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+
+# ══════════════════════════════════════════════════════
+# Eval Gate: SKILL.md behavioral change without fresh stamp
+# ══════════════════════════════════════════════════════
+
+class TestSkillEvalGate:
+
+    _STAMP = os.path.join(".claude", "ecw", "state", "eval-cleared.stamp")
+
+    def _make_cwd_input(self, command, cwd):
+        return {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(cwd)}
+
+    def _mock_staged(self, staged_files, diff_content=""):
+        """Return side_effect for subprocess.run covering both git diff calls."""
+        from unittest.mock import MagicMock
+        def _side_effect(cmd, **kwargs):
+            r = MagicMock()
+            r.returncode = 0
+            if "--name-only" in cmd:
+                r.stdout = "\n".join(staged_files) + "\n"
+            else:
+                r.stdout = diff_content
+            return r
+        return _side_effect
+
+    def test_skill_behavioral_no_stamp_blocks(self, bash_preflight, tmp_path):
+        """SKILL.md staged with MUST keyword, no stamp → block."""
+        diff = "+## Step\n+MUST invoke downstream skill\n"
+        inp = self._make_cwd_input("git commit -m 'step 1'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/tdd/SKILL.md"], diff)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "Eval Gate" in msg
+        assert "eval-quick" in msg
+
+    def test_skill_behavioral_fresh_stamp_passes(self, bash_preflight, tmp_path):
+        """SKILL.md staged with MUST keyword, stamp newer than file → continue."""
+        skill_path = tmp_path / "skills" / "tdd" / "SKILL.md"
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text("MUST do something")
+
+        stamp_path = tmp_path / ".claude" / "ecw" / "state" / "eval-cleared.stamp"
+        stamp_path.parent.mkdir(parents=True)
+        stamp_path.write_text("")
+        # stamp newer than skill file
+        import time
+        os.utime(str(stamp_path), (time.time() + 10, time.time() + 10))
+
+        diff = "+MUST invoke downstream skill\n"
+        inp = self._make_cwd_input("git commit -m 'step 1'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/tdd/SKILL.md"], diff)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_skill_behavioral_stale_stamp_blocks(self, bash_preflight, tmp_path):
+        """stamp older than SKILL.md (edited after eval) → block."""
+        skill_path = tmp_path / "skills" / "tdd" / "SKILL.md"
+        skill_path.parent.mkdir(parents=True)
+        skill_path.write_text("MUST do something")
+
+        stamp_path = tmp_path / ".claude" / "ecw" / "state" / "eval-cleared.stamp"
+        stamp_path.parent.mkdir(parents=True)
+        stamp_path.write_text("")
+        # stamp older than skill file
+        import time
+        os.utime(str(stamp_path), (time.time() - 60, time.time() - 60))
+
+        diff = "+MUST invoke downstream skill\n"
+        inp = self._make_cwd_input("git commit -m 'step 1'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/tdd/SKILL.md"], diff)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "Eval Gate" in msg
+
+    def test_skill_cosmetic_change_not_blocked(self, bash_preflight, tmp_path):
+        """SKILL.md staged but only cosmetic diff (no behavioral keywords) → continue."""
+        diff = "+This section explains the background context.\n+See documentation for details.\n"
+        inp = self._make_cwd_input("git commit -m 'docs: typo fix'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/tdd/SKILL.md"], diff)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
+    def test_downstream_handoff_keyword_triggers(self, bash_preflight, tmp_path):
+        """'Downstream Handoff' in diff triggers eval gate."""
+        diff = "+## Downstream Handoff\n+After completing, route to next skill.\n"
+        inp = self._make_cwd_input("git commit -m 'step 2'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/risk-classifier/SKILL.md"], diff)):
+            os.environ.pop("ECW_ALLOW_DANGEROUS_CMD", None)
+            action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "Eval Gate" in msg
+
+    def test_override_bypasses_eval_gate(self, bash_preflight, tmp_path):
+        """ECW_ALLOW_DANGEROUS_CMD=1 bypasses the eval gate."""
+        diff = "+MUST invoke downstream skill\n"
+        inp = self._make_cwd_input("git commit -m 'step 1'", tmp_path)
+        with patch("subprocess.run", side_effect=self._mock_staged(
+                ["skills/tdd/SKILL.md"], diff)):
+            with patch.dict(os.environ, {"ECW_ALLOW_DANGEROUS_CMD": "1"}):
+                action, _ = bash_preflight.check(inp)
+        assert action == "continue"
