@@ -15,6 +15,7 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 - **Current Phase**: phase1-complete
 - **Created**: {YYYY-MM-DD}
 - **Workflow ID**: {YYYYMMDD-xxxx}
+- **Baseline Commit**: {git rev-parse HEAD at workflow start}
 - **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
 - **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
 - **Auto-Continue**: yes
