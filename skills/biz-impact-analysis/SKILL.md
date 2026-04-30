@@ -25,7 +25,10 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 
 ## Flow
 
-1. **Determine Diff Range** — No args: use `git diff master...HEAD`; with args: use `git diff {args}` to get changed file list
+1. **Determine Diff Range** — Resolution order (first match wins):
+   1. **Manual arg provided**: use `git diff {args}` (e.g., `/biz-impact-analysis HEAD~3` → `git diff HEAD~3...HEAD`)
+   2. **Session baseline available**: Read `Baseline Commit` field from `<!-- ECW:STATUS:START/END -->` block in the current workflow's `session-state.md`. If a valid hash is found, use `git diff {baseline_commit}...HEAD`. This covers only commits made during this ECW workflow, not unrelated branch history.
+   3. **Fallback**: use `git diff master...HEAD` (backward-compatible; applies when no active ECW session or session-state.md predates this feature)
 2. **Coordinator Preprocessing** — Execute before Agent dispatch:
    1. Run `git diff --stat {diff_range}` to get change statistics
    2. Run `git diff --name-only {diff_range}` to get file list
