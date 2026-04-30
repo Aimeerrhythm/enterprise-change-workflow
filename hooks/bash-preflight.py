@@ -10,6 +10,7 @@ Override: set ECW_ALLOW_DANGEROUS_CMD=1 environment variable to bypass all check
 
 import os
 import re
+import subprocess
 import sys
 
 try:
@@ -55,10 +56,129 @@ def _check_sed_bypass(command, config):
             )
     return None
 
+
+# ── Commit Gates ──
+
+_EVAL_STAMP = os.path.join(".claude", "ecw", "state", "eval-cleared.stamp")
+
+# Keywords indicating behavioral (not cosmetic) SKILL.md changes.
+# Only checked on `+` lines of the diff to avoid false positives from removed content.
+_SKILL_BEHAVIORAL_KEYWORDS = [
+    "MUST", "NEVER",
+    "Auto-Continue", "Mode switch", "Routing", "Downstream Handoff",
+    "→ block", "→ deny",
+    "必须", "拦截", "阻止",
+]
+
+
+def _get_staged_files(cwd):
+    """Return list of staged file paths via git diff --cached. Returns [] on any error."""
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=cwd, capture_output=True, text=True, timeout=10,
+        )
+        if r.returncode != 0:
+            return []
+        return [f for f in r.stdout.strip().splitlines() if f]
+    except Exception:
+        return []
+
+
+def _check_commit_hook_without_test(command, cwd):
+    """Block git commit when hooks/*.py is staged but no tests/static/test_*.py is staged.
+
+    Enforces Fix Protocol: a regression test must accompany every hook logic change.
+    Bypass: set ECW_ALLOW_DANGEROUS_CMD=1.
+    """
+    if not re.search(r'\bgit\s+commit\b', command):
+        return None
+    if not cwd:
+        return None
+
+    staged = _get_staged_files(cwd)
+    if not staged:
+        return None
+
+    hook_files = [f for f in staged if re.match(r'hooks/[^/]+\.py$', f)]
+    if not hook_files:
+        return None
+
+    test_files = [f for f in staged if re.match(r'tests/static/test_[^/]+\.py$', f)]
+    if test_files:
+        return None
+
+    files_str = ", ".join(f"`{f}`" for f in hook_files)
+    return (
+        f"**[ECW Fix Gate]** {files_str} 有修改，但暂存区没有对应的 `tests/static/test_*.py` 变更。\n\n"
+        "Fix Protocol 要求：先写复现 bug 的失败测试，再写实现代码。\n\n"
+        "如需跳过检查：`ECW_ALLOW_DANGEROUS_CMD=1 git commit ...`"
+    )
+
+
+def _check_commit_skill_eval(command, cwd):
+    """Block git commit when SKILL.md has behavioral changes but no fresh eval-cleared stamp.
+
+    Behavioral = diff contains keywords like MUST / Routing / Downstream Handoff.
+    Stamp is created by `make eval-quick` on success; stale if SKILL.md was modified after it.
+    Bypass: set ECW_ALLOW_DANGEROUS_CMD=1.
+    """
+    if not re.search(r'\bgit\s+commit\b', command):
+        return None
+    if not cwd:
+        return None
+
+    staged = _get_staged_files(cwd)
+    if not staged:
+        return None
+
+    skill_mds = [f for f in staged if re.search(r'skills/[^/]+/SKILL\.md$', f)]
+    if not skill_mds:
+        return None
+
+    # Only check + lines (added content) to avoid triggering on removed text
+    has_behavioral = False
+    for skill_file in skill_mds:
+        try:
+            r = subprocess.run(
+                ["git", "diff", "--cached", "--", skill_file],
+                cwd=cwd, capture_output=True, text=True, timeout=10,
+            )
+            added = "\n".join(
+                line[1:] for line in r.stdout.splitlines()
+                if line.startswith("+") and not line.startswith("+++")
+            )
+            if any(kw in added for kw in _SKILL_BEHAVIORAL_KEYWORDS):
+                has_behavioral = True
+                break
+        except Exception:
+            pass
+
+    if not has_behavioral:
+        return None
+
+    # Check stamp freshness: stamp must exist AND be newer than every staged SKILL.md on disk
+    stamp_path = os.path.join(cwd, _EVAL_STAMP)
+    if os.path.exists(stamp_path):
+        stamp_mtime = os.path.getmtime(stamp_path)
+        stale = any(
+            os.path.exists(os.path.join(cwd, f)) and
+            os.path.getmtime(os.path.join(cwd, f)) > stamp_mtime
+            for f in skill_mds
+        )
+        if not stale:
+            return None
+
+    return (
+        "**[ECW Eval Gate]** SKILL.md 行为性内容已修改，但没有检测到有效的 eval 通过记录。\n\n"
+        "请先运行：\n```\ncd tests && make eval-quick\n```\n"
+        "eval 通过后自动创建放行标记，然后重新提交。\n\n"
+        "如需跳过检查：`ECW_ALLOW_DANGEROUS_CMD=1 git commit ...`"
+    )
+
+
 def _check_stale_diff_range(command, cwd):
     """Block git diff master...HEAD when an ECW session baseline is available.
-
-    When risk-classifier creates a session it records the HEAD hash as Baseline Commit.
     Using master...HEAD instead of {baseline}...HEAD on long-lived branches pulls in
     hundreds of unrelated historical commits, making biz-impact-analysis noise-heavy.
     """
@@ -207,6 +327,16 @@ def check(input_data, config=None):
     sed_block = _check_sed_bypass(command, config)
     if sed_block:
         return ("block", sed_block)
+
+    # Fix Gate: hooks/*.py changed without tests/static/ change
+    hook_gate = _check_commit_hook_without_test(command, cwd)
+    if hook_gate:
+        return ("block", hook_gate)
+
+    # Eval Gate: SKILL.md behavioral change without fresh eval-cleared stamp
+    eval_gate = _check_commit_skill_eval(command, cwd)
+    if eval_gate:
+        return ("block", eval_gate)
 
     warnings = []
 
