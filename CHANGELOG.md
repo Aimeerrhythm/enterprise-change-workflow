@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.10] - 2026-04-30
+
+### 修复
+
+- **auto-continue hook 原子写入 Phase/Mode（Issue #21）** — `marker_utils` 新增 `update_status_fields` / `update_mode` 两个原子写函数；`auto-continue` hook 改用原子方式同时更新 `Current Phase` 与 `Current Mode`，避免两次独立写入之间的竞争；`stop-persist` 过滤空响应，防止空字符串覆盖有效状态
+- **Workflow ID 时区偏差（Issue #17）** — Claude 内部时间感知不跟踪本地时区，导致 Created/Workflow ID 相差约 4h（UTC vs CST）；改为日期部分取 `currentDate` 注入的本地日期，后缀改为 4 位随机 hex，`Created` 字段只保留日期，彻底消除时区偏差
+- **risk-classifier 强制自动触发规则（Issue #23）** — 移除 SKILL.md 中将 `ecw:risk-classifier` 设为"会话开始自动触发"的规则，改为仅手动调用（`/ecw:risk-classifier`），消除 skill 未加载时的 Unknown skill 报错
+
+### 测试
+
+- **测试不再硬编码标题关键词** — 改为验证 `##` 章节数量，解耦测试与 Skill 标题措辞变化
+- **测试匹配 design-reference.md 中文标题** — 消除因文档中文标题变动导致的预存测试失败
+
+### 文档
+
+- 新增 Prompt Engineering 反思文章与设计补充
+
 ## [1.2.9] - 2026-04-28
 
 ### 修复
