@@ -60,13 +60,19 @@ def _is_bash(input_data):
     return input_data.get("tool_name") == "Bash"
 
 
+def _is_biz_impact_skill(input_data):
+    """Match Skill(ecw:biz-impact-analysis) invocations."""
+    return (input_data.get("tool_name") == "Skill"
+            and input_data.get("tool_input", {}).get("skill") == "ecw:biz-impact-analysis")
+
 
 # ── Sub-hook registry ──
 # Format: (module_filename, applicable_profiles, matcher_function)
 # Modules are loaded from the same directory as this dispatcher.
 
 SUB_HOOKS = [
-    ("verify-completion", ["minimal", "standard", "strict"], _is_task_complete),
+    ("verify-completion", ["minimal", "standard", "strict"],
+     lambda d: _is_task_complete(d) or _is_biz_impact_skill(d)),
     ("config-protect",    ["minimal", "standard", "strict"], _is_edit_or_write),
     ("gateguard-fact-force", ["standard", "strict"],         _is_edit_or_write),
     ("secret-scan",       ["standard", "strict"],            _is_edit_or_write),

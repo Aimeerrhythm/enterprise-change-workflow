@@ -134,7 +134,7 @@ def test_check_impl_verify_convergence_finds_in_older_workflow(verify_module, tm
     new_wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
     old_wf.mkdir(parents=True)
     new_wf.mkdir(parents=True)
-    # findings exist only in the OLDER workflow dir, no HAS-MUST-FIX marker
+    # findings exist only in the OLDER workflow dir, no unresolved must-fix rows
     (old_wf / "impl-verify-findings.md").write_text("findings — all clear")
     assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "pass"
 
@@ -147,20 +147,54 @@ def test_check_impl_verify_convergence_not_run_when_absent(verify_module, tmp_pa
 
 
 def test_check_impl_verify_convergence_has_must_fix(verify_module, tmp_path):
-    """Returns 'has-must-fix' when findings file contains the HAS-MUST-FIX marker."""
+    """Returns 'has-must-fix' when findings table has a row with must-fix and no [FIXED]."""
     wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
     wf.mkdir(parents=True)
     (wf / "impl-verify-findings.md").write_text(
-        "<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->\n\n### Round 1\n..."
+        "| # | Type | Location | Severity |\n"
+        "| 1 | State machine gap | Foo.java:42 | must-fix |\n"
     )
     assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "has-must-fix"
 
 
-def test_check_impl_verify_convergence_pass_when_marker_pass(verify_module, tmp_path):
-    """Returns 'pass' when findings file contains the PASS marker."""
+def test_check_impl_verify_convergence_pass_when_all_fixed(verify_module, tmp_path):
+    """Returns 'pass' when all must-fix rows are marked [FIXED]."""
     wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
     wf.mkdir(parents=True)
     (wf / "impl-verify-findings.md").write_text(
-        "<!-- ECW:VERIFY-STATUS: PASS -->\n\n### Round 1\n..."
+        "| # | Type | Location | Severity |\n"
+        "| 1 | [FIXED] State machine gap | Foo.java:42 | must-fix |\n"
     )
     assert verify_module.check_impl_verify_convergence(str(tmp_path)) == "pass"
+
+
+def test_check_impl_verify_skill_gate_blocks(verify_module, tmp_path):
+    """check() blocks Skill(ecw:biz-impact-analysis) when findings have unresolved must-fix."""
+    wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    wf.mkdir(parents=True)
+    (wf / "impl-verify-findings.md").write_text(
+        "| 1 | Missing validation | Bar.java:10 | must-fix |\n"
+    )
+    input_data = {
+        "cwd": str(tmp_path),
+        "tool_name": "Skill",
+        "tool_input": {"skill": "ecw:biz-impact-analysis"},
+    }
+    action, _ = verify_module.check(input_data)
+    assert action == "block"
+
+
+def test_check_impl_verify_skill_gate_passes_when_clean(verify_module, tmp_path):
+    """check() allows Skill(ecw:biz-impact-analysis) when findings show no unresolved items."""
+    wf = tmp_path / ".claude" / "ecw" / "session-data" / "20260427-1430"
+    wf.mkdir(parents=True)
+    (wf / "impl-verify-findings.md").write_text(
+        "| 1 | [FIXED] Missing validation | Bar.java:10 | must-fix |\n"
+    )
+    input_data = {
+        "cwd": str(tmp_path),
+        "tool_name": "Skill",
+        "tool_input": {"skill": "ecw:biz-impact-analysis"},
+    }
+    action, _ = verify_module.check(input_data)
+    assert action == "continue"

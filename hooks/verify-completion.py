@@ -101,8 +101,9 @@ _MESSAGES = {
 def check(input_data, config=None):
     """Dispatcher sub-hook entry point.
 
-    Called by dispatcher.py when tool_name=TaskUpdate, status=completed.
-    Also usable directly for testing.
+    Called by dispatcher.py when:
+      - tool_name=TaskUpdate, status=completed
+      - tool_name=Skill, skill=ecw:biz-impact-analysis
 
     Args:
         input_data: Hook input dict (must contain "cwd")
@@ -115,6 +116,13 @@ def check(input_data, config=None):
     """
     cwd = input_data.get("cwd", "")
     if not cwd:
+        return ("continue", "")
+
+    # Gate: block ecw:biz-impact-analysis invocation when impl-verify has unresolved must-fix
+    if input_data.get("tool_name") == "Skill":
+        verify_status = check_impl_verify_convergence(cwd)
+        if verify_status == "has-must-fix":
+            return ("block", _MESSAGES["impl_verify_must_fix"])
         return ("continue", "")
 
     profile = (config or {}).get("_runtime_profile", "standard")
@@ -462,12 +470,15 @@ def check_knowledge_doc_freshness(cwd, modified):
 
 
 def check_impl_verify_convergence(cwd):
-    """Check impl-verify convergence status from findings file.
+    """Check impl-verify convergence status by parsing the findings file content.
+
+    A must-fix item is unresolved when a table row contains 'must-fix' (severity)
+    but does NOT also contain '[FIXED]' on the same line.
 
     Returns:
-        'has-must-fix' — findings file exists and contains HAS-MUST-FIX marker (hard block)
-        'not-run'      — findings file does not exist (soft reminder)
-        'pass'         — findings file exists without HAS-MUST-FIX marker
+        'has-must-fix' — findings file exists and has unresolved must-fix items
+        'not-run'      — no findings file found
+        'pass'         — findings file exists with no unresolved must-fix items
     """
     session_data = os.path.join(cwd, ".claude", "ecw", "session-data")
     if not os.path.isdir(session_data):
@@ -480,8 +491,10 @@ def check_impl_verify_convergence(cwd):
             if not store.exists("impl-verify-findings"):
                 continue
             content = store.read("impl-verify-findings") or ""
-            if "<!-- ECW:VERIFY-STATUS: HAS-MUST-FIX -->" in content:
-                return "has-must-fix"
+            for line in content.splitlines():
+                # Table rows: contains '|', contains 'must-fix', no '[FIXED]'
+                if "|" in line and "must-fix" in line.lower() and "[FIXED]" not in line:
+                    return "has-must-fix"
             return "pass"
     except Exception:
         pass
