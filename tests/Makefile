@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full all clean _check-api-key
+.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full eval-domain-collab eval-tdd eval-impl-verify eval-all-skills all clean _check-api-key
 
 # Layer 1: 静态结构验证（<3s, $0）
 lint: lint-md lint-py
@@ -33,8 +33,11 @@ test-simulator:
 	$(PYTHON) -m pytest static/test_workflow_simulator.py -v
 
 # Layer 2: risk-classifier P0 场景行为 Eval（~2min, ~$0.50）
+# 成功后创建 eval-cleared.stamp，解锁 SKILL.md 行为变更的 git commit
 eval-quick: _check-api-key
-	cd eval && npx promptfoo eval --filter-pattern "s0[1-8]-*"
+	cd eval && npx promptfoo eval --filter-pattern "s0[1-8]-*" && \
+	mkdir -p ../.claude/ecw/state && \
+	touch ../.claude/ecw/state/eval-cleared.stamp
 
 # Layer 2: risk-classifier 全部场景行为 Eval（~5min, ~$1.50）
 eval-full: _check-api-key
