@@ -4,6 +4,14 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.12] - 2026-04-30
+
+### 新增
+
+- **bash-preflight Fix Gate** — `git commit` 时若 `hooks/*.py` 有逻辑改动但暂存区无 `tests/static/test_*.py` 变更，直接 block；强制"先写失败测试，再写实现"的 Fix Protocol
+- **bash-preflight Eval Gate** — `git commit` 时若 `skills/*/SKILL.md` 包含行为性关键词改动（`MUST`/`Routing`/`Downstream Handoff` 等），但无有效 `eval-cleared.stamp` 或 stamp 早于文件修改时间，直接 block；防止 SKILL.md 行为变更未经 LLM eval 验证就进入仓库
+- **eval-quick 成功后创建 stamp** — `make eval-quick` 通过后自动 touch `.claude/ecw/state/eval-cleared.stamp`，作为 Eval Gate 的放行凭证；stamp 路径已在 `.gitignore` 中
+
 ## [1.2.11] - 2026-04-30
 
 ### 重构

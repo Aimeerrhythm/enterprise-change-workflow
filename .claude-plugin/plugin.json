@@ -1,6 +1,6 @@
 {
   "name": "ecw",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "description": "Enterprise change management workflow: risk classification, multi-domain collaboration, requirements elicitation, implementation planning, adversarial spec review, TDD, implementation orchestration, systematic debugging, implementation verification, business impact analysis, cross-review, knowledge base maintenance (audit, utilization tracking, repo map), and multi-repo workspace for cross-service development",
   "author": {
     "name": "Aimeerrhythm"
