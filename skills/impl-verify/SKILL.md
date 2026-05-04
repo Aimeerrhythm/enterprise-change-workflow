@@ -166,7 +166,7 @@ Read `./prompts/round-checklists.md` — Round 4 section for the engineering sta
 
 After convergence (zero must-fix findings in the most recent round):
 
-> **Downstream Handoff**: Read risk level and domain mode from session-state.md (if unavailable, default to P0), update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> **Downstream Handoff**: Read risk level and domain mode from session-state.md (if unavailable, default to P0), update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** and update `current_phase` to `verify-complete` within the same STATUS marker block, then:
 > - **P0/P1**: Invoke `ecw:biz-impact-analysis`. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList. (knowledge-track runs after biz-impact-analysis completes)
 > - **P2 cross-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. Then suggest biz-impact-analysis; wait for user decision.
 > - **P2 single-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. No biz-impact-analysis suggestion (excluded per workflow-routes.yml).

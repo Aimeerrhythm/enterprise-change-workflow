@@ -204,7 +204,7 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and proceed to implementation. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-> **Downstream Handoff**: Read risk level and `auto_continue` from session-state.md (if session-state.md is unavailable, default to P0 and wait for user direction). Update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> **Downstream Handoff**: Read risk level and `auto_continue` from session-state.md (if session-state.md is unavailable, default to P0 and wait for user direction). Update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** and update `current_phase` to `spec-challenge-complete` within the same STATUS marker block, then:
 > - **P0/P1 (`auto_continue: true`)**: Invoke the next skill based on Implementation Strategy:
 >   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
 >   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.

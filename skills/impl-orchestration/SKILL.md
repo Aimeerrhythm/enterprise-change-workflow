@@ -279,12 +279,13 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 
 **Downstream Handoff — route to impl-verify:**
 
-1. Call `TaskList` to check for pending tasks
-2. If a pending `ecw:impl-verify` task exists (created by risk-classifier with blockedBy dependency on implementation tasks):
+1. Update `current_phase` to `impl-complete` within the `<!-- ECW:STATUS:START/END -->` marker block in session-state.md
+2. Call `TaskList` to check for pending tasks
+3. If a pending `ecw:impl-verify` task exists (created by risk-classifier with blockedBy dependency on implementation tasks):
    - Mark it `in_progress` via TaskUpdate
    - Invoke `ecw:impl-verify` using the Skill tool
-3. If no pending impl-verify task exists, invoke `ecw:impl-verify` directly via Skill tool
-4. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
+4. If no pending impl-verify task exists, invoke `ecw:impl-verify` directly via Skill tool
+5. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
 
 ## Task Merging
 
