@@ -39,7 +39,7 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete analysis]` header, and warn user that manual impact review may be needed
 5. **Auto-backfill knowledge base** — If the agent's report contains "Unregistered Cross-Domain Calls", execute the knowledge backfill procedure (see [Knowledge Auto-Backfill](#knowledge-auto-backfill) below)
-6. **Present analysis report** — Output the agent's formatted report directly; append backfill summary if any calls were added
+6. **Present analysis report** — Write the full report to `session-data/{workflow-id}/biz-impact-report.md` (use `CheckpointStore.write("biz-impact-report", content)` or write directly to that path; read the workflow-id from the STATUS block in session-state.md). Then output the agent's formatted report directly; append backfill summary if any calls were added
 
 ## Agent Dispatch
 
@@ -120,7 +120,11 @@ If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysi
 
 ## Subagent Ledger Update
 
-After Agent returns, append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
+After Agent returns, append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section.
+
+**IMPORTANT — insert inside the marker block**: Use the Edit tool to insert the new row **before** `<!-- ECW:LEDGER:END -->`, not after it. Do **not** append raw text to the end of the file. Raw appends land outside the marker block and are invisible to the hook parser.
+
+Preferred: call `append_ledger_entry` from `hooks/marker_utils.py`, which handles marker placement correctly. If writing manually via Edit, locate the `<!-- ECW:LEDGER:END -->` line and insert the new entry immediately before it.
 
 ```yaml
 - phase: biz-impact-analysis
