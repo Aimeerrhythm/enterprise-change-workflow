@@ -183,3 +183,85 @@ class TestStateFileManagement:
 class TestScriptExists:
     def test_hook_script_exists(self):
         assert (HOOKS_DIR / "gateguard-fact-force.py").exists()
+
+
+# ---------------------------------------------------------------------------
+# Bash write interception (Issue #35)
+# ---------------------------------------------------------------------------
+
+def _make_bash_input(tmp_path, command):
+    """Build a Bash tool_input dict with the given command."""
+    return {
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+        "cwd": str(tmp_path),
+    }
+
+
+def _touch(tmp_path, rel):
+    """Create a file at tmp_path/rel and return its path string."""
+    p = tmp_path / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.touch()
+    return str(p)
+
+
+class TestBashWriteInterception:
+    def test_redirect_gt_blocks_guarded_file(self, gateguard, tmp_path):
+        """echo content > Foo.java should be blocked (file not yet investigated)."""
+        _touch(tmp_path, "src/Foo.java")
+        inp = _make_bash_input(tmp_path, f"echo 'public class Foo {{}}' > {tmp_path}/src/Foo.java")
+        action, msg = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "block"
+        assert "Gateguard" in msg
+
+    def test_redirect_append_blocks_guarded_file(self, gateguard, tmp_path):
+        """cat >> Bar.java should be blocked."""
+        _touch(tmp_path, "src/Bar.java")
+        inp = _make_bash_input(tmp_path, f"cat >> {tmp_path}/src/Bar.java << 'EOF'\npublic class Bar {{}}\nEOF")
+        action, msg = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "block"
+        assert "Gateguard" in msg
+
+    def test_tee_blocks_guarded_file(self, gateguard, tmp_path):
+        """echo content | tee Baz.java should be blocked."""
+        _touch(tmp_path, "src/Baz.java")
+        inp = _make_bash_input(tmp_path, f"echo 'class Baz {{}}' | tee {tmp_path}/src/Baz.java")
+        action, msg = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "block"
+        assert "Gateguard" in msg
+
+    def test_bash_write_already_investigated_passes(self, gateguard, tmp_path):
+        """Bash write to an already-investigated file should pass through."""
+        _touch(tmp_path, "src/Known.java")
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "investigated-files.txt").write_text("src/Known.java\n")
+
+        inp = _make_bash_input(tmp_path, f"echo 'x' > {tmp_path}/src/Known.java")
+        action, _ = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "continue"
+
+    def test_bash_write_unguarded_extension_passes(self, gateguard, tmp_path):
+        """Bash write to a .py file (not in guarded_exts) should pass through."""
+        _touch(tmp_path, "src/main.py")
+        inp = _make_bash_input(tmp_path, f"echo 'pass' > {tmp_path}/src/main.py")
+        action, _ = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "continue"
+
+    def test_block_message_contains_bypass_warning(self, gateguard, tmp_path):
+        """Block message must warn against Bash bypass (layer-1 text)."""
+        _, msg = gateguard.check(_make_input(tmp_path, "Service.java"), JAVA_CONFIG)
+        assert "Do not bypass this check by using Bash" in msg
+
+    def test_bash_no_write_pattern_passes(self, gateguard, tmp_path):
+        """A Bash command without write patterns should always pass."""
+        inp = _make_bash_input(tmp_path, "grep -r 'Service' src/")
+        action, _ = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "continue"
+
+    def test_bash_write_nonexistent_file_passes(self, gateguard, tmp_path):
+        """Bash writing to a guarded-extension path that doesn't exist yet passes."""
+        inp = _make_bash_input(tmp_path, f"echo 'x' > {tmp_path}/src/NewFile.java")
+        action, _ = gateguard.check(inp, JAVA_CONFIG)
+        assert action == "continue"

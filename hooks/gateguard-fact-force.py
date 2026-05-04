@@ -17,6 +17,7 @@ Whitelist mode:
 """
 
 import os
+import re
 
 STATE_FILENAME = "investigated-files.txt"
 
@@ -81,23 +82,35 @@ def _is_exempt(file_path, cwd, config=None):
     return False
 
 
-def check(input_data, config=None):
-    """Sub-hook entry point.
+_BASH_WRITE_RE = re.compile(
+    r'(?:^|\s|;|\|)(?:tee\s+|>{1,2}\s*)([^\s|&;><]+)',
+    re.MULTILINE,
+)
+
+_BYPASS_NOTICE = (
+    "\n\n**Do not bypass this check by using Bash, Write, or any other tool**"
+    " — the investigation requirement applies to all write methods."
+    " After completing your investigation, use the Edit tool to retry."
+)
+
+
+def _extract_bash_write_targets(command):
+    """Extract candidate file paths from shell write patterns in a Bash command.
+
+    Detects: ``> file``, ``>> file``, ``tee file`` (common write patterns).
+    Returns a list of raw path strings found; may include false positives —
+    callers must validate extensions before blocking.
+    """
+    return _BASH_WRITE_RE.findall(command)
+
+
+def _check_file_path(file_path, cwd, guarded_exts, config, investigated):
+    """Core per-file gate check (shared by Edit/Write and Bash paths).
 
     Returns:
-        ("block", message) — first touch, demands investigation
-        ("continue", "") — file already investigated, exempt, or not guarded
+        ("block", message) if the file needs investigation
+        ("continue", "") otherwise
     """
-    file_path = input_data.get("tool_input", {}).get("file_path", "")
-    cwd = input_data.get("cwd", "")
-
-    if not file_path or not cwd:
-        return ("continue", "")
-
-    guarded_exts = _parse_guarded_extensions(config)
-    if not guarded_exts:
-        return ("continue", "")
-
     _, ext = os.path.splitext(file_path)
     if ext.lower() not in guarded_exts:
         return ("continue", "")
@@ -110,7 +123,6 @@ def check(input_data, config=None):
 
     rel_path = os.path.relpath(file_path, cwd) if os.path.isabs(file_path) else file_path
 
-    investigated = _read_investigated(cwd)
     if rel_path in investigated:
         return ("continue", "")
 
@@ -124,5 +136,55 @@ def check(input_data, config=None):
         f"2. **Read the file** to understand its interface and responsibilities\n"
         f"3. **Check related tests** if they exist\n\n"
         f"Once you understand the impact surface, retry the edit."
+        f"{_BYPASS_NOTICE}"
     )
     return ("block", msg)
+
+
+def check(input_data, config=None):
+    """Sub-hook entry point.
+
+    Returns:
+        ("block", message) — first touch, demands investigation
+        ("continue", "") — file already investigated, exempt, or not guarded
+    """
+    tool_name = input_data.get("tool_name", "")
+    tool_input = input_data.get("tool_input", {})
+    cwd = input_data.get("cwd", "")
+
+    if not cwd:
+        return ("continue", "")
+
+    guarded_exts = _parse_guarded_extensions(config)
+    if not guarded_exts:
+        return ("continue", "")
+
+    # --- Layer 1: Edit / Write tools (file_path field) ---
+    if tool_name != "Bash":
+        file_path = tool_input.get("file_path", "")
+        if not file_path:
+            return ("continue", "")
+        investigated = _read_investigated(cwd)
+        return _check_file_path(file_path, cwd, guarded_exts, config, investigated)
+
+    # --- Layer 2: Bash tool — detect shell write patterns ---
+    command = tool_input.get("command", "")
+    if not command:
+        return ("continue", "")
+
+    candidates = _extract_bash_write_targets(command)
+    if not candidates:
+        return ("continue", "")
+
+    investigated = _read_investigated(cwd)
+    for raw_path in candidates:
+        # Resolve relative to cwd so _is_exempt and os.path.exists work correctly
+        if not os.path.isabs(raw_path):
+            abs_path = os.path.join(cwd, raw_path)
+        else:
+            abs_path = raw_path
+        result = _check_file_path(abs_path, cwd, guarded_exts, config, investigated)
+        if result[0] == "block":
+            return result
+
+    return ("continue", "")
