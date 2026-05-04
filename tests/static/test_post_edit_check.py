@@ -411,3 +411,83 @@ class TestBaselineCommitInjection:
         with patch.object(post_edit, "_inject_baseline_commit") as mock_inject:
             post_edit.check(input_data)
         mock_inject.assert_not_called()
+
+
+# ══════════════════════════════════════════════════════
+# Session State YAML Validation
+# ══════════════════════════════════════════════════════
+
+class TestSessionStateYamlValidation:
+    """post-edit-check must warn when session-state.md contains invalid YAML."""
+
+    @pytest.fixture
+    def post_edit(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "post_edit_check",
+            Path(__file__).resolve().parent.parent.parent / "hooks" / "post-edit-check.py",
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_valid_yaml_no_warning(self, post_edit, tmp_path):
+        """Valid YAML in STATUS section produces no YAML warning."""
+        valid_content = (
+            "# ECW Session State\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:writing-plans]\n"
+            "current_phase: phase1-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        input_data = {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": str(tmp_path / "session-state.md"),
+                "content": valid_content,
+            },
+            "cwd": str(tmp_path),
+        }
+        action, message = post_edit.check(input_data)
+        assert action == "continue"
+        assert "YAML Error" not in message
+
+    def test_invalid_yaml_status_produces_warning(self, post_edit, tmp_path):
+        """Invalid YAML in STATUS section triggers YAML Error warning."""
+        invalid_content = (
+            "# ECW Session State\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: [unclosed\n"
+            "routing:\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        input_data = {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": str(tmp_path / "session-state.md"),
+                "content": invalid_content,
+            },
+            "cwd": str(tmp_path),
+        }
+        action, message = post_edit.check(input_data)
+        assert action == "continue"
+        assert "YAML Error" in message
+        assert "STATUS" in message
+
+    def test_non_session_state_file_not_checked(self, post_edit, tmp_path):
+        """YAML validation only applies to session-state.md, not other files."""
+        invalid_content = "bad: yaml:\n  - [\n"
+        input_data = {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": str(tmp_path / "other.md"),
+                "content": invalid_content,
+            },
+            "cwd": str(tmp_path),
+        }
+        action, message = post_edit.check(input_data)
+        assert "YAML Error" not in message
+

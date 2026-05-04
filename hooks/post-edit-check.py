@@ -16,6 +16,15 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from marker_utils import read_marker_section  # noqa: E402
+
+try:
+    import yaml as _yaml
+    _YAML_AVAILABLE = True
+except ImportError:
+    _YAML_AVAILABLE = False
+
 
 # ── User-visible messages (locale: zh-CN) ──
 # All user-facing strings are collected here for future i18n.
@@ -151,6 +160,38 @@ def _accumulate_modified_file(cwd, filepath):
         pass  # State tracking is best-effort
 
 
+def _validate_session_state_yaml(tool_input, tool_name):
+    """Validate all marker sections in session-state.md are valid YAML.
+
+    Returns a list of error strings (empty = all valid).
+    """
+    if not _YAML_AVAILABLE:
+        return []
+
+    if tool_name == "Write":
+        content = tool_input.get("content", "")
+    elif tool_name == "Edit":
+        # For Edit, try to reconstruct the affected section by checking new_string
+        content = tool_input.get("new_string", "")
+    else:
+        return []
+
+    if not content:
+        return []
+
+    warnings = []
+    for section_name in ("STATUS", "MODE", "LEDGER"):
+        section = read_marker_section(content, section_name)
+        if section is not None:
+            try:
+                _yaml.safe_load(section)
+            except Exception as e:
+                warnings.append(
+                    f"{section_name} section: {e}"
+                )
+    return warnings
+
+
 def _scan_anti_patterns(content, filepath):
     """Scan content for anti-patterns. Returns list of warning strings."""
     warnings = []
@@ -199,6 +240,14 @@ def check(input_data, config=None):
     # 1b. Auto-fill Baseline Commit placeholder in new session-state.md files
     if tool_name == "Write":
         _inject_baseline_commit(filepath, cwd)
+
+    # 1c. YAML validity check for session-state.md marker sections
+    if filepath.endswith("session-state.md") and _YAML_AVAILABLE:
+        yaml_warnings = _validate_session_state_yaml(tool_input, tool_name)
+        if yaml_warnings:
+            msg = "**[ECW YAML Error]** session-state.md 的 marker 区块包含无效 YAML，请立即修正：\n\n"
+            msg += "\n".join(f"- {w}" for w in yaml_warnings)
+            return ("continue", msg)
 
     # 2. Scan for anti-patterns (only for scannable file types)
     ext = _get_file_extension(filepath)
