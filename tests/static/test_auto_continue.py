@@ -246,24 +246,31 @@ class TestSpecChallengeHookBehavior:
         state_file = state_dir / "session-state.md"
         state_file.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P0\n"
-            "- **Auto-Continue**: yes\n"
-            "- **Routing**: ecw:writing-plans → ecw:spec-challenge → ecw:tdd\n"
-            "- **Next**: ecw:tdd\n"
-            f"- **Current Phase**: {phase}\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:writing-plans, ecw:spec-challenge, ecw:tdd]\n"
+            "next: ecw:tdd\n"
+            f"current_phase: {phase}\n"
             "<!-- ECW:STATUS:END -->\n"
             "<!-- ECW:MODE:START -->\n"
-            "- **Working Mode**: planning\n"
+            "working_mode: planning\n"
             "<!-- ECW:MODE:END -->\n"
         )
         return state_file
+
+    def _parse_state(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        return mu.parse_status(state_file.read_text())
 
     def test_phase_advances_to_spec_challenge_complete(self, tmp_path):
         """Phase must still advance to spec-challenge-complete — hook does this, not SKILL.md."""
         state_file = self._make_state(tmp_path)
         self.hook._advance_session_state(str(state_file), "ecw:spec-challenge")
-        content = state_file.read_text()
-        assert "**Current Phase**: spec-challenge-complete" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "spec-challenge-complete"
 
     def test_no_system_message_injected(self, tmp_path, monkeypatch):
         """main() must NOT output systemMessage for spec-challenge — would bypass AskUserQuestion."""
@@ -311,7 +318,8 @@ class TestSpecChallengeHookBehavior:
         self.hook.main()
 
         content = state_file.read_text()
-        assert "**Current Phase**: spec-challenge-complete" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "spec-challenge-complete"
 
 
 class TestRemainingRouteUnit:
@@ -458,53 +466,67 @@ class TestAdvanceSessionState:
         state_file.write_text(
             "# ECW Session State\n\n"
             "<!-- ECW:STATUS:START -->\n"
-            f"- **Current Phase**: {phase}\n"
-            "- **Risk Level**: P1\n"
-            "- **Auto-Continue**: yes\n"
-            "- **Next**: ecw:requirements-elicitation\n"
+            f"current_phase: {phase}\n"
+            "risk_level: P1\n"
+            "auto_continue: true\n"
+            "next: ecw:requirements-elicitation\n"
             "<!-- ECW:STATUS:END -->\n\n"
             "<!-- ECW:MODE:START -->\n"
-            f"- **Working Mode**: {mode}\n"
+            f"working_mode: {mode}\n"
             "<!-- ECW:MODE:END -->\n"
         )
         return state_file
+
+    def _parse_state(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        return mu.parse_status(state_file.read_text())
+
+    def _parse_mode(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        result = mu.parse_yaml_section(state_file.read_text(), "MODE")
+        return result.get("working_mode") if result else None
 
     def test_updates_phase_after_skill_completes(self, tmp_path):
         """Current Phase must advance after risk-classifier finishes."""
         state_file = self._make_state(tmp_path, phase="phase1-complete")
         self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
-        content = state_file.read_text()
-        assert "**Current Phase**: phase1-complete" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "phase1-complete"
 
     def test_updates_phase_after_requirements_elicitation(self, tmp_path):
         state_file = self._make_state(tmp_path, phase="phase1-complete")
         self.hook._advance_session_state(str(state_file), "ecw:requirements-elicitation")
-        content = state_file.read_text()
-        assert "**Current Phase**: requirements-complete" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "requirements-complete"
 
     def test_updates_mode_after_writing_plans(self, tmp_path):
         """Working Mode must update to 'planning' after writing-plans finishes."""
         state_file = self._make_state(tmp_path, mode="analysis")
         self.hook._advance_session_state(str(state_file), "ecw:writing-plans")
-        content = state_file.read_text()
-        assert "**Working Mode**: planning" in content
+        assert self._parse_mode(state_file) == "planning"
 
     def test_updates_both_fields_atomically(self, tmp_path):
         """Both Current Phase and Working Mode must be written in a single update."""
         state_file = self._make_state(tmp_path, phase="plan-complete", mode="planning")
         self.hook._advance_session_state(str(state_file), "ecw:tdd")
-        content = state_file.read_text()
-        assert "**Current Phase**: tdd-complete" in content
-        assert "**Working Mode**: implementation" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "tdd-complete"
+        assert self._parse_mode(state_file) == "implementation"
 
     def test_preserves_unrelated_fields(self, tmp_path):
         """Risk Level, Auto-Continue, and Next must not be modified."""
         state_file = self._make_state(tmp_path)
         self.hook._advance_session_state(str(state_file), "ecw:impl-verify")
-        content = state_file.read_text()
-        assert "**Risk Level**: P1" in content
-        assert "**Auto-Continue**: yes" in content
-        assert "**Next**: ecw:requirements-elicitation" in content
+        fields = self._parse_state(state_file)
+        assert fields["risk_level"] == "P1"
+        assert fields["auto_continue"] is True
+        assert fields["next"] == "ecw:requirements-elicitation"
 
     def test_unknown_skill_is_noop(self, tmp_path):
         """Skills not in the mapping table must not modify the file."""
@@ -544,14 +566,14 @@ class TestAdvanceSessionState:
         state_file = state_dir / "session-state.md"
         state_file.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P1\n"
-            "- **Auto-Continue**: yes\n"
-            "- **Routing**: ecw:risk-classifier → ecw:writing-plans\n"
-            "- **Next**: ecw:writing-plans\n"
-            "- **Current Phase**: phase1-complete\n"
+            "risk_level: P1\n"
+            "auto_continue: true\n"
+            "routing: [ecw:risk-classifier, ecw:writing-plans]\n"
+            "next: ecw:writing-plans\n"
+            "current_phase: phase1-complete\n"
             "<!-- ECW:STATUS:END -->\n"
             "<!-- ECW:MODE:START -->\n"
-            "- **Working Mode**: analysis\n"
+            "working_mode: analysis\n"
             "<!-- ECW:MODE:END -->\n"
         )
 
@@ -569,9 +591,9 @@ class TestAdvanceSessionState:
 
         self.hook.main()
 
-        content = state_file.read_text()
-        assert "**Current Phase**: phase1-complete" in content
-        assert "**Working Mode**: analysis" in content
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "phase1-complete"
+        assert self._parse_mode(state_file) == "analysis"
         output = json.loads("".join(captured))
         assert "systemMessage" in output
 
@@ -667,19 +689,41 @@ class TestPreToolUseHandler:
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
+        # routing is a list or string; convert to YAML list
+        if isinstance(routing, str):
+            routing_list = [s.strip() for s in routing.split("→")]
+        else:
+            routing_list = routing
+        import yaml as _yaml
+        routing_yaml = _yaml.dump(routing_list, default_flow_style=True).strip()
         state_file.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P0\n"
-            "- **Auto-Continue**: yes\n"
-            f"- **Routing**: {routing}\n"
-            f"- **Next**: {next_val}\n"
-            f"- **Current Phase**: {phase}\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            f"routing: {routing_yaml}\n"
+            f"next: {next_val}\n"
+            f"current_phase: {phase}\n"
             "<!-- ECW:STATUS:END -->\n"
             "<!-- ECW:MODE:START -->\n"
-            "- **Working Mode**: planning\n"
+            "working_mode: planning\n"
             "<!-- ECW:MODE:END -->\n"
         )
         return state_file
+
+    def _parse_state(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        return mu.parse_status(state_file.read_text())
+
+    def _parse_mode(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        result = mu.parse_yaml_section(state_file.read_text(), "MODE")
+        return result.get("working_mode") if result else None
 
     def _run_pre_tool_use(self, tmp_path, monkeypatch, skill):
         import io
@@ -705,11 +749,11 @@ class TestPreToolUseHandler:
         self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
         state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
-        content = state_file.read_text()
-        assert "**Current Phase**: spec-challenge" in content, (
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "spec-challenge", (
             "PreToolUse must update Current Phase to the in-progress skill name"
         )
-        assert "**Current Phase**: plan-complete" not in content
+        assert fields["current_phase"] != "plan-complete"
 
     def test_pre_tool_use_updates_next_to_downstream_skill(self, tmp_path, monkeypatch):
         """At skill entry, Next must be updated to the skill AFTER the current one in Routing.
@@ -721,8 +765,8 @@ class TestPreToolUseHandler:
         self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
         state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
-        content = state_file.read_text()
-        assert "**Next**: ecw:tdd" in content, (
+        fields = self._parse_state(state_file)
+        assert fields["next"] == "ecw:tdd", (
             "When spec-challenge starts, Next must be updated to ecw:tdd (via TDD:RED alias)"
         )
 
@@ -732,8 +776,7 @@ class TestPreToolUseHandler:
         self._make_state(tmp_path, routing, next_val="ecw:tdd", phase="plan-complete")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:tdd")
         state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
-        content = state_file.read_text()
-        assert "**Working Mode**: implementation" in content
+        assert self._parse_mode(state_file) == "implementation"
 
     def test_pre_tool_use_returns_continue_not_system_message(self, tmp_path, monkeypatch):
         """PreToolUse must return {result: continue}, never inject a systemMessage."""
@@ -750,9 +793,9 @@ class TestPreToolUseHandler:
         routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
         state_file = self._make_state(tmp_path, routing, next_val="ecw:biz-impact-analysis")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:biz-impact-analysis")
-        content = state_file.read_text()
+        fields = self._parse_state(state_file)
         # biz-impact-analysis is last skill; _next_skill_from_routing returns None → Next unchanged
-        assert "**Next**: ecw:biz-impact-analysis" in content
+        assert fields["next"] == "ecw:biz-impact-analysis"
 
 
 class TestKnowledgeTrackInjection:
@@ -776,20 +819,26 @@ class TestKnowledgeTrackInjection:
 
     def _make_state(self, tmp_path, risk_level="P0", routing=None):
         if routing is None:
-            routing = f"ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
+            routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-dd01"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
+        if isinstance(routing, str):
+            routing_list = [s.strip() for s in routing.split("→")]
+        else:
+            routing_list = routing
+        import yaml as _yaml
+        routing_yaml = _yaml.dump(routing_list, default_flow_style=True).strip()
         state_file.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            f"- **Risk Level**: {risk_level}\n"
-            "- **Auto-Continue**: yes\n"
-            f"- **Routing**: {routing}\n"
-            "- **Next**: ecw:biz-impact-analysis\n"
-            "- **Current Phase**: verify-complete\n"
+            f"risk_level: {risk_level}\n"
+            "auto_continue: true\n"
+            f"routing: {routing_yaml}\n"
+            "next: ecw:biz-impact-analysis\n"
+            "current_phase: verify-complete\n"
             "<!-- ECW:STATUS:END -->\n"
             "<!-- ECW:MODE:START -->\n"
-            "- **Working Mode**: verification\n"
+            "working_mode: verification\n"
             "<!-- ECW:MODE:END -->\n"
         )
         return state_file

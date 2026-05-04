@@ -19,7 +19,7 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status, parse_yaml_section  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -48,22 +48,31 @@ def _read_session_state(cwd):
 
 
 def _extract_state_fields(content):
-    """Extract key fields from session-state.md content."""
+    """Extract key fields from session-state.md STATUS section (YAML format)."""
+    fields_raw = parse_status(content) or {}
     fields = {}
-    patterns = {
-        "risk_level": r'\*\*Risk Level\*\*:\s*(P[0-3])',
-        "domains": r'\*\*Domains\*\*:\s*(.+)',
-        "mode": r'\*\*Mode\*\*:\s*(.+)',
-        "routing": r'\*\*Routing\*\*:\s*(.+)',
-        "current_phase": r'\*\*Current Phase\*\*:\s*(.+)',
-        "status": r'\*\*Status\*\*:\s*(.+)',
-        "working_mode": r'\*\*Working Mode\*\*:\s*(.+)',
-        "next_skill": r'\*\*Next\*\*:\s*(.+)',
-    }
-    for key, pattern in patterns.items():
-        m = re.search(pattern, content, re.IGNORECASE)
-        if m:
-            fields[key] = m.group(1).strip()
+    if fields_raw.get("risk_level"):
+        fields["risk_level"] = fields_raw["risk_level"]
+    if fields_raw.get("domains"):
+        domains = fields_raw["domains"]
+        fields["domains"] = ", ".join(domains) if isinstance(domains, list) else str(domains)
+    if fields_raw.get("mode"):
+        fields["mode"] = fields_raw["mode"]
+    if fields_raw.get("routing") is not None:
+        routing = fields_raw["routing"]
+        fields["routing"] = " → ".join(routing) if isinstance(routing, list) else str(routing)
+    if fields_raw.get("current_phase"):
+        fields["current_phase"] = fields_raw["current_phase"]
+    if fields_raw.get("auto_continue") is not None:
+        if fields_raw["auto_continue"] is False:
+            fields["status"] = "ended"
+        else:
+            fields["status"] = "active"
+    working_mode_data = parse_yaml_section(content, "MODE") or {}
+    if working_mode_data.get("working_mode"):
+        fields["working_mode"] = working_mode_data["working_mode"]
+    if fields_raw.get("next"):
+        fields["next_skill"] = fields_raw["next"]
     return fields
 
 

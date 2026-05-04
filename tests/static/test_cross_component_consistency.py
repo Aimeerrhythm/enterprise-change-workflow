@@ -312,12 +312,12 @@ class TestG9MarkerFormatConsistency:
 
 
 # ═══════════════════════════════════════════
-# G11: auto-continue _FIELD_PATTERNS vs session-state-format.md
-# Historical bug: auto-continue regex didn't match changed field format
+# G11: parse_status (YAML) vs session-state-format.md
+# Historical bug: auto-continue regex didn't match changed field format (Issue #40: migrated to YAML)
 # ═══════════════════════════════════════════
 
 class TestG11FieldPatternsVsTemplate:
-    """auto-continue regex patterns must match the field format in the template."""
+    """parse_status must correctly parse YAML fields that appear in the session-state template."""
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -327,39 +327,37 @@ class TestG11FieldPatternsVsTemplate:
             pytest.skip("session-state-format.md not found")
         self.fmt_content = fmt_path.read_text(encoding="utf-8")
 
-    def test_field_patterns_match_template(self):
-        synthetic_lines = {
-            "auto_continue": "- **Auto-Continue**: yes",
-            "routing": "- **Routing**: ecw:risk-classifier → ecw:writing-plans",
-            "next": "- **Next**: ecw:writing-plans",
-            "risk_level": "- **Risk Level**: P1",
-        }
-        unmatched = []
-        for field_name, pattern in self.hook._FIELD_PATTERNS.items():
-            test_line = synthetic_lines.get(field_name)
-            if test_line is None:
-                continue
-            if not re.search(pattern, test_line, re.IGNORECASE):
-                unmatched.append(
-                    f"'{field_name}': r'{pattern}' vs '{test_line}'"
-                )
-        assert not unmatched, (
-            "Field patterns don't match expected format:\n" + "\n".join(unmatched)
+    def test_parse_status_extracts_required_fields(self):
+        """parse_status must correctly extract all routing-critical fields from YAML STATUS."""
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", ROOT / "hooks" / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+
+        synthetic_status = (
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "auto_continue: true\n"
+            "routing: [ecw:risk-classifier, ecw:writing-plans]\n"
+            "next: ecw:writing-plans\n"
+            "current_phase: phase1-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
         )
+        fields = mu.parse_status(synthetic_status)
+        assert fields is not None, "parse_status must succeed on valid YAML STATUS"
+        assert fields.get("risk_level") == "P1"
+        assert fields.get("auto_continue") is True
+        assert isinstance(fields.get("routing"), list)
+        assert "ecw:writing-plans" in fields.get("routing", [])
+        assert fields.get("next") == "ecw:writing-plans"
 
     def test_field_names_exist_in_template(self):
-        field_names = {
-            "auto_continue": "Auto-Continue",
-            "routing": "Routing",
-            "next": "Next",
-            "risk_level": "Risk Level",
-        }
+        """YAML field names used by parse_status must appear in the session-state template."""
+        required_yaml_keys = ["risk_level", "auto_continue", "routing", "next", "current_phase"]
         missing = []
-        for key, display_name in field_names.items():
-            if key not in self.hook._FIELD_PATTERNS:
-                continue
-            if f"**{display_name}**" not in self.fmt_content:
-                missing.append(display_name)
+        for key in required_yaml_keys:
+            if key not in self.fmt_content:
+                missing.append(key)
         assert not missing, (
-            f"Fields parsed by auto-continue but missing from template: {missing}"
+            f"YAML keys used by parse_status but missing from template: {missing}"
         )

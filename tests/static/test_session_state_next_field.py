@@ -59,9 +59,11 @@ class TestPreCompactNextField:
         state_path = state_dir / "session-state.md"
         state_path.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P1\n"
-            "- **Current Phase**: phase2-complete\n"
-            "- **Next**: ecw:writing-plans\n"
+            "risk_level: P1\n"
+            "current_phase: phase2-complete\n"
+            "next: ecw:writing-plans\n"
+            "routing: []\n"
+            "auto_continue: true\n"
             "<!-- ECW:STATUS:END -->\n"
         )
         msg = pre_compact._build_recovery_message(
@@ -81,8 +83,10 @@ class TestPreCompactNextField:
         state_path = state_dir / "session-state.md"
         state_path.write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P1\n"
-            "- **Current Phase**: phase2-complete\n"
+            "risk_level: P1\n"
+            "current_phase: phase2-complete\n"
+            "routing: []\n"
+            "auto_continue: true\n"
             "<!-- ECW:STATUS:END -->\n"
         )
         msg = pre_compact._build_recovery_message(
@@ -107,13 +111,17 @@ class TestSessionStartNextField:
 
     def test_next_skill_in_state_fields(self, session_start):
         content = (
-            "- **Risk Level**: P1\n"
-            "- **Next**: ecw:impl-verify\n"
-            "- **Status**: active\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "next: ecw:impl-verify\n"
+            "auto_continue: true\n"
+            "routing: []\n"
+            "current_phase: plan-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
         )
         fields = session_start._extract_state_fields(content)
         assert "next_skill" in fields, (
-            "_extract_state_fields must extract 'next_skill' from **Next** field"
+            "_extract_state_fields must extract 'next_skill' from YAML `next` field"
         )
         assert fields["next_skill"] == "ecw:impl-verify"
 
@@ -200,17 +208,18 @@ class TestAutoContinueMarkerDependency:
         )
 
     def test_injects_routing_on_valid_status_block(self, auto_continue, tmp_path, monkeypatch):
-        """Hook must inject systemMessage when STATUS block is present and Auto-Continue: yes."""
+        """Hook must inject systemMessage when STATUS block is present and auto_continue: true."""
         import json, io
 
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text(
             "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P1\n"
-            "- **Auto-Continue**: yes\n"
-            "- **Routing**: ecw:risk-classifier → ecw:requirements-elicitation → ecw:writing-plans\n"
-            "- **Next**: ecw:requirements-elicitation\n"
+            "risk_level: P1\n"
+            "auto_continue: true\n"
+            "routing: [ecw:risk-classifier, ecw:requirements-elicitation, ecw:writing-plans]\n"
+            "next: ecw:requirements-elicitation\n"
+            "current_phase: phase1-complete\n"
             "<!-- ECW:STATUS:END -->\n"
         )
 

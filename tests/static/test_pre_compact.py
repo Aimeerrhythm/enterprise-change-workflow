@@ -137,12 +137,26 @@ class TestExtractHelpers:
 
     def test_extract_risk_level_p0(self, pre_compact_module, tmp_path):
         f = tmp_path / "state.md"
-        f.write_text("**Risk Level**: P0\n**Current Phase**: implementation")
+        f.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "current_phase: implementation\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "<!-- ECW:STATUS:END -->"
+        )
         assert pre_compact_module._extract_risk_level(str(f)) == "P0"
 
     def test_extract_risk_level_p3(self, pre_compact_module, tmp_path):
         f = tmp_path / "state.md"
-        f.write_text("**Risk Level**: P3\n")
+        f.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P3\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "current_phase: impl-complete\n"
+            "<!-- ECW:STATUS:END -->"
+        )
         assert pre_compact_module._extract_risk_level(str(f)) == "P3"
 
     def test_extract_risk_level_missing(self, pre_compact_module, tmp_path):
@@ -152,7 +166,14 @@ class TestExtractHelpers:
 
     def test_extract_current_phase(self, pre_compact_module, tmp_path):
         f = tmp_path / "state.md"
-        f.write_text("**Current Phase**: requirements-elicitation\n")
+        f.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "current_phase: requirements-elicitation\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "risk_level: P1\n"
+            "<!-- ECW:STATUS:END -->"
+        )
         assert pre_compact_module._extract_current_phase(str(f)) == "requirements-elicitation"
 
     def test_extract_current_phase_missing(self, pre_compact_module, tmp_path):
@@ -172,7 +193,14 @@ class TestBuildRecoveryMessage:
         """Full happy path: state + risk + phase + checkpoint files."""
         state = tmp_path / ".claude" / "ecw" / "session-data" / "wf1" / "session-state.md"
         state.parent.mkdir(parents=True)
-        state.write_text("**Risk Level**: P0\n**Current Phase**: implementation\n")
+        state.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "current_phase: implementation\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "<!-- ECW:STATUS:END -->"
+        )
 
         checkpoint_files = [
             ".claude/ecw/session-data/wf1/session-state.md",
@@ -216,7 +244,14 @@ class TestBuildRecoveryMessage:
     def test_checkpoint_files_capped_at_5(self, pre_compact_module, tmp_path):
         """Only first 5 non-state checkpoint files are listed."""
         state = tmp_path / "state.md"
-        state.write_text("**Risk Level**: P1\n")
+        state.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "current_phase: impl-complete\n"
+            "<!-- ECW:STATUS:END -->"
+        )
 
         checkpoints = [f".claude/ecw/session-data/wf1/file-{i}.md" for i in range(8)]
         msg = pre_compact_module._build_recovery_message(str(state), checkpoints, str(tmp_path))
@@ -227,7 +262,14 @@ class TestBuildRecoveryMessage:
     def test_no_checkpoint_files_omits_step3(self, pre_compact_module, tmp_path):
         """Empty checkpoint list: step 3 (read checkpoints) is omitted."""
         state = tmp_path / "state.md"
-        state.write_text("**Risk Level**: P2\n")
+        state.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P2\n"
+            "routing: []\n"
+            "auto_continue: true\n"
+            "current_phase: impl-complete\n"
+            "<!-- ECW:STATUS:END -->"
+        )
 
         msg = pre_compact_module._build_recovery_message(str(state), [], str(tmp_path))
 

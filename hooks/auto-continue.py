@@ -18,23 +18,15 @@ Fixes stale Current Phase / Working Mode / Next fields (Issue #21, Issue #26).
 
 import json
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
     find_session_state,
-    read_marker_section,
+    parse_status,
     update_mode,
     update_status_fields,
 )
-
-_FIELD_PATTERNS = {
-    "auto_continue": r'\*\*Auto-Continue\*\*:\s*(.+)',
-    "routing": r'\*\*Routing\*\*:\s*(.+)',
-    "next": r'\*\*Next\*\*:\s*(.+)',
-    "risk_level": r'\*\*Risk Level\*\*:\s*(P[0-3])',
-}
 
 # Completed-phase value written to Current Phase after a skill finishes.
 # Key: ECW skill name (as passed in tool_input.skill).
@@ -82,26 +74,21 @@ _ROUTING_STEP_TO_SKILL = {
 }
 
 
-def _parse_field(status_text, field_name):
-    pattern = _FIELD_PATTERNS.get(field_name)
-    if not pattern:
-        return None
-    m = re.search(pattern, status_text, re.IGNORECASE)
-    return m.group(1).strip() if m else None
-
-
 def _remaining_route(routing, current_skill):
-    """Extract steps after current_skill in the routing chain.
+    """Extract steps after current_skill in the routing list.
 
+    routing: list of step strings (YAML routing list from session-state.md).
     Returns [] when current_skill is not found, not the full chain —
     injecting the full chain would cause the model to re-run the entire workflow.
     """
     if not routing:
         return []
-    steps = [s.strip() for s in routing.split("→")]
-    for i, step in enumerate(steps):
+    if isinstance(routing, str):
+        # Legacy: accept string for backward compatibility during migration
+        routing = [s.strip() for s in routing.split("→")]
+    for i, step in enumerate(routing):
         if current_skill in step or step in current_skill:
-            return steps[i + 1:]
+            return routing[i + 1:]
     return []
 
 
@@ -136,13 +123,16 @@ def _routing_step_to_skill(step):
 def _next_skill_from_routing(routing, current_skill):
     """Find the next ECW skill to invoke after current_skill in the routing chain.
 
+    routing: list of step strings (YAML routing list from session-state.md).
     Handles Routing aliases (e.g., TDD:RED → ecw:tdd, Implementation(GREEN) is still tdd).
     Returns the full ECW skill name (e.g., 'ecw:impl-verify') or None if not found.
     """
     if not routing:
         return None
+    if isinstance(routing, str):
+        # Legacy: accept string for backward compatibility during migration
+        routing = [s.strip() for s in routing.split("→")]
 
-    steps = [s.strip() for s in routing.split("→")]
     aliases = _SKILL_ROUTING_ALIASES.get(current_skill, [])
     short_name = current_skill.replace("ecw:", "").lower() if current_skill.startswith("ecw:") else ""
 
@@ -150,7 +140,7 @@ def _next_skill_from_routing(routing, current_skill):
     # Using last-match so multi-step skills like tdd (TDD:RED + Implementation(GREEN))
     # correctly find what follows their final alias.
     last_match_idx = -1
-    for i, step in enumerate(steps):
+    for i, step in enumerate(routing):
         step_lower = step.lower()
         if current_skill == step:
             last_match_idx = i
@@ -167,7 +157,7 @@ def _next_skill_from_routing(routing, current_skill):
         return None
 
     # Walk remaining steps and return the first that resolves to an ECW skill.
-    for step in steps[last_match_idx + 1:]:
+    for step in routing[last_match_idx + 1:]:
         skill = _routing_step_to_skill(step)
         if skill:
             return skill
@@ -191,15 +181,15 @@ def _handle_pre_tool_use(state_path, skill_name):
         with open(state_path, encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-        status = read_marker_section(content, "STATUS")
-        routing = _parse_field(status or "", "routing") or ""
+        fields_dict = parse_status(content)
+        routing = (fields_dict or {}).get("routing") or []
         next_skill = _next_skill_from_routing(routing, skill_name)
 
         fields = {}
         if in_progress_phase:
-            fields["Current Phase"] = in_progress_phase
+            fields["current_phase"] = in_progress_phase
         if next_skill:
-            fields["Next"] = next_skill
+            fields["next"] = next_skill
         if fields:
             content = update_status_fields(content, fields)
         if mode:
@@ -228,7 +218,7 @@ def _advance_session_state(state_path, skill_name):
             content = f.read()
 
         if phase:
-            content = update_status_fields(content, {"Current Phase": phase})
+            content = update_status_fields(content, {"current_phase": phase})
         if mode:
             content = update_mode(content, mode)
 
@@ -279,19 +269,19 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
-    status = read_marker_section(content, "STATUS")
-    if not status:
+    fields_dict = parse_status(content)
+    if not fields_dict:
         print(json.dumps({"result": "continue"}))
         return
 
-    auto_continue = _parse_field(status, "auto_continue")
-    if auto_continue != "yes":
+    auto_continue = fields_dict.get("auto_continue")
+    if auto_continue is not True:
         print(json.dumps({"result": "continue"}))
         return
 
-    routing = _parse_field(status, "routing") or ""
-    risk_level = _parse_field(status, "risk_level") or ""
-    next_skill = _parse_field(status, "next") or ""
+    routing = fields_dict.get("routing") or []
+    risk_level = fields_dict.get("risk_level") or ""
+    next_skill = fields_dict.get("next") or ""
 
     # Advance phase and mode atomically before injecting the routing message.
     _advance_session_state(state_path, skill_name)

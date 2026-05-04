@@ -67,7 +67,14 @@ class TestGetProfile:
         """Risk level read from session-state.md when env not set."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-workflow"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text("- **Risk Level**: P0\nstatus: active\n")
+        (state_dir / "session-state.md").write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: []\n"
+            "current_phase: phase1-complete\n"
+            "<!-- ECW:STATUS:END -->"
+        )
 
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("ECW_RISK_LEVEL", None)

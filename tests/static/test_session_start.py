@@ -84,13 +84,24 @@ class TestExtractStateFields:
     """Tests for _extract_state_fields function."""
 
     def test_extracts_risk_level(self, session_start):
-        content = "- **Risk Level**: P0\n- **Domains**: order, inventory\n"
+        content = (
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "domains: [order, inventory]\n"
+            "<!-- ECW:STATUS:END -->"
+        )
         fields = session_start._extract_state_fields(content)
         assert fields["risk_level"] == "P0"
-        assert fields["domains"] == "order, inventory"
+        assert "order" in fields["domains"]
+        assert "inventory" in fields["domains"]
 
     def test_extracts_mode_and_routing(self, session_start):
-        content = "- **Mode**: cross-domain\n- **Routing**: domain-collab → writing-plans\n"
+        content = (
+            "<!-- ECW:STATUS:START -->\n"
+            "mode: cross-domain\n"
+            "routing: [domain-collab, writing-plans]\n"
+            "<!-- ECW:STATUS:END -->"
+        )
         fields = session_start._extract_state_fields(content)
         assert fields["mode"] == "cross-domain"
         assert "writing-plans" in fields["routing"]
@@ -157,7 +168,13 @@ class TestSessionStartMain:
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n- **Risk Level**: P1\n- **Current Phase**: phase1-complete\n"
+            "# ECW Session State\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "current_phase: phase1-complete\n"
+            "auto_continue: true\n"
+            "routing: [ecw:writing-plans]\n"
+            "<!-- ECW:STATUS:END -->\n"
         )
 
         input_data = {"cwd": str(tmp_path)}
@@ -166,15 +183,21 @@ class TestSessionStartMain:
                 session_start.main()
                 output = json.loads(mock_print.call_args[0][0])
                 assert "additionalContext" in output
-                assert "Risk Level" in output["additionalContext"]
+                assert "risk_level" in output["additionalContext"]
                 assert "P1" in output["additionalContext"]
 
     def test_ended_session_no_recovery(self, session_start, tmp_path):
-        """Session with Status: ended → no recovery hint."""
+        """Session with auto_continue: false → no recovery hint."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n- **Risk Level**: P1\n- **Status**: ended\n"
+            "# ECW Session State\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "auto_continue: false\n"
+            "current_phase: biz-impact-complete\n"
+            "routing: []\n"
+            "<!-- ECW:STATUS:END -->\n"
         )
 
         input_data = {"cwd": str(tmp_path)}

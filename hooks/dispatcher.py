@@ -26,7 +26,7 @@ import sys
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state  # noqa: E402
+from marker_utils import find_session_state, parse_status  # noqa: E402
 from ecw_config import read_ecw_config  # noqa: E402
 
 
@@ -102,9 +102,9 @@ def get_profile(cwd):
             if state_file:
                 with open(state_file, encoding="utf-8", errors="ignore") as f:
                     content = f.read(4096)  # Read only the header
-                m = re.search(r'(?:risk_level|\*\*Risk Level\*\*):\s*(P[0-3])', content, re.IGNORECASE)
-                if m:
-                    return RISK_PROFILE_MAP.get(m.group(1).upper(), DEFAULT_PROFILE)
+                fields = parse_status(content)
+                if fields and fields.get("risk_level"):
+                    return RISK_PROFILE_MAP.get(fields["risk_level"].upper(), DEFAULT_PROFILE)
         except Exception:
             pass
 

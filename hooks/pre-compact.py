@@ -18,7 +18,7 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status  # noqa: E402
 
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
@@ -48,41 +48,41 @@ def _append_compact_marker(state_path):
 
 
 def _extract_risk_level(state_path):
-    """Extract risk level from session-state.md."""
+    """Extract risk level from session-state.md STATUS section (YAML format)."""
     try:
         with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(2048)
-        m = re.search(r'\*\*Risk Level\*\*:\s*(P[0-3])', content, re.IGNORECASE)
-        if m:
-            return m.group(1)
+            content = f.read(4096)
+        fields = parse_status(content)
+        if fields:
+            return fields.get("risk_level") or None
     except Exception:
         pass
     return None
 
 
 def _extract_current_phase(state_path):
-    """Extract current phase from session-state.md."""
+    """Extract current phase from session-state.md STATUS section (YAML format)."""
     try:
         with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(2048)
-        m = re.search(r'\*\*Current Phase\*\*:\s*(.+)', content)
-        if m:
-            return m.group(1).strip()
+            content = f.read(4096)
+        fields = parse_status(content)
+        if fields:
+            return fields.get("current_phase") or None
     except Exception:
         pass
     return None
 
 
 def _extract_next_skill(state_path):
-    """Extract next skill from session-state.md Next field."""
+    """Extract next skill from session-state.md STATUS section (YAML format)."""
     try:
         with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(2048)
-        m = re.search(r'\*\*Next\*\*:\s*(.+)', content)
-        if m:
-            val = m.group(1).strip()
-            if val and val.lower() not in ('tbd', 'none', 'complete', ''):
-                return val
+            content = f.read(4096)
+        fields = parse_status(content)
+        if fields:
+            val = fields.get("next", "")
+            if val and str(val).lower() not in ('tbd', 'none', 'complete', ''):
+                return str(val)
     except Exception:
         pass
     return None
