@@ -14,7 +14,7 @@ After implementation completes and before marking the task done, perform multi-d
 
 **Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `impl-verify-findings.md` follow this language. Pass to dispatched verifier agent prompts.
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: verification` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: verification` / `<!-- ECW:MODE:END -->`.
 
 ## Why This Is Needed
 
@@ -166,12 +166,12 @@ Read `./prompts/round-checklists.md` — Round 4 section for the engineering sta
 
 After convergence (zero must-fix findings in the most recent round):
 
-> **Downstream Handoff**: Read risk level and domain mode from session-state.md (if unavailable, default to P0), update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> **Downstream Handoff**: Read risk level and domain mode from session-state.md (if unavailable, default to P0), update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
 > - **P0/P1**: Invoke `ecw:biz-impact-analysis`. Mark the `ecw:impl-verify` Task as complete and the `ecw:biz-impact-analysis` Task as `in_progress` if it exists in TaskList. (knowledge-track runs after biz-impact-analysis completes)
 > - **P2 cross-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. Then suggest biz-impact-analysis; wait for user decision.
 > - **P2 single-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. No biz-impact-analysis suggestion (excluded per workflow-routes.yml).
 > - **P3**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. No further downstream handoff.
-> - If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
 
 ## Severity Definitions and Verification Discipline
 

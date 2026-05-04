@@ -14,7 +14,7 @@ After a plan/design document is produced, dispatch the `spec-challenge` agent fo
 
 **Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: planning` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: planning` / `<!-- ECW:MODE:END -->`.
 
 ## Trigger
 
@@ -76,7 +76,16 @@ After spec-challenge agent returns:
    - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
-2. **Ledger update**: Append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table: `| spec-challenge | reviewer | ecw:spec-challenge | opus | large | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
+2. **Ledger update**: Append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
+```yaml
+- phase: spec-challenge
+  agent: reviewer
+  type: "ecw:spec-challenge"
+  model: opus
+  scale: large
+  started: "{HH:mm}"
+  duration: "{duration}"
+```. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
 3. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
 4. **Present verbatim** the full review report to user. No responses, no judgments.
 
@@ -200,7 +209,7 @@ After spec-challenge completes and user confirms review results (Plan updated), 
 >   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
 >   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
 > - **P2/P3 (manual trigger)**: spec-challenge does not auto-route to implementation for P2/P3. Present findings and wait for user direction.
-> - **If `Auto-Continue` field is missing or `no`**: Show strategy recommendation and wait for user direction (backward compatibility).
+> - **If `auto_continue` field is missing or `no`**: Show strategy recommendation and wait for user direction (backward compatibility).
 
 ### Manual Trigger
 

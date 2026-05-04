@@ -13,7 +13,7 @@ Execute plan by dispatching subagents per task in dependency-aware parallel laye
 
 **Announce at start:** "Using ecw:impl-orchestration to execute the plan with parallel layer dispatch."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: implementation` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: implementation` / `<!-- ECW:MODE:END -->`.
 
 ## When to Use
 
@@ -232,11 +232,35 @@ Read `./prompts/code-quality-review-template.md` for the P0 code quality review 
 - Record layer timing: `Layer {N}: {task_count} tasks, {elapsed}s (parallel), merge {merge_time}s`
 - Proceed to next layer
 
-```markdown
-| Task 2: Add DTO | implementer | sonnet | — | 14:30 | 45s | worktree: wt-task-2 |
-| Task 2: Add DTO | spec-reviewer | sonnet | — | 14:31 | 20s | |
-| Task 4: MQ config | implementer | haiku | — | 14:30 | 30s | worktree: wt-task-4 |
-| Task 4: MQ config | spec-reviewer | sonnet | — | 14:31 | 18s | |
+```yaml
+- phase: "Task 2: Add DTO"
+  agent: implementer
+  type: general
+  model: sonnet
+  scale: medium
+  started: "14:30"
+  duration: "~45s"
+- phase: "Task 2: Add DTO"
+  agent: spec-reviewer
+  type: general
+  model: sonnet
+  scale: small
+  started: "14:31"
+  duration: "~20s"
+- phase: "Task 4: MQ config"
+  agent: implementer
+  type: general
+  model: haiku
+  scale: small
+  started: "14:30"
+  duration: "~30s"
+- phase: "Task 4: MQ config"
+  agent: spec-reviewer
+  type: general
+  model: sonnet
+  scale: small
+  started: "14:31"
+  duration: "~18s"
 ```
 
 ## Implementer Prompt Construction

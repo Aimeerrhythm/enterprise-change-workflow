@@ -332,10 +332,10 @@ def check_session_state_contract(result: LintResult):
 
     rc_content = rc_path.read_text(encoding="utf-8")
 
-    # Extract field names from the session-state template in risk-classifier
-    # Pattern: - **Field Name**: ...
+    # Extract YAML key names from the session-state template in risk-classifier
+    # Pattern: key: value (YAML format, no leading dash-star)
     producer_fields = set()
-    template_pattern = re.compile(r"-\s*\*\*(.+?)\*\*:")
+    yaml_key_pattern = re.compile(r'^([a-z][a-z_]+):', re.MULTILINE)
     in_template = False
     for line in rc_content.split("\n"):
         if "# ECW Session State" in line:
@@ -344,7 +344,7 @@ def check_session_state_contract(result: LintResult):
         if in_template:
             if line.startswith("## ") and "Subagent" not in line:
                 break
-            m = template_pattern.match(line)
+            m = yaml_key_pattern.match(line)
             if m:
                 producer_fields.add(m.group(1).strip())
 
@@ -352,10 +352,12 @@ def check_session_state_contract(result: LintResult):
         result.warn("[session-state] Could not extract session-state fields from risk-classifier template")
         return
 
-    # Scan other skills for session-state field references
+    # Scan other skills for session-state YAML key references
     consumer_fields: dict[str, set[str]] = defaultdict(set)
-    field_ref_pattern = re.compile(r"session-state.*?`?(\w[\w\s]+?)`?\s*field", re.IGNORECASE)
-    bold_field_pattern = re.compile(r"\*\*(Risk Level|Domains|Mode|Routing|Current Phase|Implementation Strategy|Post-Implementation Tasks)\*\*")
+    # Match YAML keys referenced in session-state context
+    yaml_field_pattern = re.compile(
+        r'`(risk_level|domains|mode|routing|current_phase|implementation_strategy|post_implementation_tasks|auto_continue|next)`'
+    )
 
     for skill_dir in get_skill_dirs():
         if skill_dir.name == "risk-classifier":
@@ -364,7 +366,7 @@ def check_session_state_contract(result: LintResult):
         if "session-state" not in content:
             continue
 
-        for m in bold_field_pattern.finditer(content):
+        for m in yaml_field_pattern.finditer(content):
             consumer_fields[skill_dir.name].add(m.group(1))
 
     # Verify producer >= consumer

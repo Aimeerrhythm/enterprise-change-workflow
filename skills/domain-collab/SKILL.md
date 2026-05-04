@@ -18,7 +18,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 **Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: analysis` / `<!-- ECW:MODE:END -->`.
 
 ## Trigger
 
@@ -72,7 +72,16 @@ Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R1 | {domain name} | general | opus | medium | {HH:mm} | {duration} |`. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
+6. **Ledger update**: Append one entry per domain Agent to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
+```yaml
+- phase: domain-collab R1
+  agent: "{domain name}"
+  type: general
+  model: opus
+  scale: medium
+  started: "{HH:mm}"
+  duration: "{duration}"
+```. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
@@ -101,7 +110,16 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
    - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append records to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table (one row per domain Agent): `| domain-collab R2 | {domain name} | general | opus | small | {HH:mm} | {duration} |`. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
+5. **Ledger update**: Append one entry per domain Agent to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
+```yaml
+- phase: domain-collab R2
+  agent: "{domain name}"
+  type: general
+  model: opus
+  scale: small
+  started: "{HH:mm}"
+  duration: "{duration}"
+```. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 
@@ -204,10 +222,10 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 
 **Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
 
-> **Downstream Handoff**: After Round 3 completes and report is output, update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill:
+> **Downstream Handoff**: After Round 3 completes and report is output, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill:
 > - **P0/P1**: Invoke risk-classifier Phase 2.
 > - **P2**: Invoke `ecw:writing-plans`.
-> - If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
 
 ---
 

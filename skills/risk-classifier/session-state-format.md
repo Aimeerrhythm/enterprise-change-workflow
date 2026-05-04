@@ -8,30 +8,50 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 # ECW Session State
 
 <!-- ECW:STATUS:START -->
-- **Risk Level**: P{X}
-- **Domains**: {domain list}
-- **Mode**: {single-domain/cross-domain}
-- **Routing**: {full routing chain}
-- **Current Phase**: phase1-complete
-- **Created**: {YYYY-MM-DD}
-- **Workflow ID**: {YYYYMMDD-xxxx}
-- **Baseline Commit**: TBD
-- **Implementation Strategy**: TBD (determined after ecw:writing-plans based on Task count)
-- **Post-Implementation Tasks**: {fill after Route Task Creation, e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
-- **Auto-Continue**: yes
-- **Next**: {next skill to invoke, updated by each skill before handoff}
+risk_level: P{X}
+domains: [{domain list}]
+mode: {single-domain or cross-domain}
+routing: [{ordered skill list}]
+current_phase: phase1-complete
+created: "{YYYY-MM-DD}"
+workflow_id: "{YYYYMMDD-xxxx}"
+baseline_commit: TBD
+implementation_strategy: TBD
+post_implementation_tasks: TBD
+auto_continue: true
+next: {next skill to invoke}
 <!-- ECW:STATUS:END -->
 
 <!-- ECW:MODE:START -->
-- **Working Mode**: analysis
+working_mode: analysis
 <!-- ECW:MODE:END -->
 
 <!-- ECW:LEDGER:START -->
-## Subagent Ledger
-
-| Phase | Agent | Type | Model | Est. Scale | Started | Duration |
-|-------|-------|------|-------|-----------|---------|----------|
 <!-- ECW:LEDGER:END -->
+```
+
+## Format Rules
+
+- All marker sections use **YAML** format (not Markdown)
+- `routing` and `domains` are **YAML lists** (square brackets), not comma-separated strings
+- `auto_continue` is **YAML boolean** (`true`/`false`), not string
+- String values containing special characters must be quoted (`"2026-05-04"`, `"20260504-a3f1"`)
+- LEDGER section is a **YAML list of dicts**, one dict per subagent dispatch
+
+**CRITICAL: always use the `<!-- ECW:STATUS:START/END -->` markers.** The auto-continue hook reads the STATUS section via `read_marker_section("STATUS")`. If STATUS content is written outside these markers, the hook silently no-ops and the downstream skill chain breaks.
+
+## LEDGER Entry Format
+
+Each subagent dispatch appends one entry:
+
+```yaml
+- phase: {skill or sub-phase name}
+  agent: {agent identifier}
+  type: {general or ecw:skill-name}
+  model: {opus, sonnet, haiku}
+  scale: {small, medium, large}
+  started: "{HH:mm}"
+  duration: "{~Ns or ~Nm Ns}"
 ```
 
 ## Workflow ID Generation
@@ -43,7 +63,7 @@ Write this template to `.claude/ecw/session-data/{workflow-id}/session-state.md`
 
 ## Marker Conventions
 
-session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent table), `STOP` (auto-updated by Stop hook).
+session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent list), `STOP` (auto-updated by Stop hook).
 
 ## Working Mode Definitions
 
@@ -56,7 +76,7 @@ Each skill sets the `MODE` marker section on entry to declare the current workin
 | `implementation` | impl-orchestration, tdd, systematic-debugging | Write code; keep atomic commits; run tests after each change |
 | `verification` | impl-verify, biz-impact-analysis | Review completed work; severity-grade findings; do not modify code |
 
-**Mode switch**: When entering a skill, update the MODE marker: `<!-- ECW:MODE:START -->\n- **Working Mode**: {mode}\n<!-- ECW:MODE:END -->`
+**Mode switch**: When entering a skill, update the MODE marker with YAML: `working_mode: {mode}`
 
 ## Session Advisory — Context Management
 
@@ -71,4 +91,4 @@ After Plan completion (writing-plans finishes), evaluate whether to continue or 
 
 Full workflow for P0 cross-domain changes typically requires 500+ turns. Recommend switching to a new session after plan completion (after spec-challenge) to avoid context compression causing information loss.
 
-**New session recovery**: Tasks created by TaskCreate do not persist across sessions. When a new session reads `session-state.md` to restore context, it needs to re-create pending Tasks based on the `Post-Implementation Tasks` field.
+**New session recovery**: Tasks created by TaskCreate do not persist across sessions. When a new session reads `session-state.md` to restore context, it needs to re-create pending Tasks based on the `post_implementation_tasks` field.

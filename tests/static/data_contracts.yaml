@@ -8,7 +8,7 @@
 # Convention:
 #   key:          logical name (stable across path changes)
 #   path_pattern: substring that MUST appear in the skill's SKILL.md
-#   fields:       session-state.md bold field names the skill reads
+#   fields:       session-state.md YAML key names the skill reads
 #   condition:    when this read/write applies (for routing-aware checks)
 
 skills:
@@ -18,16 +18,16 @@ skills:
       - key: session-state
         path_pattern: "session-state.md"
         required_fields:
-          - Risk Level
-          - Domains
-          - Mode
-          - Routing
-          - Current Phase
-          - Workflow ID
-          - Post-Implementation Tasks
-          - Implementation Strategy
-          - Auto-Continue
-          - Next
+          - risk_level
+          - domains
+          - mode
+          - routing
+          - current_phase
+          - workflow_id
+          - post_implementation_tasks
+          - implementation_strategy
+          - auto_continue
+          - next
       - key: phase2-assessment
         path_pattern: "phase2-assessment.md"
         condition: "P0/P1"
@@ -58,7 +58,7 @@ skills:
         path_pattern: "requirements-summary.md"
     reads:
       - key: session-state
-        fields: [Risk Level, Domains]
+        fields: [risk_level, domains]
     subagent_dispatches:
       - phase: synthesis
         model: sonnet
@@ -74,7 +74,7 @@ skills:
         path_pattern: "knowledge-summary.md"
     reads:
       - key: session-state
-        fields: [Risk Level, Domains, Mode]
+        fields: [risk_level, domains, mode]
     subagent_dispatches:
       - phase: round1
         model: opus
@@ -92,7 +92,7 @@ skills:
         path_pattern: ".claude/plans/"
     reads:
       - key: session-state
-        fields: [Risk Level]
+        fields: [risk_level]
       - key: requirements-summary
         condition: "P0/P1 single-domain"
       - key: domain-collab-report
@@ -124,7 +124,7 @@ skills:
     writes: []
     reads:
       - key: session-state
-        fields: [Risk Level]
+        fields: [risk_level]
       - key: plan-file
         condition: "requirement (not bug/fast-track)"
     subagent_dispatches: []
@@ -138,7 +138,7 @@ skills:
         condition: "always — batch-updates LEDGER marker after each dispatch layer"
     reads:
       - key: session-state
-        fields: [Risk Level, Implementation Strategy]
+        fields: [risk_level, implementation_strategy]
       - key: plan-file
     subagent_dispatches:
       - phase: implementation
@@ -161,7 +161,7 @@ skills:
         path_pattern: "impl-verify-findings.md"
     reads:
       - key: session-state
-        fields: [Risk Level]
+        fields: [risk_level]
       - key: requirements-summary
         condition: "single-domain requirement (degradable)"
       - key: domain-collab-report
@@ -181,7 +181,7 @@ skills:
     writes: []
     reads:
       - key: session-state
-        fields: [Risk Level]
+        fields: [risk_level]
     subagent_dispatches:
       - phase: analysis
         model: opus
@@ -194,7 +194,7 @@ skills:
         path_pattern: "debug-evidence.md"
     reads:
       - key: session-state
-        fields: [Risk Level]
+        fields: [risk_level]
     subagent_dispatches: []
     ask_user_question: true
 

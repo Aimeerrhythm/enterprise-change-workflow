@@ -11,7 +11,7 @@ description: |
 
 After code changes are complete, dispatch the `biz-impact-analysis` agent to analyze the impact of changes on business processes.
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: verification` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: verification` / `<!-- ECW:MODE:END -->`.
 
 **Announce at start:** "Using ecw:biz-impact-analysis to assess business impact of code changes."
 
@@ -109,21 +109,27 @@ After biz-impact-analysis report is output:
 > Invoke `ecw:knowledge-track`.
 > Mark the biz-impact-analysis Task as complete; then proceed to the downstream handoff below.
 
-> **Downstream Handoff**: Read risk level and domain mode from session-state.md, update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> **Downstream Handoff**: Read risk level and domain mode from session-state.md, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
 > - **P0/P1**: Invoke `ecw:risk-classifier --phase3` to execute Phase 3 calibration. Mark the biz-impact-analysis Task as complete; if a pending "Phase 3 Calibration" Task exists, mark it `in_progress`.
 > - **P2 cross-domain**: Suggest executing Phase 3 (not mandatory; user decides) — cross-domain changes may have calibration value.
 > - **P2 single-domain**: No Phase 3 needed; present findings and stop.
 > - **P3**: No Phase 3 needed.
-> - If `Auto-Continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 
 ## Subagent Ledger Update
 
-After Agent returns, append one row to `.claude/ecw/session-data/{workflow-id}/session-state.md` Subagent Ledger table:
+After Agent returns, append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
 
-```
-| biz-impact-analysis | analyst | ecw:biz-impact-analysis | opus | large | {HH:mm} | {duration} |
+```yaml
+- phase: biz-impact-analysis
+  agent: analyst
+  type: "ecw:biz-impact-analysis"
+  model: opus
+  scale: large
+  started: "{HH:mm}"
+  duration: "{duration}"
 ```
 
 Note time before dispatch and compute duration after Agent return.

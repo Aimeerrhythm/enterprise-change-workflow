@@ -20,15 +20,15 @@ SESSION_STATE_FORMAT = SKILLS_DIR / "risk-classifier" / "session-state-format.md
 
 
 class TestSessionStateNextField:
-    """session-state-format.md must include Next field in STATUS section."""
+    """session-state-format.md must include `next` field in STATUS section."""
 
     @pytest.fixture(autouse=True)
     def load_format(self):
         self.content = SESSION_STATE_FORMAT.read_text(encoding="utf-8")
 
     def test_has_next_field(self):
-        assert "**Next**" in self.content, (
-            "session-state-format.md missing '**Next**' field"
+        assert "next:" in self.content, (
+            "session-state-format.md missing 'next:' YAML field"
         )
 
     def test_next_field_between_status_markers(self):
@@ -36,8 +36,8 @@ class TestSessionStateNextField:
         end = self.content.find("ECW:STATUS:END")
         assert start != -1 and end != -1, "STATUS markers not found"
         status_section = self.content[start:end]
-        assert "**Next**" in status_section, (
-            "**Next** field must be inside ECW:STATUS:START/END markers"
+        assert "next:" in status_section, (
+            "'next:' field must be inside ECW:STATUS:START/END markers"
         )
 
 

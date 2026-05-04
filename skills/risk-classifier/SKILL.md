@@ -17,7 +17,7 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 **Announce at start:** "Using ecw:risk-classifier to classify change risk level."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: analysis` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md with YAML: `<!-- ECW:MODE:START -->` / `working_mode: analysis` / `<!-- ECW:MODE:END -->`.
 
 ## TDD Phase Notes
 
@@ -87,7 +87,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 
 **Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 
-**REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`Risk Level`, `Auto-Continue`, `Routing`, `Next`, etc.). Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks parse only the marker-delimited sections. Writing without markers causes silent hook failure and breaks the entire downstream skill chain.
+**REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`risk_level`, `auto_continue`, `routing`, `next`, etc.) in YAML format. Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks use `parse_status()` which only reads YAML inside the marker-delimited STATUS section. Writing without markers (or with Markdown bold format instead of YAML) causes silent hook failure and breaks the entire downstream skill chain.
 
 Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
 
@@ -95,7 +95,7 @@ Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) 
 
 After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
 
-**Creation method**: Use TaskCreate tool, set blockedBy dependency chain. **After all Tasks are created, update `session-state.md`'s `Post-Implementation Tasks` field with actual Task IDs** (e.g., `impl-verify(#3) → biz-impact-analysis(#4)`):
+**Creation method**: Use TaskCreate tool, set blockedBy dependency chain. **After all Tasks are created, update `session-state.md`'s `post_implementation_tasks` field with actual Task IDs** (e.g., `impl-verify(#3) → biz-impact-analysis(#4)`):
 
 1. TaskCreate: **"ecw:impl-verify — Implementation correctness verification"** (pending)
 2. TaskCreate: **"ecw:biz-impact-analysis — Business impact analysis"** (P0/P1 only, blockedBy: impl-verify)
@@ -183,7 +183,7 @@ Read `./prompts/phase2-subagent-steps.md` for the subagent's reasoning steps (co
 
 **Before generating Phase 2 report**, Read `./phase2-output-template.md` for the exact output structure.
 
-> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `Next` field and invoke the next skill in the routing chain (typically `ecw:writing-plans`).
+> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `next` field (YAML key, inside the `<!-- ECW:STATUS:START/END -->` marker block) and invoke the next skill in the routing chain (typically `ecw:writing-plans`).
 
 ---
 

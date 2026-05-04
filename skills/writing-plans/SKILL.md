@@ -13,7 +13,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 **Announce at start:** "Using ecw:writing-plans to create the implementation plan."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `- **Working Mode**: planning` / `<!-- ECW:MODE:END -->`.
+**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: planning` / `<!-- ECW:MODE:END -->`.
 
 ## Plan Mode — Do Not Use
 
@@ -176,7 +176,7 @@ The implementation strategy was already determined and written to session-state.
 | `subagent-driven` | Invoke `ecw:tdd` first (if `tdd.enabled: true`), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly. |
 | `direct` | Invoke `ecw:tdd` to begin the first Plan Task's RED phase. |
 
-> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill. If `Auto-Continue` field is missing or `no` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
+> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill. If `auto_continue` field is missing or `no` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
 
 ## Supplementary Files
 
