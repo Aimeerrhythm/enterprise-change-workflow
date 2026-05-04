@@ -368,6 +368,25 @@ class TestRemainingRouteUnit:
         result = self.fn(routing, "ecw:risk-classifier")
         assert result == ["ecw:requirements-elicitation", "ecw:writing-plans"]
 
+    def test_yaml_list_input(self):
+        """Accepts YAML list (new format) in addition to string."""
+        routing = ["ecw:risk-classifier", "ecw:writing-plans", "ecw:impl-verify"]
+        result = self.fn(routing, "ecw:writing-plans")
+        assert result == ["ecw:impl-verify"]
+
+    def test_tdd_alias_tdd_red_in_routing(self):
+        """When routing has TDD:RED (alias for ecw:tdd), remaining starts after TDD:RED."""
+        routing = ["ecw:writing-plans", "TDD:RED", "Implementation(GREEN)", "ecw:impl-verify"]
+        result = self.fn(routing, "ecw:tdd")
+        # TDD:RED and Implementation(GREEN) are both aliases; last-match is Implementation(GREEN)
+        assert result == ["ecw:impl-verify"]
+
+    def test_no_substring_false_positive(self):
+        """'ecw:tdd' must NOT match a hypothetical 'ecw:tdd-extended' step."""
+        routing = ["ecw:tdd-extended", "ecw:impl-verify"]
+        result = self.fn(routing, "ecw:tdd")
+        assert result == [], "Substring match must not fire for unrelated skill names"
+
 
 class TestSystematicDebuggingAutoContinue:
     """systematic-debugging must have a Downstream Handoff block routing to impl-verify."""

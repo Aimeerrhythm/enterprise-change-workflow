@@ -87,10 +87,24 @@ def _remaining_route(routing, current_skill):
     if isinstance(routing, str):
         # Legacy: accept string for backward compatibility during migration
         routing = [s.strip() for s in routing.split("→")]
+
+    aliases = _SKILL_ROUTING_ALIASES.get(current_skill, [])
+    short_name = current_skill.replace("ecw:", "").lower() if current_skill.startswith("ecw:") else ""
+
+    # Use last-match so multi-step skills (e.g., TDD:RED + Implementation(GREEN))
+    # correctly return what follows their final alias step.
+    last_match = -1
     for i, step in enumerate(routing):
-        if current_skill in step or step in current_skill:
-            return routing[i + 1:]
-    return []
+        step_lower = step.lower()
+        if current_skill == step or (short_name and short_name == step_lower):
+            last_match = i
+        else:
+            for alias in aliases:
+                if alias.lower() == step_lower:
+                    last_match = i
+                    break
+
+    return routing[last_match + 1:] if last_match != -1 else []
 
 
 def _routing_step_to_skill(step):
@@ -303,7 +317,7 @@ def main():
     # knowledge-track fallback: after biz-impact-analysis, if knowledge-track is NOT already
     # in the remaining Routing chain (old sessions), check ecw.yml and inject it when needed.
     if skill_name == "ecw:biz-impact-analysis":
-        has_kt = any("knowledge-track" in s.lower() for s in remaining)
+        has_kt = any(_routing_step_to_skill(s) == "ecw:knowledge-track" for s in remaining)
         if not has_kt and risk_level in ("P0", "P1"):
             try:
                 from ecw_config import read_ecw_config  # noqa: PLC0415
