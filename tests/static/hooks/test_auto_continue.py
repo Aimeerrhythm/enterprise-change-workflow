@@ -568,6 +568,20 @@ class TestAdvanceSessionState:
                 f"Phase mapping key '{skill}' does not start with 'ecw:'"
             )
 
+    def test_all_phase_values_are_loaded_not_complete(self):
+        """PostToolUse fires when Skill loads instructions, not when work finishes.
+
+        All _SKILL_COMPLETED_PHASE values must end with -loaded.
+        The -complete suffix is now written explicitly by each SKILL.md Downstream
+        Handoff, not by the hook (fixes Issue #33).
+        """
+        for skill, phase in self.hook._SKILL_COMPLETED_PHASE.items():
+            assert phase.endswith("-loaded"), (
+                f"Skill '{skill}' phase value '{phase}' must end with '-loaded', "
+                f"not '-complete'. The hook fires on Skill tool return (instructions "
+                f"loaded), not on actual work completion."
+            )
+
     def test_all_skills_have_mode_mapping(self):
         """Every key in _SKILL_MODE must map to a known working mode."""
         known_modes = {"analysis", "planning", "implementation", "verification"}
