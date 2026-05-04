@@ -180,6 +180,9 @@ def check_skill_references(result: LintResult):
 
         for match in ref_pattern.finditer(content):
             skill_name = match.group(1)
+            # Ignore template placeholders like `ecw:skill-name`
+            if skill_name == "skill-name":
+                continue
             if skill_name not in existing_skills and skill_name not in existing_agents:
                 result.error(f"[xref] {rel}: references `ecw:{skill_name}` but neither skills/{skill_name}/ nor agents/{skill_name}.md exists")
 
@@ -325,9 +328,9 @@ def check_anchor_keywords(result: LintResult):
 
 def check_session_state_contract(result: LintResult):
     """Fields written by risk-classifier must be a superset of fields read by downstream skills."""
-    rc_path = SKILLS_DIR / "risk-classifier" / "SKILL.md"
+    rc_path = SKILLS_DIR / "risk-classifier" / "session-state-format.md"
     if not rc_path.exists():
-        result.error("[session-state] risk-classifier/SKILL.md not found")
+        result.error("[session-state] skills/risk-classifier/session-state-format.md not found")
         return
 
     rc_content = rc_path.read_text(encoding="utf-8")
