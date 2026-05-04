@@ -137,7 +137,7 @@ After all TDD cycles for the current Plan Task complete (all tests GREEN):
    - If next Plan Task exists: Begin TDD RED phase for the next Task immediately
    - If all Plan Tasks complete: Proceed to impl-verify
 
-> **Downstream Handoff**: After the final Plan Task's GREEN phase completes, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md to `ecw:impl-verify`, then invoke `ecw:impl-verify`. If a pending `ecw:impl-verify` Task exists in TaskList, mark it `in_progress` first. If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
+> **Downstream Handoff**: After the final Plan Task's GREEN phase completes, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md to `ecw:impl-verify` and update `current_phase` to `tdd-complete` within the same STATUS marker block, then invoke `ecw:impl-verify`. If a pending `ecw:impl-verify` Task exists in TaskList, mark it `in_progress` first. If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
 
 ## Error Handling
 

@@ -183,7 +183,7 @@ Read `./prompts/phase2-subagent-steps.md` for the subagent's reasoning steps (co
 
 **Before generating Phase 2 report**, Read `./phase2-output-template.md` for the exact output structure.
 
-> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `next` field (YAML key, inside the `<!-- ECW:STATUS:START/END -->` marker block) and invoke the next skill in the routing chain (typically `ecw:writing-plans`).
+> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `next` field (YAML key, inside the `<!-- ECW:STATUS:START/END -->` marker block) and update `current_phase` to `phase1-complete` within the same STATUS marker block, then invoke the next skill in the routing chain (typically `ecw:writing-plans`).
 
 ---
 

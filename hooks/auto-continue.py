@@ -33,17 +33,17 @@ from marker_utils import (  # noqa: E402
 # Key: ECW skill name (as passed in tool_input.skill).
 # Value: the phase string to record in the STATUS block.
 _SKILL_COMPLETED_PHASE = {
-    "ecw:risk-classifier":          "phase1-complete",   # Phase 2 overrides via its own write
-    "ecw:requirements-elicitation": "requirements-complete",
-    "ecw:domain-collab":            "domain-collab-complete",
-    "ecw:writing-plans":            "plan-complete",
-    "ecw:spec-challenge":           "spec-challenge-complete",
-    "ecw:tdd":                      "tdd-complete",
-    "ecw:impl-orchestration":       "impl-complete",
-    "ecw:systematic-debugging":     "impl-complete",
-    "ecw:impl-verify":              "verify-complete",
-    "ecw:biz-impact-analysis":      "biz-impact-complete",
-    "ecw:knowledge-track":          "knowledge-track-complete",
+    "ecw:risk-classifier":          "phase1-loaded",   # Phase 2 overrides via its own write; SKILL.md writes phase1-complete when done
+    "ecw:requirements-elicitation": "requirements-loaded",
+    "ecw:domain-collab":            "domain-collab-loaded",
+    "ecw:writing-plans":            "plan-loaded",
+    "ecw:spec-challenge":           "spec-challenge-loaded",
+    "ecw:tdd":                      "tdd-loaded",
+    "ecw:impl-orchestration":       "impl-loaded",
+    "ecw:systematic-debugging":     "impl-loaded",
+    "ecw:impl-verify":              "verify-loaded",
+    "ecw:biz-impact-analysis":      "biz-impact-loaded",
+    "ecw:knowledge-track":          "knowledge-track-loaded",
 }
 
 # Working Mode associated with each skill while it is active.

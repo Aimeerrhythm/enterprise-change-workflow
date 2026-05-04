@@ -176,7 +176,7 @@ The implementation strategy was already determined and written to session-state.
 | `subagent-driven` | Invoke `ecw:tdd` first (if `tdd.enabled: true`), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly. |
 | `direct` | Invoke `ecw:tdd` to begin the first Plan Task's RED phase. |
 
-> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill. If `auto_continue` field is missing or `false` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
+> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md and update `current_phase` to `plan-complete` within the same STATUS marker block, then invoke the next skill. If `auto_continue` field is missing or `false` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
 
 ## Supplementary Files
 
