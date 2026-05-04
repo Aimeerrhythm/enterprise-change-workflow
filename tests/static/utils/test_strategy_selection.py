@@ -194,3 +194,28 @@ class TestTddRiskAwareEnforcement:
     def test_has_cycle_subagent_model_selection(self):
         """Must specify model for TDD cycle subagents (sonnet)."""
         assert "sonnet" in self.lower
+
+
+class TestWorkflowIdConflictDetection:
+    """Verify risk-classifier SKILL.md has workflow-id conflict detection (fix #31)."""
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = (SKILL_DIR / "SKILL.md").read_text()
+        self.lower = self.content.lower()
+
+    def test_conflict_detection_mentioned(self):
+        """Must instruct checking for existing session-state.md before writing."""
+        assert "conflict" in self.lower or "already exists" in self.lower, \
+            "SKILL.md must describe conflict detection for workflow-id"
+
+    def test_max_attempts_specified(self):
+        """Must cap regeneration attempts to avoid infinite loops."""
+        assert re.search(r'max\s*3|3\s*attempt', self.lower), \
+            "SKILL.md must specify max 3 regeneration attempts"
+
+    def test_session_state_existence_check(self):
+        """Must reference session-state.md existence check."""
+        assert "session-state.md" in self.content and (
+            "exists" in self.lower or "conflict" in self.lower
+        ), "SKILL.md must mention checking session-state.md existence"

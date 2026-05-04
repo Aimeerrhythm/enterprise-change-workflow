@@ -355,9 +355,33 @@ SESSION_STATE_ALREADY_SET = """\
 """
 
 
+class TestFindGitRoot:
+    """Tests for _find_git_root helper."""
+
+    def test_finds_root_at_same_level(self, post_edit, tmp_path):
+        """.git at same dir as file → returns that dir."""
+        (tmp_path / ".git").mkdir()
+        result = post_edit._find_git_root(str(tmp_path / "session-state.md"))
+        assert result == str(tmp_path)
+
+    def test_finds_root_in_parent(self, post_edit, tmp_path):
+        """File nested inside repo → walks up to find .git."""
+        (tmp_path / ".git").mkdir()
+        nested = tmp_path / "session-data" / "20260504-abcd"
+        nested.mkdir(parents=True)
+        result = post_edit._find_git_root(str(nested / "session-state.md"))
+        assert result == str(tmp_path)
+
+    def test_returns_none_when_no_git(self, post_edit, tmp_path):
+        """No .git anywhere → returns None."""
+        result = post_edit._find_git_root(str(tmp_path / "session-state.md"))
+        assert result is None
+
+
 class TestBaselineCommitInjection:
 
     def test_tbd_replaced_with_head_hash(self, post_edit, tmp_path):
+        (tmp_path / ".git").mkdir()
         state_file = tmp_path / "session-state.md"
         state_file.write_text(SESSION_STATE_TBD)
         with patch("subprocess.run") as mock_run:
@@ -368,7 +392,40 @@ class TestBaselineCommitInjection:
         assert "deadbeef1234567890ab" in result
         assert "TBD" not in result
 
+    def test_uses_git_root_from_filepath_not_cwd(self, post_edit, tmp_path):
+        """git rev-parse runs in the git root found via filepath, not via cwd."""
+        # tmp_path is the user project git root
+        (tmp_path / ".git").mkdir()
+        nested = tmp_path / ".claude" / "ecw" / "session-data" / "20260504-abcd"
+        nested.mkdir(parents=True)
+        state_file = nested / "session-state.md"
+        state_file.write_text(SESSION_STATE_TBD)
+
+        # cwd points to a completely different directory (simulates plugin install dir)
+        fake_plugin_dir = tmp_path / "plugin-dir"
+        fake_plugin_dir.mkdir()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "abc1234567890\n"
+            post_edit._inject_baseline_commit(str(state_file), str(fake_plugin_dir))
+            called_cwd = mock_run.call_args[1]["cwd"]
+
+        # Must use the git root derived from filepath, not fake_plugin_dir
+        assert called_cwd == str(tmp_path)
+        assert "abc1234567890" in state_file.read_text()
+
+    def test_no_git_root_leaves_file_unchanged(self, post_edit, tmp_path):
+        """No .git found anywhere → TBD stays, subprocess never called."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(SESSION_STATE_TBD)
+        with patch("subprocess.run") as mock_run:
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        assert mock_run.call_count == 0
+        assert "TBD" in state_file.read_text()
+
     def test_already_set_hash_not_overwritten(self, post_edit, tmp_path):
+        (tmp_path / ".git").mkdir()
         state_file = tmp_path / "session-state.md"
         state_file.write_text(SESSION_STATE_ALREADY_SET)
         with patch("subprocess.run") as mock_run:
@@ -386,6 +443,7 @@ class TestBaselineCommitInjection:
         assert mock_run.call_count == 0
 
     def test_git_failure_leaves_file_unchanged(self, post_edit, tmp_path):
+        (tmp_path / ".git").mkdir()
         state_file = tmp_path / "session-state.md"
         state_file.write_text(SESSION_STATE_TBD)
         with patch("subprocess.run") as mock_run:
