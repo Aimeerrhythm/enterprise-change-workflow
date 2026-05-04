@@ -230,6 +230,12 @@ skills:
 
   workspace:
     writes:
+      - key: workspace-yml
+        path_pattern: ".claude/ecw/workspace.yml"
+        condition: "create phase"
+      - key: analysis-report
+        path_pattern: "analysis-report.md"
+        condition: "Phase 2 (child sessions)"
       - key: cross-service-plan
         path_pattern: ".claude/ecw/session-data/{wf-id}/cross-service-plan.md"
       - key: workspace-analysis-task
@@ -240,7 +246,7 @@ skills:
       - key: workspace-yml
         path_pattern: ".claude/ecw/workspace.yml"
       - key: analysis-report
-        path_pattern: "{service}/.claude/ecw/analysis-report.md"
+        path_pattern: "analysis-report.md"
         condition: "Phase 3 contract alignment"
     subagent_dispatches:
       - phase: phase2-analysis
