@@ -85,6 +85,8 @@ Read `./phase1-output-template.md` for output format and user confirmation flow.
 
 After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
 
+**Conflict detection (must do before writing):** Check if `.claude/ecw/session-data/{workflow-id}/session-state.md` already exists. If it does, regenerate the 4-digit suffix and re-check — repeat until a non-conflicting ID is found (max 3 attempts). This prevents triggering a second Write permission prompt when recovering from a failed first attempt.
+
 **Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 
 **REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`risk_level`, `auto_continue`, `routing`, `next`, etc.) in YAML format. Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks use `parse_status()` which only reads YAML inside the marker-delimited STATUS section. Writing without markers (or with Markdown bold format instead of YAML) causes silent hook failure and breaks the entire downstream skill chain.
