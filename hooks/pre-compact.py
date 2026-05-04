@@ -98,9 +98,18 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
     next_skill = None
     if state_path:
         rel_state = os.path.relpath(state_path, cwd)
-        risk = _extract_risk_level(state_path)
-        phase = _extract_current_phase(state_path)
-        next_skill = _extract_next_skill(state_path)
+        try:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                state_content = f.read()
+            fields = parse_status(state_content)
+            if fields:
+                risk = fields.get("risk_level") or None
+                phase = fields.get("current_phase") or None
+                val = fields.get("next", "")
+                if val and str(val).lower() not in ("tbd", "none", "complete", ""):
+                    next_skill = str(val)
+        except Exception:
+            pass
 
     # Auto-continue directive FIRST — this is the primary instruction
     parts.append(

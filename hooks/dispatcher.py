@@ -101,7 +101,7 @@ def get_profile(cwd):
         try:
             if state_file:
                 with open(state_file, encoding="utf-8", errors="ignore") as f:
-                    content = f.read(4096)  # Read only the header
+                    content = f.read()
                 fields = parse_status(content)
                 if fields and fields.get("risk_level"):
                     return RISK_PROFILE_MAP.get(fields["risk_level"].upper(), DEFAULT_PROFILE)

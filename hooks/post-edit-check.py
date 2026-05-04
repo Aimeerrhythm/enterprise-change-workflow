@@ -160,9 +160,11 @@ def _accumulate_modified_file(cwd, filepath):
         pass  # State tracking is best-effort
 
 
-def _validate_session_state_yaml(tool_input, tool_name):
+def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
     """Validate all marker sections in session-state.md are valid YAML.
 
+    For Write: validates the content being written (from tool_input).
+    For Edit: reads the actual file after the edit has been applied.
     Returns a list of error strings (empty = all valid).
     """
     if not _YAML_AVAILABLE:
@@ -171,8 +173,14 @@ def _validate_session_state_yaml(tool_input, tool_name):
     if tool_name == "Write":
         content = tool_input.get("content", "")
     elif tool_name == "Edit":
-        # For Edit, try to reconstruct the affected section by checking new_string
-        content = tool_input.get("new_string", "")
+        # PostToolUse fires after the edit; read the file as it now exists
+        if not filepath:
+            return []
+        try:
+            with open(filepath, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+        except Exception:
+            return []
     else:
         return []
 
@@ -243,7 +251,7 @@ def check(input_data, config=None):
 
     # 1c. YAML validity check for session-state.md marker sections
     if filepath.endswith("session-state.md") and _YAML_AVAILABLE:
-        yaml_warnings = _validate_session_state_yaml(tool_input, tool_name)
+        yaml_warnings = _validate_session_state_yaml(tool_input, tool_name, filepath)
         if yaml_warnings:
             msg = "**[ECW YAML Error]** session-state.md 的 marker 区块包含无效 YAML，请立即修正：\n\n"
             msg += "\n".join(f"- {w}" for w in yaml_warnings)

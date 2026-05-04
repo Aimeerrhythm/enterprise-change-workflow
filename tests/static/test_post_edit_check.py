@@ -491,3 +491,52 @@ class TestSessionStateYamlValidation:
         action, message = post_edit.check(input_data)
         assert "YAML Error" not in message
 
+    def test_edit_reads_actual_file_for_validation(self, post_edit, tmp_path):
+        """Edit on session-state.md reads the actual file (not new_string) for YAML validation."""
+        state_file = tmp_path / "session-state.md"
+        # File on disk has invalid YAML in STATUS section
+        state_file.write_text(
+            "# ECW Session State\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: [unclosed\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        # new_string contains only a small edit fragment — no complete marker section
+        input_data = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": str(state_file),
+                "old_string": "risk_level: P0",
+                "new_string": "risk_level: P1",
+            },
+            "cwd": str(tmp_path),
+        }
+        action, message = post_edit.check(input_data)
+        # Must catch the invalid YAML by reading the actual file
+        assert "YAML Error" in message
+        assert "STATUS" in message
+
+    def test_edit_valid_file_no_warning(self, post_edit, tmp_path):
+        """Edit on session-state.md with valid YAML on disk produces no warning."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:writing-plans]\n"
+            "current_phase: phase1-complete\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        input_data = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": str(state_file),
+                "old_string": "risk_level: P0",
+                "new_string": "risk_level: P1",
+            },
+            "cwd": str(tmp_path),
+        }
+        action, message = post_edit.check(input_data)
+        assert "YAML Error" not in message
+

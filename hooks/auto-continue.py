@@ -26,6 +26,7 @@ from marker_utils import (  # noqa: E402
     parse_status,
     update_mode,
     update_status_fields,
+    validate_status,
 )
 
 # Completed-phase value written to Current Phase after a skill finishes.
@@ -273,6 +274,10 @@ def main():
     if not fields_dict:
         print(json.dumps({"result": "continue"}))
         return
+
+    errors = validate_status(fields_dict)
+    if errors:
+        print(f"[auto-continue] STATUS validation warnings: {errors}", file=sys.stderr)
 
     auto_continue = fields_dict.get("auto_continue")
     if auto_continue is not True:
