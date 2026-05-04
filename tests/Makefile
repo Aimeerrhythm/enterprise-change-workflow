@@ -17,20 +17,20 @@ lint-md:
 # Python 代码质量检查（需要 ruff: pip install ruff）
 lint-py:
 	@command -v ruff >/dev/null 2>&1 && \
-		ruff check --config ../ruff.toml ../hooks/*.py ../tests/static/*.py 2>&1 || \
+		ruff check --config ../ruff.toml ../hooks/*.py ../tests/static/**/*.py 2>&1 || \
 		echo "SKIP: ruff not installed (pip install ruff)"
 
 # Layer 1b: hook 单元测试（<10s, $0）
 test-hook:
-	$(PYTHON) -m pytest static/test_verify_completion.py static/test_dispatcher.py static/test_post_edit_check.py static/test_config_protect.py static/test_hooks_json.py static/test_session_start.py static/test_stop_persist.py static/test_session_end.py static/test_pre_compact.py static/test_marker_utils.py static/test_cost_tracker.py static/test_gateguard_fact_force.py static/test_secret_scan.py static/test_bash_preflight.py -v
+	$(PYTHON) -m pytest static/hooks/ -v
 
 # Layer 1c: 数据契约验证（<5s, $0）
 test-contracts:
-	$(PYTHON) -m pytest static/test_data_contracts.py -v
+	$(PYTHON) -m pytest static/consistency/test_data_contracts.py -v
 
 # Layer 1.5: 工作流模拟器（<5s, $0）
 test-simulator:
-	$(PYTHON) -m pytest static/test_workflow_simulator.py -v
+	$(PYTHON) -m pytest static/consistency/test_workflow_simulator.py -v
 
 # Layer 2: risk-classifier P0 场景行为 Eval（~2min, ~$0.50）
 # 成功后创建 eval-cleared.stamp，解锁 SKILL.md 行为变更的 git commit

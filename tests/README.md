@@ -605,26 +605,74 @@ tests/
 ├── static/
 │   ├── lint_skills.py                # Layer 1: 14 项静态检查（~880 行）
 │   ├── anchor_keywords.yaml          # 锚点关键词（11 个 skill）
-│   ├── conftest.py                   # pytest fixtures
-│   ├── test_verify_completion.py     # Layer 1b: 56 个 hook 单元测试
-│   ├── test_strategy_selection.py    # v0.5.0: 三维度策略表验证（11 tests）
-│   ├── test_impl_verify_subagent.py  # v0.5.0: impl-verify 并行 subagent 验证（10 tests）
-│   ├── test_writing_plans_subagent.py # v0.5.0: writing-plans subagent 验证（10 tests）
-│   ├── test_phase2_subagent.py       # v0.5.0: Phase 2 subagent 验证（10 tests）
-│   ├── test_pre_compact.py           # v0.5.0: PreCompact hook 验证（6 tests）
-│   ├── test_session_data_checkpoints.py # v0.5.0: session-data checkpoint 验证（6 tests）
-│   └── test_hooks_json.py            # v0.5.0: hooks.json 注册验证（5 tests）
+│   ├── data_contracts.yaml           # 技能数据契约（被多子目录共用）
+│   ├── workflow_traces.yaml          # 工作流 golden traces（被 consistency/ 使用）
+│   ├── conftest.py                   # pytest fixtures（自动作用于所有子目录）
+│   ├── hooks/                        # Hook 行为单元测试（18 个文件）
+│   │   ├── test_verify_completion.py     # Layer 1b: verify-completion hook（56 tests）
+│   │   ├── test_auto_continue.py         # auto-continue hook
+│   │   ├── test_bash_preflight.py        # bash-preflight hook
+│   │   ├── test_cost_tracker_script.py   # cost-tracker.py 脚本行为
+│   │   ├── test_dispatcher.py            # hooks dispatcher
+│   │   ├── test_config_protect.py        # config-protect hook
+│   │   ├── test_gateguard_fact_force.py  # gateguard hook
+│   │   ├── test_hook_exception_safety.py # hook 异常安全
+│   │   ├── test_hooks_json.py            # hooks.json 注册
+│   │   ├── test_marker_utils.py          # marker_utils 工具函数
+│   │   ├── test_parse_status.py          # parse_status 工具函数
+│   │   ├── test_post_edit_check.py       # post-edit-check hook
+│   │   ├── test_pre_compact.py           # pre-compact hook
+│   │   ├── test_secret_scan.py           # secret-scan hook
+│   │   ├── test_session_end.py           # session-end hook
+│   │   ├── test_session_start.py         # session-start hook
+│   │   ├── test_stop_persist.py          # stop-persist hook
+│   │   └── test_workflow_guard.py        # workflow-guard hook
+│   ├── skills/                       # Skill 结构与架构测试（10 个文件）
+│   │   ├── test_biz_impact_subagent.py
+│   │   ├── test_cross_review.py
+│   │   ├── test_impl_orchestration_parallel.py
+│   │   ├── test_impl_verify_subagent.py
+│   │   ├── test_phase2_subagent.py
+│   │   ├── test_requirements_elicitation.py
+│   │   ├── test_spec_challenge.py
+│   │   ├── test_systematic_debugging.py
+│   │   ├── test_workspace.py
+│   │   └── test_writing_plans_subagent.py
+│   ├── consistency/                  # 跨组件一致性验证（8 个文件）
+│   │   ├── test_artifact_schema.py
+│   │   ├── test_cross_component_consistency.py
+│   │   ├── test_data_contracts.py
+│   │   ├── test_design_standards.py
+│   │   ├── test_rules_framework.py
+│   │   ├── test_session_data_checkpoints.py
+│   │   ├── test_session_state_next_field.py
+│   │   └── test_workflow_simulator.py
+│   └── utils/                        # 工具函数与配置验证（7 个文件）
+│       ├── test_agent_hardening.py
+│       ├── test_checkpoint_utils.py
+│       ├── test_cost_tracking.py         # Subagent Ledger model 字段验证
+│       ├── test_ecw_init_permissions.py
+│       ├── test_model_routing.py
+│       ├── test_strategy_selection.py
+│       └── test_yaml_template_validity.py
 └── eval/
-    ├── promptfooconfig.yaml          # promptfoo 主配置
+    ├── promptfooconfig.yaml          # risk-classifier 路由决策 eval（root）
     ├── tools/
     │   └── classify_result.json      # 结构化输出 tool schema
-    └── scenarios/
-        ├── s01-p0-single-domain.yaml
-        ├── s02-p1-cross-domain.yaml
-        ├── ...
-        ├── s17-p3-bug.yaml
-        ├── s18-p0-4domain-dense.yaml      # v0.5.0: WMS-like P0 4域密集场景
-        ├── s19-p1-cross-domain-tdd.yaml   # v0.5.0: P1 跨域含 tdd
-        ├── s20-p2-requirement-tdd.yaml    # v0.5.0: P2 含 tdd 不含 spec-challenge
-        └── s21-bug-excludes-tdd.yaml      # v0.5.0: Bug 排除 tdd
+    ├── scenarios/                    # risk-classifier 场景（s01~s25）
+    │   ├── s01-p0-single-domain.yaml
+    │   ├── ...
+    │   └── s25-routing-order-validation.yaml
+    ├── domain-collab/                # domain-collab skill 专项 eval
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
+    ├── impl-verify/                  # impl-verify skill 专项 eval
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
+    └── tdd/                          # tdd skill 专项 eval
+        ├── promptfooconfig.yaml
+        ├── scenarios/
+        └── tools/
 ```

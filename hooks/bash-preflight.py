@@ -104,13 +104,13 @@ def _check_commit_hook_without_test(command, cwd):
     if not hook_files:
         return None
 
-    test_files = [f for f in staged if re.match(r'tests/static/test_[^/]+\.py$', f)]
+    test_files = [f for f in staged if re.match(r'tests/static/(.*/)?test_[^/]+\.py$', f)]
     if test_files:
         return None
 
     files_str = ", ".join(f"`{f}`" for f in hook_files)
     return (
-        f"**[ECW Fix Gate]** {files_str} 有修改，但暂存区没有对应的 `tests/static/test_*.py` 变更。\n\n"
+        f"**[ECW Fix Gate]** {files_str} 有修改，但暂存区没有对应的 `tests/static/**/test_*.py` 变更。\n\n"
         "Fix Protocol 要求：先写复现 bug 的失败测试，再写实现代码。\n\n"
         "如需跳过检查：`ECW_ALLOW_DANGEROUS_CMD=1 git commit ...`"
     )
