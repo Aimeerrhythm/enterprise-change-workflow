@@ -265,12 +265,12 @@ class TestSpecChallengeHookBehavior:
         spec.loader.exec_module(mu)
         return mu.parse_status(state_file.read_text())
 
-    def test_phase_advances_to_spec_challenge_complete(self, tmp_path):
-        """Phase must still advance to spec-challenge-complete — hook does this, not SKILL.md."""
+    def test_phase_advances_to_spec_challenge_loaded(self, tmp_path):
+        """Phase must advance to spec-challenge-loaded (instructions loaded, work pending) — hook sets this, SKILL.md Downstream Handoff sets spec-challenge-complete when done."""
         state_file = self._make_state(tmp_path)
         self.hook._advance_session_state(str(state_file), "ecw:spec-challenge")
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "spec-challenge-complete"
+        assert fields["current_phase"] == "spec-challenge-loaded"
 
     def test_no_system_message_injected(self, tmp_path, monkeypatch):
         """main() must NOT output systemMessage for spec-challenge — would bypass AskUserQuestion."""
@@ -319,7 +319,7 @@ class TestSpecChallengeHookBehavior:
 
         content = state_file.read_text()
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "spec-challenge-complete"
+        assert fields["current_phase"] == "spec-challenge-loaded"
 
 
 class TestRemainingRouteUnit:
@@ -512,17 +512,17 @@ class TestAdvanceSessionState:
         return result.get("working_mode") if result else None
 
     def test_updates_phase_after_skill_completes(self, tmp_path):
-        """Current Phase must advance after risk-classifier finishes."""
+        """Current Phase must advance to phase1-loaded after risk-classifier instructions load."""
         state_file = self._make_state(tmp_path, phase="phase1-complete")
         self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "phase1-complete"
+        assert fields["current_phase"] == "phase1-loaded"
 
     def test_updates_phase_after_requirements_elicitation(self, tmp_path):
         state_file = self._make_state(tmp_path, phase="phase1-complete")
         self.hook._advance_session_state(str(state_file), "ecw:requirements-elicitation")
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "requirements-complete"
+        assert fields["current_phase"] == "requirements-loaded"
 
     def test_updates_mode_after_writing_plans(self, tmp_path):
         """Working Mode must update to 'planning' after writing-plans finishes."""
@@ -535,7 +535,7 @@ class TestAdvanceSessionState:
         state_file = self._make_state(tmp_path, phase="plan-complete", mode="planning")
         self.hook._advance_session_state(str(state_file), "ecw:tdd")
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "tdd-complete"
+        assert fields["current_phase"] == "tdd-loaded"
         assert self._parse_mode(state_file) == "implementation"
 
     def test_preserves_unrelated_fields(self, tmp_path):
@@ -611,7 +611,7 @@ class TestAdvanceSessionState:
         self.hook.main()
 
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "phase1-complete"
+        assert fields["current_phase"] == "phase1-loaded"
         assert self._parse_mode(state_file) == "analysis"
         output = json.loads("".join(captured))
         assert "systemMessage" in output
