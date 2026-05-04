@@ -9,7 +9,7 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 - `zh-CN`: 所有标题、表头、字段标签用中文输出
 - `en`: Use English as-is from templates
 
-**Exception**: `session-state.md` marker comments (`<!-- ECW:STATUS:START -->` etc.) and field keys (`Risk Level`, `Domains`, `Mode`) stay in English — they are machine-parsed by hooks.
+**Exception**: `session-state.md` marker comments (`<!-- ECW:STATUS:START -->` etc.) and YAML field keys (`risk_level`, `domains`, `mode`, etc.) stay in English — they are machine-parsed by hooks.
 
 ## Overview
 
@@ -36,28 +36,25 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 # ECW Session State
 
 <!-- ECW:STATUS:START -->
-- **Risk Level**: P{X}
-- **Domains**: {domain list}
-- **Mode**: {single-domain/cross-domain}
-- **Routing**: {full routing chain}
-- **Current Phase**: phase1-complete
-- **Created**: {YYYY-MM-DD}
-- **Workflow ID**: {YYYYMMDD-xxxx}
-- **Implementation Strategy**: TBD
-- **Post-Implementation Tasks**: {e.g., "impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)"}
-- **Auto-Continue**: yes
-- **Next**: {next skill to invoke}
+risk_level: P{X}
+domains: [{domain list}]
+mode: {single-domain or cross-domain}
+routing: [{ordered skill list}]
+current_phase: phase1-complete
+created: "{YYYY-MM-DD}"
+workflow_id: "{YYYYMMDD-xxxx}"
+baseline_commit: TBD
+implementation_strategy: TBD
+post_implementation_tasks: TBD
+auto_continue: true
+next: {next skill to invoke}
 <!-- ECW:STATUS:END -->
 
 <!-- ECW:MODE:START -->
-- **Working Mode**: analysis
+working_mode: analysis
 <!-- ECW:MODE:END -->
 
 <!-- ECW:LEDGER:START -->
-## Subagent Ledger
-
-| Phase | Agent | Type | Model | Est. Scale | Started | Duration |
-|-------|-------|------|-------|-----------|---------|----------|
 <!-- ECW:LEDGER:END -->
 ```
 
@@ -65,8 +62,10 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 
 - Use `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections
 - Update only between matching markers — never overwrite the entire file
+- All marker sections use **YAML** format; `routing` and `domains` are YAML lists; `auto_continue` is YAML boolean
 - Working modes: `analysis` | `planning` | `implementation` | `verification`
-- Ledger scale: small (<20K tokens), medium (20-80K), large (>80K)
+- Ledger is a YAML list of dicts; scale: small (<20K tokens), medium (20-80K), large (>80K)
+- See `skills/risk-classifier/session-state-format.md` for full template and LEDGER entry format
 
 ---
 

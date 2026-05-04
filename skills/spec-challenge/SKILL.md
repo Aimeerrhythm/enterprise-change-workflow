@@ -204,12 +204,12 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 After spec-challenge completes and user confirms review results (Plan updated), update session-state.md and proceed to implementation. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
-> **Downstream Handoff**: Read risk level and `Auto-Continue` from session-state.md (if session-state.md is unavailable, default to P0 and wait for user direction). Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
-> - **P0/P1 (Auto-Continue: yes)**: Invoke the next skill based on Implementation Strategy:
+> **Downstream Handoff**: Read risk level and `auto_continue` from session-state.md (if session-state.md is unavailable, default to P0 and wait for user direction). Update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block**, then:
+> - **P0/P1 (`auto_continue: true`)**: Invoke the next skill based on Implementation Strategy:
 >   - If `subagent-driven`: Invoke `ecw:tdd` (if `tdd.enabled: true` in ecw.yml), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly.
 >   - If `direct`: Invoke `ecw:tdd` to begin the first Plan Task's RED phase.
 > - **P2/P3 (manual trigger)**: spec-challenge does not auto-route to implementation for P2/P3. Present findings and wait for user direction.
-> - **If `auto_continue` field is missing or `no`**: Show strategy recommendation and wait for user direction (backward compatibility).
+> - **If `auto_continue` field is missing or `false`**: Show strategy recommendation and wait for user direction (backward compatibility).
 
 ### Manual Trigger
 

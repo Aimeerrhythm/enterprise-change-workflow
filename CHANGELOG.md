@@ -4,7 +4,37 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-## [1.2.12] - 2026-04-30
+## [1.2.13] - 2026-05-04
+
+### 重构
+
+- **session-state.md 格式迁移：Markdown → YAML（Issue #40）** — STATUS/MODE/LEDGER 三个 marker section 内容全面改为 YAML 格式，消除正则解析的静默不匹配问题
+  - `marker_utils.py` 新增 YAML API：`parse_status()`、`parse_ledger()`、`append_ledger_entry()`、`validate_status()`、`parse_yaml_section()`、`update_yaml_section()`；改写 `update_status_fields()` 和 `update_mode()` 为 YAML dict 操作
+  - 4 个 hook 迁移（`auto-continue.py`、`session-start.py`、`pre-compact.py`、`dispatcher.py`）：删除约 70 行私有正则（`_FIELD_PATTERNS`、`_parse_field`、`_extract_state_fields` 等），改用 `parse_status()` 统一解析；`auto_continue` 从字符串比较改为 bool 比较；`routing`/`domains` 直接作为 list 操作
+  - `post-edit-check.py` 新增 YAML 校验：写入 session-state.md 时立即校验所有 marker section 的 YAML 合法性（Write 用 content，Edit 读磁盘文件），格式错误立即报告 systemMessage；新增 `_validate_session_state_yaml()`
+  - `session-state-format.md` 模板全面更新为 YAML 格式；LEDGER 从 Markdown 表格改为 YAML list of dicts；10 个 SKILL.md 同步更新 Mode switch、Ledger 追加示例、字段引用
+  - `data_contracts.yaml`、`lint_skills.py` CHECK 6、`anchor_keywords.yaml` 同步更新
+  - 同时解决 Issue #36（Ledger 追加结构化，append_ledger_entry 不再可能写到标签外）
+
+### 修复
+
+- **`validate_status()` 接入 auto-continue hook** — 实现后原未调用；PostToolUse 路径中 `parse_status()` 之后补充调用 `validate_status()`，校验失败写 stderr warning（降级容忍，不阻塞流程）
+- **`pre-compact.py` 三次重复读文件** — `_build_recovery_message()` 原通过 3 个独立函数分别打开文件；改为一次读取 + `parse_status()` 提取 3 个字段
+- **`dispatcher.py` 4096 字节截断风险** — LEDGER 积累后文件超 4096 字节可能截断 STATUS 块；改为读完整文件
+- **`post-edit-check.py` Edit 操作 YAML 校验不可靠** — Edit 的 `new_string` 通常是局部片段，原逻辑无法检测到完整 marker 区块中的 YAML 错误；Edit 路径改为 PostToolUse 之后读磁盘实际文件
+- **`knowledge-track` fallback 精确匹配** — `has_kt` 判断从 `"knowledge-track" in s.lower()` substring 改为 `_routing_step_to_skill(s) == "ecw:knowledge-track"` 精确匹配
+- **`_remaining_route()` alias-aware 精确匹配** — 双向 substring 匹配（`current_skill in step or step in current_skill`）替换为与 `_next_skill_from_routing` 一致的 alias 表匹配；修复 TDD:RED 在 routing 中时 `ecw:tdd` 无法命中导致 systemMessage remaining route 显示为空的问题
+- **workspace data-contract** — `data_contracts.yaml` 补充 `workspace-yml`（create 阶段产出）和 `analysis-report`（Phase 2 子 session 产出）两个 writes 声明，消除 lint `[data-contracts]` ERROR
+
+### 测试
+
+- 新增 `tests/static/test_parse_status.py`（41 个测试），TDD 红绿驱动实现
+- 5 个 hook 测试文件 mock 数据全面更新为 YAML 格式
+- `test_auto_continue.py` 新增 4 个测试（YAML list 输入、TDD:RED alias、无 substring 假阳性、知识追踪精确匹配）
+- `test_post_edit_check.py` 新增 3 个测试（Edit 读实际文件校验、valid/invalid YAML 场景）
+- 总测试数：968 → 973
+
+
 
 ### 新增
 

@@ -182,7 +182,7 @@ Wait for user confirmation. After confirmation:
 > **Downstream Handoff**: After user confirms the requirement summary, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill:
 > - **P0/P1**: Invoke risk-classifier Phase 2, then `ecw:writing-plans`.
 > - **P2**: Invoke `ecw:writing-plans`.
-> - If `auto_continue` field is missing or `no` in session-state.md, wait for user direction (backward compatibility).
+> - If `auto_continue` field is missing or `false` in session-state.md, wait for user direction (backward compatibility).
 
 ## Error Handling
 

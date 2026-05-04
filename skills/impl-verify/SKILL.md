@@ -171,7 +171,7 @@ After convergence (zero must-fix findings in the most recent round):
 > - **P2 cross-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. Then suggest biz-impact-analysis; wait for user decision.
 > - **P2 single-domain**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. No biz-impact-analysis suggestion (excluded per workflow-routes.yml).
 > - **P3**: If ecw.yml `paths.knowledge_root` exists, invoke `ecw:knowledge-track`. No further downstream handoff.
-> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
 
 ## Severity Definitions and Verification Discipline
 

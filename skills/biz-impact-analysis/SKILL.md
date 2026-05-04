@@ -114,7 +114,7 @@ After biz-impact-analysis report is output:
 > - **P2 cross-domain**: Suggest executing Phase 3 (not mandatory; user decides) — cross-domain changes may have calibration value.
 > - **P2 single-domain**: No Phase 3 needed; present findings and stop.
 > - **P3**: No Phase 3 needed.
-> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 

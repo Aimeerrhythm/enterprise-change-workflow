@@ -225,7 +225,7 @@ P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw
 > **Downstream Handoff**: After Round 3 completes and report is output, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md, then invoke the next skill:
 > - **P0/P1**: Invoke risk-classifier Phase 2.
 > - **P2**: Invoke `ecw:writing-plans`.
-> - If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> - If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
 
 ---
 

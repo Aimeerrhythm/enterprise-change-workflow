@@ -104,4 +104,4 @@ Create failing test, implement single fix, verify, escalate on repeated failure,
 
 After Phase 4 implementation completes (bug fixed, tests passing):
 
-> **Downstream Handoff**: Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md to `ecw:impl-verify`, then invoke `ecw:impl-verify` for post-fix verification. If `auto_continue` field is missing or `no` in session-state.md, wait for user confirmation (backward compatibility).
+> **Downstream Handoff**: Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md to `ecw:impl-verify`, then invoke `ecw:impl-verify` for post-fix verification. If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
