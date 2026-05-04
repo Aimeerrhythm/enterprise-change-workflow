@@ -87,10 +87,22 @@ SCANNABLE_EXTENSIONS = {
 MODIFIED_FILES_STATE = ".claude/ecw/state/modified-files.txt"
 
 
-def _inject_baseline_commit(filepath, cwd):
+def _find_git_root(path):
+    """Walk up from path until a .git directory is found. Returns the directory or None."""
+    d = os.path.dirname(os.path.abspath(path))
+    while True:
+        if os.path.exists(os.path.join(d, ".git")):
+            return d
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+
+
+def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for signature compat
     """If session-state.md was just written with Baseline Commit: TBD, replace with actual HEAD hash.
 
-    Runs git rev-parse HEAD in cwd and updates the file in-place.
+    Resolves the git root from filepath (not from cwd, which points to the plugin install dir).
     No-op if file doesn't match, git fails, or hash already present.
     """
     if not filepath.endswith("session-state.md"):
@@ -106,10 +118,14 @@ def _inject_baseline_commit(filepath, cwd):
     if not re.search(r'\*\*Baseline Commit\*\*:\s*TBD\b', content):
         return
 
+    git_root = _find_git_root(filepath)
+    if git_root is None:
+        return
+
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=cwd,
+            cwd=git_root,
             capture_output=True,
             text=True,
             timeout=5,
