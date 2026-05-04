@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.2.14] - 2026-05-04
+
+### 修复
+
+- **auto-continue PostToolUse 改写 `-loaded`，不再提前写 `-complete`（Issue #33）** — `Skill` 工具只加载指令，实际工作发生在后续 turn；`_SKILL_COMPLETED_PHASE` 所有值从 `-complete` 改为 `-loaded`（如 `phase1-loaded`、`tdd-loaded`），正确表达"指令已加载，工作待执行"的语义。同步更新 10 个 SKILL.md 的 Downstream Handoff，补充显式写入 `current_phase: {skill}-complete` 指令，由 skill 在实际完成时负责设置终态
+- **biz-impact-analysis Ledger 写入位置约束（Issue #36）** — SKILL.md Ledger 写入指令新增明确要求：必须在 `<!-- ECW:LEDGER:END -->` 之前插入，禁止直接 raw-append 到文件末尾；推荐使用 `append_ledger_entry`（已内置 marker-aware 写入）；`marker_utils.py` 的 `append_ledger_entry` 补充防御性 docstring，说明 raw append 会落到标签外导致 hook 解析失败
+- **biz-impact-analysis report 未写入 session-data（Issue #37）** — SKILL.md 步骤 6 新增显式磁盘写入指令：Agent 返回后先将完整报告写入 `session-data/{workflow-id}/biz-impact-report.md`，再输出到对话；Phase 3 calibration 依赖该文件，缺失会导致 Phase 3 无法执行
+
+### 测试
+
+- `test_auto_continue.py` 新增 `test_all_phase_values_are_loaded_not_complete`：断言 `_SKILL_COMPLETED_PHASE` 所有值以 `-loaded` 结尾，防止回退到 `-complete`（Issue #33 回归守卫）
+- `test_biz_impact_subagent.py` 新增 `TestBizImpactLedgerPosition`（3 个测试）：断言 SKILL.md 引用 `ECW:LEDGER:END`、包含 `before` 插入约束、推荐 `append_ledger_entry`
+- `test_biz_impact_subagent.py` 新增 `TestBizImpactReportPersisted`（3 个测试）：断言 SKILL.md 包含 `biz-impact-report.md` 写入指令、引用 `session-data` 路径、写入指令先于 output 指令
+
 ## [1.2.13] - 2026-05-04
 
 ### 重构
