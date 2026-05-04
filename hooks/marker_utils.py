@@ -19,6 +19,8 @@ Standard marker names for session-state.md:
 import os
 import re
 
+import yaml
+
 
 def make_markers(name):
     """Return (start_marker, end_marker) for a given section name.
@@ -104,34 +106,98 @@ def find_session_state(cwd):
     return None
 
 
-def update_status_fields(content, fields):
-    """Update specific **Field**: value lines within the STATUS marker block.
+def parse_yaml_section(content, name):
+    """Extract marker section and parse as YAML.
 
-    Only modifies fields that already exist in the block; leaves all other
-    fields and surrounding file content untouched.
+    Returns parsed YAML (dict, list, or scalar), or None if:
+    - Marker section does not exist
+    - YAML parsing fails
+    """
+    section = read_marker_section(content, name)
+    if section is None:
+        return None
+    try:
+        return yaml.safe_load(section)
+    except yaml.YAMLError:
+        return None
+
+
+def update_yaml_section(content, name, data):
+    """Serialize data as YAML and write into marker section."""
+    yaml_str = yaml.dump(
+        data,
+        default_flow_style=False,
+        allow_unicode=True,
+        sort_keys=False,
+    ).rstrip()
+    return update_marker_section(content, name, yaml_str)
+
+
+def parse_status(content):
+    """Parse STATUS section as YAML dict. Returns dict or None."""
+    result = parse_yaml_section(content, "STATUS")
+    if result is None or not isinstance(result, dict):
+        return None
+    return result
+
+
+def parse_ledger(content):
+    """Parse LEDGER section as YAML list of dicts. Returns list or None."""
+    result = parse_yaml_section(content, "LEDGER")
+    if result is None:
+        return None
+    if not isinstance(result, list):
+        return None
+    return result
+
+
+def append_ledger_entry(content, entry):
+    """Append one entry to LEDGER list. Creates section if absent."""
+    ledger = parse_ledger(content) or []
+    ledger.append(entry)
+    return update_yaml_section(content, "LEDGER", ledger)
+
+
+def validate_status(fields):
+    """Validate STATUS fields against schema. Returns error list (empty = valid)."""
+    errors = []
+
+    for f in ("risk_level", "routing", "current_phase", "auto_continue"):
+        if f not in fields:
+            errors.append(f"missing required field: {f}")
+
+    rl = fields.get("risk_level", "")
+    if rl and rl not in ("P0", "P1", "P2", "P3"):
+        errors.append(f"risk_level invalid: '{rl}' (expected P0-P3)")
+
+    if "routing" in fields and not isinstance(fields["routing"], list):
+        errors.append("routing must be a list")
+
+    if "auto_continue" in fields and not isinstance(fields["auto_continue"], bool):
+        errors.append("auto_continue must be boolean")
+
+    if "domains" in fields and not isinstance(fields["domains"], list):
+        errors.append("domains must be a list")
+
+    return errors
+
+
+def update_status_fields(content, fields):
+    """Update specific fields within the STATUS marker block.
 
     Args:
         content: Full file content.
-        fields: Dict mapping exact Markdown field names (e.g. "Current Phase")
-                to their new values.
+        fields: Dict mapping field names (snake_case YAML keys) to new values.
 
     Returns:
         Updated file content.
     """
-    status = read_marker_section(content, "STATUS")
+    status = parse_status(content)
     if status is None:
         return content
 
-    updated_status = status
-    for field_name, new_value in fields.items():
-        pattern = re.compile(
-            rf'(\*\*{re.escape(field_name)}\*\*:\s*).+',
-            re.MULTILINE,
-        )
-        if pattern.search(updated_status):
-            updated_status = pattern.sub(rf'\g<1>{new_value}', updated_status)
-
-    return update_marker_section(content, "STATUS", updated_status)
+    status.update(fields)
+    return update_yaml_section(content, "STATUS", status)
 
 
 def update_mode(content, mode_value):
@@ -144,7 +210,7 @@ def update_mode(content, mode_value):
     Returns:
         Updated file content.
     """
-    return update_marker_section(content, "MODE", f"- **Working Mode**: {mode_value}")
+    return update_yaml_section(content, "MODE", {"working_mode": mode_value})
 
 
 def update_session_state_section(cwd, name, new_inner):
