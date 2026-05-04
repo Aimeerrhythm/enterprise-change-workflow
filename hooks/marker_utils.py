@@ -152,7 +152,21 @@ def parse_ledger(content):
 
 
 def append_ledger_entry(content, entry):
-    """Append one entry to LEDGER list. Creates section if absent."""
+    """Append one entry to LEDGER list. Creates section if absent.
+
+    This function serializes the full LEDGER list back into the
+    <!-- ECW:LEDGER:START --> / <!-- ECW:LEDGER:END --> marker block via
+    update_yaml_section → update_marker_section. The end marker is always
+    kept as the closing boundary; nothing is written outside it.
+
+    WARNING: Do NOT use raw string append / file.write() to add Ledger
+    entries directly to the end of session-state.md. Raw appends place the
+    new content *after* <!-- ECW:LEDGER:END -->, which is outside the marker
+    block and therefore invisible to every hook parser that reads this
+    section. Always go through this function (preferred) or, when using the
+    Edit tool manually, insert the new row immediately *before* the
+    <!-- ECW:LEDGER:END --> line.
+    """
     ledger = parse_ledger(content) or []
     ledger.append(entry)
     return update_yaml_section(content, "LEDGER", ledger)
