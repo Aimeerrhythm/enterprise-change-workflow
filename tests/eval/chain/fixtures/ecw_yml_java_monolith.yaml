@@ -1,0 +1,29 @@
+project:
+  name: "ecommerce-platform"
+  type: "java-monolith"
+  language: "java"
+  output_language: "zh-CN"
+
+tdd:
+  enabled: true
+  check_test_files: false
+  base_test_class: "BaseServiceTest"
+
+verification:
+  run_tests: true
+
+component_types:
+  - service
+  - repository
+  - controller
+  - mq-producer
+  - mq-consumer
+  - facade
+
+paths:
+  domain_registry: ".claude/ecw/domain-registry.md"
+  knowledge_root: ".claude/knowledge/"
+  knowledge_common: ".claude/knowledge/common/"
+  risk_factors: ".claude/ecw/change-risk-classification.md"
+  plans: ".claude/plans/"
+  session_data: ".claude/ecw/session-data/"

@@ -171,7 +171,7 @@ class TestRunStep:
             mock_loader.return_value = "skill content"
             from tests.eval.chain.harness import run_step
             run_step(step, {})
-            mock_loader.assert_called_once_with("risk-classifier", extra_files=["session-state-format.md"])
+            mock_loader.assert_called_once_with("risk-classifier", extra_files=["session-state-format.md"], prompt_file=None)
 
 
 class TestRunChain:
