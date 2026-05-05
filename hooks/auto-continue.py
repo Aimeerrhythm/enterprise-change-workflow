@@ -22,6 +22,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
+    append_timeline_entry,
     find_session_state,
     parse_status,
     update_mode,
@@ -210,6 +211,12 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
             content = update_status_fields(content, fields)
         if mode:
             content = update_mode(content, mode)
+
+        # Append TIMELINE entry (backfills previous entry's end/duration_s automatically).
+        # Only for skills we track in _SKILL_MODE — same guard as STATUS updates above.
+        if skill_name in _SKILL_MODE:
+            phase = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
+            content = append_timeline_entry(content, phase)
 
         with open(state_path, "w", encoding="utf-8") as f:
             f.write(content)
