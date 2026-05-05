@@ -18,6 +18,7 @@ Standard marker names for session-state.md:
 
 import os
 import re
+from datetime import datetime, timezone
 
 import yaml
 
@@ -170,6 +171,53 @@ def append_ledger_entry(content, entry):
     ledger = parse_ledger(content) or []
     ledger.append(entry)
     return update_yaml_section(content, "LEDGER", ledger)
+
+
+def append_timeline_entry(content: str, phase: str) -> str:
+    """Append a new TIMELINE entry and backfill the previous entry's end/duration_s.
+
+    Each call:
+    1. Reads the TIMELINE YAML list (creates empty list if block absent or empty).
+    2. If the last entry has end=None, backfills its end to now and computes duration_s
+       from its start (integer seconds). Already-set end values are never overwritten.
+    3. Appends a new entry: phase=phase, start=now, end=None, duration_s=None.
+    4. Writes the updated list back into the <!-- ECW:TIMELINE:START/END --> block,
+       creating the block if it does not exist.
+
+    The marker tag is ECW:TIMELINE.
+    """
+    now = datetime.now().replace(microsecond=0)
+    now_str = now.isoformat()
+
+    # Parse existing timeline (list of dicts), or start empty
+    timeline = parse_yaml_section(content, "TIMELINE")
+    if not isinstance(timeline, list):
+        timeline = []
+
+    # Backfill previous entry if end is None
+    if timeline:
+        last = timeline[-1]
+        if isinstance(last, dict) and last.get("end") is None:
+            last["end"] = now_str
+            # Calculate duration from start
+            start_val = last.get("start")
+            if start_val:
+                try:
+                    start_dt = datetime.fromisoformat(str(start_val).strip('"\''))
+                    duration = int((now - start_dt).total_seconds())
+                    last["duration_s"] = duration
+                except (ValueError, TypeError):
+                    last["duration_s"] = None
+
+    # Append new entry
+    timeline.append({
+        "phase": phase,
+        "start": now_str,
+        "end": None,
+        "duration_s": None,
+    })
+
+    return update_yaml_section(content, "TIMELINE", timeline)
 
 
 def validate_status(fields):
