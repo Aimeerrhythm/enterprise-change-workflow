@@ -1,6 +1,57 @@
 # Impl-Verify Output Templates
 
-## Per-Round Output Format
+## Per-Round Persistence File Format (impl-verify-round{N}.md)
+
+Each round's results are persisted immediately to an independent file. This file is the source of truth for that round's findings and survives even if the final merge into `impl-verify-findings.md` fails.
+
+```markdown
+---
+round: {N}
+dimension: "{dimension_name}"
+status: "{pass|has-findings|failed}"
+timestamp: "{ISO 8601}"
+---
+
+# Impl-Verify Round {N} — {dimension name}
+
+**Check scope**: {cross-referenced artifacts + code file list}
+
+## Findings
+
+```yaml
+findings:
+  - file: "path/to/file.java"
+    line: 42
+    severity: must-fix
+    dimension: "{dimension_id}"
+    description: "Description of the finding"
+    expected: "What was expected"
+    actual: "What was found"
+``​`
+
+**Summary**: {one-line summary}
+**Must-fix count**: {X}
+**Suggestion count**: {Y}
+```
+
+When a round fails (subagent returns malformed data):
+
+```markdown
+---
+round: {N}
+dimension: "{dimension_name}"
+status: "failed"
+timestamp: "{ISO 8601}"
+error: "{brief error description}"
+---
+
+# Impl-Verify Round {N} — {dimension name}
+
+**Status**: FAILED — {error description}
+**Fallback**: Coordinator will retry or execute inline.
+```
+
+## Per-Round In-Session Output Format
 
 ```markdown
 ### Impl-Verify Round {N} — {dimension name}

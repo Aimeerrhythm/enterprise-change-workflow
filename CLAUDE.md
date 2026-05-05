@@ -63,7 +63,8 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
 | `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
 | `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
-| `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | After each impl-verify pass | All findings (replaces >5 threshold) |
+| `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | After each impl-verify pass | Merged findings from all rounds (final summary) |
+| `.claude/ecw/session-data/{workflow-id}/impl-verify-round{N}.md` | Immediately when each Round subagent returns | Per-round independent findings; survives partial failure |
 | `.claude/ecw/calibration-log.md` | After Phase 3 calibration | Full-dimension comparison log (detailed tables for human review and pattern analysis) |
 | `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Concise structured index for Phase 1 automated quick-lookup |
 | `.claude/ecw/state/instincts.md` | After Phase 3 calibration | Learned heuristic rules, injected by SessionStart when confidence > 0.7 |
