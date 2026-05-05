@@ -161,10 +161,10 @@ class TestRotation:
         trace_file = _trace_path(trace_dir)
         trace_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Write ~600KB of data (each line ~100 bytes, ~6000 lines)
+        # Write >512KB of data — each line ~80 bytes, need ~7000 lines
         lines = []
-        for i in range(6000):
-            record = {"ts": "2026-01-01T00:00:00", "hook": "test", "event": "E", "i": i}
+        for i in range(8000):
+            record = {"ts": "2026-01-01T00:00:00", "hook": "test", "event": "E", "i": i, "pad": "x" * 20}
             lines.append(json.dumps(record) + "\n")
         trace_file.write_text("".join(lines))
 
@@ -186,8 +186,8 @@ class TestRotation:
 
         # Write >512KB
         lines = []
-        for i in range(6000):
-            record = {"ts": "2026-01-01T00:00:00", "hook": "test", "event": "E", "i": i}
+        for i in range(8000):
+            record = {"ts": "2026-01-01T00:00:00", "hook": "test", "event": "E", "i": i, "pad": "x" * 20}
             lines.append(json.dumps(record) + "\n")
         trace_file.write_text("".join(lines))
 
