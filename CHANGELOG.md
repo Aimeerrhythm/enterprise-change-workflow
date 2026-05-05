@@ -4,6 +4,20 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.3.1] - 2026-05-05
+
+### 新功能
+
+- **三层递进验证体系（Issue #44）** — 新增 Layer 2b/Layer 3 eval 验证层级。Layer 3 为端到端链路级验证：新增 `tests/eval/chain/` 框架（harness、skill_loader、assertions、context_builder），三条验证链 c1（P0 单域）、c2（P1 跨域）、c3（Bug 调试），共 76 个测试全部 GREEN。Makefile 新增 `eval-chain`/`eval-chain-all` targets（含 CHAIN 参数 guard）
+- **通用 Skill 校准机制（Issue #47）** — 扩展 Phase 3 calibration 覆盖全 Skill 预测偏差。新增 `scripts/calibration-collector.py`（确定性采集 4 维校准数据：Domain识别/Plan精度/Spec-Challenge接受率/Requirements完整度，输出 YAML）。`auto-continue.py` PreToolUse 新增 `_get_skill_instincts()` 函数，从 `instincts.md` 按 skill section 注入历史经验。`instincts.md` 格式扩展为按 `## skill-name` 分 section，保留 `<!-- INSTINCT -->` marker 向后兼容。`spec-challenge` SKILL.md 新增 User Decisions 表批量持久化（Response Summary 时机）。`phase3-steps.md` 新增 Steps 7-12 多维校准流程
+
+### 测试
+
+- eval/chain 框架 76 个测试（c1: 23、c2: 25、c3: 28），全部 GREEN
+- 新增 32 个静态测试：`test_calibration_collector.py`（19）、`test_auto_continue.py` instincts 相关（10）、`test_spec_challenge.py` User Decisions（3）
+
+---
+
 ## [1.3.0] - 2026-05-05
 
 ### 新功能
@@ -813,6 +827,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[1.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.0
 [1.2.14]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.14
 [1.2.13]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.13
