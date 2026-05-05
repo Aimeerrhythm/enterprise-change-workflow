@@ -1,0 +1,39 @@
+# ECW Spec-Challenge Review Quality Evaluation (L2b)
+# Verifies that the spec-challenge review agent correctly identifies (or correctly passes)
+# plans at different quality levels, including planted defect detection.
+#
+# Usage:
+#   cd tests/eval/spec-challenge && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+#
+# Cost: ~$2-5 per run (4 scenarios × Opus, review outputs are substantial)
+# Time: ~8-15 min
+
+description: "ECW Spec-Challenge Review Quality Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 16000
+      tools:
+        - file://tools/spec_challenge_quality_result.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: spec-challenge-quality
+    raw: |
+      [{"role": "system", "content": "{{agent_instructions}}\n\n## Common Anti-Patterns to Avoid\n\n{{common_rationalizations}}\n\nIMPORTANT EVAL INSTRUCTION: You are in an evaluation environment without file system access. The plan document content is provided inline in the user message — do NOT call Read, Grep, Write, Edit, Agent, or any file system tools. Do NOT call AskUserQuestion.\n\nAfter completing your full review analysis across all 4 dimensions, you MUST call the spec_challenge_quality_result tool to report your findings. The review_content field must contain the complete review report following the prescribed output format (Fatal Flaws, Improvement Suggestions, Blind Spot Annotations, Conclusion sections)."},{"role": "user", "content": "请评审以下 Plan 文档：\n\n{{plan_content}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  agent_instructions:
+    type: file
+    path: ../../../agents/spec-challenge.md
+  common_rationalizations:
+    type: file
+    path: ../../../skills/spec-challenge/prompts/common-rationalizations.md

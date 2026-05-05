@@ -1,0 +1,133 @@
+# S04: False-Positive Control — P1 积分发放使用最终一致性（有效设计选择）
+# 验证：评审者不会将合法的 MQ 最终一致性设计误报为 fatal flaw
+# Plan 包含幂等控制 + 重试 + 对账，是积分类非实时场景的合理选型
+# 期望：has_fatal_flaws=false, conclusion_verdict='pass', improvement_count>=1
+- vars:
+    plan_content: |
+      # Plan: 积分发放（订单确认后 MQ 异步）
+
+      ## 计划头
+      - **Risk Level**: P1
+      - **Domains**: order, points
+      - **Implementation Strategy**: subagent-driven
+      - **Goal**: 订单确认成功后，通过 MQ 异步发放积分，采用最终一致性模型（积分为非实时权益，可接受 1-3 分钟延迟）
+      - **Architecture**: OrderConfirmService → MQ(ORDER_CONFIRMED) → PointsGrantConsumer → PointsAccount（幂等写入）→ 对账定时任务（补偿兜底）
+      - **Tech Stack**: Java 17, Spring Boot 3, MySQL 8, RocketMQ 5
+      - **Architecture Decision**: 积分发放不使用分布式事务（XA/Saga），原因：①积分为非实时权益，用户对 1-3 分钟延迟无感知；②最终一致性 + 幂等消费 + 对账补偿已满足业务 SLA；③分布式事务显著增加系统复杂度
+
+      ## Task 1: 订单确认时发布 MQ 消息
+
+      **Files**:
+      - Modify: src/main/java/com/example/order/service/OrderConfirmService.java
+      - Create: src/main/java/com/example/order/mq/OrderConfirmedProducer.java
+      - Test: src/test/java/com/example/order/service/OrderConfirmServiceTest.java
+
+      **Step 1**: 编写失败测试——订单确认成功后，发布 ORDER_CONFIRMED 消息（包含 orderId、userId、orderAmount、confirmedAt）
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 在 OrderConfirmService 中事务提交后（afterCommit）发布 MQ 消息，确保消息与事务提交原子性
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 1: 订单确认发布 MQ"
+
+      ## Task 2: 积分发放消费者（幂等消费）
+
+      **Files**:
+      - Create: src/main/java/com/example/points/consumer/PointsGrantConsumer.java
+      - Create: src/main/java/com/example/points/service/PointsGrantService.java
+      - Create: src/main/java/com/example/points/repository/PointsGrantRecordRepository.java
+      - Create: src/main/resources/db/migration/V301_create_points_grant_record.sql
+      - Test: src/test/java/com/example/points/consumer/PointsGrantConsumerTest.java
+
+      **Step 1**: 编写失败测试——相同 orderId 的消息重复消费，积分仅发放一次；正常消息发放积分并写入 points_grant_record
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现幂等消费：消费前先查 points_grant_record 表，orderId 已存在则直接 ACK 跳过；否则在事务内写入发放记录并更新 points_account 余额
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 2: 积分发放（幂等消费）"
+
+      ## Task 3: 消费失败重试 + 死信处理
+
+      **Files**:
+      - Modify: src/main/java/com/example/points/consumer/PointsGrantConsumer.java
+      - Create: src/main/java/com/example/points/consumer/PointsGrantDLQConsumer.java
+      - Test: src/test/java/com/example/points/consumer/PointsGrantConsumerTest.java
+
+      **Step 1**: 编写失败测试——消费失败时 RocketMQ 自动重试 3 次（间隔 5s/30s/1min）；重试全部失败后进入 DLQ；DLQ 消费者写告警日志并通知运营人工处理
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 配置 RocketMQ 消费者重试策略，实现 DLQ Consumer 的日志和告警逻辑
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 3: 积分发放失败重试 + DLQ 告警"
+
+      ## Task 4: 积分对账定时任务（兜底补偿）
+
+      **Files**:
+      - Create: src/main/java/com/example/points/job/PointsReconciliationJob.java
+      - Test: src/test/java/com/example/points/job/PointsReconciliationJobTest.java
+
+      **Step 1**: 编写失败测试——定时任务每小时扫描 30 分钟前已确认但未在 points_grant_record 中找到对应记录的订单，补发积分
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现对账：按时间窗口 JOIN order 表和 points_grant_record 表，找到漏发的订单，调用 PointsGrantService 补发（同样幂等）
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 4: 积分对账补偿定时任务"
+
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 核心 false-positive 控制：有效设计不应误报 fatal flaw ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_fatal_flaws === false;
+      metric: no_false_positive_on_eventual_consistency
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.fatal_flaw_count === 0;
+      metric: fatal_flaw_count_zero
+
+    # ── 结论必须是 pass ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.conclusion_verdict === 'pass';
+      metric: conclusion_is_pass
+
+    # ── 即使通过也应有改进建议（如 monitoring、alerting SLA 细化等）──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.improvement_count >= 1;
+      metric: has_improvement_suggestions
+
+    # ── 评审内容完整 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return typeof result.review_content === 'string' && result.review_content.length > 200;
+      metric: review_content_not_empty
+
+    # ── 结构一致性：has_fatal_flaws 和 fatal_flaw_count 对齐 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const hasFatal = result.has_fatal_flaws;
+        const count = result.fatal_flaw_count;
+        return (hasFatal === false && count === 0) || (hasFatal === true && count > 0);
+      metric: fatal_flaw_fields_consistent
+
+    # ── 结构一致性：verdict 和 has_fatal_flaws 对齐 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        if (result.has_fatal_flaws === false) {
+          return result.conclusion_verdict === 'pass';
+        }
+        return result.conclusion_verdict === 'conditional-pass' || result.conclusion_verdict === 'reject';
+      metric: verdict_consistent_with_fatal_flaws

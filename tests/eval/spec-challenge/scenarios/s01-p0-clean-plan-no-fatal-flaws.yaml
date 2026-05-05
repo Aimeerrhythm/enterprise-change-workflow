@@ -1,0 +1,148 @@
+# S01: P0 干净 Plan — 支付退款逆向流程（无 Fatal Flaw）
+# 验证：评审者对结构完整、逻辑正确的 P0 plan 不误报 fatal flaw
+# 期望：has_fatal_flaws=false, conclusion_verdict='pass', improvement_count>=1
+- vars:
+    plan_content: |
+      # Plan: 支付退款逆向流程
+
+      ## 计划头
+      - **Risk Level**: P0
+      - **Domains**: payment
+      - **Implementation Strategy**: subagent-driven
+      - **Goal**: 实现用户发起退款申请的完整逆向流程，支持幂等调用、部分退款和超时人工介入
+      - **Architecture**: APP → RefundController → RefundService（幂等检查 + 金额校验）→ PaymentGatewayClient（带 requestId）→ RefundRecord（状态更新）→ MQ 异步通知
+      - **Tech Stack**: Java 17, Spring Boot 3, MySQL 8, RocketMQ 5
+
+      ## Rollback Notes
+      - 新增 refund_record 表，migration 已包含在 Task 1，灰度期间保持原 payment_order 表 refund_status 字段双写
+      - PaymentGatewayClient 新增 refundWithRequestId() 重载方法，原 refund() 方法保持不变（向后兼容）
+      - 若灰度期间回滚，refund_record 表数据可保留，不影响核心 payment_order 表
+
+      ## Task 1: 幂等退款核心逻辑
+
+      **Files**:
+      - Create: src/main/java/com/example/payment/service/RefundService.java
+      - Create: src/main/java/com/example/payment/domain/RefundRecord.java
+      - Create: src/main/java/com/example/payment/repository/RefundRecordRepository.java
+      - Create: src/main/resources/db/migration/V202_create_refund_record.sql
+      - Test: src/test/java/com/example/payment/service/RefundServiceTest.java
+
+      **Step 1**: 编写失败测试——相同 requestId 多次调用 initRefund()，仅执行一次实际退款逻辑，第二次直接返回第一次的 RefundRecord
+      **Step 2**: 运行 mvn test -pl payment-service，确认测试失败（RefundService 不存在）
+      **Step 3**: 实现 RefundService.initRefund()：先按 requestId 查 refund_record；若已存在直接返回；否则在事务内写入 PROCESSING 状态记录，再异步调用网关
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 1: 幂等退款核心逻辑 + refund_record 表"
+
+      ## Task 2: 部分退款金额校验
+
+      **Files**:
+      - Modify: src/main/java/com/example/payment/service/RefundService.java
+      - Modify: src/main/java/com/example/payment/domain/RefundRecord.java
+      - Test: src/test/java/com/example/payment/service/RefundServiceTest.java
+
+      **Step 1**: 编写失败测试——退款金额 > (已支付金额 - 已退款金额) 时抛出 RefundAmountExceededException；退款金额 = 剩余可退金额时正常通过
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现金额校验：从 payment_order 获取 paid_amount，从 refund_record 聚合 refunded_amount，校验 refund_amount ≤ paid_amount - refunded_amount
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 2: 部分退款金额校验"
+
+      ## Task 3: 支付网关退款调用（含超时人工介入）
+
+      **Files**:
+      - Modify: src/main/java/com/example/payment/client/PaymentGatewayClient.java
+      - Create: src/main/java/com/example/payment/event/RefundTimeoutEvent.java
+      - Test: src/test/java/com/example/payment/client/PaymentGatewayClientTest.java
+
+      **Step 1**: 编写失败测试——网关正常返回时 refund_record 更新为 SUCCESS；网关超时（>5s）时更新为 PENDING 并发布 RefundTimeoutEvent
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现 refundWithRequestId()：timeout=5s，最多重试 2 次（指数退避），超时后置 PENDING，发送 RefundTimeoutEvent 触发人工介入告警
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 3: 网关退款调用（含超时人工介入）"
+
+      ## Task 4: 退款完成通知
+
+      **Files**:
+      - Modify: src/main/java/com/example/payment/service/RefundService.java
+      - Create: src/main/java/com/example/payment/mq/RefundCompletedProducer.java
+      - Test: src/test/java/com/example/payment/service/RefundServiceTest.java
+
+      **Step 1**: 编写失败测试——退款成功后，refund_record 状态更新为 SUCCESS，发布 REFUND_COMPLETED MQ 消息
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现：在事务提交回调（TransactionSynchronization.afterCommit）中发送 MQ，避免事务未提交就发消息
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 4: 退款完成通知（事务提交后发送 MQ）"
+
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 核心：P0 干净 plan 不应有 fatal flaw ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_fatal_flaws === false;
+      metric: no_false_positive_fatal_flaws
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.fatal_flaw_count === 0;
+      metric: fatal_flaw_count_zero
+
+    # ── 结论必须是 pass（不能是 conditional-pass 或 reject）──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.conclusion_verdict === 'pass';
+      metric: conclusion_is_pass
+
+    # ── 即使干净 plan 也应有改进建议（不能无脑通过）──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.improvement_count >= 1;
+      metric: has_improvement_suggestions
+
+    # ── 评审内容完整：有 review_content ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return typeof result.review_content === 'string' && result.review_content.length > 200;
+      metric: review_content_not_empty
+
+    # ── 结构一致性：has_fatal_flaws 和 fatal_flaw_count 对齐 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const hasFatal = result.has_fatal_flaws;
+        const count = result.fatal_flaw_count;
+        return (hasFatal === false && count === 0) || (hasFatal === true && count > 0);
+      metric: fatal_flaw_fields_consistent
+
+    # ── 结构一致性：conclusion_verdict 与 has_fatal_flaws 对齐 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        if (result.has_fatal_flaws === false) {
+          return result.conclusion_verdict === 'pass';
+        }
+        return result.conclusion_verdict === 'conditional-pass' || result.conclusion_verdict === 'reject';
+      metric: verdict_consistent_with_fatal_flaws
+
+    # ── 评审覆盖关键维度：accuracy + boundaries ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.review_content || '').toLowerCase();
+        const hasAccuracy = /accuracy|准确|可靠/.test(content);
+        const hasBoundary = /blind spot|盲点|边界|未覆盖/.test(content);
+        return hasAccuracy || hasBoundary;
+      metric: review_covers_key_dimensions

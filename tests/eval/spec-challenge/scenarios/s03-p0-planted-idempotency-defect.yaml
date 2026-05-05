@@ -1,0 +1,152 @@
+# S03: P0 Planted Defect — 支付回调处理缺失幂等控制
+# 植入缺陷（commission type）：回调 handler 有重试机制但入口无幂等检查，
+#   网关重发同一回调时系统重复处理，导致订单状态多次更新和重复通知
+# 期望：has_fatal_flaws=true, fatal_flaw_count>=1, 评审内容提及幂等
+- vars:
+    plan_content: |
+      # Plan: 支付结果回调处理（P0）
+
+      ## 计划头
+      - **Risk Level**: P0
+      - **Domains**: payment, order
+      - **Implementation Strategy**: subagent-driven
+      - **Goal**: 实现支付网关回调接口，接收支付结果通知，更新订单支付状态，触发后续业务流程
+      - **Architecture**: PaymentGatewayWebhook → PaymentCallbackHandler → PaymentCallbackValidator（签名验证）→ OrderPaymentUpdater → MQ 异步下游
+      - **Tech Stack**: Java 17, Spring Boot 3, MySQL 8, RocketMQ 5
+
+      ## Rollback Notes
+      - 新增 payment_callback_log 表用于记录回调日志（Task 1），migration V203
+      - 若灰度出现问题，可通过 feature flag `payment.callback.v2.enabled=false` 切回旧实现
+
+      ## Task 1: 回调签名验证 + 日志记录
+
+      **Files**:
+      - Create: src/main/java/com/example/payment/callback/PaymentCallbackController.java
+      - Create: src/main/java/com/example/payment/callback/PaymentCallbackValidator.java
+      - Create: src/main/java/com/example/payment/repository/PaymentCallbackLogRepository.java
+      - Create: src/main/resources/db/migration/V203_create_payment_callback_log.sql
+      - Test: src/test/java/com/example/payment/callback/PaymentCallbackControllerTest.java
+
+      **Step 1**: 编写失败测试——签名正确的回调请求通过验证；签名错误的返回 400 Bad Request；每次回调请求均写入 payment_callback_log 表
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现签名验证（HMAC-SHA256），日志记录所有入参和时间戳
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 1: 回调签名验证 + 日志记录"
+
+      ## Task 2: 订单支付状态更新
+
+      **Files**:
+      - Create: src/main/java/com/example/payment/callback/PaymentCallbackHandler.java
+      - Modify: src/main/java/com/example/order/service/OrderPaymentUpdater.java
+      - Test: src/test/java/com/example/payment/callback/PaymentCallbackHandlerTest.java
+
+      **Step 1**: 编写失败测试——支付成功回调将订单状态从 PENDING_PAYMENT 更新为 PAID；支付失败回调将订单状态更新为 PAYMENT_FAILED
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现 PaymentCallbackHandler.handle()：从回调参数提取 transactionId 和 status，
+        调用 OrderPaymentUpdater.updateStatus(orderId, status)，更新订单表 payment_status 字段。
+        若更新失败（如数据库暂时不可用），最多重试 3 次，间隔 2s、4s、8s 指数退避，全部失败后写入 DLQ（死信队列）等待人工处理
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 2: 订单支付状态更新（含重试）"
+
+      ## Task 3: 支付成功后触发下游流程
+
+      **Files**:
+      - Modify: src/main/java/com/example/payment/callback/PaymentCallbackHandler.java
+      - Create: src/main/java/com/example/payment/mq/PaymentSuccessProducer.java
+      - Test: src/test/java/com/example/payment/callback/PaymentCallbackHandlerTest.java
+
+      **Step 1**: 编写失败测试——支付成功后发布 PAYMENT_SUCCESS MQ 消息，触发发货、积分、通知等下游流程
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现 MQ 发布，在订单状态更新事务提交后发送消息（TransactionSynchronization.afterCommit）
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 3: 支付成功触发下游 MQ"
+
+      ## Task 4: 回调失败告警
+
+      **Files**:
+      - Modify: src/main/java/com/example/payment/callback/PaymentCallbackHandler.java
+      - Create: src/main/java/com/example/payment/alert/CallbackFailureAlerter.java
+      - Test: src/test/java/com/example/payment/callback/PaymentCallbackHandlerTest.java
+
+      **Step 1**: 编写失败测试——重试耗尽后发送告警（钉钉机器人 + 邮件），告警内容包含 orderId、transactionId、失败原因
+      **Step 2**: 运行测试，确认失败
+      **Step 3**: 实现告警通知，DLQ 处理后触发告警
+      **Step 4**: 运行测试，确认通过
+      **Step 5**: git commit "step 4: 回调失败告警"
+
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 核心：planted defect 必须被识别为 fatal flaw ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_fatal_flaws === true;
+      metric: planted_defect_detected_as_fatal
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.fatal_flaw_count >= 1;
+      metric: at_least_one_fatal_flaw
+
+    # ── 结论不能是 pass ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.conclusion_verdict === 'conditional-pass' || result.conclusion_verdict === 'reject';
+      metric: conclusion_is_not_pass
+
+    # ── planted defect 特定：评审内容提及幂等/重复处理 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.review_content || '').toLowerCase();
+        return content.includes('幂等') || content.includes('idempoten') ||
+               content.includes('重复') || content.includes('duplicate') ||
+               content.includes('去重') || content.includes('dedup');
+      metric: review_mentions_idempotency
+
+    # ── planted defect 特定：fatal_flaw_topics 包含幂等相关主题 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const topics = (result.fatal_flaw_topics || []).join(' ').toLowerCase();
+        return topics.includes('幂等') || topics.includes('idempoten') ||
+               topics.includes('重复') || topics.includes('duplicate') ||
+               topics.includes('回调') || topics.includes('callback');
+      metric: fatal_flaw_topics_mention_idempotency
+
+    # ── 结构一致性 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const hasFatal = result.has_fatal_flaws;
+        const count = result.fatal_flaw_count;
+        return (hasFatal === false && count === 0) || (hasFatal === true && count > 0);
+      metric: fatal_flaw_fields_consistent
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        if (result.has_fatal_flaws === false) {
+          return result.conclusion_verdict === 'pass';
+        }
+        return result.conclusion_verdict === 'conditional-pass' || result.conclusion_verdict === 'reject';
+      metric: verdict_consistent_with_fatal_flaws
+
+    # ── 评审内容完整 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return typeof result.review_content === 'string' && result.review_content.length > 200;
+      metric: review_content_not_empty

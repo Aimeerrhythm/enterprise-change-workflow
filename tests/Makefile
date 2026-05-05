@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full eval-domain-collab eval-tdd eval-impl-verify eval-all-skills all clean _check-api-key
+.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full eval-domain-collab eval-tdd eval-impl-verify eval-writing-plans eval-spec-challenge eval-all-skills all clean _check-api-key
 
 # Layer 1: 静态结构验证（<3s, $0）
 lint: lint-md lint-py
@@ -55,8 +55,16 @@ eval-tdd: _check-api-key
 eval-impl-verify: _check-api-key
 	cd eval/impl-verify && npx promptfoo eval
 
+# Layer 2b: writing-plans 产出物质量 Eval（~5-10min, ~$1-3）
+eval-writing-plans: _check-api-key
+	cd eval/writing-plans && npx promptfoo eval
+
+# Layer 2b: spec-challenge 产出物质量 Eval（~8-15min, ~$2-5）
+eval-spec-challenge: _check-api-key
+	cd eval/spec-challenge && npx promptfoo eval
+
 # Layer 2b: 全部 Skill 行为 Eval
-eval-all-skills: eval-full eval-domain-collab eval-tdd eval-impl-verify
+eval-all-skills: eval-full eval-domain-collab eval-tdd eval-impl-verify eval-writing-plans eval-spec-challenge
 
 # 日常开发：静态 + hook 测试 + 契约 + 模拟器 + P0 场景
 all: lint test-hook test-contracts test-simulator eval-quick
