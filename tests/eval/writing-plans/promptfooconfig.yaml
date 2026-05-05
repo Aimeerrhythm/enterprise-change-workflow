@@ -1,0 +1,44 @@
+# ECW Writing-Plans Artifact Quality Evaluation (L2b)
+# Verifies that writing-plans generates structurally correct Plans at each risk level.
+#
+# Usage:
+#   cd tests/eval/writing-plans && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+#
+# Cost: ~$1-3 per run (3 scenarios × Opus)
+# Time: ~5-10 min
+
+description: "ECW Writing-Plans Artifact Quality Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 16000
+      tools:
+        - file://tools/plan_quality_result.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: writing-plans-quality
+    raw: |
+      [{"role": "system", "content": "{{skill_content}}\n\n## Referenced Templates (inline for eval — normally read from file)\n\n### Plan Header Template\n{{plan_header_template}}\n\n### Task Structure Template\n{{task_structure_template}}\n\n### Plan Quality Checks\n{{plan_quality_checks}}\n\nIMPORTANT EVAL INSTRUCTION: You are in an evaluation environment without file system access. Instead of writing the plan to a file, you MUST call the plan_quality_result tool to report both the structural characteristics of your plan AND the complete plan content in the plan_content field.\n\nDo NOT call Write, Read, Edit, or any file system tools. Do NOT call AskUserQuestion. Analyze the requirement and generate the complete plan content directly, then report via the tool.\n\n## Simulated Project Context\n\n### ecw.yml\n{{ecw_yml}}\n\n### session-state.md\n{{session_state}}\n\n### domain-registry\n{{domain_registry}}\n\n### ecw-path-mappings\n{{path_mappings}}"},{"role": "user", "content": "{{input}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  skill_content:
+    type: file
+    path: ../../../skills/writing-plans/SKILL.md
+  plan_header_template:
+    type: file
+    path: ../../../skills/writing-plans/plan-header-template.md
+  task_structure_template:
+    type: file
+    path: ../../../skills/writing-plans/task-structure-template.md
+  plan_quality_checks:
+    type: file
+    path: ../../../skills/writing-plans/prompts/plan-quality-checks.md

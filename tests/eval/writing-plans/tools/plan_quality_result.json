@@ -1,0 +1,65 @@
+{
+  "name": "plan_quality_result",
+  "description": "Report the structural quality characteristics of the generated implementation plan. Call this tool after completing the plan generation analysis.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "task_count": {
+        "type": "integer",
+        "description": "Total number of implementation tasks in the plan"
+      },
+      "has_plan_header": {
+        "type": "boolean",
+        "description": "Whether the plan starts with the required header (Risk Level, Domains, Implementation Strategy, Goal, Architecture, Tech Stack)"
+      },
+      "every_task_has_tdd_steps": {
+        "type": "boolean",
+        "description": "Whether every task includes RED-GREEN test-first steps (Step 1: failing test, Step 2: verify fail, Step 3: implementation, Step 4: verify pass)"
+      },
+      "every_task_has_file_paths": {
+        "type": "boolean",
+        "description": "Whether every task specifies exact file paths in the Files section (Create/Modify/Test)"
+      },
+      "every_task_has_test_context": {
+        "type": "boolean",
+        "description": "Whether every task includes Test Context (framework, base class, key dependencies)"
+      },
+      "every_task_has_commit_step": {
+        "type": "boolean",
+        "description": "Whether every task ends with a commit step"
+      },
+      "has_rollback_notes": {
+        "type": "boolean",
+        "description": "Whether the plan includes rollback or data compatibility notes (required for P0)"
+      },
+      "implementation_strategy": {
+        "type": "string",
+        "enum": ["direct", "subagent-driven", "undetermined"],
+        "description": "The implementation strategy: direct (Tasks<=3 + files<=5), subagent-driven (Tasks>8 or P0/P1 with 4+ Tasks)"
+      },
+      "requirement_points_covered": {
+        "type": "integer",
+        "description": "Number of distinct requirement points from the input that are addressed by at least one task"
+      },
+      "requirement_points_total": {
+        "type": "integer",
+        "description": "Total number of distinct requirement points identified in the input"
+      },
+      "plan_content": {
+        "type": "string",
+        "maxLength": 50000,
+        "description": "The complete plan content that would be written to .claude/plans/"
+      }
+    },
+    "required": [
+      "task_count",
+      "has_plan_header",
+      "every_task_has_tdd_steps",
+      "every_task_has_file_paths",
+      "implementation_strategy",
+      "requirement_points_covered",
+      "requirement_points_total",
+      "plan_content"
+    ]
+  }
+}
