@@ -13,8 +13,8 @@ templates/        — Configuration and knowledge file templates
   └── rules/      — Engineering rule templates (common/ + language-specific/)
 docs/             — Design reference and advisory documentation
 tests/
-  ├── static/     — Static linting and unit tests (Layer 1)
-  └── eval/       — Behavioral eval scenarios via promptfoo (Layer 2)
+  ├── static/     — Static linting, hook unit tests, contract & simulator tests (Layer 1/1b)
+  └── eval/       — Behavioral eval via promptfoo (Layer 2/2b) + chain harness (Layer 3)
 ```
 
 ## Contribution Types
@@ -86,10 +86,18 @@ make lint
 # Layer 1b: Hook unit tests (<10s, $0)
 make test-hook
 
+# Layer 1b: Data contract + workflow simulator tests (<5s, $0)
+make test-contracts
+make test-simulator
+
 # Layer 2: P0 scenario behavioral eval (~2min, ~$0.50)
 make eval-quick
 
-# Full suite
+# Layer 2b/3: Per-skill evals + chain evals (requires ANTHROPIC_API_KEY)
+make eval-all-skills
+make eval-chain-all
+
+# Full suite (lint + tests + eval-quick)
 make all
 ```
 
@@ -138,6 +146,7 @@ Before submitting changes:
 
 - [ ] `make lint` passes with no new errors
 - [ ] `make test-hook` passes (if hooks were modified)
+- [ ] `make test-contracts` passes (if data contracts or SKILL.md I/O changed)
 - [ ] No new warnings introduced in `lint_skills.py` output
 - [ ] CLAUDE.md updated if new Skills, Artifacts, or Required Files were added
 - [ ] `templates/ecw.yml` updated if new configuration keys were introduced
