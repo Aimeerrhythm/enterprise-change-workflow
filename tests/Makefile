@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full eval-domain-collab eval-tdd eval-impl-verify eval-writing-plans eval-spec-challenge eval-all-skills all clean _check-api-key
+.PHONY: lint lint-md lint-py test-hook test-contracts test-simulator eval-quick eval-full eval-domain-collab eval-tdd eval-impl-verify eval-writing-plans eval-spec-challenge eval-all-skills eval-chain eval-chain-all all clean _check-api-key
 
 # Layer 1: 静态结构验证（<3s, $0）
 lint: lint-md lint-py
@@ -65,6 +65,16 @@ eval-spec-challenge: _check-api-key
 
 # Layer 2b: 全部 Skill 行为 Eval
 eval-all-skills: eval-full eval-domain-collab eval-tdd eval-impl-verify eval-writing-plans eval-spec-challenge
+
+# Layer 3: 单链跨 Skill 兼容性 Eval（~5-15min, ~$2-5）
+# 用法：make eval-chain CHAIN=c1_p0_single_plan_review
+eval-chain: _check-api-key
+	@test -n "$(CHAIN)" || (echo "ERROR: specify chain ID. Usage: make -C tests eval-chain CHAIN=c1_p0_single_plan_review" && exit 1)
+	cd .. && $(PYTHON) -m tests.eval.chain.harness --chain $(CHAIN)
+
+# Layer 3: 全部链（~15-40min, ~$6-15）
+eval-chain-all: _check-api-key
+	cd .. && $(PYTHON) -m tests.eval.chain.harness --all
 
 # 日常开发：静态 + hook 测试 + 契约 + 模拟器 + P0 场景
 all: lint test-hook test-contracts test-simulator eval-quick
