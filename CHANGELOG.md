@@ -4,6 +4,42 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.3.0] - 2026-05-05
+
+### 新功能
+
+- **Workflow Timeline 追踪（Issue #34）** — session-state.md 新增 `ECW:TIMELINE` YAML 块，记录每个 skill 节点的 start/end 时间和 duration_s。由 hook 确定性写入，零 LLM 依赖：PreToolUse 写入当前 skill 的 Start 时自动回填上一个 skill 的 End 和 duration_s。`marker_utils.py` 新增 `append_timeline_entry()`
+- **Routing 链偏离检测（Issue #43）** — `auto-continue.py` PreToolUse 阶段新增 `_check_routing_deviation()`，检测 off-chain（skill 不在 Routing 链中）和 out-of-order（跳过中间 skill）两类偏离。routing 作为 YAML list 处理，偏离检测在字段更新前执行。`_OFF_CHAIN_ALLOWED` 白名单跳过合法链外 skill（cross-review、knowledge-audit 等）。只 log_trace 记录，不 block 不注入 systemMessage
+- **知识库自进化（Issue #46）** — `knowledge-track` Step 4.5 自动生成 code-derived 候选知识条目到 `pending-entries.md`；`knowledge-audit` Step 5.5 在审计结束时引导用户审核 pending entries（accept/reject/write）。候选条目需满足三条件：AI 花 3+ 轮推导、知识库不存在、可复用。CLAUDE.md Artifact 表新增 `pending-entries.md`
+
+### 架构改进
+
+- **结构化 hook 执行日志（Issue #42）** — 新增 `hooks/trace_logger.py`，提供 `log_trace(cwd, hook, event, **kwargs)` 函数，append-only JSONL 输出到 `.claude/ecw/state/hook-trace.jsonl`，512KB 自动 rotation，best-effort 永不抛异常。四个核心 hook 全部集成：auto-continue（字段更新/systemMessage 注入）、dispatcher（profile/sub-hook/block 决策）、post-edit-check（文件路径/warning 类型）、verify-completion（pass/fail/失败项）
+- **impl-orchestration 依赖图下沉到 Python（Issue #41）** — 新增 `hooks/dep_graph.py`，Kahn 拓扑排序 + 文件冲突检测，stdin/stdout JSON 协议。修复 issue 方案中 in_degree 重复计数（显式依赖 + 文件冲突同一对 task）和空 layers 时 `set().union(*[])` crash 问题。`skills/impl-orchestration/SKILL.md` Dependency Graph Construction 部分从自然语言算法改为调用 Python 脚本
+
+### 重构
+
+- **knowledge-track 从会话回溯改为 hook 实时记录（Issue #45）** — 新增 `hooks/knowledge-read-logger.py` Read PostToolUse hook，实时记录知识文件读取事件到 `knowledge-reads.jsonl`（fast-path 过滤非 `.md`/非 `knowledge|rules` 路径，<1ms）。`knowledge-track` SKILL.md Step 1 改为读取 JSONL 日志，保留会话扫描 fallback。`workflow-routes.yml` P0/P1 链路补充 knowledge-track 节点
+
+### 修复
+
+- **impl-verify findings 不稳定落盘（Issue #22）** — 新增 per-round 持久化架构：每个 Round subagent 返回后立即写入 `impl-verify-round{N}.md`，partial failure 时已完成 round 的 findings 不丢失。session-state-format.md 新增 per-round 文件格式模板和 Artifact 表条目
+- **worktree/subagent 结果回传协议（Issue #24）** — 新增 `task-result-schema.md` 定义 `task-result.json` 结构，implementer 在 worktree 中完成后必须写入此文件。coordinator 从 worktree 路径读取作为 Ledger 权威数据源。SKILL.md 和 prompt guide 同步更新。eval prompt 增加 `tool_choice` 强制约束
+- **workflow-id 冲突检测（Issue #31）** — risk-classifier 写入 session-state.md 前先检测同名 workflow-id 目录是否存在，冲突时自动换 ID，避免先碰壁再换触发多余权限提示
+- **baseline commit 注入 cwd 修正（Issue #32）** — `post-edit-check.py` `_inject_baseline_commit` 从 filepath 解析 git root，替代使用插件目录作为 cwd
+
+### 测试
+
+- 新增 `test_trace_logger.py`（20 个测试）— 写入、字段完整性、异常安全、rotation、JSON 格式
+- 新增 `test_dep_graph.py`（33 个测试）— 分层、文件冲突、环检测、边界情况、CLI 协议
+- 新增 `test_timeline.py`（6 个测试）— 首条追加、回填、duration 计算、缺失 block 创建、不重复回填
+- 新增 `test_routing_deviation.py`（12 个测试）— 链上通过、out-of-order、off-chain、白名单、非 skill 步骤
+- 新增 `test_knowledge_read_logger.py` + knowledge-track/knowledge-audit 相关测试
+- 新增 `test_impl_orchestration_result_protocol.py`（Issue #24 结果回传协议）
+- 新增 `test_impl_verify_per_round.py`（Issue #22 per-round 持久化）
+- 新增 Issue #31/#32 回归测试
+- 总测试数：973 → 1082（+109）
+
 ## [1.2.14] - 2026-05-04
 
 ### 修复
@@ -777,6 +813,20 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[1.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.0
+[1.2.14]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.14
+[1.2.13]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.13
+[1.2.12]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.12
+[1.2.11]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.11
+[1.2.10]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.10
+[0.9.9]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.9
+[0.9.8]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.8
+[0.9.7]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.7
+[0.9.6]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.6
+[0.9.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.5
+[0.9.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.4
+[0.9.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.3
+[0.9.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.2
 [0.9.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.1
 [0.9.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.0
 [0.8.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.8.1
