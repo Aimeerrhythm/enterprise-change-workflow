@@ -6,7 +6,7 @@ Dispatch with `subagent_type: "ecw:implementer"` (base instructions auto-injecte
 - ECW domain context (domain name, knowledge file paths, risk level)
 - TDD requirement (if `tdd.enabled` in ecw.yml)
 - Working directory
-- **For worktree dispatch**: "You are in an isolated worktree. Implement, test, and commit. Your changes will be merged after review."
+- **For worktree dispatch**: "You are in an isolated worktree. Implement, test, and commit. Before reporting back, write `.claude/ecw/task-result.json` (see Result File section). Your changes will be merged after review."
 - **Completed layer context**: Briefly list what prior layers implemented (file names + one-line summary), so the implementer understands what already exists
 - **Engineering rules** (if ecw.yml `rules.enabled: true`): Include in prompt: "Engineering rules are at `{rules.path}`. Read applicable rules before implementing. Your code will be verified against these rules in impl-verify Round 4."
 
