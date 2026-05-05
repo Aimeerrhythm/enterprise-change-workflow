@@ -175,10 +175,22 @@ Each implementer:
 
 ### Phase 2: Sequential Merge
 
-After ALL implementers in the layer complete, merge their worktree branches into the current branch **one by one**:
+After ALL implementers in the layer complete, for each worktree branch **in sequence**:
+
+**Step 1 — Read result file (BEFORE merge):**
 
 ```bash
-# For each completed worktree branch:
+cat {worktree_path}/.claude/ecw/task-result.json
+```
+
+Read `./task-result-schema.md` for the full schema. This is the authoritative source for the Subagent Ledger; the Agent tool result text is secondary. If the file is missing:
+- Fall back to `git log {worktree_branch}` to infer what was done
+- Write `.claude/ecw/session-data/{wf-id}/task-{N}-aggregation-warning.md` to record the gap explicitly
+- Continue merge (do not block the layer)
+
+**Step 2 — Merge the branch:**
+
+```bash
 git merge <worktree-branch> --no-edit
 ```
 
@@ -226,6 +238,7 @@ Read `./prompts/code-quality-review-template.md` for the P0 code quality review 
 
 - Mark all layer tasks complete via TaskUpdate
 - **[MANDATORY] Update Subagent Ledger** in `session-state.md` — batch all layer tasks in a single Edit:
+  - Data source: `task-result.json` (read in Phase 2 Step 1). If file was missing, use git log–inferred data and mark with `[inferred]` in the notes column
   - P0: record implementer + spec-reviewer + code-quality per task
   - P1: record implementer + spec-reviewer per task
   - Include worktree branch name in notes column for traceability
@@ -299,6 +312,7 @@ Reference `workflow-routes.yml` `impl_strategy` section for authoritative rules.
 
 | Scenario | Handling |
 |----------|---------|
+| `task-result.json` missing after worktree merge | Fall back to `git log {worktree-branch}` to infer task result. Write `.claude/ecw/session-data/{wf-id}/task-{N}-aggregation-warning.md`. Mark Ledger entry with `[inferred]`. Continue processing — do not block the layer |
 | Implementer subagent fails or returns empty | Record `FAILED` in Subagent Ledger → retry once with same model → still fails: escalate model (sonnet→opus) → still fails: notify user and mark task BLOCKED |
 | Spec reviewer returns empty or malformed | Retry once → still fails: coordinator performs simplified spec check inline (verify file changes match task requirements) |
 | Code quality reviewer fails (P0 only) | Retry once → still fails: skip code quality review for this task with `[Warning: code quality review unavailable for Task N]`, continue to next task. impl-verify Round 4 will catch quality issues |
@@ -331,3 +345,4 @@ When `parallel: false`, the orchestrator uses the serial fallback mode throughou
 - `prompts/implementer-prompt-guide.md` — Prompt construction, model selection, status handling
 - `prompts/code-quality-review-template.md` — P0 code quality review dispatch template
 - `prompts/anti-patterns.md` — Never rules + common rationalizations
+- `task-result-schema.md` — Worktree result file schema, coordinator read protocol, missing-file fallback
