@@ -18,7 +18,8 @@ providers:
       tools:
         - file://tools/coordinator_result_protocol.json
       tool_choice:
-        type: any
+        type: tool
+        name: coordinator_result_protocol
 
 prompts:
   - id: impl-orchestration-coordinator
