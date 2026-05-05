@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 HOOKS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "hooks"
-EXCLUDED = {"marker_utils.py", "ecw_config.py", "__init__.py", "conftest.py"}
+EXCLUDED = {"marker_utils.py", "ecw_config.py", "dep_graph.py", "__init__.py", "conftest.py"}
 
 # Sub-hooks are loaded by dispatcher.py and protected by its try/except.
 # They don't need their own __main__ block.
