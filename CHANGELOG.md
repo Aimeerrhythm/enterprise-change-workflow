@@ -98,7 +98,7 @@
 - `test_post_edit_check.py` 新增 3 个测试（Edit 读实际文件校验、valid/invalid YAML 场景）
 - 总测试数：968 → 973
 
-
+## [1.2.12] - 2026-04-30
 
 ### 新增
 
@@ -834,6 +834,15 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 [1.2.12]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.12
 [1.2.11]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.11
 [1.2.10]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.10
+[1.2.9]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.9
+[1.2.8]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.8
+[1.2.7]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.7
+[1.2.6]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.6
+[1.2.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.5
+[1.2.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.4
+[1.2.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.3
+[1.2.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.2
+[1.2.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.2.1
 [0.9.9]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.9
 [0.9.8]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.8
 [0.9.7]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v0.9.7
