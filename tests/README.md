@@ -132,6 +132,14 @@ make -C tests eval-quick  # P0 场景 eval（~2min, ~$0.50）
 make -C tests eval-full   # 全部 21 场景（~5min, ~$1.50）
 make -C tests all         # lint + test-hook + eval-quick
 make -C tests clean       # 清理缓存
+
+# Layer 2b: 产出物质量 eval（按需，需 API Key）
+make -C tests eval-writing-plans    # writing-plans 产出物 eval（~5-10min, ~$1-3）
+make -C tests eval-spec-challenge   # spec-challenge 评审质量 eval（~8-15min, ~$2-5）
+
+# Layer 3: 链式兼容性 eval（按需，需 API Key）
+make -C tests eval-chain CHAIN=c1_p0_single_plan_review   # 单链（~5-15min, ~$2-5）
+make -C tests eval-chain-all                               # 全部链（~15-40min, ~$6-15）
 ```
 
 ## 验证层级详解
@@ -224,6 +232,94 @@ python3 tests/static/lint_skills.py --quiet  # 仅输出错误
 
 ```bash
 cd tests/eval && npx promptfoo eval && npx promptfoo view
+```
+
+### Layer 2b: 产出物质量 Eval
+
+**文件**: `eval/writing-plans/` + `eval/spec-challenge/` | **耗时**: 5-15min/skill | **成本**: $1-5/run | **可靠性**: 70-80%
+
+验证 writing-plans 和 spec-challenge 的**产出物结构化质量**，而非路由决策。与 Layer 2 的区别：
+
+| 维度 | Layer 2 (risk-classifier) | Layer 2b (writing-plans / spec-challenge) |
+|------|--------------------------|------------------------------------------|
+| 验证目标 | 路由决策正确性（分类 + 路由链） | 产出物质量指标（结构、深度、覆盖度） |
+| 输入 | 需求/Bug 描述 | 需求 + 项目上下文（ecw.yml、domain-registry） |
+| 输出捕获 | classify_result tool（6 个字段） | plan_quality_result / spec_challenge_quality_result tool |
+| 覆盖场景 | 21 个路由场景 | writing-plans 3 个场景（P0/P1/P2）；spec-challenge 4 个场景（true-pos/false-pos） |
+
+**writing-plans eval**（`eval/writing-plans/`）验证：
+
+- P0 计划：task_count ≥ N、has_rollback_notes、every_task_has_tdd_steps、subagent-driven 策略
+- P1 计划：跨域文件覆盖、分布式协调提及
+- P2 计划：direct 策略、task_count ≤ 5、无 rollback notes
+
+**spec-challenge eval**（`eval/spec-challenge/`）验证 2×2 矩阵：
+
+| 场景类型 | 目的 |
+|---------|------|
+| S01 干净计划（P0）| true-negative：评审者不误报 fatal flaw，结论 pass |
+| S02 planted rollback defect（P1 跨域）| true-positive：fatal_flaw_topics 含分布式/回滚关键词 |
+| S03 planted idempotency defect（P0）| true-positive：fatal_flaw_topics 含幂等关键词 |
+| S04 最终一致性（false-positive control）| 评审者不误判含幂等+重试+对账的 MQ 方案为 fatal flaw |
+
+```bash
+make -C tests eval-writing-plans   # writing-plans 产出物质量 eval
+make -C tests eval-spec-challenge  # spec-challenge 评审质量 eval
+```
+
+### Layer 3: 链式兼容性 Eval
+
+**文件**: `eval/chain/` | **耗时**: 5-15min/链 | **成本**: $2-5/链 | **可靠性**: 75-85%
+
+验证**多 Skill 跨步骤产出物兼容性**——Step N 的输出能否被 Step N+1 正确消费。与 Layer 2/2b 的区别：
+
+| 维度 | Layer 2/2b | Layer 3 |
+|------|-----------|---------|
+| 验证粒度 | 单 Skill 行为 | 跨 Skill 产出物流转 |
+| 运行方式 | promptfoo（Node.js）| Python harness（`tests.eval.chain`） |
+| 核心问题 | "这个 Skill 分类/产出物是否正确？" | "上游产出物能否被下游正确消费？" |
+| 典型缺陷 | 路由规则变更未同步 | WP 输出字段名变更 → SC 上下文注入断裂 |
+
+**已实现的链（`eval/chain/chains/`）：**
+
+| 链 ID | 步骤 | 场景 | 断言数 |
+|-------|------|------|--------|
+| `c1_p0_single_plan_review` | RC → WP → SC | P0 单域支付退款 | 18 |
+| `c2_p1_cross_domain_plan` | RC → WP → SC | P1 跨域订单取消+库存释放 | 18 |
+| `c3_bug_debug` | RC → SD | Bug：库存超卖（并发）| 10 |
+
+**harness 架构：**
+
+```
+chain YAML（chains/*.yaml）
+  ├── steps[]: skill + skill_files + tool_schema + context + input
+  │   └── context 支持 from_step: {from_step: x, field: y}（跨步骤引用）
+  └── assertions[]: mini-DSL（==, !=, contains, >=, <=, >, <）
+
+harness.py  →  skill_loader.py（加载 SKILL.md + extra_files）
+            →  context_builder.py（fixture + 跨步骤引用注入）
+            →  Anthropic API（tool_choice: any，强制 tool_use 输出）
+            →  assertions.py（字段级断言验证）
+```
+
+**运行方式：**
+
+```bash
+# 运行单链（从项目根目录）
+make -C tests eval-chain CHAIN=c1_p0_single_plan_review
+
+# 运行全部链（~15-40min, ~$6-15）
+make -C tests eval-chain-all
+
+# 直接调用 harness
+python -m tests.eval.chain.harness --chain c1_p0_single_plan_review
+python -m tests.eval.chain.harness --all --runs 3
+```
+
+**单元测试（不调用 API）：**
+
+```bash
+python3 -m pytest tests/eval/chain/ -v  # 61个单元测试，<1s
 ```
 
 ## 文件依赖地图
@@ -667,12 +763,50 @@ tests/
     │   ├── promptfooconfig.yaml
     │   ├── scenarios/
     │   └── tools/
+    ├── impl-orchestration/           # impl-orchestration 行为 eval
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
     ├── impl-verify/                  # impl-verify skill 专项 eval
     │   ├── promptfooconfig.yaml
     │   ├── scenarios/
     │   └── tools/
-    └── tdd/                          # tdd skill 专项 eval
-        ├── promptfooconfig.yaml
-        ├── scenarios/
-        └── tools/
+    ├── tdd/                          # tdd skill 专项 eval
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
+    ├── writing-plans/                # writing-plans 产出物质量 eval (Layer 2b)
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
+    │       └── plan_quality_result.json
+    ├── spec-challenge/               # spec-challenge 评审质量 eval (Layer 2b)
+    │   ├── promptfooconfig.yaml
+    │   ├── scenarios/
+    │   └── tools/
+    │       └── spec_challenge_quality_result.json
+    └── chain/                        # Layer 3: 链式兼容性 eval
+        ├── __init__.py
+        ├── harness.py                # 链执行引擎（CLI + run_chain API）
+        ├── skill_loader.py           # SKILL.md + extra_files + prompt_file 加载
+        ├── context_builder.py        # fixture + 跨步骤引用注入
+        ├── assertions.py             # 断言引擎（mini-DSL，无 eval() 注入风险）
+        ├── chains/                   # 链定义 YAML
+        │   ├── c1_p0_single_plan_review.yaml   # RC→WP→SC，P0 单域，18 断言
+        │   ├── c2_p1_cross_domain_plan.yaml    # RC→WP→SC，P1 跨域，18 断言
+        │   └── c3_bug_debug.yaml               # RC→SD，Bug 场景，10 断言
+        ├── fixtures/                 # 模拟项目上下文（被链 YAML 引用）
+        │   ├── ecw_yml_java_monolith.yaml
+        │   ├── domain_registry_5domains.md
+        │   └── path_mappings_standard.md
+        ├── tools/                    # 链专属 tool schemas
+        │   └── debug_investigation_result.json
+        ├── results/                  # 运行结果 JSON（gitignored）
+        ├── test_skill_loader.py      # 8 个单元测试
+        ├── test_context_builder.py   # 15 个单元测试
+        ├── test_assertions.py        # 27 个单元测试
+        ├── test_harness.py           # 11 个单元测试
+        ├── test_chain_c1.py          # 39 个单元测试（含 prompt_file 机制）
+        ├── test_chain_c2.py          # 25 个单元测试
+        └── test_chain_c3.py          # 28 个单元测试（含 tool schema 结构验证）
 ```
