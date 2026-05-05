@@ -83,9 +83,9 @@ To prevent context overflow in the coordinator, each verification Round is dispa
 **Coordinator responsibilities:**
 1. Execute `git diff --name-only` to get the changed file list (lightweight)
 2. Dispatch Round 1-4 as **parallel** subagents (4 Agent tool calls in a single message)
-3. Collect structured findings YAML from each subagent
-4. Merge findings, deduplicate across Rounds
-5. **Persist findings**: Write merged findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` **before** creating any fix Tasks or presenting to user. Format per finding: severity, Round, file:line, description, expected vs actual, fix suggestion. Update this file after each re-verification round (append new findings, mark fixed ones as `[FIXED]`). This ensures findings survive context compaction.
+3. **Per-round immediate persistence**: As soon as each Round subagent returns, immediately write its results to an independent file: `.claude/ecw/session-data/{workflow-id}/impl-verify-round{N}.md` (where N = round number). Do NOT wait for all rounds to complete before persisting — each round is persisted independently. This ensures that completed round results survive even if subsequent rounds fail, the merge step errors, or context is compacted mid-verification.
+4. Merge findings from all persisted round files, deduplicate across Rounds
+5. **Persist merged findings**: Write merged findings to `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` **before** creating any fix Tasks or presenting to user. Format per finding: severity, Round, file:line, description, expected vs actual, fix suggestion. Update this file after each re-verification round (append new findings, mark fixed ones as `[FIXED]`). This ensures a complete view survives context compaction.
 6. Present findings to user, handle convergence loop
 
 **Each Round subagent is dispatched with `subagent_type: "ecw:impl-verifier"`**, which auto-injects the agent's base instructions (verification approach, output format, reading limits). Coordinator passes round-specific reference material and verification checklist in the `prompt` parameter.
@@ -148,8 +148,9 @@ Read `./prompts/round-checklists.md` — Round 4 section for the engineering sta
 
 1. Collect all files involved in fixes
 2. Re-run related dimension checks on those files (not a full re-run — only the affected Rounds)
-3. If this round still has must-fix findings, continue fixing and trigger next round
-4. If user also addressed suggestion-level issues, re-verification covers those changes too (ensure no new issues introduced)
+3. Persist each re-verification round result to `impl-verify-round{N}.md` (overwrite the previous round file for that dimension with updated status). Already persisted round files for unaffected dimensions remain unchanged.
+4. If this round still has must-fix findings, continue fixing and trigger next round
+5. If user also addressed suggestion-level issues, re-verification covers those changes too (ensure no new issues introduced)
 
 **Incremental re-verification**: When dispatching Round N+, only dispatch subagents for Rounds that had must-fix findings. Pass only the files involved in fixes (incremental diff), not the full change set. This reduces subagent context consumption during convergence.
 
@@ -202,11 +203,12 @@ Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. 
 
 | Scenario | Handling |
 |----------|---------|
-| Round subagent returns empty or malformed YAML | Record `FAILED` in findings → retry once with explicit output format instructions → still fails: coordinator executes that Round inline (fallback to non-subagent mode for that Round only) |
+| Round subagent returns empty or malformed YAML | Record `FAILED` in findings → persist failure marker to `impl-verify-round{N}.md` with `status: failed` → retry once with explicit output format instructions → still fails: coordinator executes that Round inline (fallback to non-subagent mode for that Round only). Already persisted round files from completed rounds remain intact. |
 | All 4 Round subagents fail | Notify user: `[DEGRADED: automated verification unavailable]` → suggest manual code review or retry |
 | Knowledge file missing (Round 2: `business-rules.md`, `data-model.md`, `knowledge-summary.md`) | Skip Round 2 with `[Warning: domain knowledge files not found, Round 2 skipped]` → continue with Rounds 1, 3, 4 |
 | Requirement/Plan file missing | Skip corresponding Round (1 or 3) with warning → execute remaining Rounds |
-| `impl-verify-findings.md` write failure | Retry once → still fails: output findings in conversation to preserve for convergence tracking |
+| `impl-verify-round{N}.md` write failure | Retry once → still fails: keep result in coordinator memory and note `[Warning: Round {N} persistence failed, result held in-session only]` |
+| `impl-verify-findings.md` merge/write failure | Retry once → still fails: output findings in conversation. Per-round files already persisted remain available as fallback for downstream consumers. |
 | `git diff` command failure | Verify git state with `git status` → if not in a git repo or no changes: notify user and exit |
 
 ## Constraints
