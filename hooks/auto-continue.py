@@ -28,6 +28,7 @@ from marker_utils import (  # noqa: E402
     update_status_fields,
     validate_status,
 )
+from trace_logger import log_trace  # noqa: E402
 
 # Completed-phase value written to Current Phase after a skill finishes.
 # Key: ECW skill name (as passed in tool_input.skill).
@@ -180,7 +181,7 @@ def _next_skill_from_routing(routing, current_skill):
     return None
 
 
-def _handle_pre_tool_use(state_path, skill_name):
+def _handle_pre_tool_use(state_path, skill_name, cwd=""):
     """Update Current Phase (in-progress), Next, and Working Mode at skill entry.
 
     Hard-codes the in-progress state so these fields are always accurate regardless
@@ -212,6 +213,13 @@ def _handle_pre_tool_use(state_path, skill_name):
 
         with open(state_path, "w", encoding="utf-8") as f:
             f.write(content)
+
+        log_trace(cwd, "auto-continue", "PreToolUse",
+                  skill=skill_name,
+                  action="update_fields",
+                  fields_updated={**({"current_phase": in_progress_phase} if in_progress_phase else {}),
+                                  **({"next": next_skill} if next_skill else {}),
+                                  **({"mode": mode} if mode else {})})
     except Exception:
         pass  # Never block workflow
 
@@ -271,7 +279,7 @@ def main():
     hook_event = input_data.get("hook_event_name", "PostToolUse")
 
     if hook_event == "PreToolUse":
-        _handle_pre_tool_use(state_path, skill_name)
+        _handle_pre_tool_use(state_path, skill_name, cwd=cwd)
         print(json.dumps({"result": "continue"}))
         return
 
@@ -309,6 +317,8 @@ def main():
     # Phase/mode updates (above) still apply; only skip systemMessage injection so the
     # "do not ask for confirmation" directive does not override the SKILL.md flow.
     if skill_name == "ecw:spec-challenge":
+        log_trace(cwd, "auto-continue", "PostToolUse",
+                  skill=skill_name, action="skip_inject", reason="spec-challenge")
         print(json.dumps({"result": "continue"}))
         return
 
@@ -333,6 +343,9 @@ def main():
                     "were used (hit/miss/redundant/misleading). "
                     "Do not ask for confirmation."
                 )
+                log_trace(cwd, "auto-continue", "PostToolUse",
+                          skill=skill_name, action="inject_knowledge_track",
+                          risk_level=risk_level)
                 print(json.dumps({"systemMessage": kt_msg}, ensure_ascii=False))
                 return
 
@@ -349,6 +362,11 @@ def main():
         "Do not ask for confirmation or output transition text — "
         "the user already approved the full routing chain during Phase 1."
     )
+
+    log_trace(cwd, "auto-continue", "PostToolUse",
+              skill=skill_name, action="inject_system_message",
+              next_target=next_skill or None,
+              routing_remaining=remaining or None)
 
     print(json.dumps({"systemMessage": " ".join(parts)}, ensure_ascii=False))
 

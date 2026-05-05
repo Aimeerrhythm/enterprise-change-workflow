@@ -18,6 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import read_marker_section  # noqa: E402
+from trace_logger import log_trace  # noqa: E402
 
 try:
     import yaml as _yaml
@@ -269,6 +270,8 @@ def check(input_data, config=None):
     if filepath.endswith("session-state.md") and _YAML_AVAILABLE:
         yaml_warnings = _validate_session_state_yaml(tool_input, tool_name, filepath)
         if yaml_warnings:
+            log_trace(cwd, "post-edit-check", "PostToolUse",
+                      file=rel_path, warnings=["yaml_invalid"])
             msg = "**[ECW YAML Error]** session-state.md 的 marker 区块包含无效 YAML，请立即修正：\n\n"
             msg += "\n".join(f"- {w}" for w in yaml_warnings)
             return ("continue", msg)
@@ -293,6 +296,24 @@ def check(input_data, config=None):
 
     if not warnings:
         return ("continue", "")
+
+    # Summarize warning types for trace (not the full text)
+    warning_types = []
+    for w in warnings:
+        if "catch" in w:
+            warning_types.append("empty_catch")
+        elif "凭据" in w or "secret" in w.lower():
+            warning_types.append("hardcoded_secret")
+        elif "AWS" in w:
+            warning_types.append("aws_key")
+        elif "私钥" in w or "PRIVATE KEY" in w:
+            warning_types.append("private_key")
+        elif "TODO" in w or "FIXME" in w:
+            warning_types.append("todo_comment")
+        else:
+            warning_types.append("other")
+    log_trace(cwd, "post-edit-check", "PostToolUse",
+              file=rel_path, warnings=warning_types)
 
     msg = _MESSAGES["quality_gate_header"]
     msg += "\n".join(f"- {w}" for w in warnings[:5])

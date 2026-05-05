@@ -26,6 +26,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ecw_config import read_ecw_config as _read_ecw_config  # noqa: E402
 from marker_utils import CheckpointStore  # noqa: E402
+from trace_logger import log_trace  # noqa: E402
 
 try:
     import yaml
@@ -122,6 +123,8 @@ def check(input_data, config=None):
     if input_data.get("tool_name") == "Skill":
         verify_status = check_impl_verify_convergence(cwd)
         if verify_status == "has-must-fix":
+            log_trace(cwd, "verify-completion", "PreToolUse",
+                      action="block", reason="impl-verify-must-fix")
             return ("block", _MESSAGES["impl_verify_must_fix"])
         return ("continue", "")
 
@@ -169,7 +172,14 @@ def check(input_data, config=None):
     all_warnings = (compile_warnings or []) + (test_warnings or [])
 
     if issues:
+        log_trace(cwd, "verify-completion", "PreToolUse",
+                  action="block", issues_count=len(issues),
+                  issues_summary=[i[:120] for i in issues[:5]])
         return ("block", _format_fail_message(issues))
+    log_trace(cwd, "verify-completion", "PreToolUse",
+              action="pass", modified=len(modified), deleted=len(deleted),
+              has_warnings=bool(all_warnings),
+              has_knowledge_reminders=bool(knowledge_reminders))
     return ("continue", _format_pass_message(
         len(modified), len(deleted), all_warnings, knowledge_reminders, test_reminders,
         impl_verify_ran, km_reminders
