@@ -18,7 +18,7 @@ HOOKS_DIR = ROOT / "hooks"
 TEMPLATES_DIR = ROOT / "templates"
 DOCS_DIR = ROOT / "docs"
 
-SHARED_MODULES = {"marker_utils.py", "ecw_config.py"}
+SHARED_MODULES = {"marker_utils.py", "ecw_config.py", "dep_graph.py"}
 SKILL_LINE_LIMIT = 500
 VALID_AGENT_MODELS = {"haiku", "sonnet", "opus"}
 
