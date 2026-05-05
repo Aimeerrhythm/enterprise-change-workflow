@@ -112,6 +112,9 @@ skills:
     writes:
       - key: spec-challenge-report
         path_pattern: "spec-challenge-report.md"
+      - key: user-decisions
+        path_pattern: "spec-challenge-report.md"
+        condition: "User Decisions table appended to spec-challenge-report.md at Response Summary time"
     reads:
       - key: plan-file
     subagent_dispatches:
