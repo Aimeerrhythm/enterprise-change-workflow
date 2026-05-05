@@ -1,0 +1,169 @@
+# c1: P0 Single Domain Plan Review Chain
+# End-to-end chain: risk-classifier → writing-plans → spec-challenge
+# Validates artifact compatibility across the three-step P0 planning flow
+# for a single-domain payment refund requirement.
+#
+# Usage:
+#   python -m tests.eval.chain.harness --chain c1_p0_single_plan_review
+#
+# Prerequisites: ANTHROPIC_API_KEY set
+# Cost: ~$2-5 per run (Opus for spec-challenge)
+# Time: ~5-15 min
+
+name: "c1: P0 Single Domain Plan Review"
+
+steps:
+  # ── Step 1: Risk Classification ──────────────────────────────────────────
+  - skill: risk-classifier
+    skill_files:
+      - workflow-routes.yml
+    tool_schema: tools/classify_result.json
+    max_tokens: 4000
+    eval_instruction: |
+      Classify the risk level for this requirement. You MUST populate the
+      `domains` field with the list of affected domain names (e.g. ["payment"]).
+      Call classify_result tool with all required fields including domains.
+    context:
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+      domain_registry: fixtures/domain_registry_5domains.md
+      path_mappings: fixtures/path_mappings_standard.md
+    input: |
+      需求：新增支付退款逆向流程。用户在 APP 端可以对已支付订单发起退款申请，
+      系统需要验证退款条件（订单状态、退款时限、退款金额），调用支付网关退款接口，
+      更新订单状态，并在退款完成后发送通知。
+
+      关键约束：
+      1. 退款接口必须幂等（重复调用不重复退款）
+      2. 部分退款支持（退款金额 ≤ 已支付金额 - 已退款金额）
+      3. 退款超时需支持人工介入
+
+      技术约束：所有退款逻辑在 payment 域内完成。订单状态通过 payment 域的
+      OrderQueryFacade 查询（只读），退款通知通过 payment 域发送 MQ 消息
+      （notification 域为 MQ 消费方，本次变更不修改 notification 域代码）。
+
+  # ── Step 2: Implementation Plan ──────────────────────────────────────────
+  - skill: writing-plans
+    skill_files:
+      - plan-header-template.md
+      - task-structure-template.md
+    tool_schema: writing-plans/tools/plan_quality_result.json
+    max_tokens: 16000
+    eval_instruction: |
+      Generate a complete implementation plan for the payment refund requirement.
+      After completing the plan, call the plan_quality_result tool to report both
+      structural characteristics AND the complete plan content in the plan_content field.
+    context:
+      session_state:
+        from_step: risk-classifier
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+      domain_registry: fixtures/domain_registry_5domains.md
+      path_mappings: fixtures/path_mappings_standard.md
+    input: |
+      需求：新增支付退款逆向流程。用户在 APP 端可以对已支付订单发起退款申请，
+      系统需要验证退款条件（订单状态、退款时限、退款金额），调用支付网关退款接口，
+      更新订单状态，并在退款完成后发送通知。
+
+      关键约束：
+      1. 退款接口必须幂等（重复调用不重复退款）
+      2. 部分退款支持（退款金额 ≤ 已支付金额 - 已退款金额）
+      3. 退款超时需支持人工介入
+
+      技术约束：所有退款逻辑在 payment 域内完成。订单状态通过 payment 域的
+      OrderQueryFacade 查询（只读），退款通知通过 payment 域发送 MQ 消息
+      （notification 域为 MQ 消费方，本次变更不修改 notification 域代码）。
+
+  # ── Step 3: Adversarial Review ───────────────────────────────────────────
+  # Uses agents/spec-challenge.md (not SKILL.md, which is the coordinator).
+  # The coordinator dispatches the agent; here we directly invoke the agent.
+  - skill: spec-challenge
+    prompt_file: agents/spec-challenge.md
+    skill_files:
+      - prompts/common-rationalizations.md
+    tool_schema: spec-challenge/tools/spec_challenge_quality_result.json
+    max_tokens: 16000
+    eval_instruction: |
+      You are the adversarial technical review agent. The plan document to review
+      is provided in the '## Simulated Project Context → ### plan_document' section.
+      Review it along 4 dimensions (Accuracy & Reliability, Information Quality &
+      Actionability, Completeness, Risk Balance). For each dimension raise at least
+      1 issue. Then call the spec_challenge_quality_result tool with your findings.
+      Do NOT call AskUserQuestion, Agent, or any file system tools.
+    context:
+      plan_document:
+        from_step: writing-plans
+        field: plan_content
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+    input: |
+      请对上下文中 '### plan_document' 区域提供的实现方案进行独立对抗性评审，
+      并调用 spec_challenge_quality_result 工具报告你的评审结果。
+
+# ── Cross-Step Assertions ────────────────────────────────────────────────────
+# Verify artifact compatibility: output of step N is correctly consumed by step N+1.
+assertions:
+  # Step 1 (risk-classifier) output quality
+  - name: rc_classifies_as_p0
+    check: {field: "risk-classifier.risk_level", op: "==", value: "P0"}
+
+  - name: rc_single_domain
+    check: {field: "risk-classifier.mode", op: "==", value: "single-domain"}
+
+  - name: rc_classifies_as_requirement
+    check: {field: "risk-classifier.change_type", op: "==", value: "requirement"}
+
+  - name: rc_identifies_payment_domain
+    # domains is stored as str(list), e.g. "['payment']"; contains checks substring
+    check: {field: "risk-classifier.domains", op: contains, value: "payment"}
+
+  - name: rc_routes_to_writing_plans
+    check: {field: "risk-classifier.routing", op: contains, value: "writing-plans"}
+
+  - name: rc_routes_to_spec_challenge
+    check: {field: "risk-classifier.routing", op: contains, value: "spec-challenge"}
+
+  # Step 2 (writing-plans) — reflects RC P0 classification
+  - name: wp_has_plan_header
+    check: {field: "writing-plans.has_plan_header", op: "==", value: "True"}
+
+  - name: wp_every_task_has_tdd_steps_for_p0
+    check: {field: "writing-plans.every_task_has_tdd_steps", op: "==", value: "True"}
+
+  - name: wp_has_rollback_notes_for_p0
+    # P0 triggers mandatory rollback notes in writing-plans — verifies RC→WP handoff
+    check: {field: "writing-plans.has_rollback_notes", op: "==", value: "True"}
+
+  - name: wp_task_depth_sufficient_for_p0
+    # P0 refund: ≥4 tasks (idempotency, amount validation, gateway call, notification)
+    # task_count ≥ 4 guarantees subagent-driven strategy per workflow-routes.yml rules
+    check: {field: "writing-plans.task_count", op: ">=", value: 4}
+
+  - name: wp_subagent_driven_strategy_for_p0
+    # P0 + task_count ≥ 4 → subagent-driven per impl_strategy rules
+    check: {field: "writing-plans.implementation_strategy", op: "==", value: "subagent-driven"}
+
+  # Step 2→3 compatibility: plan_content passed to spec-challenge
+  - name: wp_plan_content_exists_for_sc
+    check: {field: "writing-plans.plan_content", op: "!=", value: ""}
+
+  - name: wp_plan_content_has_task_structure
+    # plan_content must have Task sections (not just a header) for SC to review
+    check: {field: "writing-plans.plan_content", op: contains, value: "Task"}
+
+  # Step 3 (spec-challenge) — consumed WP plan_content
+  - name: sc_review_content_not_empty
+    check: {field: "spec-challenge.review_content", op: "!=", value: ""}
+
+  - name: sc_review_references_plan_topic
+    # SC review mentions the plan topic — weak proof of plan consumption
+    check: {field: "spec-challenge.review_content", op: contains, value: "退款"}
+
+  - name: sc_review_references_task_structure
+    # SC review mentions "Task" — stronger proof SC read the plan structure (not just topic)
+    check: {field: "spec-challenge.review_content", op: contains, value: "Task"}
+
+  - name: sc_fatal_flaw_count_nonnegative
+    check: {field: "spec-challenge.fatal_flaw_count", op: ">=", value: 0}
+
+  - name: sc_does_not_reject_sound_plan
+    # A dynamically generated P0 plan may get conditional-pass (acceptable);
+    # outright reject would indicate the chain is broken (truncated plan_content, etc.)
+    check: {field: "spec-challenge.conclusion_verdict", op: "!=", value: "reject"}
