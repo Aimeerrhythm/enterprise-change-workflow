@@ -141,6 +141,27 @@ You are a single-task agent. Respect these boundaries strictly:
 - **Do not load or read SKILL.md files** — your instructions are complete as provided
 - If you encounter a situation requiring orchestrator intervention, report it in your output status (BLOCKED or NEEDS_CONTEXT) rather than attempting to self-orchestrate
 
+## Result File (Mandatory for Worktree Dispatch)
+
+**If you are running in a worktree** (your prompt says "You are in an isolated worktree"), you MUST write `.claude/ecw/task-result.json` in the current directory BEFORE reporting back. This is the coordinator's authoritative record — do not skip it.
+
+```bash
+cat > .claude/ecw/task-result.json << 'RESULT_EOF'
+{
+  "task_id": "<full task label from your Task Description>",
+  "status": "completed",
+  "summary": "<one-sentence: what you built>",
+  "files_changed": ["<path1>", "<path2>"],
+  "commits": ["<sha> <message>"],
+  "error": null
+}
+RESULT_EOF
+```
+
+For `status: failed` or `status: blocked`, set `error` to a concise description of what went wrong.
+
+Create `.claude/ecw/` if it doesn't exist: `mkdir -p .claude/ecw`
+
 ## Report Format
 
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
