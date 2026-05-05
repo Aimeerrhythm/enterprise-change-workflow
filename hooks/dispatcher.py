@@ -28,6 +28,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import find_session_state, parse_status  # noqa: E402
 from ecw_config import read_ecw_config  # noqa: E402
+from trace_logger import log_trace  # noqa: E402
 
 
 # ── Risk level → profile mapping ──
@@ -146,7 +147,9 @@ def main():
     config = read_ecw_config(cwd) if cwd else {}
     config["_runtime_profile"] = profile
 
+    tool_name = input_data.get("tool_name", "")
     system_messages = []
+    sub_hooks_fired = []
 
     for module_filename, profiles, matcher in SUB_HOOKS:
         if profile not in profiles:
@@ -160,9 +163,14 @@ def main():
                 continue
 
             action, message = mod.check(input_data, config)
+            sub_hooks_fired.append(module_filename)
 
             if action == "block":
                 # First blocker wins — output deny and exit
+                log_trace(cwd, "dispatcher", "PreToolUse",
+                          tool=tool_name, profile=profile,
+                          sub_hooks_fired=sub_hooks_fired,
+                          blocked=True, blocker=module_filename)
                 result = {
                     "hookSpecificOutput": {
                         "hookEventName": "PreToolUse",
@@ -178,6 +186,11 @@ def main():
 
         except Exception as e:
             sys.stderr.write(f"ECW dispatcher: sub-hook '{module_filename}' error: {e}\n")
+
+    log_trace(cwd, "dispatcher", "PreToolUse",
+              tool=tool_name, profile=profile,
+              sub_hooks_fired=sub_hooks_fired,
+              blocked=False)
 
     # All sub-hooks passed
     if system_messages:
