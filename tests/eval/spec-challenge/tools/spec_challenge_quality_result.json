@@ -1,0 +1,49 @@
+{
+  "name": "spec_challenge_quality_result",
+  "description": "Report the findings of adversarial plan review. Call this tool after completing the review analysis.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "has_fatal_flaws": {
+        "type": "boolean",
+        "description": "Whether any fatal flaws were found that would make the plan unreliable if not resolved"
+      },
+      "fatal_flaw_count": {
+        "type": "integer",
+        "description": "Number of fatal flaws identified (0 if none)"
+      },
+      "fatal_flaw_topics": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "One-phrase topic for each fatal flaw, e.g. ['missing idempotency in payment retry', 'no distributed rollback for inventory']. Empty array if no fatal flaws."
+      },
+      "improvement_count": {
+        "type": "integer",
+        "description": "Number of improvement suggestions identified"
+      },
+      "blind_spot_count": {
+        "type": "integer",
+        "description": "Number of blind spot annotations identified (scenarios the plan does not cover)"
+      },
+      "conclusion_verdict": {
+        "type": "string",
+        "enum": ["pass", "conditional-pass", "reject"],
+        "description": "The review conclusion: pass (no fatal flaws, plan is sound), conditional-pass (must resolve F1-FN before implementation), reject (fundamental rework required)"
+      },
+      "review_content": {
+        "type": "string",
+        "maxLength": 30000,
+        "description": "The complete review report text following the prescribed output format (Fatal Flaws, Improvement Suggestions, Blind Spot Annotations, Conclusion)"
+      }
+    },
+    "required": [
+      "has_fatal_flaws",
+      "fatal_flaw_count",
+      "fatal_flaw_topics",
+      "improvement_count",
+      "blind_spot_count",
+      "conclusion_verdict",
+      "review_content"
+    ]
+  }
+}
