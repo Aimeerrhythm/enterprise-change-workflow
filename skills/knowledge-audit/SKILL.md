@@ -105,6 +105,45 @@ Generated: YYYY-MM-DD HH:MM
 2. [Specific suggestion]
 ```
 
+### Step 5.5: Review Pending Knowledge Entries
+
+Read `.claude/ecw/knowledge-ops/pending-entries.md`.
+
+If not exists or no entries with `Status: pending` — note "No pending knowledge entries." and skip.
+
+**Add a summary section to the Step 5 report** (or output separately if report already printed):
+
+```markdown
+## Pending Entries Status
+- Total pending: {count}
+- By target file: {breakdown}
+- Oldest pending: {date}
+```
+
+For each entry with Status = `pending`, present to user using AskUserQuestion:
+
+**Options**: Accept / Reject / Edit then accept
+
+**On Accept**:
+- If `target_file` does not exist → Ask: "Target file `{path}` does not exist. Create it? (Y/n)"
+  - Yes: Create file with minimal header (title + section)
+  - No: Keep entry as pending with note `[NO-TARGET-FILE]`, move to next entry
+- Read the `target_file`
+- Append proposed content to the specified `target_section` (or end of file if section missing)
+- Read back `target_file` to verify the content was written
+  - If content not found: Keep Status = `pending`, note `[WRITE-FAILED]`, move to next entry
+- Update entry Status from `pending` to `written`
+- Log: "Written to `{target_file}` §`{target_section}`"
+
+**On Reject**:
+- Update entry Status from `pending` to `rejected`
+- Entry stays in file to prevent regeneration of the same knowledge
+
+**On Edit then accept**:
+- User provides modified proposed content
+- Write modified content to `target_file` at `target_section` (same flow as Accept)
+- Update entry Status to `written`, note `(user-edited)`
+
 ### Step 6: Persist Stale References for Hook Consumption
 
 Write structured stale reference data to `.claude/ecw/state/stale-refs.md`. This file is consumed by the `verify-completion` hook to produce targeted reminders on subsequent task completions.

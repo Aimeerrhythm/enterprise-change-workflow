@@ -70,6 +70,59 @@ Append an entry at the end of the "Records" section in doc-tracker file:
 
 Omit any event type that didn't occur in this task.
 
+### Step 4.5: Generate Candidate Entry for Code-Derived Knowledge
+
+Skip this step entirely if Step 3 identified no code-derived events.
+
+For each code-derived event from Step 3:
+
+**1. Validate against three criteria** — The derived knowledge must meet at least one:
+- **Cross-file scattered**: info derived from 3+ source files
+- **Implicit intent**: code has what but not why, and the why was non-obvious
+- **Counter-intuitive design**: behavior looks like a bug but is intentional
+
+If none apply, skip this event (not worth a candidate entry).
+
+**2. Check for backlog** — Read `.claude/ecw/knowledge-ops/pending-entries.md` if it exists:
+- Count entries with `Status: pending` for the same target_file
+- If count ≥ 10 → Skip generation for that target_file, append a note to the doc-tracker
+  record (Step 4): `⚠️ Pending entries backlog (10+ items). Run /ecw:knowledge-audit to clear.`
+
+**3. Deduplication check** — For each existing entry under the same target_file:
+- Extract key terms from the candidate's summary (class names, function names, business nouns)
+- Compare with the first sentence of each existing entry
+- If word overlap > 60% → Skip (similar entry already exists)
+- If Status = `rejected` for a near-identical entry → Skip (user already declined)
+
+**4. Generate candidate entry** — Append to `.claude/ecw/knowledge-ops/pending-entries.md`
+(create the file with header if it does not exist):
+
+```markdown
+### [Auto-generated] {one-line summary}
+
+- **Status**: pending
+- **Source task**: {YYYY-MM-DD} - {task summary from Step 5}
+- **Derived from**: {list of source files AI read to derive this knowledge}
+- **Rounds spent**: {N rounds of source code reading}
+- **Target file**: {which knowledge file this should be added to}
+- **Target section**: {section name in target file, or "new section"}
+- **Criterion met**: {cross-file-scattered | implicit-intent | counter-intuitive}
+
+**Proposed content:**
+
+> {The actual knowledge to add — concise, factual, focused on constraints
+> and rules, not implementation details. Match the style of existing files.}
+
+**Evidence:**
+
+> {Which files, what pattern was observed, why this is non-obvious from
+> reading any single file.}
+
+---
+```
+
+If no events qualify after all checks, skip this step and do not create pending-entries.md.
+
 ### Step 5: Brief Summary
 
 One sentence on documentation utilization efficiency, e.g.:
