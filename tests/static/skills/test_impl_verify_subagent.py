@@ -98,16 +98,21 @@ class TestImplVerifyPerRoundPersistence:
         )
 
     def test_merge_after_per_round_persistence(self):
-        """Final merge into impl-verify-findings.md comes AFTER per-round persistence."""
+        """In coordinator responsibilities, per-round persistence step precedes merge step."""
         content = self.content
-        round_file_pos = content.find("impl-verify-round")
-        findings_file_pos = content.find("impl-verify-findings.md")
+        # Find the Coordinator responsibilities section
+        coord_start = content.find("Coordinator responsibilities")
+        assert coord_start != -1, "Must have Coordinator responsibilities section"
+        coord_section = content[coord_start:]
+        round_file_pos = coord_section.find("impl-verify-round")
+        findings_file_pos = coord_section.find("impl-verify-findings.md")
         assert round_file_pos != -1 and findings_file_pos != -1, (
-            "Both per-round files and findings.md must be mentioned"
+            "Both per-round files and findings.md must be mentioned "
+            "in Coordinator responsibilities"
         )
         assert round_file_pos < findings_file_pos, (
             "Per-round persistence must be described before final merge "
-            "to impl-verify-findings.md"
+            "to impl-verify-findings.md in coordinator flow"
         )
 
     def test_degraded_round_still_persists_completed(self):
