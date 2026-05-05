@@ -1,0 +1,49 @@
+{
+  "name": "debug_investigation_result",
+  "description": "Chain-eval tool for systematic-debugging Phase 1 investigation checkpoint. Captures structured root cause investigation output for cross-step assertion.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "bug_classification": {
+        "type": "string",
+        "description": "Preliminary bug category based on Phase 1 investigation",
+        "enum": [
+          "data-issue",
+          "logic-error",
+          "integration-failure",
+          "race-condition",
+          "configuration",
+          "unknown"
+        ]
+      },
+      "root_cause_hypothesis": {
+        "type": "string",
+        "description": "Primary hypothesis about the root cause, stated as a falsifiable claim"
+      },
+      "evidence_sources": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Evidence sources consulted or recommended (logs, metrics, code paths)"
+      },
+      "affected_components": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "Domain or component names affected by the bug"
+      },
+      "investigation_complete": {
+        "type": "boolean",
+        "description": "Whether Phase 1 investigation has reached a testable hypothesis"
+      },
+      "next_phase": {
+        "type": "string",
+        "description": "Recommended next investigation phase",
+        "enum": ["pattern-analysis", "hypothesis-test", "escalate"]
+      }
+    },
+    "required": [
+      "bug_classification",
+      "root_cause_hypothesis",
+      "investigation_complete"
+    ]
+  }
+}
