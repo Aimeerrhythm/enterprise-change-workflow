@@ -952,3 +952,259 @@ class TestKnowledgeTrackInjection:
         # Should appear exactly once (from the remaining route), not from fallback injection
         assert msg.count("knowledge-track") >= 1
 
+
+class TestGetSkillInstincts:
+    """Unit tests for _get_skill_instincts() — per-skill instincts injection.
+
+    Issue #47 Phase D: auto-continue PreToolUse injects instincts for the about-to-load skill.
+    instincts.md format: ## skill-name sections with <!-- INSTINCT --> markers inside.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_instincts(self, tmp_path, content):
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "instincts.md").write_text(content)
+
+    def test_returns_empty_when_no_instincts_file(self, tmp_path):
+        """No instincts.md → empty string."""
+        result = self.hook._get_skill_instincts(str(tmp_path), "ecw:writing-plans")
+        assert result == ""
+
+    def test_returns_empty_when_skill_section_missing(self, tmp_path):
+        """instincts.md exists but no section for this skill → empty string."""
+        self._make_instincts(tmp_path,
+            "# ECW Learned Instincts\n\n"
+            "## risk-classifier\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: payment risk\n"
+            "- **Action**: escalate\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: test\n"
+        )
+        result = self.hook._get_skill_instincts(str(tmp_path), "ecw:writing-plans")
+        assert result == ""
+
+    def test_returns_instincts_for_correct_skill(self, tmp_path):
+        """instincts.md has multi-section format; returns only the right skill's section."""
+        self._make_instincts(tmp_path,
+            "# ECW Learned Instincts\n\n"
+            "## risk-classifier\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: payment risk\n"
+            "- **Action**: escalate\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: test\n\n"
+            "## writing-plans\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: task underestimate\n"
+            "- **Action**: add 30% buffer\n"
+            "- **Confidence**: 0.80\n"
+            "- **Source**: test\n"
+        )
+        result = self.hook._get_skill_instincts(str(tmp_path), "ecw:writing-plans")
+        assert "writing-plans" in result.lower() or "task underestimate" in result
+        assert "payment risk" not in result, "Must not include risk-classifier instincts"
+
+    def test_returns_empty_when_section_has_no_instincts_placeholder(self, tmp_path):
+        """Section with 'no instincts yet' text → empty string."""
+        self._make_instincts(tmp_path,
+            "# ECW Learned Instincts\n\n"
+            "## writing-plans\n\n"
+            "(no instincts yet — insufficient calibration data)\n"
+        )
+        result = self.hook._get_skill_instincts(str(tmp_path), "ecw:writing-plans")
+        assert result == ""
+
+    def test_old_flat_format_not_returned_for_skill(self, tmp_path):
+        """Old flat format (no ## sections) → no skill match → empty for any specific skill."""
+        self._make_instincts(tmp_path,
+            "# ECW Learned Instincts\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: old flat instinct\n"
+            "- **Action**: old action\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: old-format\n"
+        )
+        # Old flat format has no ## sections — _get_skill_instincts must return empty
+        result = self.hook._get_skill_instincts(str(tmp_path), "ecw:writing-plans")
+        assert result == "", \
+            "Old flat format (no ## sections) must return empty for specific skill lookup"
+
+
+class TestPreToolUseInstinctsInjection:
+    """PreToolUse must inject per-skill instincts as systemMessage when instincts exist.
+
+    Issue #47 Phase D: when instincts.md has content for the about-to-load skill,
+    PreToolUse returns {systemMessage: ...} instead of {result: continue}.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _make_state(self, tmp_path, routing=None, phase="plan-complete"):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260504-inst"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        if routing is None:
+            routing = ["ecw:writing-plans", "ecw:spec-challenge", "ecw:impl-verify"]
+        import yaml as _yaml
+        routing_yaml = _yaml.dump(routing, default_flow_style=True).strip()
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "auto_continue: true\n"
+            f"routing: {routing_yaml}\n"
+            "next: ecw:writing-plans\n"
+            f"current_phase: {phase}\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "working_mode: planning\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        return state_file
+
+    def _make_instincts(self, tmp_path, skill_short, pattern_text):
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "instincts.md").write_text(
+            "# ECW Learned Instincts\n\n"
+            f"## {skill_short}\n\n"
+            "<!-- INSTINCT -->\n"
+            f"- **Pattern**: {pattern_text}\n"
+            "- **Action**: some action\n"
+            "- **Confidence**: 0.80\n"
+            "- **Source**: test\n"
+        )
+
+    def _run_pre_tool_use(self, tmp_path, monkeypatch, skill):
+        import io
+        payload = json.dumps({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Skill",
+            "tool_input": {"skill": skill},
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        captured = []
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: captured.append(s),
+            "flush": lambda self: None,
+        })())
+        self.hook.main()
+        return json.loads("".join(captured))
+
+    def test_injects_system_message_when_instincts_exist(self, tmp_path, monkeypatch):
+        """When instincts.md has content for this skill, PreToolUse returns systemMessage."""
+        self._make_state(tmp_path)
+        self._make_instincts(tmp_path, "writing-plans", "task underestimate pattern")
+        output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:writing-plans")
+        assert "systemMessage" in output, \
+            "PreToolUse must return systemMessage when skill has instincts"
+        assert "task underestimate pattern" in output["systemMessage"] or \
+               "instinct" in output["systemMessage"].lower(), \
+            "systemMessage must include the instinct content"
+
+    def test_returns_continue_when_no_instincts(self, tmp_path, monkeypatch):
+        """When no instincts for this skill, PreToolUse returns {result: continue}."""
+        self._make_state(tmp_path)
+        # No instincts.md created
+        output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:writing-plans")
+        assert output.get("result") == "continue", \
+            "Without instincts, PreToolUse must return continue"
+        assert "systemMessage" not in output
+
+    def test_injects_correct_skill_instincts_not_others(self, tmp_path, monkeypatch):
+        """Injected instincts must be for the loading skill, not for other skills."""
+        self._make_state(tmp_path)
+        # Add instincts for risk-classifier, not for writing-plans
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "instincts.md").write_text(
+            "# ECW Learned Instincts\n\n"
+            "## risk-classifier\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: risk-classifier instinct\n"
+            "- **Action**: risk action\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: test\n\n"
+            "## writing-plans\n\n"
+            "(no instincts yet)\n"
+        )
+        output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:writing-plans")
+        # writing-plans section has "no instincts yet" → empty → return continue
+        assert output.get("result") == "continue", \
+            "Must return continue when skill section is empty/no-instincts"
+
+
+class TestSessionStartInstinctsCompatibility:
+    """session-start _read_instincts() must work with new multi-section instincts.md format.
+
+    Issue #47 Q1: new format keeps <!-- INSTINCT --> markers inside each section.
+    _read_instincts() uses content.split('<!-- INSTINCT -->') globally — still works.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "session_start", HOOKS_DIR / "session-start.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def test_reads_instincts_from_multi_section_format(self, tmp_path):
+        """_read_instincts() must find instincts in new multi-section format."""
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "instincts.md").write_text(
+            "# ECW Learned Instincts\n\n"
+            "## risk-classifier\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: payment risk\n"
+            "- **Action**: escalate\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: test\n\n"
+            "## writing-plans\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: task underestimate\n"
+            "- **Action**: add buffer\n"
+            "- **Confidence**: 0.80\n"
+            "- **Source**: test\n"
+        )
+        result = self.hook._read_instincts(str(tmp_path))
+        assert len(result) == 2, \
+            "_read_instincts must find all instincts across sections (flat parse)"
+        patterns = [r["pattern"] for r in result]
+        assert "payment risk" in patterns
+        assert "task underestimate" in patterns
+
+    def test_reads_instincts_from_old_flat_format(self, tmp_path):
+        """_read_instincts() must still work with old flat format (no ## sections)."""
+        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "instincts.md").write_text(
+            "# ECW Learned Instincts\n\n"
+            "<!-- INSTINCT -->\n"
+            "- **Pattern**: old flat instinct\n"
+            "- **Action**: old action\n"
+            "- **Confidence**: 0.85\n"
+            "- **Source**: old-format\n"
+        )
+        result = self.hook._read_instincts(str(tmp_path))
+        assert len(result) == 1
+        assert result[0]["pattern"] == "old flat instinct"

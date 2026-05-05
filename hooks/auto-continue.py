@@ -18,6 +18,7 @@ Fixes stale Current Phase / Working Mode / Next fields (Issue #21, Issue #26).
 
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -235,6 +236,61 @@ def _next_skill_from_routing(routing, current_skill):
     return None
 
 
+def _get_skill_instincts(cwd: str, skill_name: str) -> str:
+    """Read instincts for a specific skill from instincts.md.
+
+    instincts.md format (new multi-section, backward-compatible):
+      ## risk-classifier
+      <!-- INSTINCT -->
+      - **Pattern**: ...
+      ## writing-plans
+      <!-- INSTINCT -->
+      - **Pattern**: ...
+
+    Returns formatted instincts string for injection, or "" when none found.
+    Issue #47 Phase D: per-skill instincts injected at PreToolUse time.
+    """
+    instincts_path = os.path.join(cwd, ".claude", "ecw", "state", "instincts.md")
+    if not os.path.exists(instincts_path):
+        return ""
+    try:
+        with open(instincts_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+    except Exception:
+        return ""
+
+    skill_key = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
+    # Find the section for this skill: ## skill-key ... (up to next ## or end)
+    pattern = rf"(?:^|\n)##\s+{re.escape(skill_key)}\s*\n(.*?)(?=\n##\s|\Z)"
+    m = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not m:
+        return ""
+    section = m.group(1).strip()
+    if not section or "no instincts yet" in section.lower():
+        return ""
+    # Extract individual instinct entries using <!-- INSTINCT --> markers
+    blocks = section.split("<!-- INSTINCT -->")
+    instincts = []
+    for block in blocks[1:]:
+        entry = {}
+        for line in block.splitlines():
+            line = line.strip()
+            if line.startswith("- **Pattern**:"):
+                entry["pattern"] = line.split(":", 1)[1].strip()
+            elif line.startswith("- **Action**:"):
+                entry["action"] = line.split(":", 1)[1].strip()
+        if entry.get("pattern") and entry.get("action"):
+            instincts.append(f"- {entry['pattern']} → {entry['action']}")
+
+    if not instincts:
+        return ""
+    return (
+        f"[ECW INSTINCTS for {skill_key}] Historical calibration data — "
+        f"adjust your decisions based on these learned patterns:\n"
+        + "\n".join(instincts)
+    )
+
+
 def _handle_pre_tool_use(state_path, skill_name, cwd=""):
     """Update Current Phase (in-progress), Next, and Working Mode at skill entry.
 
@@ -355,7 +411,11 @@ def main():
 
     if hook_event == "PreToolUse":
         _handle_pre_tool_use(state_path, skill_name, cwd=cwd)
-        print(json.dumps({"result": "continue"}))
+        instincts_msg = _get_skill_instincts(cwd, skill_name)
+        if instincts_msg:
+            print(json.dumps({"systemMessage": instincts_msg}, ensure_ascii=False))
+        else:
+            print(json.dumps({"result": "continue"}))
         return
 
     # ── PostToolUse path ──────────────────────────────────────────────────────

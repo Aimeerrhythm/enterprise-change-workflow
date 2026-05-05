@@ -73,6 +73,7 @@ spec-challenge:
   - "Announce at start"
   - "Your Thought"
   - "auto_continue"
+  - "User Decisions"
 
 requirements-elicitation:
   - "Systematic Questioning"

@@ -149,6 +149,26 @@ After all items are handled, output summary table for user final confirmation:
 **Status**: Awaiting user final confirmation
 ```
 
+**User Decisions Persistence (Phase 3 Calibration)**: When generating the Response Summary, append a `## User Decisions` table to `spec-challenge-report.md`. This table records accepted/rejected/deferred decisions for Phase 3 multi-skill calibration. Write once, batch — do not append per-item during the confirmation flow.
+
+Format to append to `spec-challenge-report.md`:
+
+```markdown
+## User Decisions
+
+| Finding | Decision | Rationale |
+|---------|----------|-----------|
+| F1 | accepted | — |
+| F2 | rejected | user rationale |
+| I1 | accepted | — |
+| I2 | deferred | — |
+```
+
+Use `accepted` / `rejected` / `deferred` (lowercase English) as the standard Decision values for machine-parseable Phase 3 calibration. Map from user selections:
+- "Agree to modify" / "Adopted" → `accepted`
+- "Disagree" → `rejected`
+- "Deferred" → `deferred`
+
 After outputting summary, use AskUserQuestion for user final confirmation:
 - "Confirm passed" — Review complete, proceed to next phase
 - "More changes needed" — User adds feedback, continue adjusting

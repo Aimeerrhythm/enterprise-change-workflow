@@ -138,3 +138,44 @@ class TestSpecChallengeSessionContinuity:
         )
         assert has_precompact, \
             "Must mention PreCompact hook as context protection mechanism"
+
+
+class TestSpecChallengeUserDecisions:
+    """Verify spec-challenge SKILL.md persists User Decisions for Phase 3 calibration.
+
+    Issue #47: Phase 3 multi-skill calibration reads acceptance rate from
+    User Decisions table in spec-challenge-report.md.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_skill(self):
+        self.content = (ROOT / "skills" / "spec-challenge" / "SKILL.md").read_text()
+        self.lower = self.content.lower()
+
+    def test_persists_user_decisions_table(self):
+        """Must persist User Decisions table to spec-challenge-report.md."""
+        has_decisions_persist = bool(
+            re.search(r'user decisions', self.lower)
+            and re.search(r'spec-challenge-report\.md', self.content)
+        )
+        assert has_decisions_persist, \
+            "Must persist User Decisions table to spec-challenge-report.md for Phase 3 calibration"
+
+    def test_decisions_written_at_response_summary(self):
+        """User Decisions table must be written when generating Response Summary (batch, not per-item)."""
+        has_timing = bool(
+            re.search(r'(response summary|output.*summary).{0,200}user decisions', self.lower, re.DOTALL)
+            or re.search(r'user decisions.{0,200}(response summary|output.*summary)', self.lower, re.DOTALL)
+            or re.search(r'(append|write|persist).{0,100}user decisions.{0,100}(report|spec-challenge-report)', self.lower, re.DOTALL)
+        )
+        assert has_timing, \
+            "User Decisions table must be written at Response Summary time, not per-item"
+
+    def test_decisions_table_has_accepted_rejected(self):
+        """User Decisions table must record accepted/rejected/deferred decisions."""
+        has_decision_columns = bool(
+            re.search(r'accept', self.lower)
+            and (re.search(r'reject', self.lower) or re.search(r'defer', self.lower))
+        )
+        assert has_decision_columns, \
+            "User Decisions table must include accept/reject/deferred columns"
