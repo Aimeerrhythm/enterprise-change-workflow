@@ -28,6 +28,9 @@ working_mode: analysis
 
 <!-- ECW:LEDGER:START -->
 <!-- ECW:LEDGER:END -->
+
+<!-- ECW:TIMELINE:START -->
+<!-- ECW:TIMELINE:END -->
 ```
 
 ## Format Rules
@@ -54,6 +57,22 @@ Each subagent dispatch appends one entry:
   duration: "{~Ns or ~Nm Ns}"
 ```
 
+## TIMELINE Entry Format
+
+Each skill invocation appends one entry automatically via the PreToolUse hook:
+
+```yaml
+- phase: {skill short name, e.g., "risk-classifier", "writing-plans"}
+  start: "{YYYY-MM-DDTHH:mm:ss}"
+  end: "{YYYY-MM-DDTHH:mm:ss}" or null
+  duration_s: {integer seconds} or null
+```
+
+- **start**: ISO 8601 timestamp when the skill PreToolUse hook fires
+- **end**: ISO 8601 timestamp when the next skill's PreToolUse fires (backfilled automatically)
+- **duration_s**: Integer seconds between start and end (computed automatically when end is backfilled)
+- The last entry in the list always has `end: null` and `duration_s: null` until the next skill starts
+
 ## Workflow ID Generation
 
 - **Date part**: Read from `currentDate` system-reminder (format `YYYY/MM/DD`) — this is injected by the runtime from the user's local clock and is timezone-correct. Convert to `YYYYMMDD`.
@@ -63,7 +82,7 @@ Each subagent dispatch appends one entry:
 
 ## Marker Conventions
 
-session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent list), `STOP` (auto-updated by Stop hook).
+session-state.md uses `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections. When updating a section (e.g. STATUS, LEDGER, MODE, TIMELINE), only replace content between the matching markers — **never overwrite the entire file**. Standard marker names: `STATUS` (workflow fields), `MODE` (working mode), `LEDGER` (subagent list), `TIMELINE` (per-skill timing), `STOP` (auto-updated by Stop hook).
 
 ## Working Mode Definitions
 
