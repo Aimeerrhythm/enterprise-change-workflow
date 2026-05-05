@@ -78,29 +78,44 @@ Before dispatching the first Task, run a build/test pre-flight to catch pre-exis
 
 Before dispatching any task, build a dependency graph to determine which tasks can run in parallel.
 
-### Step 1: Parse Explicit Dependencies
+### Step 1: Extract Task Metadata from Plan (LLM)
 
-Read the plan for dependency declarations:
-- "depends on Task N" / "after Task N" / "requires output from Task N"
-- Plan task ordering often implies sequence — but only enforce when explicitly stated or logically required (e.g., Task creates a class that another Task extends)
+For each `## Task N:` heading in the plan, extract:
+- `id` (int): task number
+- `files` (list of strings): files to create or modify — from "Files:" line or inferred from task description
+- `depends_on` (list of ints): explicit dependency IDs — from "depends on Task N" / "after Task N" / "requires output from Task N" phrases
 
-### Step 2: Detect File-Level Conflicts
+Plan task ordering often implies sequence — but only include in `depends_on` when explicitly stated or logically required (e.g., Task creates a class that another Task extends).
 
-For each task, identify files it will create or modify (from plan task description). Two tasks that touch **any** of the same files are **mutually exclusive** — add a dependency edge (lower-numbered task first).
-
-Heuristics:
+Heuristics for `files`:
 - Plan usually lists "Files to create/modify" per task
-- Same module + same class/file → conflict
-- Same configuration file → conflict
-- Uncertain → assume conflict (safe default)
+- Same module + same class/file → include both tasks
+- Same configuration file → include both tasks
+- Uncertain → include the file (safe default — the script will serialize conflicting tasks)
 
-### Step 3: Build Execution Layers
+### Step 2: Call dep_graph.py (Deterministic)
 
-Topological sort on the dependency graph, grouping tasks into layers:
-- **Layer 0**: Tasks with zero inbound dependency edges
-- **Layer N**: Tasks whose dependencies are all satisfied by layers < N
+Format the extracted task list as JSON and run:
 
-Display layer plan to user:
+```bash
+echo '[{"id": 1, "files": ["A.java"], "depends_on": []}, {"id": 2, "files": ["B.java", "Shared.java"], "depends_on": [1]}, {"id": 3, "files": ["C.java", "Shared.java"], "depends_on": []}]' | python3 "${CLAUDE_PLUGIN_ROOT}/hooks/dep_graph.py"
+```
+
+The script handles:
+- **File conflict detection**: tasks touching the same file are automatically serialized (lower ID first)
+- **Topological sort**: Kahn's algorithm groups tasks into parallel execution layers
+- **Cycle detection**: reports involved tasks if a cycle exists
+
+Output:
+```json
+{"layers": [[1, 3], [2]], "conflicts": [{"tasks": [2, 3], "file": "Shared.java"}]}
+```
+
+If the output contains an `"error"` field (cycle detected), report the error to the user and ask how to resolve (remove a dependency, merge tasks, or restructure).
+
+### Step 3: Display Execution Layers
+
+Use the returned `layers` to display the execution plan to the user:
 
 ```
 Execution Layers (max parallelism: 3):
@@ -112,6 +127,8 @@ Execution Layers (max parallelism: 3):
 
   Estimated: 5 layers (vs 13 serial tasks)
 ```
+
+If `conflicts` is non-empty, also display detected file conflicts so the user can verify the file-level serialization is correct.
 
 ### Max Parallelism
 
