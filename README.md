@@ -284,7 +284,7 @@ ECW uses a unified dispatcher pattern. `hooks.json` registers 6 event points:
 |------------|----------|-------------|
 | `verify-completion` | all | 4 hard blocks + 1 soft reminder before task completion |
 | `config-protect` | all | Block AI from modifying critical ECW config files |
-| `compact-suggest` | all | Proactive context compaction suggestion |
+| `gateguard-fact-force` | standard, strict | Implementer fact-forcing source traceability gate |
 | `secret-scan` | standard, strict | Detect sensitive data (AWS keys, JWT, GitHub tokens) |
 | `bash-preflight` | standard, strict | Dangerous command pre-check (--no-verify, push --force, rm -rf) |
 
@@ -315,22 +315,29 @@ enterprise-change-workflow/
 ├── skills/                      # 15 core skills
 ├── agents/                      # 7 agent definitions
 ├── commands/                    # 3 slash commands
-├── hooks/                       # 6 event-point hook architecture
+├── hooks/                       # Hook architecture (6 event points, 10 scripts)
 │   ├── hooks.json               # Hook registration
 │   ├── dispatcher.py            # PreToolUse unified dispatcher
+│   ├── auto-continue.py         # Skill-to-skill auto chaining (PreToolUse + PostToolUse)
 │   ├── verify-completion.py     # 4 hard blocks + 1 soft reminder
 │   ├── config-protect.py        # Config file protection
-│   ├── compact-suggest.py       # Proactive compaction suggestion
+│   ├── gateguard-fact-force.py  # Implementer fact-forcing gate
 │   ├── secret-scan.py           # Sensitive data detection
 │   ├── bash-preflight.py        # Dangerous command pre-check
 │   ├── session-start.py         # Context injection + instinct loading
+│   ├── post-edit-check.py       # Anti-pattern detection on Edit/Write
+│   ├── cost-tracker.py          # Token cost tracking (Stop)
+│   ├── knowledge-read-logger.py # Knowledge file read logging (PostToolUse Read)
+│   ├── marker_utils.py          # Shared marker/status utilities
 │   └── ...
 ├── templates/                   # Config and knowledge file templates
 ├── scripts/java/                # Java/Spring project scanners (3 scripts)
+├── scripts/calibration-collector.py  # Multi-dimensional calibration data collector
 ├── docs/                        # Design reference
 │   ├── design-principles.md     # Amplifiers vs. crutches, five tests
-│   └── design-reference.md      # Token budgets, model selection
-├── tests/                       # Lint + hook unit tests + promptfoo evals
+│   ├── design-reference.md      # Token budgets, model selection
+│   └── workflow-execution-flow.md  # Workflow execution flow details
+├── tests/                       # Lint + hook unit tests + promptfoo evals + chain evals
 ├── CLAUDE.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
