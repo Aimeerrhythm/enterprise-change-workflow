@@ -401,6 +401,8 @@ def main():
 
     # knowledge-track fallback: after biz-impact-analysis, if knowledge-track is NOT already
     # in the remaining Routing chain (old sessions), check ecw.yml and inject it when needed.
+    # Deprecated: new sessions created after issue #45 have knowledge-track in chain.
+    # This fallback handles sessions created with the old routing that lacked knowledge-track.
     if skill_name == "ecw:biz-impact-analysis":
         has_kt = any(_routing_step_to_skill(s) == "ecw:knowledge-track" for s in remaining)
         if not has_kt and risk_level in ("P0", "P1"):
@@ -411,6 +413,10 @@ def main():
             except Exception:
                 knowledge_root = None
             if knowledge_root:
+                log_trace(cwd, "auto-continue", "PostToolUse",
+                          skill=skill_name, action="knowledge_track_fallback_deprecated",
+                          note="Session predates issue-45; knowledge-track not in chain. "
+                               "This fallback will be removed in a future version.")
                 kt_msg = (
                     "[ECW AUTO-CONTINUE] Knowledge utilization tracking required for "
                     f"{risk_level} workflow. "

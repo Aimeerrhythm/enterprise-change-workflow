@@ -18,11 +18,22 @@ Check if doc-tracker file exists:
 
 ## Tracking Steps
 
-### Step 1: Review Document Access in Conversation
+### Step 1: Load Knowledge Read Log
 
-Scan all Read tool calls in this conversation, identify:
-- Which knowledge docs were read
-- After each read, whether document content influenced subsequent code generation or decisions
+Read `.claude/ecw/session-data/{workflow-id}/knowledge-reads.jsonl`.
+
+This file is auto-populated by the `knowledge-read-logger` hook on every Read
+call to knowledge files. Each line is a JSON object:
+```json
+{"ts": "2026-05-04T10:15:23", "file": ".claude/knowledge/payment/business-rules.md"}
+```
+
+It covers **all sessions** that shared the same workflow-id (Session 1 + Session 2), so
+cross-session reads are not lost even when the workflow was split across multiple sessions.
+
+**If the file does not exist** (legacy session or non-ECW context):
+- Fall back to scanning Read tool calls in the **current** conversation context only
+- Note the limitation: cross-session reads from prior sessions will not be visible
 
 ### Step 2: Classify Each Document Access
 

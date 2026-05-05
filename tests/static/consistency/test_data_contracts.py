@@ -68,6 +68,9 @@ KEY_ALIASES = {
     "analysis-report": [
         "analysis-report", "analysis-report.md",
     ],
+    "knowledge-reads-log": [
+        "knowledge-reads-log", "knowledge-reads.jsonl",
+    ],
 }
 
 
@@ -185,8 +188,9 @@ class TestUpstreamWriters:
     def test_reader_has_upstream_writer(self, contracts):
         """Every reads entry (except session-state) must have a producing skill."""
         writers = _all_writers(contracts)
-        # Keys produced outside the skill system (by commands or child sessions)
-        EXTERNAL_PRODUCERS = {"session-state", "workspace-yml", "analysis-report"}
+        # Keys produced outside the skill system (by commands, child sessions, or hooks)
+        EXTERNAL_PRODUCERS = {"session-state", "workspace-yml", "analysis-report",
+                               "knowledge-reads-log"}
         orphans = []
         for skill_name, spec in contracts.items():
             for entry in spec.get("reads", []) or []:

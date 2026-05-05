@@ -27,6 +27,7 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [requirements-elicitation, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
     must_exclude: [domain-collab]
@@ -42,6 +43,7 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [requirements-elicitation, writing-plans, impl-verify, biz-impact-analysis]
     must_exclude: [domain-collab, spec-challenge]
@@ -80,6 +82,7 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [domain-collab, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
     must_exclude: [requirements-elicitation]
@@ -96,6 +99,7 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [domain-collab, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
     must_exclude: [requirements-elicitation]
@@ -134,6 +138,7 @@ routes:
       - "Fix(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [systematic-debugging, impl-verify, biz-impact-analysis]
     must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
@@ -147,6 +152,7 @@ routes:
       - "Fix(GREEN)"
       - impl-verify
       - biz-impact-analysis
+      - knowledge-track
       - "Phase 3"
     must_include: [systematic-debugging, impl-verify, biz-impact-analysis]
     must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
