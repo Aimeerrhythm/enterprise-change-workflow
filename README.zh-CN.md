@@ -284,7 +284,7 @@ ECW 使用统一 Dispatcher 模式。`hooks.json` 注册 6 个事件点：
 |--------|---------|------|
 | `verify-completion` | 全部 | 4 项硬拦截 + 1 项软提醒 |
 | `config-protect` | 全部 | 阻止 AI 修改 ECW 关键配置文件 |
-| `compact-suggest` | 全部 | 主动上下文压缩建议 |
+| `gateguard-fact-force` | standard, strict | 实现者事实溯源守卫 |
 | `secret-scan` | standard, strict | 敏感数据检测 |
 | `bash-preflight` | standard, strict | 危险命令预检 |
 
@@ -315,22 +315,29 @@ enterprise-change-workflow/
 ├── skills/                      # 15 个核心 skill
 ├── agents/                      # 7 个 agent 定义
 ├── commands/                    # 3 个斜杠命令
-├── hooks/                       # 6 个事件点 Hook 架构
+├── hooks/                       # Hook 架构（6 个事件点，10 个脚本）
 │   ├── hooks.json               # Hook 注册
 │   ├── dispatcher.py            # PreToolUse 统一调度器
+│   ├── auto-continue.py         # Skill 间自动衔接（PreToolUse + PostToolUse）
 │   ├── verify-completion.py     # 4 项硬拦截 + 1 项软提醒
 │   ├── config-protect.py        # 配置文件保护
-│   ├── compact-suggest.py       # 主动压缩建议
+│   ├── gateguard-fact-force.py  # 实现者事实溯源守卫
 │   ├── secret-scan.py           # 敏感数据检测
 │   ├── bash-preflight.py        # 危险命令预检
 │   ├── session-start.py         # 上下文注入 + instinct 加载
+│   ├── post-edit-check.py       # 反模式检测（Edit/Write）
+│   ├── cost-tracker.py          # Token 成本追踪（Stop）
+│   ├── knowledge-read-logger.py # 知识文件读取日志（PostToolUse Read）
+│   ├── marker_utils.py          # 共享 marker/status 工具模块
 │   └── ...
 ├── templates/                   # 配置和知识文件模板
 ├── scripts/java/                # Java/Spring 扫描脚本（3 个）
+├── scripts/calibration-collector.py  # 多维校准数据采集器
 ├── docs/                        # 设计参考文档
 │   ├── design-principles.md     # 放大器 vs. 拐杖，五个试金石
-│   └── design-reference.md      # Token 预算、模型选择指南
-├── tests/                       # Lint + Hook 单测 + promptfoo eval
+│   ├── design-reference.md      # Token 预算、模型选择指南
+│   └── workflow-execution-flow.md  # 工作流执行流程详解
+├── tests/                       # Lint + Hook 单测 + promptfoo eval + chain eval
 ├── CLAUDE.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
