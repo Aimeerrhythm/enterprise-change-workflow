@@ -65,6 +65,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
 | `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | After each impl-verify pass | Merged findings from all rounds (final summary) |
 | `.claude/ecw/session-data/{workflow-id}/impl-verify-round{N}.md` | Immediately when each Round subagent returns | Per-round independent findings; survives partial failure |
+| `.claude/ecw/session-data/{workflow-id}/biz-impact-report.md` | After biz-impact-analysis agent returns | Full business impact analysis report; required for Phase 3 calibration |
 | `{worktree-root}/.claude/ecw/task-result.json` | Immediately before worktree implementer reports back | Implementer-written result file; coordinator reads from worktree path BEFORE git merge as authoritative Ledger source |
 | `.claude/ecw/session-data/{workflow-id}/task-{N}-aggregation-warning.md` | When task-result.json is absent after worktree merge | Explicit gap marker written by coordinator; records that Ledger entry was inferred from git log |
 | `.claude/ecw/calibration-log.md` | After Phase 3 calibration | Full-dimension comparison log (detailed tables for human review and pattern analysis) |
