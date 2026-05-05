@@ -75,6 +75,15 @@ _ROUTING_STEP_TO_SKILL = {
     "TDD:RED": "ecw:tdd",
 }
 
+# Skills that are legitimately invoked outside the Routing chain (manual-only tools).
+# These are whitelisted from deviation detection.
+_OFF_CHAIN_ALLOWED = {
+    "ecw:cross-review",
+    "ecw:knowledge-audit",
+    "ecw:knowledge-repomap",
+    "ecw:workspace",
+}
+
 
 def _remaining_route(routing, current_skill):
     """Extract steps after current_skill in the routing list.
@@ -134,6 +143,50 @@ def _routing_step_to_skill(step):
             return skill_name
 
     return None  # non-skill step
+
+
+def _check_routing_deviation(routing_list, current_skill, expected_next):
+    """Check if current_skill deviates from the Routing chain.
+
+    Args:
+        routing_list: Routing chain as a list of steps (from session-state.md).
+        current_skill: The skill being invoked now (e.g., "ecw:impl-verify").
+        expected_next: The skill that was expected next (from fields_dict["next"]).
+
+    Returns:
+        dict with {"type": "off-chain"|"out-of-order", "detail": str} if deviation detected.
+        None if no deviation.
+    """
+    # Whitelist: manual-only tools are legitimately off-chain
+    if current_skill in _OFF_CHAIN_ALLOWED:
+        return None
+
+    # Empty or None routing: no chain to validate
+    if not routing_list:
+        return None
+
+    # Build set of all skills in the routing chain
+    chain_skills = set()
+    for step in routing_list:
+        skill = _routing_step_to_skill(step)
+        if skill:
+            chain_skills.add(skill)
+
+    # Check if current skill is off-chain
+    if current_skill not in chain_skills:
+        return {
+            "type": "off-chain",
+            "detail": f"Skill '{current_skill}' not found in routing chain {routing_list}",
+        }
+
+    # Check if current skill is out-of-order (expected_next exists and doesn't match)
+    if expected_next and current_skill != expected_next:
+        return {
+            "type": "out-of-order",
+            "detail": f"Expected '{expected_next}' but got '{current_skill}'",
+        }
+
+    return None
 
 
 def _next_skill_from_routing(routing, current_skill):
@@ -199,6 +252,21 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
 
         fields_dict = parse_status(content)
         routing = (fields_dict or {}).get("routing") or []
+
+        # ── Routing deviation detection (before field updates) ─────────────
+        # Only check when auto_continue is active and a routing chain is set.
+        auto_continue = (fields_dict or {}).get("auto_continue")
+        if auto_continue is True and routing:
+            # expected_next is what the previous skill wrote as the next step
+            expected_next = (fields_dict or {}).get("next") or None
+            deviation = _check_routing_deviation(routing, skill_name, expected_next)
+            if deviation:
+                log_trace(cwd, "auto-continue", "PreToolUse",
+                          skill=skill_name,
+                          action="routing_deviation",
+                          deviation=deviation,
+                          severity="warn")
+
         next_skill = _next_skill_from_routing(routing, skill_name)
 
         fields = {}
