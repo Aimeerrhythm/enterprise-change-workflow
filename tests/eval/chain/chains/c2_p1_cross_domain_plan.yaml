@@ -1,0 +1,166 @@
+# c2: P1 Cross Domain Plan Review Chain
+# End-to-end chain: risk-classifier → writing-plans → spec-challenge
+# Validates artifact compatibility for a P1 cross-domain scenario.
+# Key difference from c1 (P0 single-domain):
+#   - RC must identify cross-domain mode with two domains
+#   - RC routing includes domain-collab (P1 cross-domain requires it)
+#   - RC routing includes spec-challenge (P1 cross-domain — unlike P1 single-domain)
+#   - WP task_count threshold is lower (≥2 vs ≥4 for P0)
+#
+# Usage:
+#   make -C tests eval-chain CHAIN=c2_p1_cross_domain_plan
+#
+# Prerequisites: ANTHROPIC_API_KEY set
+# Cost: ~$2-5 per run (Opus for spec-challenge)
+# Time: ~5-15 min
+
+name: "c2: P1 Cross Domain Plan Review"
+
+steps:
+  # ── Step 1: Risk Classification ──────────────────────────────────────────
+  - skill: risk-classifier
+    skill_files:
+      - workflow-routes.yml
+    tool_schema: tools/classify_result.json
+    max_tokens: 4000
+    eval_instruction: |
+      Classify the risk level for this requirement. You MUST populate the
+      `domains` field with the list of affected domain names (e.g. ["order", "inventory"]).
+      Call classify_result tool with all required fields including domains.
+    context:
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+      domain_registry: fixtures/domain_registry_5domains.md
+      path_mappings: fixtures/path_mappings_standard.md
+    input: |
+      需求：用户在 APP 端取消已支付订单后，系统需要：
+      1. 将订单状态更新为"已取消"（order 域）
+      2. 释放该订单占用的库存（inventory 域）
+      3. 触发支付退款流程，确保退款金额正确返还
+
+      关键约束：
+      1. 库存释放必须在订单取消事务提交后异步执行（避免阻塞订单取消主流程）
+      2. 若库存释放失败，需告警并支持人工重试（不回滚订单取消）
+      3. 退款通过现有支付退款接口发起（payment 域），order 域只需发送 MQ 消息
+
+      技术约束：
+      - order 域和 inventory 域之间通过 MQ 异步解耦（直接调用需要走 OrderFacade）
+      - inventory 域的库存释放接口需要幂等保护（订单号作为幂等键）
+
+  # ── Step 2: Implementation Plan ──────────────────────────────────────────
+  - skill: writing-plans
+    skill_files:
+      - plan-header-template.md
+      - task-structure-template.md
+    tool_schema: writing-plans/tools/plan_quality_result.json
+    max_tokens: 16000
+    eval_instruction: |
+      Generate a complete implementation plan for the cross-domain order cancellation
+      requirement. After completing the plan, call the plan_quality_result tool to report
+      both structural characteristics AND the complete plan content in the plan_content field.
+    context:
+      session_state:
+        from_step: risk-classifier
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+      domain_registry: fixtures/domain_registry_5domains.md
+      path_mappings: fixtures/path_mappings_standard.md
+    input: |
+      需求：用户取消订单后，系统需要释放 inventory 域库存，并通过 payment 域触发退款。
+      order 域和 inventory 域通过 MQ 异步解耦。库存释放接口需幂等保护。
+
+      请根据会话状态中的分析结论，制定完整实现方案。
+
+  # ── Step 3: Adversarial Review ───────────────────────────────────────────
+  - skill: spec-challenge
+    prompt_file: agents/spec-challenge.md
+    skill_files:
+      - prompts/common-rationalizations.md
+    tool_schema: spec-challenge/tools/spec_challenge_quality_result.json
+    max_tokens: 16000
+    eval_instruction: |
+      You are the adversarial technical review agent. The plan document to review
+      is provided in the '## Simulated Project Context → ### plan_document' section.
+      Review it along 4 dimensions (Accuracy & Reliability, Information Quality &
+      Actionability, Completeness, Risk Balance). For each dimension raise at least
+      1 issue. Then call the spec_challenge_quality_result tool with your findings.
+      Do NOT call AskUserQuestion, Agent, or any file system tools.
+    context:
+      plan_document:
+        from_step: writing-plans
+        field: plan_content
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+    input: |
+      请对上下文中 '### plan_document' 区域提供的实现方案进行独立对抗性评审，
+      并调用 spec_challenge_quality_result 工具报告你的评审结果。
+
+# ── Cross-Step Assertions ────────────────────────────────────────────────────
+# Verify artifact compatibility across the P1 cross-domain planning chain.
+# Key behavioral difference from c1 (P0 single-domain):
+#   - P1 cross-domain routes to domain-collab AND spec-challenge
+#   - WP task_count threshold is lower (≥2)
+assertions:
+  # Step 1 (risk-classifier) — P1 cross-domain classification
+  - name: rc_classifies_as_p1
+    check: {field: "risk-classifier.risk_level", op: "==", value: "P1"}
+
+  - name: rc_cross_domain
+    check: {field: "risk-classifier.mode", op: "==", value: "cross-domain"}
+
+  - name: rc_classifies_as_requirement
+    check: {field: "risk-classifier.change_type", op: "==", value: "requirement"}
+
+  - name: rc_identifies_order_domain
+    check: {field: "risk-classifier.domains", op: contains, value: "order"}
+
+  - name: rc_identifies_inventory_domain
+    check: {field: "risk-classifier.domains", op: contains, value: "inventory"}
+
+  - name: rc_routes_to_domain_collab
+    # P1 cross-domain must include domain-collab (per workflow-routes.yml)
+    check: {field: "risk-classifier.routing", op: contains, value: "domain-collab"}
+
+  - name: rc_routes_to_writing_plans
+    check: {field: "risk-classifier.routing", op: contains, value: "writing-plans"}
+
+  - name: rc_routes_to_spec_challenge
+    # P1 cross-domain requires spec-challenge (unlike P1 single-domain which excludes it)
+    check: {field: "risk-classifier.routing", op: contains, value: "spec-challenge"}
+
+  # Step 2 (writing-plans) — reflects RC P1 cross-domain classification
+  - name: wp_has_plan_header
+    check: {field: "writing-plans.has_plan_header", op: "==", value: "True"}
+
+  - name: wp_task_count_sufficient_for_p1
+    # P1 cross-domain (order+inventory+payment): ≥2 tasks (lower threshold than P0's ≥4)
+    check: {field: "writing-plans.task_count", op: ">=", value: 2}
+
+  # Step 2→3 compatibility: plan_content passed to spec-challenge
+  - name: wp_plan_content_exists_for_sc
+    check: {field: "writing-plans.plan_content", op: "!=", value: ""}
+
+  - name: wp_plan_content_has_task_structure
+    # plan_content must have Task sections for SC to review
+    check: {field: "writing-plans.plan_content", op: contains, value: "Task"}
+
+  - name: wp_plan_content_has_cross_domain_reference
+    # Plan must reference cross-domain topics (inventory or 库存)
+    check: {field: "writing-plans.plan_content", op: contains, value: "库存"}
+
+  # Step 3 (spec-challenge) — consumed WP plan_content
+  - name: sc_review_content_not_empty
+    check: {field: "spec-challenge.review_content", op: "!=", value: ""}
+
+  - name: sc_review_references_plan_topic
+    # SC review should mention the order cancellation topic
+    check: {field: "spec-challenge.review_content", op: contains, value: "取消"}
+
+  - name: sc_review_references_task_structure
+    # Stronger proof SC read the plan structure, not just the topic
+    check: {field: "spec-challenge.review_content", op: contains, value: "Task"}
+
+  - name: sc_fatal_flaw_count_nonnegative
+    check: {field: "spec-challenge.fatal_flaw_count", op: ">=", value: 0}
+
+  - name: sc_does_not_reject_sound_plan
+    # A dynamically generated P1 plan may get conditional-pass (acceptable);
+    # outright reject would indicate the chain is broken (truncated plan_content, etc.)
+    check: {field: "spec-challenge.conclusion_verdict", op: "!=", value: "reject"}
