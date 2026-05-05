@@ -1,0 +1,110 @@
+# c3: Bug Debug Chain
+# End-to-end chain: risk-classifier → systematic-debugging
+# Validates artifact compatibility for a Bug scenario:
+#   - RC correctly classifies change_type=bug and routes to systematic-debugging
+#   - SD consumes session_state from RC and produces structured investigation checkpoint
+# Key difference from c1/c2: 2-step chain (no planning/review phase).
+# Uses chain-local tool schema (chain/tools/debug_investigation_result.json).
+#
+# Usage:
+#   make -C tests eval-chain CHAIN=c3_bug_debug
+#
+# Prerequisites: ANTHROPIC_API_KEY set
+# Cost: ~$1-3 per run
+# Time: ~3-8 min
+
+name: "c3: Bug Debug Investigation"
+
+steps:
+  # ── Step 1: Risk Classification ──────────────────────────────────────────
+  - skill: risk-classifier
+    skill_files:
+      - workflow-routes.yml
+    tool_schema: tools/classify_result.json
+    max_tokens: 4000
+    eval_instruction: |
+      Classify the risk level for this bug report. You MUST set change_type to "bug".
+      Populate the `domains` field with affected domain names (e.g. ["order", "inventory"]).
+      Call classify_result tool with all required fields including domains and routing.
+    context:
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+      domain_registry: fixtures/domain_registry_5domains.md
+      path_mappings: fixtures/path_mappings_standard.md
+    input: |
+      Bug 报告：下单后库存未扣减，导致超卖。
+
+      现象：用户在高并发场景下下单成功，但 inventory 域的库存未相应扣减，
+      库存数量保持不变，后续其他用户仍可购买同一商品，导致实际发货数量超过库存上限。
+
+      复现步骤：
+      1. 同时发起 10 个并发下单请求（相同商品 SKU，库存余量 5）
+      2. 10 个订单均返回下单成功（order 域状态更新正常）
+      3. 查询 inventory 域：库存数量未减少，仍为 5
+      4. 实际发货后导致超卖
+
+      环境：生产环境，高并发时稳定复现；低并发（串行）时未复现。
+
+  # ── Step 2: Debug Investigation ──────────────────────────────────────────
+  - skill: systematic-debugging
+    skill_files:
+      - prompts/investigation-steps.md
+    tool_schema: chain/tools/debug_investigation_result.json
+    max_tokens: 8000
+    eval_instruction: |
+      You are in an eval environment without file system access. Based on the bug
+      description and the session_state context (containing risk classification),
+      simulate Phase 1 root cause investigation for the described bug.
+      Identify the most likely bug category and state a falsifiable root cause hypothesis.
+      Call the debug_investigation_result tool with your structured investigation checkpoint.
+      Do NOT call Write, Read, Edit, AskUserQuestion, or Agent tools.
+    context:
+      session_state:
+        from_step: risk-classifier
+      ecw_yml: fixtures/ecw_yml_java_monolith.yaml
+    input: |
+      Bug 报告：下单后库存未扣减，导致超卖。高并发场景下稳定复现，串行时未复现。
+
+      请基于会话状态中的风险分类结论，对该 Bug 进行 Phase 1 根因调查，
+      并调用 debug_investigation_result 工具报告你的调查结论。
+
+# ── Cross-Step Assertions ────────────────────────────────────────────────────
+# Verify Bug scenario artifact compatibility:
+# RC correctly classifies the bug and SD produces a structured investigation result.
+assertions:
+  # Step 1 (risk-classifier) — Bug classification
+  - name: rc_classifies_as_bug
+    check: {field: "risk-classifier.change_type", op: "==", value: "bug"}
+
+  - name: rc_risk_level_not_p3
+    # Concurrency-related inventory bugs are at least P1 (production impact)
+    check: {field: "risk-classifier.risk_level", op: "!=", value: "P3"}
+
+  - name: rc_routes_to_systematic_debugging
+    check: {field: "risk-classifier.routing", op: contains, value: "systematic-debugging"}
+
+  - name: rc_routes_to_impl_verify
+    check: {field: "risk-classifier.routing", op: contains, value: "impl-verify"}
+
+  - name: rc_routes_to_biz_impact
+    # P1+ bugs must route to biz-impact-analysis (per workflow-routes.yml)
+    check: {field: "risk-classifier.routing", op: contains, value: "biz-impact-analysis"}
+
+  # Step 2 (systematic-debugging) — consumed RC session_state, produced investigation
+  - name: sd_hypothesis_not_empty
+    check: {field: "systematic-debugging.root_cause_hypothesis", op: "!=", value: ""}
+
+  - name: sd_identifies_affected_component
+    # SD must identify inventory as an affected component given the bug description
+    check: {field: "systematic-debugging.affected_components", op: contains, value: "inventory"}
+
+  - name: sd_bug_classification_recognized
+    # SD should categorize beyond "unknown" given the concurrency symptom
+    check: {field: "systematic-debugging.bug_classification", op: "!=", value: "unknown"}
+
+  - name: sd_investigation_complete
+    # SD should complete Phase 1 investigation given the detailed bug report
+    check: {field: "systematic-debugging.investigation_complete", op: "==", value: "True"}
+
+  - name: sd_next_phase_defined
+    # SD must recommend a next investigation phase
+    check: {field: "systematic-debugging.next_phase", op: "!=", value: ""}
