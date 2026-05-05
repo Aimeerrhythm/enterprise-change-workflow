@@ -1,0 +1,33 @@
+# ECW Impl-Orchestration Result Protocol Evaluation
+# Verifies that coordinator reads task-result.json as authoritative source before
+# updating Subagent Ledger, and handles missing files with explicit warning markers.
+#
+# Usage:
+#   cd tests/eval/impl-orchestration && npx promptfoo eval
+#
+# Prerequisites:
+#   - ANTHROPIC_API_KEY set in environment
+
+description: "ECW Impl-Orchestration Result File Protocol Evaluation"
+
+providers:
+  - id: anthropic:messages:pub-claude-opus-4-6
+    config:
+      temperature: 0
+      max_tokens: 2000
+      tools:
+        - file://tools/coordinator_result_protocol.json
+      tool_choice:
+        type: any
+
+prompts:
+  - id: impl-orchestration-coordinator
+    raw: |
+      [{"role": "system", "content": "{{skill_content}}\n\nIMPORTANT EVAL INSTRUCTION: After your analysis, you MUST call the coordinator_result_protocol tool to report your structured protocol decision.\n\nYou are evaluating the ecw:impl-orchestration coordinator's result aggregation protocol. Given a scenario about worktree implementer results, determine:\n1. scenario: brief label\n2. first_action_after_agent_returns: what to do FIRST after Agent call returns (before git merge)\n3. authoritative_source: which source drives the Subagent Ledger data\n4. read_before_merge: must the result file be read before git merge?\n5. missing_file_action: what to do when task-result.json is absent\n6. write_warning_marker: whether an explicit marker file is written on missing result\n7. ledger_source: data source when writing Subagent Ledger entries"},{"role": "user", "content": "{{input}}"}]
+
+tests: file://scenarios/*.yaml
+
+vars:
+  skill_content:
+    type: file
+    path: ../../../skills/impl-orchestration/SKILL.md

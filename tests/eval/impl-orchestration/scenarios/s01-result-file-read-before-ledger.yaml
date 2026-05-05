@@ -1,0 +1,40 @@
+# S01: Result file must be read BEFORE git merge and Ledger update
+# Tests that coordinator reads task-result.json from worktree path as authoritative source.
+# Should FAIL against current SKILL.md (no mention of task-result.json).
+# Should PASS after fix.
+- vars:
+    input: |
+      You are the impl-orchestration coordinator. A worktree implementer for Task 2 just returned
+      via the Agent tool. The Agent tool result indicates the worktree path is
+      `.claude/worktrees/abc123` and the worktree branch is `worktree-task2`.
+
+      What is your FIRST action before running `git merge worktree-task2`?
+      What is the authoritative source for task result data when updating the Subagent Ledger?
+      Must the result file be read before the git merge?
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.first_action_after_agent_returns === 'read-result-file';
+      metric: read_result_file_first
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.authoritative_source === 'task-result.json';
+      metric: task_result_json_authoritative
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.read_before_merge === true;
+      metric: read_before_merge
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.ledger_source === 'task-result.json';
+      metric: ledger_from_task_result_json

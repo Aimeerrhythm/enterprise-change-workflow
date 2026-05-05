@@ -1,0 +1,40 @@
+# S02: Missing task-result.json — coordinator falls back + writes warning marker
+# Tests that when task-result.json is absent after worktree merge, the coordinator:
+# 1. Falls back to git log inference
+# 2. Writes an explicit aggregation-warning marker file (not silently continues)
+# Should FAIL against current SKILL.md (no protocol defined for this case).
+# Should PASS after fix.
+- vars:
+    input: |
+      You are the impl-orchestration coordinator. You merged worktree branch `worktree-task4`
+      into the current branch. When you attempt to read
+      `.claude/worktrees/xyz456/.claude/ecw/task-result.json`, the file does not exist.
+
+      What actions do you take?
+      Do you write a warning/marker file to record this aggregation failure?
+      What fallback source do you use to infer the task result?
+  assert:
+    - type: is-json
+      value: "{{output}}"
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // fallback must involve git log (not silently treating agent text as authoritative)
+        return result.missing_file_action === 'write-warning-marker' ||
+               result.missing_file_action === 'git-log-only';
+      metric: fallback_not_silent
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.write_warning_marker === true;
+      metric: write_warning_marker_on_missing
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        // must not just error-out or skip — must attempt git log inference
+        return result.missing_file_action !== 'error-out' &&
+               result.missing_file_action !== 'skip-task';
+      metric: no_hard_error_or_skip

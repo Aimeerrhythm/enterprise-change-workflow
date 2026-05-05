@@ -1,0 +1,42 @@
+{
+  "name": "coordinator_result_protocol",
+  "description": "Report the coordinator's result aggregation protocol decision in structured format. Call this tool to record your decision about how to handle worktree implementer results.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "scenario": {
+        "type": "string",
+        "description": "Brief label for the scenario being evaluated"
+      },
+      "first_action_after_agent_returns": {
+        "type": "string",
+        "enum": ["read-result-file", "run-git-merge", "run-compile-check", "update-ledger", "other"],
+        "description": "The coordinator's first action after a worktree Agent call returns, before git merge"
+      },
+      "authoritative_source": {
+        "type": "string",
+        "enum": ["task-result.json", "agent-tool-result-text", "git-log", "mixed"],
+        "description": "The authoritative source for task result data used to update Subagent Ledger"
+      },
+      "read_before_merge": {
+        "type": "boolean",
+        "description": "Whether the result file must be read BEFORE running git merge"
+      },
+      "missing_file_action": {
+        "type": "string",
+        "enum": ["write-warning-marker", "error-out", "skip-task", "git-log-only", "use-agent-text-only"],
+        "description": "Action when task-result.json is absent after merge"
+      },
+      "write_warning_marker": {
+        "type": "boolean",
+        "description": "Whether a warning/aggregation-failed marker file must be written when result file is missing"
+      },
+      "ledger_source": {
+        "type": "string",
+        "enum": ["task-result.json", "agent-tool-result-text", "git-log-inferred"],
+        "description": "Data source used when writing Subagent Ledger entries (Phase 5)"
+      }
+    },
+    "required": ["scenario", "first_action_after_agent_returns", "authoritative_source", "read_before_merge"]
+  }
+}
