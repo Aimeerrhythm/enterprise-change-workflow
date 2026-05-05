@@ -1,0 +1,125 @@
+# S03: P2 单域需求 — 订单列表分页查询优化
+# 验证：P2 plan 允许合并步骤（5-10min/step）、direct 策略、不要求 rollback 注记
+- vars:
+    input: |
+      需求：优化订单列表分页查询接口性能。
+      当前查询接口在数据量大时响应慢（>2s），需要：
+      1. 为 order 表 created_at + user_id 添加复合索引
+      2. 将 COUNT(*) 分页改为游标分页（cursor-based pagination）
+
+      约束：接口需要保持向后兼容（旧客户端继续传 page/pageSize，新客户端可传 cursor）
+    session_state: |
+      <!-- ECW:STATUS:START -->
+      - **Risk Level**: P2
+      - **Domains**: order
+      - **Mode**: single-domain
+      - **Routing**: writing-plans → TDD:RED → Implementation(GREEN) → impl-verify → Phase 3
+      - **Current Phase**: phase2-complete
+      - **Created**: 2026-05-04
+      - **Workflow ID**: 20260504-c9d3
+      - **Baseline Commit**: ghi9012
+      - **Implementation Strategy**: TBD
+      - **Post-Implementation Tasks**: impl-verify(#2) → phase3(#3)
+      - **Auto-Continue**: yes
+      - **Next**: writing-plans
+      <!-- ECW:STATUS:END -->
+
+      <!-- ECW:MODE:START -->
+      - **Working Mode**: planning
+      <!-- ECW:MODE:END -->
+    ecw_yml: |
+      project:
+        name: "test-ecommerce"
+        type: "java-monolith"
+        language: "java"
+        output_language: "zh-CN"
+      tdd:
+        enabled: true
+        check_test_files: false
+        base_test_class: "BaseServiceTest"
+      verification:
+        run_tests: true
+    domain_registry: |
+      ## order
+      - 知识目录: .claude/knowledge/order/
+      - 代码目录: src/main/java/com/example/order/
+    path_mappings: |
+      | 代码路径 | 域 |
+      |---------|-----|
+      | src/main/java/com/example/order/ | order |
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 结构完整性 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_plan_header === true;
+      metric: has_plan_header
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_file_paths === true;
+      metric: every_task_has_file_paths
+
+    # ── P2 仍需要 TDD 步骤（simplified TDD 不是免除 TDD）──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_tdd_steps === true;
+      metric: every_task_has_tdd_steps
+
+    # ── P2 合并步骤后 task 数量应 <= 5 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.task_count >= 1 && result.task_count <= 5;
+      metric: task_count_p2_range
+
+    # ── P2 不要求 rollback 注记 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_rollback_notes === false;
+      metric: no_rollback_notes_required
+
+    # ── P2 任务少 → direct 策略 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.implementation_strategy === 'direct';
+      metric: implementation_strategy_direct
+
+    # ── 需求覆盖度：2 个需求点（索引、游标分页）应被覆盖 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.requirement_points_covered >= 2;
+      metric: requirement_coverage
+
+    # ── 场景特定：plan 提及索引相关处理 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.plan_content || '').toLowerCase();
+        return content.includes('index') || content.includes('索引');
+      metric: covers_index_requirement
+
+    # ── 场景特定：plan 提及游标或向后兼容 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.plan_content || '').toLowerCase();
+        return content.includes('cursor') || content.includes('游标') || content.includes('兼容');
+      metric: covers_cursor_pagination

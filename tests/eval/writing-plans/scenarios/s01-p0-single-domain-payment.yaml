@@ -1,0 +1,127 @@
+# S01: P0 单域需求 — 支付退款逆向流程
+# 验证：P0 plan 具备全步骤 TDD、rollback 注记、正确粒度（2-5min/step）、幂等需求覆盖
+- vars:
+    input: |
+      需求：新增支付退款逆向流程。用户在 APP 端可以对已支付订单发起退款申请，
+      系统需要验证退款条件（订单状态、退款时限、退款金额），调用支付网关退款接口，
+      更新订单状态，并在退款完成后发送通知。
+
+      关键约束：
+      1. 退款接口必须幂等（重复调用不重复退款）
+      2. 部分退款支持（退款金额 ≤ 已支付金额 - 已退款金额）
+      3. 退款超时需支持人工介入
+    session_state: |
+      <!-- ECW:STATUS:START -->
+      - **Risk Level**: P0
+      - **Domains**: payment
+      - **Mode**: single-domain
+      - **Routing**: requirements-elicitation → Phase 2 → writing-plans → spec-challenge → TDD:RED → Implementation(GREEN) → impl-verify → biz-impact-analysis → Phase 3
+      - **Current Phase**: phase2-complete
+      - **Created**: 2026-05-04
+      - **Workflow ID**: 20260504-a3f1
+      - **Baseline Commit**: abc1234
+      - **Implementation Strategy**: TBD
+      - **Post-Implementation Tasks**: impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)
+      - **Auto-Continue**: yes
+      - **Next**: writing-plans
+      <!-- ECW:STATUS:END -->
+
+      <!-- ECW:MODE:START -->
+      - **Working Mode**: planning
+      <!-- ECW:MODE:END -->
+    ecw_yml: |
+      project:
+        name: "test-ecommerce"
+        type: "java-monolith"
+        language: "java"
+        output_language: "zh-CN"
+      tdd:
+        enabled: true
+        check_test_files: false
+        base_test_class: "BaseServiceTest"
+      verification:
+        run_tests: true
+    domain_registry: |
+      ## payment
+      - 知识目录: .claude/knowledge/payment/
+      - 代码目录: src/main/java/com/example/payment/
+    path_mappings: |
+      | 代码路径 | 域 |
+      |---------|-----|
+      | src/main/java/com/example/payment/ | payment |
+      | src/main/java/com/example/order/ | order |
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 结构完整性 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_plan_header === true;
+      metric: has_plan_header
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_tdd_steps === true;
+      metric: every_task_has_tdd_steps
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_file_paths === true;
+      metric: every_task_has_file_paths
+
+    # ── P0 粒度：3 个需求点，每个至少 1 task，上限 10 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.task_count >= 3 && result.task_count <= 10;
+      metric: task_count_in_range
+
+    # ── P0 必须有 rollback 注记 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_rollback_notes === true;
+      metric: has_rollback_notes
+
+    # ── P0 有 4+ tasks → subagent-driven ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.implementation_strategy === 'subagent-driven';
+      metric: implementation_strategy_subagent
+
+    # ── 需求覆盖度：3 个关键需求点全覆盖 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.requirement_points_covered >= 3;
+      metric: requirement_coverage
+
+    # ── 场景特定：plan 内容包含幂等相关描述 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.plan_content || '').toLowerCase();
+        return content.includes('幂等') || content.includes('idempoten');
+      metric: covers_idempotency_requirement
+
+    # ── 场景特定：plan 内容包含部分退款相关描述 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.plan_content || '').toLowerCase();
+        return content.includes('部分退款') || content.includes('partial refund');
+      metric: covers_partial_refund

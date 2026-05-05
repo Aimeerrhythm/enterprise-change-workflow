@@ -1,0 +1,134 @@
+# S02: P1 跨域需求 — 订单取消联动库存退还
+# 验证：P1 跨域 plan 覆盖两个域的文件路径、跨域协调逻辑、subagent-driven 策略
+- vars:
+    input: |
+      需求：实现订单取消时自动退还库存的联动功能。
+      当用户取消已确认订单时，系统需要：
+      1. 更新订单状态为 CANCELLED
+      2. 调用库存服务退还占用的库存量
+      3. 若订单已支付，触发退款流程
+      4. 发送取消通知（站内信 + 邮件）
+
+      关键约束：
+      - 库存退还必须在订单取消成功后才执行（分布式事务）
+      - 退款通过 MQ 异步触发，不阻塞取消流程
+    session_state: |
+      <!-- ECW:STATUS:START -->
+      - **Risk Level**: P1
+      - **Domains**: order, inventory
+      - **Mode**: cross-domain
+      - **Routing**: domain-collab → Phase 2 → writing-plans → TDD:RED → Implementation(GREEN) → impl-verify → biz-impact-analysis → Phase 3
+      - **Current Phase**: phase2-complete
+      - **Created**: 2026-05-04
+      - **Workflow ID**: 20260504-b7e2
+      - **Baseline Commit**: def5678
+      - **Implementation Strategy**: TBD
+      - **Post-Implementation Tasks**: impl-verify(#3) → biz-impact-analysis(#4) → phase3(#5)
+      - **Auto-Continue**: yes
+      - **Next**: writing-plans
+      <!-- ECW:STATUS:END -->
+
+      <!-- ECW:MODE:START -->
+      - **Working Mode**: planning
+      <!-- ECW:MODE:END -->
+    ecw_yml: |
+      project:
+        name: "test-ecommerce"
+        type: "java-monolith"
+        language: "java"
+        output_language: "zh-CN"
+      tdd:
+        enabled: true
+        check_test_files: false
+        base_test_class: "BaseServiceTest"
+      verification:
+        run_tests: true
+    domain_registry: |
+      ## order
+      - 知识目录: .claude/knowledge/order/
+      - 代码目录: src/main/java/com/example/order/
+      ## inventory
+      - 知识目录: .claude/knowledge/inventory/
+      - 代码目录: src/main/java/com/example/inventory/
+    path_mappings: |
+      | 代码路径 | 域 |
+      |---------|-----|
+      | src/main/java/com/example/order/ | order |
+      | src/main/java/com/example/inventory/ | inventory |
+      | src/main/java/com/example/payment/ | payment |
+  assert:
+    - type: is-json
+      value: "{{output}}"
+
+    # ── 结构完整性 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.has_plan_header === true;
+      metric: has_plan_header
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_tdd_steps === true;
+      metric: every_task_has_tdd_steps
+
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.every_task_has_file_paths === true;
+      metric: every_task_has_file_paths
+
+    # ── P1 跨域：task 数量 >= 4（两个域各至少 2 tasks）──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.task_count >= 4;
+      metric: task_count_cross_domain_minimum
+
+    # ── P1 + 4 tasks → subagent-driven ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.implementation_strategy === 'subagent-driven';
+      metric: implementation_strategy_subagent
+
+    # ── 需求覆盖度：4 个需求点（含取消、库存、退款、通知）应全覆盖 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        return result.requirement_points_covered >= 4;
+      metric: requirement_coverage
+
+    # ── 跨域特有：plan 内容包含 order 域的文件路径 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = result.plan_content || '';
+        return content.includes('com/example/order') || content.includes('order/');
+      metric: covers_order_domain_files
+
+    # ── 跨域特有：plan 内容包含 inventory 域的文件路径 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = result.plan_content || '';
+        return content.includes('com/example/inventory') || content.includes('inventory/');
+      metric: covers_inventory_domain_files
+
+    # ── 场景特定：plan 提及分布式事务或 MQ 异步处理 ──
+    - type: javascript
+      value: |
+        const parsed = JSON.parse(output);
+        const result = parsed.input || parsed;
+        const content = (result.plan_content || '').toLowerCase();
+        return content.includes('mq') || content.includes('异步') || content.includes('分布式') || content.includes('消息');
+      metric: covers_distributed_coordination
