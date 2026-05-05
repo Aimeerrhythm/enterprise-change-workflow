@@ -15,11 +15,12 @@
 
 Path: `.claude/ecw/calibration-log.md` (configurable via ecw.yml `paths.calibration_log`).
 
-Append format:
+Append format (one workflow entry, with Risk Classification always present + optional skill sections):
 
 ```markdown
-### {YYYY-MM-DD} — {change summary}
+## Workflow: {workflow-id} ({risk-level} {mode} {domain-summary})
 
+### Risk Classification
 | Dimension | Phase 1 | Phase 2 | Actual |
 |-----------|---------|---------|--------|
 | Risk Level | P{x} | P{y} | P{z} |
@@ -31,10 +32,54 @@ Append format:
 **Determination**: {Accurate / Over-alert / Missed / Minor deviation}
 **Deviation cause**: {one-line explanation; write "—" if no deviation}
 
+### Domain Identification
+(skipped — single-domain, no domain-collab)
+```
+
+or when data available:
+
+```markdown
+### Domain Identification
+| Metric | Value |
+|--------|-------|
+| Predicted | {domain list} |
+| Actual | {domain list} |
+| Over-predicted | {domain list or none} |
+| Missed | {domain list or none} |
+```
+
+```markdown
+### Plan Accuracy
+| Metric | Value |
+|--------|-------|
+| Planned Tasks | {n} |
+| Actual Commits | {n} |
+| Task Ratio | {ratio} |
+| Uncovered Files | {count} ({file list or none}) |
+```
+
+```markdown
+### Spec-Challenge Precision
+| Metric | Value |
+|--------|-------|
+| Total Findings | {n} ({fatal} fatal, {improvement} improvement) |
+| Accepted | {n} |
+| Rejected | {n} |
+| Deferred | {n} |
+| Acceptance Rate | {rate} |
+```
+
+```markdown
+### Requirements Completeness
+| Metric | Value |
+|--------|-------|
+| impl-verify Requirement Findings | {n} |
+| Gaps | {none or finding summaries} |
+
 ---
 ```
 
-> If file does not exist, first copy initial template from `templates/calibration-log.md` (or create an empty file with header).
+> If file does not exist, create with header: `# ECW Calibration Log\n\n> Auto-appended by Phase 3.\n\n---\n`
 
 ---
 
@@ -74,9 +119,55 @@ Append format:
 
 Path: `.claude/ecw/state/instincts.md` (configurable via ecw.yml `paths.instincts`).
 
-Instincts are lightweight heuristic rules that SessionStart hook injects into future sessions when confidence is high enough.
+Instincts are lightweight heuristic rules that SessionStart hook injects into future sessions when confidence is high enough. Multi-skill instincts (Issue #47) are stored in per-skill sections; auto-continue PreToolUse injects the relevant section when loading each skill.
 
-**Extraction rules:**
+**File format** (if file does not exist, create with header):
+
+```markdown
+# ECW Learned Instincts
+
+> Auto-managed by Phase 3. SessionStart injects risk-classifier entries with confidence > 0.7.
+> auto-continue PreToolUse injects per-skill entries when loading each skill.
+> Do not edit manually — scores are calibrated by repeated observations.
+
+---
+```
+
+**File structure — per-skill sections**:
+
+```markdown
+## risk-classifier
+
+<!-- INSTINCT -->
+- **Pattern**: {when these keywords/modules appear}
+- **Action**: {consider raising/lowering level by 1}
+- **Confidence**: {0.0-1.0}
+- **Source**: {YYYY-MM-DD calibration: {determination} — {one-line cause}}
+- **Updated**: {YYYY-MM-DD}
+
+## domain-collab
+
+(no instincts yet — insufficient calibration data)
+
+## writing-plans
+
+<!-- INSTINCT -->
+- **Pattern**: {pattern for this project's planning}
+- **Action**: {adjustment action}
+- **Confidence**: {0.0-1.0}
+- **Source**: {YYYY-MM-DD calibration}
+- **Updated**: {YYYY-MM-DD}
+
+## spec-challenge
+
+(no instincts yet — insufficient calibration data)
+
+## requirements-elicitation
+
+(no instincts yet — insufficient calibration data)
+```
+
+**Extraction rules for risk-classifier (existing)**:
 
 | Determination | Instinct Extraction |
 |---------------|-------------------|
@@ -85,31 +176,21 @@ Instincts are lightweight heuristic rules that SessionStart hook injects into fu
 | **Accurate** | If a matching instinct exists (same keywords), increase confidence by 0.1 (cap 1.0) |
 | **Minor deviation** | No instinct extraction |
 
-**Update rules:**
-- Before writing a new instinct, scan existing entries for keyword overlap (≥50% keyword match = same instinct)
+**Extraction rules for multi-skill instincts (new, Issue #47)**:
+
+Write/update instinct in the corresponding `## {skill}` section when **≥3 calibration records** for this project show a consistent pattern with confidence ≥ 0.7:
+
+| Skill | Trigger Condition | Pattern Format |
+|-------|------------------|---------------|
+| `domain-collab` | Same domain consistently missed/over-predicted | "order domain change often involves inventory domain" |
+| `writing-plans` | `task_ratio` consistently > 1.3 | "Task estimates for {change_type} are typically under by {avg_ratio}x" |
+| `spec-challenge` | Certain finding types consistently rejected | "{finding_type} findings have {acceptance_rate}% acceptance rate" |
+| `requirements-elicitation` | Requirement gaps in ≥2 records for similar change type | "{change_type} requirements often miss {gap_pattern}" |
+
+**Update rules (all skills)**:
+- Before writing a new instinct, scan existing entries in the `## {skill}` section for keyword overlap (≥50% match = same instinct)
 - If a matching instinct exists: increase confidence by 0.15 (cap 1.0), update `Updated` date
 - New instinct starts at confidence 0.5
-
-**File format** (if file does not exist, create with header):
-
-```markdown
-# Risk Classification Instincts
-
-> Auto-managed by Phase 3. SessionStart injects entries with confidence > 0.7.
-> Do not edit manually — scores are calibrated by repeated observations.
-
----
-```
-
-Each instinct entry:
-
-```markdown
-<!-- INSTINCT -->
-- **Pattern**: {when these keywords/modules appear}
-- **Action**: {consider raising/lowering level by 1}
-- **Confidence**: {0.0-1.0}
-- **Source**: {YYYY-MM-DD calibration: {determination} — {one-line cause}}
-- **Updated**: {YYYY-MM-DD}
-```
+- Sections without enough data: write `(no instincts yet — insufficient calibration data)` instead of entries
 
 > **Robustness**: If the file cannot be written, skip silently. Instinct extraction is best-effort and does not block Phase 3.
