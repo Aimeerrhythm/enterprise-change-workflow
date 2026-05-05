@@ -92,3 +92,15 @@ cross-review:
   - "cross-file"
   - "Announce at start"
   - "Your Thought"
+
+knowledge-track:
+  - "code-derived"
+  - "pending-entries.md"
+  - "candidate entry"
+  - "three criteria"
+  - "Deduplication check"
+
+knowledge-audit:
+  - "pending-entries.md"
+  - "Review Pending"
+  - "stale-refs.md"

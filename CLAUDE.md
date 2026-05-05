@@ -71,6 +71,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Concise structured index for Phase 1 automated quick-lookup |
 | `.claude/ecw/state/instincts.md` | After Phase 3 calibration | Learned heuristic rules, injected by SessionStart when confidence > 0.7 |
 | `.claude/ecw/knowledge-ops/doc-tracker.md` | After each knowledge-track run | Doc utilization tracking records (hit/miss/redundant/misleading) |
+| `.claude/ecw/knowledge-ops/pending-entries.md` | After knowledge-track detects qualifying code-derived events | Candidate knowledge entries awaiting user review; Status: pending→accepted/rejected/written |
 | `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |
 | `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
 | `.claude/ecw/workspace.yml` | After workspace create | Workspace config: services, branches, build settings (workspace root only) |
