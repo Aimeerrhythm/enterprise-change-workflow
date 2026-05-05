@@ -45,7 +45,8 @@ def run_step(step: dict, prior_artifacts: dict[str, dict[str, str]]) -> dict[str
     """Execute one skill step via the Anthropic API and return captured artifacts."""
     skill_name = step["skill"]
     extra_files = step.get("skill_files")
-    skill_prompt = load_skill_prompt(skill_name, extra_files=extra_files)
+    prompt_file = step.get("prompt_file")
+    skill_prompt = load_skill_prompt(skill_name, extra_files=extra_files, prompt_file=prompt_file)
 
     context = build_context(step.get("context") or {}, prior_artifacts)
 

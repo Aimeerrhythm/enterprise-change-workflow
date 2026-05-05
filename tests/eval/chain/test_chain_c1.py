@@ -245,23 +245,19 @@ class TestSkillLoaderPromptFile:
         agent_dir.mkdir()
         (agent_dir / "test-agent.md").write_text("# Agent Instructions", encoding="utf-8")
 
-        monkeypatch.setattr("tests.eval.chain.skill_loader.PROJECT_ROOT", tmp_path)
-        from tests.eval.chain import skill_loader
-        import importlib
-        importlib.reload(skill_loader)
+        import tests.eval.chain.skill_loader as sl
+        monkeypatch.setattr(sl, "PROJECT_ROOT", tmp_path)
 
-        result = skill_loader.load_skill_prompt("any-skill", prompt_file="agents/test-agent.md")
+        result = sl.load_skill_prompt("any-skill", prompt_file="agents/test-agent.md")
         assert result == "# Agent Instructions"
 
     def test_prompt_file_not_found_raises(self, tmp_path, monkeypatch):
         """When prompt_file path doesn't exist, raises FileNotFoundError."""
-        monkeypatch.setattr("tests.eval.chain.skill_loader.PROJECT_ROOT", tmp_path)
-        from tests.eval.chain import skill_loader
-        import importlib
-        importlib.reload(skill_loader)
+        import tests.eval.chain.skill_loader as sl
+        monkeypatch.setattr(sl, "PROJECT_ROOT", tmp_path)
 
         with pytest.raises(FileNotFoundError, match="prompt_file not found"):
-            skill_loader.load_skill_prompt("any-skill", prompt_file="agents/nonexistent.md")
+            sl.load_skill_prompt("any-skill", prompt_file="agents/nonexistent.md")
 
     def test_prompt_file_with_extra_files_appended(self, tmp_path, monkeypatch):
         """When prompt_file is given, extra_files are still appended from skill dir."""
@@ -273,13 +269,11 @@ class TestSkillLoaderPromptFile:
         sc_dir.mkdir(parents=True)
         (sc_dir / "extra.md").write_text("# Extra Content", encoding="utf-8")
 
-        monkeypatch.setattr("tests.eval.chain.skill_loader.PROJECT_ROOT", tmp_path)
-        monkeypatch.setattr("tests.eval.chain.skill_loader.SKILLS_DIR", skills_dir)
-        from tests.eval.chain import skill_loader
-        import importlib
-        importlib.reload(skill_loader)
+        import tests.eval.chain.skill_loader as sl
+        monkeypatch.setattr(sl, "PROJECT_ROOT", tmp_path)
+        monkeypatch.setattr(sl, "SKILLS_DIR", skills_dir)
 
-        result = skill_loader.load_skill_prompt(
+        result = sl.load_skill_prompt(
             "spec-challenge",
             extra_files=["extra.md"],
             prompt_file="agents/review-agent.md",
@@ -293,12 +287,10 @@ class TestSkillLoaderPromptFile:
         skill_dir.mkdir(parents=True)
         (skill_dir / "SKILL.md").write_text("# My Skill", encoding="utf-8")
 
-        monkeypatch.setattr("tests.eval.chain.skill_loader.SKILLS_DIR", tmp_path / "skills")
-        from tests.eval.chain import skill_loader
-        import importlib
-        importlib.reload(skill_loader)
+        import tests.eval.chain.skill_loader as sl
+        monkeypatch.setattr(sl, "SKILLS_DIR", tmp_path / "skills")
 
-        result = skill_loader.load_skill_prompt("my-skill")
+        result = sl.load_skill_prompt("my-skill")
         assert result == "# My Skill"
 
     def test_harness_run_step_passes_prompt_file_to_loader(self):
