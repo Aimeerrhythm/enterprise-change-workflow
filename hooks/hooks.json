@@ -65,6 +65,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "TaskUpdate",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/eval-gate.py\"",
+            "timeout": 300
+          }
+        ]
       }
     ],
     "PostToolUse": [
