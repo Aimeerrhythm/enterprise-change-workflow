@@ -50,7 +50,7 @@ Read each project config file and compare against the current plugin template. F
 
 1. **Missing sections** — If template has a top-level key (e.g., `tdd:`, `paths:`, `auto_flow:`) that project file lacks, inject the section from template with default values.
 2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.calibration_history`, `paths.instincts`) that project file lacks, add them with template defaults.
-3. **Stale fields** — If project file has fields NOT in the template, remove them.
+3. **Unknown fields** (info only) — If project file has top-level keys NOT in the template, report them but do NOT remove. User may have intentional custom extensions.
 4. **Preserve user values** — Never overwrite fields that exist in both template and project; only add missing ones.
 
 For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire file.
@@ -100,6 +100,37 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 - Section exists → **ok**
 - Section missing → **needs-fix**: Read the `knowledge_maintenance:` section from plugin `templates/ecw.yml` and insert it after the `paths:` section in the project file. Preserve all default values.
 
+### Check I: State & Knowledge-Ops Files
+
+**Check:** Verify that runtime state files and knowledge-ops files created by ecw-init exist.
+
+```bash
+ls .claude/ecw/state/calibration-history.md .claude/ecw/state/instincts.md \
+   .claude/ecw/knowledge-ops/doc-tracker.md 2>/dev/null
+```
+
+For each missing file:
+- `.claude/ecw/state/calibration-history.md` → **needs-fix**: `mkdir -p .claude/ecw/state` then write file with content:
+  ```
+  <!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+  <!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
+  ```
+- `.claude/ecw/state/instincts.md` → **needs-fix**: Write file with content:
+  ```
+  <!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+  <!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
+  ```
+- `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
+
+### Check J: Write Permissions in settings.local.json
+
+**Check:** Read `.claude/settings.local.json`. Verify `permissions.allow` array contains all three ECW write entries:
+- `Write(.claude/ecw/**)`
+- `Write(.claude/knowledge/**)`
+- `Write(.claude/plans/**)`
+
+Any missing entry → **needs-fix**: Merge into `permissions.allow` (create the file / array if it doesn't exist, never overwrite existing entries).
+
 ---
 
 ## Step 2: Present & Confirm
@@ -128,6 +159,8 @@ Manual action needed:
 Skipped (already up to date):
 {list ok checks}
 
+Tip: Changes are applied via Edit tool. If you want to revert, run `git checkout -- .claude/` after upgrade.
+
 Options:
   1. "Run upgrade (Recommended)" — Apply all auto-fixable items
   2. "Skip" — Do not run upgrade
@@ -155,13 +188,13 @@ Error handling:
 - Edit match fails → Output exact content for user to manually add
 - Any error → Record, continue to next check
 
-**After all fixes applied**, update the `ecw_version` field in project `.claude/ecw/ecw.yml` to match the current plugin version (read from plugin `package.json`). If the field doesn't exist, add it after the file header comments. This ensures `session-start.py` version check passes on next session.
-
 ---
 
 ## Step 4: Auto-Validate
 
-After all fixes (or if all checks passed), **automatically execute `/ecw-validate-config`** to verify the full configuration health. Do not ask the user — just run it.
+After all fixes (or if all checks passed), **update the `ecw_version` field** in project `.claude/ecw/ecw.yml` to match the current plugin version (read from plugin `package.json`). If the field doesn't exist, add it after the file header comments. Do this before validation so `session-start.py` version check passes on next session.
+
+Then **automatically execute `/ecw-validate-config`** to verify the full configuration health. Do not ask the user — just run it.
 
 **Clean up upgrade marker:** Run `rm -f .claude/ecw/.config-edit-allowed` via Bash to restore config protection.
 

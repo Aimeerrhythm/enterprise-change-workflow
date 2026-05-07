@@ -54,6 +54,8 @@ For each path in the `paths` section, check whether the referenced file/director
 - `knowledge_root`
 - `knowledge_common`
 - `calibration_log` (optional — may not exist yet; not an error)
+- `calibration_history` (optional — created by ecw-init/ecw-upgrade; not an error if absent on fresh install before first use)
+- `instincts` (optional — same as calibration_history)
 
 ---
 
@@ -109,8 +111,8 @@ Read the risk classification file.
 
 ### 5a: Placeholder Check
 
-Search for unfilled placeholders:
-- `{your_...}` patterns
+Search for unfilled template placeholder tokens in table rows and prose (outside code blocks and HTML comments):
+- All `{...}` patterns (e.g., `{your_*}`, `{reason}`, `{resource}`, `{N}`, `{SharedService}`, `{your_core_flow_keyword_*}`)
 - `{{...}}` patterns
 - `TODO` / `TBD` markers
 
@@ -132,7 +134,7 @@ For the following files (marked as "copy as-is" in ecw-init), compare the projec
 - Compare skill/tool names referenced in the "Risk Level → Workflow Requirements" table:
   - Extract all skill names appearing in both template and project files (e.g., `impl-verify`, `biz-impact-analysis`, `spec-challenge`, `requirements-elicitation`, `writing-plans`)
   - If project file uses terminology no longer present in template (e.g., `code-review` replaced by `impl-verify`), flag as "stale terminology"
-- Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders (`{your_...}` patterns)
+- Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders — scan for all `{...}` tokens in table rows (same scope as Step 5a)
 
 **`calibration-log.md`:**
 - Skip if file does not exist (this file is created by Phase 3 calibration, not by init; absence is normal before first P0/P1 task completes)
@@ -148,7 +150,11 @@ Standard field set (from ecw-init Scaffold Step 3b):
 For each registered domain:
 - Check if Business Rules field is missing → Flag "missing business rules path"
 - Check if Data Model field is missing → Flag "missing data model path"
-- If field exists and value is not an explicit annotation like "no standalone file", verify the referenced file exists
+- If field exists and value is not an annotation indicating no standalone file (see exemptions below), verify the referenced file exists
+
+**Exemptions (do not flag as missing):** Field value contains "no standalone", "无独立文件", "内联", "见 ", "参见 ", or starts with `(` / `（`.
+
+**Important:** Only check fields listed in domain-registry. Do NOT infer "migration needed" from the filesystem — if both a root-level file and a `common/` file exist, as long as domain-registry references an existing file the check passes. Never output migration suggestions.
 
 ### 5b-3: Output
 
@@ -158,6 +164,8 @@ For each detected difference, output:
 - **Broken reference** (fail): Field references a file that does not exist
 
 ---
+
+## Step 6: Check Knowledge File Structure
 
 ### 6a: Knowledge Root
 
@@ -174,7 +182,7 @@ Check if `knowledge_common` directory exists. If it exists, check standard files
 - `external-systems.md`
 - `e2e-paths.md`
 
-For each file: Check if it exists and whether content is still template placeholder (file size < 200 bytes or contains only headers).
+For each file: Check if it exists and whether content is still a template placeholder. A file is a placeholder if: it contains only comment lines (`<!-- ... -->`) and markdown headers (`# ...`), OR contains `{{...}}` tokens in data rows, OR contains `(暂无)` as the only data row. A file with at least one real data row (no placeholder tokens) is valid regardless of size.
 
 ### 6c: Domain-Level Knowledge
 
