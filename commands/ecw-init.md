@@ -199,7 +199,7 @@ Read `templates/ecw.yml` template. Fill in:
 - `component_types` (from Step 3)
 - `scan_patterns`: Keep defaults matching the detected language
 
-**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.3"`).
+**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.4"`).
 
 ### 4b: Generate `domain-registry.md`
 
@@ -503,7 +503,7 @@ Enter "use defaults" to use the standard component set for your language:
 
 Read `templates/ecw.yml`. Fill in project info, component types, scan patterns for detected language.
 
-**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.3"`).
+**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.4"`).
 
 ### 3b: Generate `domain-registry.md`
 

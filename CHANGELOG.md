@@ -4,6 +4,26 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.3.4] - 2026-05-07
+
+### 修复
+
+- **ecw-init**：`change-risk-classification.md` 占位符现在由 Step 6f 自动从扫描结果填充，不再要求用户手动替换；区分单域/多域场景
+- **ecw-init**：新增 Step 6g 内联配置验证，init 结束后自动检查配置健康，不再要求手动运行 `/ecw-validate-config`
+- **ecw-init**：path-mappings 完整性验证覆盖所有 Java 源目录（原仅检查 `biz/`）
+- **ecw-init**：`{{COMMIT_HASH}}` 占位符替换为实际 git commit hash
+- **ecw-init**：占位符兜底扫描范围扩展到所有 `{...}` table token（`{reason}`、`{N}`、`{SharedService}` 等）
+- **ecw-init**：Manual/Attach 模式同步 Step 6f/6g 执行语义
+- **ecw-upgrade**：修复版本号更新 Bug——全部检查通过跳过 Step 3 时 `ecw_version` 永不更新，导致每次会话都触发升级提示
+- **ecw-upgrade**：Check B.3 改为 info-only，不再自动删除用户自定义字段
+- **ecw-upgrade**：新增 Check I，升级时自动创建缺失的 `state/` 和 `knowledge-ops/` 目录及文件
+- **ecw-upgrade**：新增 Check J，验证并补全 `settings.local.json` 的 ECW 写权限配置
+- **ecw-upgrade**：Step 2 提示用户可用 `git checkout -- .claude/` 回滚
+- **ecw-validate-config**：Step 5a/5b-1 占位符扫描扩展到所有 `{...}` table token，与 ecw-init 保持一致
+- **ecw-validate-config**：Step 5b-2 新增负面约束，禁止模型推断"迁移建议"，修复 Attach 模式下的误报
+- **ecw-validate-config**：Step 6b 改为内容检查，不再依赖 200 bytes 文件大小阈值
+- **ecw-validate-config**：补充 Step 6 标题，Step 2c 补充 state 文件 optional 标注
+
 ## [1.3.3] - 2026-05-07
 
 ### 修复
