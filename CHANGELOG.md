@@ -4,6 +4,19 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.3.3] - 2026-05-07
+
+### 修复
+
+- **ecw-init 系统性修复**：修复 `ecw_version` 硬编码为旧版本号问题，现从 `package.json` 动态读取写入
+- **ecw-init**：移除对 `calibration-log.md` 的 init 创建（Phase 3 运行时产物，不应由 init 生成）
+- **ecw-init**：新增 Scaffold/Attach Step 3e/4e，init 时创建 `state/calibration-history.md` 和 `state/instincts.md` 空文件，避免 Phase 1 首次读取报 file not found
+- **ecw-init**：补全 `settings.local.json` 权限配置，增加 `Write(.claude/knowledge/**)` 条目（knowledge-track 运行时写入知识文件需要此权限）
+- **ecw-init**：Java 代码扫描脚本改为自动运行（原为可选），扫描结果直接写入对应知识文件（`cross-domain-calls.md`、`shared-resources.md`、`mq-topology.md`、`external-systems.md`），不再仅打印丢弃
+- **ecw-init**：模板 `external-systems.md` 中虚假示例数据行（`orders/catalog` 域）移入 HTML 注释，避免写入生成文件时被误认为真实数据
+- **ecw-validate-config**：`calibration-log.md` 文件不存在时跳过检查，正常情况（Phase 3 未运行）不再误报
+- **测试**：新增 `test_ecw_init_configures_knowledge_write_permission` 验证 `Write(.claude/knowledge/**)` 权限配置
+
 ## [1.3.2] - 2026-05-07
 
 ### 修复
@@ -833,6 +846,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[1.3.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.3
 [1.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.2
 [1.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.0
