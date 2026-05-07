@@ -29,7 +29,10 @@ def trace_logger():
 
 @pytest.fixture
 def trace_dir(tmp_path):
-    """Return tmp_path as a project root for trace logging."""
+    """Return tmp_path as an ECW project root for trace logging."""
+    ecw_dir = tmp_path / ".claude" / "ecw"
+    ecw_dir.mkdir(parents=True)
+    (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
     return tmp_path
 
 

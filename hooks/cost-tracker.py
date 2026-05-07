@@ -20,6 +20,8 @@ import os
 import sys
 from datetime import datetime
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 # Pricing per 1M tokens (USD)
 PRICING = {
     "haiku":  {"input": 0.80,  "output": 4.0},
@@ -145,6 +147,11 @@ def main():
     cwd = input_data.get("cwd", "")
 
     if not cwd or not _is_ecw_project(cwd):
+        print(json.dumps({"result": "continue"}))
+        return
+
+    from ecw_config import is_ecw_project
+    if not is_ecw_project(cwd):
         print(json.dumps({"result": "continue"}))
         return
 

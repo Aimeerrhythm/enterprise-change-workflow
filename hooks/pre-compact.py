@@ -170,6 +170,11 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
+    from ecw_config import is_ecw_project
+    if not is_ecw_project(cwd):
+        print(json.dumps({"result": "continue"}))
+        return
+
     state_path = find_session_state(cwd)
     checkpoint_files = _get_session_data_files(cwd)
 
