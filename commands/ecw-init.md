@@ -253,7 +253,7 @@ find . -type d -name "mapper" -path "*/resources/*" | head -5
 
 Map discovered subdirectories to confirmed domains.
 
-After writing the file, verify completeness — same gap check as Scaffold Step 3d: scan `biz/` subdirectories, cross-check against the mapping table, add any missing rows or flag as `（待确认域）`.
+After writing the file, verify completeness — same gap check as Scaffold Step 3d: scan all Java source directories discovered in this step's generation scan, verify each one with `.java` files has a mapping row, add missing rows or flag as `（待确认域）`.
 
 ### 4e: Create State Files
 
@@ -319,6 +319,8 @@ Output structured summary (same format as Scaffold Step 7), with these differenc
 - Title: "ECW Initialization Complete (Attach Mode)"
 - Knowledge files section shows: "Existing — not modified" (per domain directory)
 - Common knowledge section shows: "Existing — not modified" if files exist, "Not detected" if not
+- Include Validation Results section from Step 6g
+- Next Steps: Replace "Enrich domain knowledge files" with "Review existing domain knowledge for completeness — add any missing files (business-rules.md, data-model.md) if not yet present"
 
 ---
 
@@ -397,7 +399,7 @@ Same as Attach Step 6, using user-specified paths.
 
 ## Manual Step 7-8: Scanners + Summary
 
-Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)".
+Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)". Step 6f (fill change-risk-classification.md) and Step 6g (inline validation) always run regardless of mode.
 
 ---
 
@@ -533,13 +535,7 @@ Read and copy `templates/change-risk-classification.md` as-is.
 
 Read `templates/ecw-path-mappings.md`. Scan project directory structure, generate mapping table.
 
-After writing the file, verify completeness — scan actual `biz/` subdirectories and cross-check against the mapping table:
-
-```bash
-find . -type d -path "*/biz/*" -path "*/main/java/*" | sort
-```
-
-For each discovered subdirectory, check if it appears in the mapping table. Any directory with Java files but no mapping row is a gap — add it with the inferred domain (or mark `（待确认域）` if unclear). Output the gap count in the summary.
+After writing the file, verify completeness — scan ALL Java source directories already discovered in this step's generation scan (not just `biz/`), and check that each one with `.java` files has a corresponding mapping row. Add any missing rows or flag as `（待确认域）`. Output the gap count in the summary.
 
 ### 3e: Create State Files
 
@@ -692,18 +688,18 @@ Using the scan results from steps 6a–6d, replace the `{your_*}` placeholders i
   - Replace `{your_shared_service_2to3}` with the resource with 2–3 consumer domains (pick most representative), or `（暂无）` if none.
   - Format: `ResourceClassName（被 N 域依赖）`
 
-- **Factor 3 and Quick Reference**: Use domain descriptions and scan results to infer critical operations. "多域依赖" IS a valid reason here.
+- **Factor 3 and Quick Reference**: Use domain descriptions and scan results to infer critical operations. "多域依赖" IS a valid reason here. In Scaffold mode (no existing business-rules.md), inference is limited to class/method naming — if a term's business criticality is not unambiguous from code structure alone, use `（待确认）` rather than asserting a risk level.
 
 **Shared logic (both single and multi-domain):**
 
-After filling, verify no `{your_*}` placeholders remain. If any value genuinely cannot be inferred, replace with `（待确认：{brief hint of what to fill}）` — never leave the raw `{your_*}` template token.
+After filling, verify all `{...}` template placeholder tokens in table rows are replaced — not just `{your_*}` patterns, but also `{reason}`, `{resource}`, `{N}`, `{SharedService}`, `{your_core_flow_keyword_*}`, etc. Replace or mark each remaining one as `（待确认：{brief hint}）`. Never leave any raw placeholder token in the file.
 
 ### 6g: Inline configuration validation
 
-After all files are generated, perform key validation checks inline (equivalent to `/ecw-validate-config`) and include results in the output summary. Do not ask the user to run a separate command.
+After all files are generated, perform key validation checks inline (a subset of `/ecw-validate-config` — covers immediate init gaps but not template sync or domain-registry field completeness) and include results in the output summary. Do not ask the user to run a separate command.
 
 **Check 1 — Remaining placeholders in `change-risk-classification.md`:**
-Scan the file for `{your_*}` patterns. If any found, list them in the summary as action items. Mark as `⚠ warn`.
+Scan table rows for any remaining `{...}` template tokens (not just `{your_*}`). If any found, list them in the summary as action items. Mark as `⚠ warn`.
 
 **Check 2 — Domain knowledge directories:**
 For each registered domain, verify its knowledge directory and entry document exist. Mark missing items as `✗ fail`.
