@@ -37,3 +37,18 @@ class TestEcwInitPermissions:
         )
         assert has_plans_write, \
             "ecw-init must configure Write(.claude/plans/**) permission"
+
+    def test_ecw_init_configures_knowledge_write_permission(self):
+        """ecw-init must configure Write permission for .claude/knowledge/** paths.
+
+        knowledge-track writes doc-tracker.md and pending-entries.md under
+        .claude/ecw/knowledge-ops/, which resolves under .claude/knowledge/
+        in some configurations. The Write(.claude/knowledge/**) permission is
+        required for knowledge maintenance skills to operate without prompts.
+        """
+        has_knowledge_write = bool(
+            "write(.claude/knowledge/" in self.lower
+            or "Write(.claude/knowledge/" in self.content
+        )
+        assert has_knowledge_write, \
+            "ecw-init must configure Write(.claude/knowledge/**) permission"

@@ -199,6 +199,8 @@ Read `templates/ecw.yml` template. Fill in:
 - `component_types` (from Step 3)
 - `scan_patterns`: Keep defaults matching the detected language
 
+**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.2"`).
+
 ### 4b: Generate `domain-registry.md`
 
 Read `templates/domain-registry.md` template. Generate one block per confirmed domain using **actual paths**:
@@ -236,10 +238,6 @@ Key difference from Scaffold: `Knowledge Root` uses user-confirmed **actual path
 
 Read `templates/change-risk-classification.md` template. Write as-is to `.claude/ecw/change-risk-classification.md`.
 
-### 4c2: Copy `calibration-log.md`
-
-Read `templates/calibration-log.md` template. Write as-is to `.claude/ecw/calibration-log.md`. This file accumulates Phase 3 calibration records.
-
 ### 4d: Generate `ecw-path-mappings.md`
 
 Read `templates/ecw-path-mappings.md` template. Auto-discover project directory structure:
@@ -254,6 +252,28 @@ find . -type d -name "mapper" -path "*/resources/*" | head -5
 ```
 
 Map discovered subdirectories to confirmed domains.
+
+### 4e: Create State Files
+
+```bash
+mkdir -p .claude/ecw/state
+```
+
+Create two empty runtime state files referenced by `ecw.yml` `paths` config. These files are written by Phase 3 calibration automatically — init only creates the empty file so Phase 1 does not hit "file not found".
+
+Write `.claude/ecw/state/calibration-history.md` (skip if already exists):
+
+```markdown
+<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+<!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
+```
+
+Write `.claude/ecw/state/instincts.md` (skip if already exists):
+
+```markdown
+<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+<!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
+```
 
 ## Attach Step 5: Skip Knowledge Directory Creation
 
@@ -281,15 +301,11 @@ Entry file path:
 Present snippet to user via `AskUserQuestion`:
 - "Append to CLAUDE.md" / "Save as .claude/ecw/CLAUDE.md.snippet" / "Skip"
 
-## Attach Step 7: Optional Code Scanners (Java only)
+## Attach Step 7: Code Scanners (Java only)
 
 Skip if language is not Java or `--skip-scanners` was passed.
 
-Same as Scaffold Step 6: Offer to run Java scan scripts under `scripts/java/`.
-
-After scanners complete (or if skipped), also:
-1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
-2. **Generate Repo Map**: Run `bash scripts/java/generate-repo-map.sh <project_root> .claude/ecw/ecw.yml` to auto-generate the code structure index.
+Same as Scaffold Step 6 (6a–6e): Run all Java scan scripts automatically. Since Attach mode preserves existing domain knowledge files, only update common knowledge files (`cross-domain-calls.md`, `shared-resources.md`, `mq-topology.md`, `external-systems.md`) if they contain placeholder rows (`{{...}}`). Skip updating a file if it already has real content (i.e., no `{{...}}` placeholders in the data rows).
 
 ## Attach Step 8: Output Summary
 
@@ -479,6 +495,8 @@ Enter "use defaults" to use the standard component set for your language:
 
 Read `templates/ecw.yml`. Fill in project info, component types, scan patterns for detected language.
 
+**Version number**: Read `package.json` from the plugin root directory (the parent directory of `commands/`). Extract the `version` field and replace `ecw_version: "ECW_VERSION_PLACEHOLDER"` with the actual version string (e.g., `ecw_version: "1.3.2"`).
+
 ### 3b: Generate `domain-registry.md`
 
 Read `templates/domain-registry.md`. Generate one block per domain:
@@ -505,13 +523,31 @@ Preserve template header/footer, "Adding New Domains" block, keyword matching ru
 
 Read and copy `templates/change-risk-classification.md` as-is.
 
-### 3c2: Copy `calibration-log.md`
-
-Read and copy `templates/calibration-log.md` as-is to `.claude/ecw/calibration-log.md`.
-
 ### 3d: Generate `ecw-path-mappings.md`
 
 Read `templates/ecw-path-mappings.md`. Scan project directory structure, generate mapping table.
+
+### 3e: Create State Files
+
+```bash
+mkdir -p .claude/ecw/state
+```
+
+Create two empty runtime state files referenced by `ecw.yml` `paths` config. These files are written by Phase 3 calibration automatically — init only creates the empty file so Phase 1 does not hit "file not found".
+
+Write `.claude/ecw/state/calibration-history.md`:
+
+```markdown
+<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+<!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
+```
+
+Write `.claude/ecw/state/instincts.md`:
+
+```markdown
+<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
+<!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
+```
 
 ## Scaffold Step 4: Create Knowledge Directory Skeleton
 
@@ -554,17 +590,65 @@ Read `templates/CLAUDE.md.snippet`. Fill the domain routing table:
 
 Present to user: "Append to CLAUDE.md" / "Save as separate file" / "Skip"
 
-## Scaffold Step 6: Optional Code Scanners (Java only)
+## Scaffold Step 6: Code Scanners (Java only)
 
 Skip if language is not Java or `--skip-scanners` was passed.
 
-Ask user: "Run all scanners" / "Skip scanners"
+Run all Java scan scripts automatically — no user prompt needed. Determine `{plugin_dir}` by reading the parent directory of the `commands/` folder (i.e., where this file is located).
 
-If running: Check for scan scripts under `scripts/java/`; execute if present.
+### 6a: Cross-domain calls scan → `cross-domain-calls.md`
 
-After scanners complete (or if skipped), also:
+```bash
+bash {plugin_dir}/scripts/java/scan-cross-domain-calls.sh {project_root} .claude/ecw/ecw-path-mappings.md 2>/dev/null
+```
+
+Capture output (the markdown table rows). Then update `.claude/knowledge/common/cross-domain-calls.md`:
+- Replace `{{SCAN_DATE}}` with today's date, `{{TOTAL_COUNT}}` with number of result rows.
+- Replace the placeholder `{{caller_domain}}` example row in the "调用明细" table with the actual scan rows.
+- If the scan returns zero rows (single-domain project with no cross-domain calls): replace the placeholder row with `| (暂无跨域调用) | — | — | — | — | — | — |`
+
+### 6b: Shared resources scan → `shared-resources.md`
+
+```bash
+bash {plugin_dir}/scripts/java/scan-shared-resources.sh {project_root} .claude/ecw/ecw-path-mappings.md 2>/dev/null
+```
+
+Capture output. Then update `.claude/knowledge/common/shared-resources.md`:
+- Replace the placeholder `{{resource_name}}` rows in both tables with actual scan results.
+- Classify scanned resources into the "极高风险/高风险/中风险" sections based on consumer domain count.
+- If no shared resources found: replace placeholder rows with `| (暂无) | — | — | — | — |`
+
+### 6c: MQ topology scan → `mq-topology.md`
+
+```bash
+bash {plugin_dir}/scripts/java/scan-mq-topology.sh {project_root} 2>/dev/null
+```
+
+Capture output. Then update `.claude/knowledge/common/mq-topology.md`:
+- Classify each scanned row into "内部 Topic / 外部入站 Topic / 外部出站 Topic" based on whether both publisher and consumer are in this project.
+- Replace the placeholder `{{topic}}` row in the appropriate table with actual scan results.
+- If no MQ topics found: replace placeholder rows with `| (暂无) | — | — | — | — | — | — |`
+- Update the "统计" table counts.
+
+### 6d: External systems scan → `external-systems.md`
+
+Scan for `@DubboReference` (external RPC dependencies) and `@DubboService` (exposed facades):
+
+```bash
+grep -rn "@DubboReference" {project_root} --include="*.java" -l 2>/dev/null | head -20
+grep -rn "@DubboService" {project_root} --include="*.java" 2>/dev/null | head -20
+```
+
+Then update `.claude/knowledge/common/external-systems.md`:
+- For each `@DubboReference` found: extract the interface name and owning file. Add a row to "按系统分类的集成详情" under the appropriate external system section. If the system is unknown, group under a placeholder system name like "待确认外部系统".
+- For each `@DubboService` found: extract the facade interface and domain. Add to "对外暴露的服务" table.
+- Update the "汇总" count table with actual counts (`RPC 引用（出站）` and `RPC 服务（对外暴露）`).
+- For counts that cannot be determined automatically (MQ inbound/outbound), fill with `(待填充)` rather than `0`.
+
+### 6e: Repo Map + doc-tracker
+
 1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
-2. **Generate Repo Map**: Run `bash scripts/java/generate-repo-map.sh <project_root> .claude/ecw/ecw.yml` to auto-generate the code structure index.
+2. **Generate Repo Map**: Run `bash {plugin_dir}/scripts/java/generate-repo-map.sh {project_root} .claude/ecw/ecw.yml` to auto-generate the code structure index.
 
 ## Scaffold Step 7: Output Summary
 
@@ -586,17 +670,18 @@ After scanners complete (or if skipped), also:
 | `domain-registry.md` | Created |
 | `change-risk-classification.md` | Created |
 | `ecw-path-mappings.md` | Created |
-| `calibration-log.md` | Created |
+| `.claude/ecw/state/calibration-history.md` | Created |
+| `.claude/ecw/state/instincts.md` | Created |
 
 #### Knowledge Files — Common (.claude/knowledge/common/)
 | File | Status |
 |------|--------|
 | `cross-domain-rules.md` | Created |
-| `cross-domain-calls.md` | Created |
+| `cross-domain-calls.md` | Created + auto-filled from scanner |
 | `e2e-paths.md` | Created |
-| `external-systems.md` | Created |
-| `mq-topology.md` | Created |
-| `shared-resources.md` | Created |
+| `external-systems.md` | Created + auto-filled from scanner |
+| `mq-topology.md` | Created + auto-filled from scanner |
+| `shared-resources.md` | Created + auto-filled from scanner |
 
 #### Knowledge Files — Domain-Level
 | Directory | Files | Status |
@@ -616,12 +701,12 @@ After scanners complete (or if skipped), also:
 
 ### Next Steps
 
-1. **Review `ecw.yml`**: Customize `scan_patterns` and `component_types`.
-2. **Review `ecw-path-mappings.md`**: Verify directory-to-domain mappings. Fix all `?` entries.
-3. **Customize `change-risk-classification.md`**: Replace `{your_...}` placeholders.
-4. **Populate domain knowledge files**: Each domain's template files contain `{{...}}` placeholders.
-5. **Populate common knowledge files**: Fill in cross-domain integration data.
-6. **Refine CLAUDE.md keywords**: Add domain-specific terms.
+1. **Review `ecw.yml`**: Customize `scan_patterns` and `component_types` if scanners missed project conventions.
+2. **Review `ecw-path-mappings.md`**: Verify directory-to-domain mappings, especially infra/shared layers.
+3. **Customize `change-risk-classification.md`**: Replace any remaining `{your_...}` placeholders.
+4. **Review scanner-filled common knowledge**: Confirm external systems, MQ topology, and shared resources are correct.
+5. **Enrich domain knowledge files**: Add project-specific business rules and data model details.
+6. **Refine CLAUDE.md keywords**: Add missing domain-specific terms.
 7. **Validate**: Run `/ecw-validate-config` to check configuration completeness.
 ```
 
@@ -638,6 +723,7 @@ Add to `.claude/settings.local.json`:
   "permissions": {
     "allow": [
       "Write(.claude/ecw/**)",
+      "Write(.claude/knowledge/**)",
       "Write(.claude/plans/**)"
     ]
   }
@@ -646,7 +732,7 @@ Add to `.claude/settings.local.json`:
 
 If `.claude/settings.local.json` already exists, merge the `allow` entries without overwriting existing permissions.
 
-This enables ECW skills to write session state, plans, and reports without triggering permission confirmation dialogs.
+This enables ECW skills to write session state, plans, reports, and knowledge maintenance files without triggering permission confirmation dialogs.
 
 **Clean up config-edit marker:** Run `rm -f .claude/ecw/.config-edit-allowed` via Bash to restore config protection.
 

@@ -135,7 +135,8 @@ For the following files (marked as "copy as-is" in ecw-init), compare the projec
 - Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders (`{your_...}` patterns)
 
 **`calibration-log.md`:**
-- Only check if file header format matches the template (this file is primarily append-only data — no content comparison)
+- Skip if file does not exist (this file is created by Phase 3 calibration, not by init; absence is normal before first P0/P1 task completes)
+- If file exists: Only check if file header format matches the template (this file is primarily append-only data — no content comparison)
 
 ### 5b-2: domain-registry Field Completeness
 

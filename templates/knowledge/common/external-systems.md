@@ -42,71 +42,49 @@
 类型取值：MQ、RPC/Dubbo、gRPC、HTTP、SDK、WebSocket 等
 -->
 
-### {{System Name}}（{{简要描述}}）
+<!--
+对每个外部系统重复以下章节模板。
 
-集成层：`{{path-to-wrapper-or-client-code}}`
-RPC 引用：`{{list of remote interfaces}}`
+### {系统名称}（{简要描述}）
 
-| 方向 | 类型 | Topic / 接口 / 端点 | 所属域 | 业务场景 | 影响描述 |
-|------|------|-------------------|-------|---------|---------|
-| 入站 | MQ | `ext.system.order.create` | orders | 接收来自外部系统的新订单 | 订单创建入口；Schema 变更需与对方协调 |
-| 出站 | MQ | `app.to-system.order.status` | orders | 通知外部系统订单状态变更 | 状态同步；消息格式变更需与下游协调 |
-| 出站 | RPC | `ExternalFacade.queryProduct()` | catalog | 从外部系统查询商品详情 | 只读；接口版本变更可能导致调用失败 |
-| 出站 | HTTP | `POST /api/v1/webhook` | notifications | 推送事件通知 | 需认证；端点变更需更新配置 |
-| {{direction}} | {{type}} | {{topic_or_interface}} | {{domain}} | {{scenario}} | {{impact}} |
-
----
-
-### {{Another System Name}}（{{简要描述}}）
-
-集成层：`{{path}}`
+集成层：`{封装类或 SDK 客户端路径}`
 
 | 方向 | 类型 | Topic / 接口 / 端点 | 所属域 | 业务场景 | 影响描述 |
 |------|------|-------------------|-------|---------|---------|
-| {{direction}} | {{type}} | {{topic_or_interface}} | {{domain}} | {{scenario}} | {{impact}} |
+| 入站/出站/双向 | MQ/RPC/HTTP/SDK | `接口或 Topic 名` | domain-id | 业务场景说明 | 变更影响说明 |
 
 ---
+-->
+
+<!-- 由 /ecw-init 代码扫描自动填充，或手动补充 -->
 
 ## 对外暴露的服务
 
 <!--
-如果应用对外暴露了 API（RPC、REST、gRPC）供外部系统调用，
-在此列出。这有助于理解系统的"入站接口面"。
+如果应用对外暴露了 API（RPC、REST、gRPC）供外部系统调用，在此列出。
 -->
 
 | 暴露接口 | 所属域 | 描述 |
 |---------|-------|------|
-| OrderFacade | orders | 订单 CRUD 操作 |
-| StockQueryFacade | inventory | 库存查询 |
-| {{facade_class}} | {{domain}} | {{description}} |
+<!-- 由 /ecw-init 扫描 @DubboService 自动填充 -->
 
 ## 内部异步 Topic（自产自消）
 
 <!--
-这些 Topic 不涉及外部系统。它们用于内部异步解耦。
-变更时只需考虑内部消费方。
+这些 Topic 不涉及外部系统，用于内部异步解耦。变更时只需考虑内部消费方。
 -->
 
 | Topic | 常量名 | 所属域 | 业务场景 |
 |-------|-------|-------|---------|
-| `app.internal.order.index.update` | ORDER_INDEX_ROUTING_KEY | orders | 订单搜索索引重建 |
-| `{{topic}}` | {{constant}} | {{domain}} | {{scenario}} |
+<!-- 由 /ecw-init 扫描 MQ 发布/消费自动填充 -->
 
 ---
 
 ## 关键代码位置
 
-<!--
-集成代码在代码库中的快速索引。
--->
-
 | 类别 | 路径 |
 |------|------|
-| MQ 常量 | `{{path-to-mq-constants}}` |
-| RPC 配置 | `{{path-to-rpc-config}}` |
-| 外部调用封装层 | `{{path-to-wrapper-layer}}/` |
-| MQ 监听器 | `{{path-to-listeners}}/` |
-| 对外暴露的 RPC 服务 | `{{path-to-facade-impls}}/` |
+<!-- 由 /ecw-init 自动填充或手动补充 -->
 
 ---
 
