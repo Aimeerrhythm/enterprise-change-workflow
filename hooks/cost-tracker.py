@@ -133,11 +133,18 @@ def _append_metrics(cwd, usage, session_id, model, cost, context_pct):
         pass
 
 
+def _is_ecw_project(cwd):
+    """Return True only if this directory has an ECW configuration."""
+    if not cwd:
+        return False
+    return os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
-    if not cwd:
+    if not cwd or not _is_ecw_project(cwd):
         print(json.dumps({"result": "continue"}))
         return
 

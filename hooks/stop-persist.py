@@ -169,11 +169,15 @@ def _update_with_markers(content, new_inner):
     return update_marker_section(content, "STOP", new_inner)
 
 
+def _is_ecw_project(cwd):
+    return bool(cwd) and os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
+
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
-    if not cwd:
+    if not _is_ecw_project(cwd):
         print(json.dumps({"result": "continue"}))
         return
 

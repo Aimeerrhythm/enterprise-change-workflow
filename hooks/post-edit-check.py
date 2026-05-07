@@ -327,6 +327,11 @@ def main():
     """Standalone entry point for PostToolUse hook."""
     input_data = json.load(sys.stdin)
 
+    cwd = input_data.get("cwd", "")
+    if not cwd or not os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml")):
+        print(json.dumps({"result": "continue"}))
+        sys.exit(0)
+
     tool_name = input_data.get("tool_name", "")
     if tool_name not in ("Edit", "Write"):
         print(json.dumps({"result": "continue"}))

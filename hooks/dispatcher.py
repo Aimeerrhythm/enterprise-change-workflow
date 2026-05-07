@@ -138,11 +138,25 @@ def _load_subhook(module_filename):
     return mod
 
 
+# ── ECW project detection ──
+
+def _is_ecw_project(cwd):
+    """Return True only if this directory has an ECW configuration."""
+    if not cwd:
+        return False
+    return os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
+
 # ── Main dispatcher ──
 
 def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
+
+    if not _is_ecw_project(cwd):
+        print(json.dumps({"result": "continue"}))
+        sys.exit(0)
+
     profile = get_profile(cwd)
     config = read_ecw_config(cwd) if cwd else {}
     config["_runtime_profile"] = profile

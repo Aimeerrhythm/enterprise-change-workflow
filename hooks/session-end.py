@@ -74,7 +74,7 @@ def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
-    if not cwd:
+    if not cwd or not os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml")):
         print(json.dumps({"result": "continue"}))
         return
 

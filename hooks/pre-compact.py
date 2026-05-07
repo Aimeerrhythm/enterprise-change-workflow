@@ -166,15 +166,8 @@ def main():
     input_data = json.load(sys.stdin)
     cwd = input_data.get("cwd", "")
 
-    if not cwd:
-        msg = (
-            "**MANDATORY: Auto-continue after compaction.** "
-            "Do NOT wait for user input. "
-            "List `.claude/ecw/session-data/` subdirectories, "
-            "read `session-state.md` from the most recent one, "
-            "run TaskList, then resume the ECW workflow immediately."
-        )
-        print(json.dumps({"result": "continue", "systemMessage": msg}))
+    if not cwd or not os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml")):
+        print(json.dumps({"result": "continue"}))
         return
 
     state_path = find_session_state(cwd)

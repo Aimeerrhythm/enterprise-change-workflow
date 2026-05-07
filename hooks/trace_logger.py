@@ -26,12 +26,14 @@ def log_trace(cwd, hook, event, **kwargs):
 
     Args:
         cwd:   Project root directory (from hook input_data["cwd"]).
-               If falsy, the call is silently ignored.
+               If falsy or not an ECW project, the call is silently ignored.
         hook:  Hook name (e.g. "auto-continue", "dispatcher").
         event: Hook event (e.g. "PreToolUse", "PostToolUse").
         **kwargs: Arbitrary extra fields merged into the JSON record.
     """
     if not cwd:
+        return
+    if not os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml")):
         return
     try:
         trace_path = os.path.join(cwd, _TRACE_FILE)
