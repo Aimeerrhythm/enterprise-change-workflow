@@ -245,6 +245,10 @@ def check(input_data, config=None):
     if not cwd:
         return ("continue", "")
 
+    from ecw_config import is_ecw_project
+    if not is_ecw_project(cwd):
+        return ("continue", "")
+
     tool_name = input_data.get("tool_name", "")
     tool_input = input_data.get("tool_input", {})
 

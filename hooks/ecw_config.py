@@ -23,6 +23,13 @@ def read_ecw_config(cwd):
         return {}
 
 
+def is_ecw_project(cwd):
+    """Return True iff cwd is an ECW-configured project (ecw.yml present)."""
+    if not cwd:
+        return False
+    return os.path.exists(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
+
+
 def read_plugin_version():
     """Read the plugin's own version from package.json."""
     import json as _json

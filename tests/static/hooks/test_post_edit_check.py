@@ -28,6 +28,15 @@ def post_edit():
     return mod
 
 
+@pytest.fixture
+def ecw_project(tmp_path):
+    """Create a minimal ECW project structure in tmp_path."""
+    ecw_dir = tmp_path / ".claude" / "ecw"
+    ecw_dir.mkdir(parents=True)
+    (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
+    return tmp_path
+
+
 # ══════════════════════════════════════════════════════
 # Anti-Pattern Detection
 # ══════════════════════════════════════════════════════
@@ -150,30 +159,30 @@ class TestModifiedFileAccumulation:
 class TestCheckFunction:
     """Tests for the check() entry point."""
 
-    def test_edit_with_anti_pattern(self, post_edit, tmp_path):
+    def test_edit_with_anti_pattern(self, post_edit, ecw_project):
         """Edit introducing anti-pattern produces warning."""
         input_data = {
             "tool_name": "Edit",
             "tool_input": {
-                "file_path": str(tmp_path / "Service.java"),
+                "file_path": str(ecw_project / "Service.java"),
                 "new_string": 'catch (Exception e) {}',
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
         assert "ECW Quality Gate" in message
         assert "catch" in message
 
-    def test_write_with_secret(self, post_edit, tmp_path):
+    def test_write_with_secret(self, post_edit, ecw_project):
         """Write with hardcoded secret produces warning."""
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(tmp_path / "config.py"),
+                "file_path": str(ecw_project / "config.py"),
                 "content": 'api_key = "sk-1234567890abcdef"',
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
@@ -221,22 +230,22 @@ class TestCheckFunction:
         assert action == "continue"
         assert message == ""
 
-    def test_accumulates_file_on_check(self, post_edit, tmp_path):
+    def test_accumulates_file_on_check(self, post_edit, ecw_project):
         """check() accumulates modified file in state."""
         input_data = {
             "tool_name": "Edit",
             "tool_input": {
-                "file_path": str(tmp_path / "Service.java"),
+                "file_path": str(ecw_project / "Service.java"),
                 "new_string": "clean code",
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         post_edit.check(input_data)
-        state_file = tmp_path / ".claude" / "ecw" / "state" / "modified-files.txt"
+        state_file = ecw_project / ".claude" / "ecw" / "state" / "modified-files.txt"
         assert state_file.exists()
         assert "Service.java" in state_file.read_text()
 
-    def test_warning_truncation(self, post_edit, tmp_path):
+    def test_warning_truncation(self, post_edit, ecw_project):
         """More than 5 warnings are truncated."""
         # Content with many anti-patterns
         content = "\n".join([
@@ -251,10 +260,10 @@ class TestCheckFunction:
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(tmp_path / "bad.py"),
+                "file_path": str(ecw_project / "bad.py"),
                 "content": content,
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
@@ -512,7 +521,7 @@ class TestSessionStateYamlValidation:
         assert action == "continue"
         assert "YAML Error" not in message
 
-    def test_invalid_yaml_status_produces_warning(self, post_edit, tmp_path):
+    def test_invalid_yaml_status_produces_warning(self, post_edit, ecw_project):
         """Invalid YAML in STATUS section triggers YAML Error warning."""
         invalid_content = (
             "# ECW Session State\n"
@@ -525,10 +534,10 @@ class TestSessionStateYamlValidation:
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(tmp_path / "session-state.md"),
+                "file_path": str(ecw_project / "session-state.md"),
                 "content": invalid_content,
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
@@ -549,9 +558,9 @@ class TestSessionStateYamlValidation:
         action, message = post_edit.check(input_data)
         assert "YAML Error" not in message
 
-    def test_edit_reads_actual_file_for_validation(self, post_edit, tmp_path):
+    def test_edit_reads_actual_file_for_validation(self, post_edit, ecw_project):
         """Edit on session-state.md reads the actual file (not new_string) for YAML validation."""
-        state_file = tmp_path / "session-state.md"
+        state_file = ecw_project / "session-state.md"
         # File on disk has invalid YAML in STATUS section
         state_file.write_text(
             "# ECW Session State\n"
@@ -568,7 +577,7 @@ class TestSessionStateYamlValidation:
                 "old_string": "risk_level: P0",
                 "new_string": "risk_level: P1",
             },
-            "cwd": str(tmp_path),
+            "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         # Must catch the invalid YAML by reading the actual file

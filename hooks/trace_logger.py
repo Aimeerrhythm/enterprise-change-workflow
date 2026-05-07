@@ -34,6 +34,12 @@ def log_trace(cwd, hook, event, **kwargs):
     if not cwd:
         return
     try:
+        from ecw_config import is_ecw_project
+        if not is_ecw_project(cwd):
+            return
+    except Exception:
+        return
+    try:
         trace_path = os.path.join(cwd, _TRACE_FILE)
         os.makedirs(os.path.dirname(trace_path), exist_ok=True)
 
