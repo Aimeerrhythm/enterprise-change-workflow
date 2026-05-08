@@ -116,7 +116,7 @@ def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for sig
 
     if "<!-- ECW:STATUS:START -->" not in content:
         return
-    if not re.search(r'\*\*Baseline Commit\*\*:\s*TBD\b', content):
+    if not re.search(r'(?:\*\*Baseline Commit\*\*|baseline_commit):\s*TBD\b', content):
         return
 
     git_root = _find_git_root(filepath)
@@ -140,7 +140,7 @@ def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for sig
         return
 
     updated = re.sub(
-        r'(\*\*Baseline Commit\*\*:\s*)TBD\b',
+        r'((?:\*\*Baseline Commit\*\*|baseline_commit):\s*)TBD\b',
         rf'\g<1>{commit_hash}',
         content,
     )

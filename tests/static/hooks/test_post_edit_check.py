@@ -479,6 +479,42 @@ class TestBaselineCommitInjection:
             post_edit.check(input_data)
         mock_inject.assert_not_called()
 
+    def test_yaml_format_tbd_replaced(self, post_edit, tmp_path):
+        """YAML format 'baseline_commit: TBD' is correctly replaced (issue #53)."""
+        (tmp_path / ".git").mkdir()
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(
+            "# ECW Session State\n\n"
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "baseline_commit: TBD\n"
+            "auto_continue: true\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "cafebabe1234567890ab\n"
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        result = state_file.read_text()
+        assert "cafebabe1234567890ab" in result
+        assert "TBD" not in result
+
+    def test_yaml_format_already_set_not_overwritten(self, post_edit, tmp_path):
+        """YAML format with existing hash is not overwritten (issue #53)."""
+        (tmp_path / ".git").mkdir()
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "baseline_commit: existinghash999\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            mock_run.return_value.stdout = "newcommithash\n"
+            post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
+        result = state_file.read_text()
+        assert "existinghash999" in result
+
 
 # ══════════════════════════════════════════════════════
 # Session State YAML Validation

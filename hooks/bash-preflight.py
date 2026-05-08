@@ -198,7 +198,7 @@ def _check_stale_diff_range(command, cwd):
     except Exception:
         return None
 
-    m = re.search(r'\*\*Baseline Commit\*\*:\s*([0-9a-f]{7,40})\b', content, re.IGNORECASE)
+    m = re.search(r'(?:\*\*Baseline Commit\*\*|baseline_commit):\s*([0-9a-f]{7,40})\b', content, re.IGNORECASE)
     if not m:
         return None
     baseline = m.group(1)

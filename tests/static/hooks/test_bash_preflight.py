@@ -446,6 +446,33 @@ class TestStaleDiffRange:
         action, _ = bash_preflight.check(inp)
         assert action == "continue"
 
+    def test_yaml_format_baseline_blocks(self, bash_preflight, tmp_path):
+        """YAML-format baseline_commit (issue #53) triggers stale-diff block."""
+        yaml_state = (
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "baseline_commit: abc1234567890def\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        self._write_session_state(tmp_path, yaml_state)
+        inp = self._make_cwd_input("git diff --stat master...HEAD", str(tmp_path))
+        action, msg = bash_preflight.check(inp)
+        assert action == "block"
+        assert "abc1234567890def" in msg
+
+    def test_yaml_format_tbd_passes_through(self, bash_preflight, tmp_path):
+        """YAML-format baseline_commit: TBD does not block (issue #53)."""
+        yaml_state = (
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P1\n"
+            "baseline_commit: TBD\n"
+            "<!-- ECW:STATUS:END -->\n"
+        )
+        self._write_session_state(tmp_path, yaml_state)
+        inp = self._make_cwd_input("git diff master...HEAD", str(tmp_path))
+        action, _ = bash_preflight.check(inp)
+        assert action == "continue"
+
 
 # ══════════════════════════════════════════════════════
 # Fix Gate: hooks/*.py changed without tests/
