@@ -21,6 +21,8 @@ import os
 import re
 import sys
 
+import yaml
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
     append_timeline_entry,
@@ -32,59 +34,70 @@ from marker_utils import (  # noqa: E402
 )
 from trace_logger import log_trace  # noqa: E402
 
-# Completed-phase value written to Current Phase after a skill finishes.
-# Key: ECW skill name (as passed in tool_input.skill).
-# Value: the phase string to record in the STATUS block.
-_SKILL_COMPLETED_PHASE = {
-    "ecw:risk-classifier":          "phase1-loaded",   # Phase 2 overrides via its own write; SKILL.md writes phase1-complete when done
-    "ecw:requirements-elicitation": "requirements-loaded",
-    "ecw:domain-collab":            "domain-collab-loaded",
-    "ecw:writing-plans":            "plan-loaded",
-    "ecw:spec-challenge":           "spec-challenge-loaded",
-    "ecw:tdd":                      "tdd-loaded",
-    "ecw:impl-orchestration":       "impl-loaded",
-    "ecw:systematic-debugging":     "impl-loaded",
-    "ecw:impl-verify":              "verify-loaded",
-    "ecw:biz-impact-analysis":      "biz-impact-loaded",
-    "ecw:knowledge-track":          "knowledge-track-loaded",
-}
+# ── Dynamic mapping generation from workflow-routes.yml ──────────────────────
+# All mapping tables are generated at module load from the single source of truth.
+# Adding/modifying a skill only requires editing workflow-routes.yml.
 
-# Working Mode associated with each skill while it is active.
-_SKILL_MODE = {
-    "ecw:risk-classifier":          "analysis",
-    "ecw:requirements-elicitation": "analysis",
-    "ecw:domain-collab":            "analysis",
-    "ecw:writing-plans":            "planning",
-    "ecw:spec-challenge":           "planning",
-    "ecw:tdd":                      "implementation",
-    "ecw:impl-orchestration":       "implementation",
-    "ecw:systematic-debugging":     "implementation",
-    "ecw:impl-verify":              "verification",
-    "ecw:biz-impact-analysis":      "verification",
-    "ecw:knowledge-track":          "verification",
-}
+_ROUTES_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "skills", "risk-classifier", "workflow-routes.yml",
+)
 
-# Skills whose Routing-chain entry does not match their short name.
-# E.g., ecw:tdd appears as "TDD:RED" (and related phase steps) in the Routing string.
-_SKILL_ROUTING_ALIASES = {
-    "ecw:tdd": ["TDD:RED", "Implementation(GREEN)", "Fix(GREEN)"],
-}
 
-# Routing chain steps that map to an ECW skill name but cannot be derived from the
-# skill's own short name.  Only entries that need special treatment live here;
-# all other skills are matched by their short name (strip "ecw:" prefix).
-_ROUTING_STEP_TO_SKILL = {
-    "TDD:RED": "ecw:tdd",
-}
+def _load_routes_from_file(routes_path=None):
+    """Parse workflow-routes.yml and generate all mapping tables.
 
-# Skills that are legitimately invoked outside the Routing chain (manual-only tools).
-# These are whitelisted from deviation detection.
-_OFF_CHAIN_ALLOWED = {
-    "ecw:cross-review",
-    "ecw:knowledge-audit",
-    "ecw:knowledge-repomap",
-    "ecw:workspace",
-}
+    Returns dict with keys: completed_phase, mode, routing_aliases,
+    step_to_skill, off_chain.
+    """
+    path = routes_path or _ROUTES_FILE
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    metadata = data.get("skill_metadata", {})
+    off_chain_list = data.get("off_chain_skills", [])
+
+    completed_phase = {}
+    mode = {}
+    routing_aliases = {}
+    step_to_skill = {}
+
+    for skill_key, meta in metadata.items():
+        full_name = f"ecw:{skill_key}"
+        phase_name = meta.get("phase_name", skill_key)
+        completed_phase[full_name] = f"{phase_name}-loaded"
+        mode[full_name] = meta["mode"]
+
+        aliases = meta.get("routing_aliases", [])
+        if aliases:
+            routing_aliases[full_name] = aliases
+            for alias in aliases:
+                step_to_skill[alias] = full_name
+
+    off_chain = {f"ecw:{s}" for s in off_chain_list}
+
+    return {
+        "completed_phase": completed_phase,
+        "mode": mode,
+        "routing_aliases": routing_aliases,
+        "step_to_skill": step_to_skill,
+        "off_chain": off_chain,
+    }
+
+
+try:
+    _mappings = _load_routes_from_file()
+except Exception:
+    _mappings = {
+        "completed_phase": {}, "mode": {}, "routing_aliases": {},
+        "step_to_skill": {}, "off_chain": set(),
+    }
+
+_SKILL_COMPLETED_PHASE = _mappings["completed_phase"]
+_SKILL_MODE = _mappings["mode"]
+_SKILL_ROUTING_ALIASES = _mappings["routing_aliases"]
+_ROUTING_STEP_TO_SKILL = _mappings["step_to_skill"]
+_OFF_CHAIN_ALLOWED = _mappings["off_chain"]
 
 
 def _remaining_route(routing, current_skill):

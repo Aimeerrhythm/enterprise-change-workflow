@@ -239,6 +239,50 @@ impl_strategy:
     strategy: impl-orchestration
     rationale: "Complex bug fix spanning many files"
 
+# ── Skill Metadata (drives auto-continue hook dynamic mapping) ──
+# Each entry declares the skill's working_mode and phase_name (used for -loaded suffix).
+# phase_name defaults to skill key if omitted.
+# Routing aliases declare non-obvious step→skill mappings in the chain.
+
+skill_metadata:
+  risk-classifier:
+    mode: analysis
+    phase_name: phase1
+  requirements-elicitation:
+    mode: analysis
+    phase_name: requirements
+  domain-collab:
+    mode: analysis
+  writing-plans:
+    mode: planning
+    phase_name: plan
+  spec-challenge:
+    mode: planning
+  tdd:
+    mode: implementation
+    routing_aliases: ["TDD:RED", "Implementation(GREEN)", "Fix(GREEN)"]
+  impl-orchestration:
+    mode: implementation
+    phase_name: impl
+  systematic-debugging:
+    mode: implementation
+    phase_name: impl
+  impl-verify:
+    mode: verification
+    phase_name: verify
+  biz-impact-analysis:
+    mode: verification
+    phase_name: biz-impact
+  knowledge-track:
+    mode: verification
+
+# Skills legitimately invoked outside the routing chain (manual-only tools).
+off_chain_skills:
+  - cross-review
+  - knowledge-audit
+  - knowledge-repomap
+  - workspace
+
 # ── Cross-Domain Determination ──
 cross_domain_rule: "During Phase 1 Step 1, check project CLAUDE.md domain routing table. 2+ domain matches = cross-domain."
 
