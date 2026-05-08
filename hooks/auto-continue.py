@@ -194,12 +194,7 @@ def main():
 
     routing = fields_dict.get("routing") or []
     risk_level = fields_dict.get("risk_level") or ""
-
-    # Recompute next from routing (authoritative) rather than reading the
-    # LLM-written next field, which may be stale or wrong (Issue #48).
-    next_skill = _next_skill_from_routing(routing, skill_name) or ""
-    if next_skill:
-        update_status_fields(state_path, {"next": next_skill})
+    next_skill = fields_dict.get("next") or ""
 
     # Advance phase and mode atomically before injecting the routing message.
     _advance_session_state(state_path, skill_name)
