@@ -248,6 +248,7 @@ skill_metadata:
   risk-classifier:
     mode: analysis
     phase_name: phase1
+    routing_aliases: ["Phase 3"]
   requirements-elicitation:
     mode: analysis
     phase_name: requirements

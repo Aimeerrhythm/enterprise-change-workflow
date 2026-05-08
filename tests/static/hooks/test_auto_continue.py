@@ -586,9 +586,15 @@ class TestNextSkillFromRouting:
         assert self.fn(routing, "ecw:systematic-debugging") == "ecw:tdd"
 
     def test_phase_markers_skipped(self):
-        """Phase 2 and Phase 3 are non-skill markers; next ECW skill is found past them."""
+        """Phase 2 is a non-skill marker; Phase 3 maps to ecw:risk-classifier (Issue #52)."""
         routing = "ecw:requirements-elicitation → Phase 2 → ecw:writing-plans → ecw:impl-verify → Phase 3"
-        assert self.fn(routing, "ecw:impl-verify") is None  # Phase 3 is not a skill
+        # Phase 2 is skipped; Phase 3 resolves to ecw:risk-classifier via routing alias
+        assert self.fn(routing, "ecw:impl-verify") == "ecw:risk-classifier"
+
+    def test_phase2_skipped_as_non_skill(self):
+        """Phase 2 is a pure non-skill marker; next ECW skill is found past it."""
+        routing = "ecw:requirements-elicitation → Phase 2 → ecw:writing-plans → ecw:impl-verify"
+        assert self.fn(routing, "ecw:requirements-elicitation") == "ecw:writing-plans"
 
     def test_biz_impact_followed_by_knowledge_track(self):
         """After biz-impact-analysis, ecw:knowledge-track is the next skill."""
@@ -601,9 +607,14 @@ class TestNextSkillFromRouting:
         assert self.fn(routing, "ecw:domain-collab") is None
 
     def test_last_skill_in_chain_returns_none(self):
-        """If current skill is last ECW skill, return None."""
+        """If current skill is last ECW skill with no Phase 3 marker, return None."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
+        assert self.fn(routing, "ecw:knowledge-track") is None
+
+    def test_phase3_resolves_to_risk_classifier(self):
+        """Phase 3 marker in routing resolves to ecw:risk-classifier (Issue #52)."""
         routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
-        assert self.fn(routing, "ecw:biz-impact-analysis") is None
+        assert self.fn(routing, "ecw:biz-impact-analysis") == "ecw:risk-classifier"
 
     def test_empty_routing_returns_none(self):
         assert self.fn("", "ecw:tdd") is None
@@ -734,22 +745,24 @@ class TestPreToolUseHandler:
 
     def test_pre_tool_use_does_not_update_next_when_last_skill(self, tmp_path, monkeypatch):
         """When the skill is last in the chain, Next must not be overwritten to None."""
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
-        state_file = self._make_state(tmp_path, routing, next_val="ecw:biz-impact-analysis")
-        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:biz-impact-analysis")
+        # knowledge-track is the true last ECW skill before Phase 3 (which maps to risk-classifier)
+        # Use a chain where knowledge-track is last with no further steps.
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
+        state_file = self._make_state(tmp_path, routing, next_val="ecw:knowledge-track")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:knowledge-track")
         fields = self._parse_state(state_file)
-        # biz-impact-analysis is last skill; _next_skill_from_routing returns None → Next unchanged
-        assert fields["next"] == "ecw:biz-impact-analysis"
+        # knowledge-track is last skill; _next_skill_from_routing returns None → Next unchanged
+        assert fields["next"] == "ecw:knowledge-track"
 
 
 class TestKnowledgeTrackInjection:
-    """After biz-impact-analysis PostToolUse, knowledge-track must be triggered when:
-    1. ecw.yml has paths.knowledge_root set (ECW-ready session)
-    2. Risk level is P0 or P1
-    3. knowledge-track is NOT already in the remaining Routing chain (old sessions)
+    """After biz-impact-analysis PostToolUse, the normal routing message must include
+    knowledge-track when it is in the routing chain (P0/P1 standard workflow).
 
-    Issue #26: knowledge-track was skipped in P0/P1 workflows because it wasn't in
-    the Routing chain and biz-impact-analysis SKILL.md prompt was the only trigger.
+    Issue #38: knowledge-track injection is now handled by normal route injection
+    (knowledge-track is always in the P0/P1 routing chain). The hook no longer
+    has a fallback injection path — biz-impact-analysis SKILL.md owns the explicit
+    call instruction for the correct timing.
     """
 
     @pytest.fixture(autouse=True)
@@ -763,7 +776,8 @@ class TestKnowledgeTrackInjection:
 
     def _make_state(self, tmp_path, risk_level="P0", routing=None):
         if routing is None:
-            routing = "ecw:impl-verify → ecw:biz-impact-analysis → Phase 3"
+            # Default: P0/P1 chain always has knowledge-track before Phase 3 (Issue #38)
+            routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-dd01"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
@@ -812,56 +826,191 @@ class TestKnowledgeTrackInjection:
         self.hook.main()
         return json.loads("".join(captured))
 
-    def test_injects_knowledge_track_for_p0_with_knowledge_root(self, tmp_path, monkeypatch):
-        """After biz-impact-analysis (P0, knowledge_root exists), must inject knowledge-track."""
-        self._make_state(tmp_path, risk_level="P0")
-        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+    def test_knowledge_track_in_routing_is_injected_via_normal_route(self, tmp_path, monkeypatch):
+        """When knowledge-track is in routing chain, normal route message includes it (P0)."""
+        # Standard P0/P1 routing: knowledge-track is always in chain (Issue #38 fix)
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
+        self._make_state(tmp_path, risk_level="P0", routing=routing)
         output = self._run_post_tool_use(tmp_path, monkeypatch)
         assert "systemMessage" in output
-        assert "knowledge-track" in output["systemMessage"].lower() or \
-               "ecw:knowledge-track" in output["systemMessage"], (
-            "systemMessage must trigger ecw:knowledge-track after biz-impact-analysis "
-            "when P0/P1 and knowledge_root is set"
+        msg = output["systemMessage"]
+        assert "knowledge-track" in msg.lower() or "ecw:knowledge-track" in msg, (
+            "Normal route injection must include ecw:knowledge-track in systemMessage "
+            "when it appears in the routing chain (standard P0/P1 workflow)"
         )
 
-    def test_injects_knowledge_track_for_p1_with_knowledge_root(self, tmp_path, monkeypatch):
-        """After biz-impact-analysis (P1, knowledge_root exists), must inject knowledge-track."""
-        self._make_state(tmp_path, risk_level="P1")
-        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+    def test_knowledge_track_in_routing_p1(self, tmp_path, monkeypatch):
+        """P1 workflow: knowledge-track in routing chain is injected via normal route."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
+        self._make_state(tmp_path, risk_level="P1", routing=routing)
         output = self._run_post_tool_use(tmp_path, monkeypatch)
         assert "systemMessage" in output
-        assert "knowledge-track" in output["systemMessage"].lower() or \
-               "ecw:knowledge-track" in output["systemMessage"]
+        msg = output["systemMessage"]
+        assert "knowledge-track" in msg.lower() or "ecw:knowledge-track" in msg
 
     def test_no_knowledge_track_for_p2(self, tmp_path, monkeypatch):
-        """P2 does not require knowledge-track; must not inject it."""
+        """P2 does not have knowledge-track in routing; must not appear in systemMessage."""
         self._make_state(tmp_path, risk_level="P2",
-                         routing="ecw:impl-verify → ecw:biz-impact-analysis → Phase 3")
-        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
-        output = self._run_post_tool_use(tmp_path, monkeypatch)
-        msg = output.get("systemMessage", "")
-        assert "knowledge-track" not in msg.lower()
-
-    def test_no_knowledge_track_without_knowledge_root(self, tmp_path, monkeypatch):
-        """When ecw.yml has no knowledge_root, must not inject knowledge-track."""
-        self._make_state(tmp_path, risk_level="P0")
-        self._make_ecw_yml(tmp_path, with_knowledge_root=False)
+                         routing="ecw:impl-verify → ecw:biz-impact-analysis")
         output = self._run_post_tool_use(tmp_path, monkeypatch)
         msg = output.get("systemMessage", "")
         assert "knowledge-track" not in msg.lower()
 
     def test_knowledge_track_in_routing_not_duplicated(self, tmp_path, monkeypatch):
-        """When knowledge-track is already in Routing, use normal route injection (no duplicate)."""
+        """When knowledge-track is in Routing, use normal route injection (no duplicate)."""
         routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
         self._make_state(tmp_path, risk_level="P0", routing=routing)
         self._make_ecw_yml(tmp_path, with_knowledge_root=True)
         output = self._run_post_tool_use(tmp_path, monkeypatch)
         # Normal systemMessage includes remaining route (ecw:knowledge-track → Phase 3)
-        # Fallback injection must NOT fire; normal routing message handles it
         assert "systemMessage" in output
         msg = output["systemMessage"]
-        # Should appear exactly once (from the remaining route), not from fallback injection
+        # Should appear exactly once (from the remaining route)
         assert msg.count("knowledge-track") >= 1
+
+
+class TestIssue52Phase3RoutingAlias:
+    """Issue #52: Phase 3 routing alias, off-chain fall-through, and phase3-complete guard.
+
+    Sub-problem 1: "Phase 3" step in routing must map to ecw:risk-classifier.
+    Sub-problem 2: off-chain deviation in PreToolUse must return without updating fields.
+    Sub-problem 3: risk-classifier completing Phase 3 must set phase3-complete, not phase1-loaded.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_hook(self):
+        spec = importlib.util.spec_from_file_location(
+            "auto_continue", HOOKS_DIR / "auto-continue.py"
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.hook = mod
+
+    def _parse_state(self, state_file):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
+        mu = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mu)
+        return mu.parse_status(state_file.read_text())
+
+    # ── Sub-problem 1: Phase 3 alias ───────────────────────────────────────────
+
+    def test_phase3_step_resolves_to_risk_classifier(self):
+        """'Phase 3' routing step must resolve to ecw:risk-classifier (Issue #52 SP1)."""
+        result = self.hook._routing_step_to_skill("Phase 3")
+        assert result == "ecw:risk-classifier", (
+            "'Phase 3' must map to ecw:risk-classifier via routing alias — "
+            "without this, risk-classifier invocation during Phase 3 is "
+            "incorrectly flagged as off-chain deviation"
+        )
+
+    def test_risk_classifier_on_chain_via_phase3_alias(self):
+        """risk-classifier invoked as Phase 3 must NOT report off-chain deviation."""
+        routing = [
+            "ecw:biz-impact-analysis",
+            "ecw:knowledge-track",
+            "Phase 3",
+        ]
+        result = self.hook._check_routing_deviation(routing, "ecw:risk-classifier", None)
+        assert result is None, (
+            "ecw:risk-classifier invoked via Phase 3 alias must not be flagged as off-chain"
+        )
+
+    # ── Sub-problem 2: off-chain fall-through ─────────────────────────────────
+
+    def test_offchain_deviation_does_not_update_fields(self, tmp_path, monkeypatch):
+        """Off-chain deviation in PreToolUse must return None (no field updates) — Issue #52 SP2."""
+        import io
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp2"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        original_phase = "biz-impact-loaded"
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:impl-verify, ecw:biz-impact-analysis]\n"
+            "next: ecw:biz-impact-analysis\n"
+            f"current_phase: {original_phase}\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "working_mode: verification\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        original_content = state_file.read_text()
+
+        payload = json.dumps({
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Skill",
+            "tool_input": {"skill": "ecw:writing-plans"},  # off-chain: not in routing
+            "cwd": str(tmp_path),
+        })
+        monkeypatch.setattr("sys.stdin", io.StringIO(payload))
+        monkeypatch.setattr("sys.stdout", type("W", (), {
+            "write": lambda self, s: None,
+            "flush": lambda self: None,
+        })())
+        self.hook.main()
+
+        # File must be unchanged — off-chain deviation must not update any fields
+        assert state_file.read_text() == original_content, (
+            "Off-chain deviation in PreToolUse must NOT update session-state.md fields "
+            "(Issue #52 SP2: missing return caused current_phase/working_mode/TIMELINE "
+            "to be incorrectly overwritten)"
+        )
+
+    # ── Sub-problem 3: phase3-complete guard ──────────────────────────────────
+
+    def test_risk_classifier_phase3_sets_phase3_complete(self, tmp_path):
+        """risk-classifier completing Phase 3 must set current_phase=phase3-complete — Issue #52 SP3."""
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp3"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        # Routing with knowledge-track before Phase 3: this is the Phase 3 context
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:biz-impact-analysis, ecw:knowledge-track, Phase 3]\n"
+            "next: ecw:risk-classifier\n"
+            "current_phase: risk-classifier\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "working_mode: analysis\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "phase3-complete", (
+            "When risk-classifier completes Phase 3 (knowledge-track precedes Phase 3 "
+            "in routing), current_phase must be 'phase3-complete', not 'phase1-loaded' "
+            "(Issue #52 SP3: phase regression after Phase 3 calibration)"
+        )
+
+    def test_risk_classifier_phase1_still_sets_phase1_loaded(self, tmp_path):
+        """risk-classifier completing Phase 1 must still set phase1-loaded — Issue #52 SP3 guard."""
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp3b"
+        state_dir.mkdir(parents=True)
+        state_file = state_dir / "session-state.md"
+        # Routing without knowledge-track before Phase 3: this is Phase 1 context
+        state_file.write_text(
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "auto_continue: true\n"
+            "routing: [ecw:risk-classifier, ecw:requirements-elicitation, ecw:writing-plans]\n"
+            "next: ecw:requirements-elicitation\n"
+            "current_phase: risk-classifier\n"
+            "<!-- ECW:STATUS:END -->\n"
+            "<!-- ECW:MODE:START -->\n"
+            "working_mode: analysis\n"
+            "<!-- ECW:MODE:END -->\n"
+        )
+        self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
+        fields = self._parse_state(state_file)
+        assert fields["current_phase"] == "phase1-loaded", (
+            "risk-classifier completing Phase 1 (no Phase 3 pattern in routing) "
+            "must still set phase1-loaded (guard must not over-correct)"
+        )
 
 
 class TestGetSkillInstincts:

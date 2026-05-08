@@ -9,8 +9,6 @@ PreToolUse (fires when a Skill is about to be invoked):
 PostToolUse (fires after each Skill tool invocation):
   - Atomically updates Current Phase (completed) and Working Mode in session-state.md
   - Injects the remaining routing chain as a systemMessage so the model chains immediately
-  - After biz-impact-analysis: triggers ecw:knowledge-track if knowledge_root is configured
-    and knowledge-track is not already in the Routing chain (backward compatibility)
 
 Replaces the repeated "CRITICAL — Auto-Continue Rule" prompt blocks (Issue #5).
 Fixes stale Current Phase / Working Mode / Next fields (Issue #21, Issue #26).
@@ -136,7 +134,8 @@ def _remaining_route(routing, current_skill):
 def _routing_step_to_skill(step):
     """Convert a single Routing chain step to an ECW skill name.
 
-    Returns None for non-skill steps (Phase 2, Phase 3, Implementation(GREEN), etc.).
+    Returns None for non-skill steps (e.g. Phase 2, Implementation(GREEN), etc.).
+    Note: Phase 3 maps to ecw:risk-classifier via routing alias (Issue #52).
     """
     step_stripped = step.strip()
     if not step_stripped:
@@ -302,6 +301,8 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
                           action="routing_deviation",
                           deviation=deviation,
                           severity="warn")
+                if deviation["type"] == "off-chain":
+                    return None  # Do not update any fields for off-chain deviation
 
         next_skill = _next_skill_from_routing(routing, skill_name)
 
@@ -361,8 +362,36 @@ def _advance_session_state(state_path, skill_name):
         with open(state_path, encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-        if phase:
-            content = update_status_fields(content, {"current_phase": phase})
+        # Phase 3 guard for risk-classifier: when risk-classifier is invoked as the
+        # Phase 3 calibration step (via "Phase 3" routing alias), current_phase must
+        # be set to "phase3-complete", not "phase1-loaded" (Issue #52 sub-problem 3).
+        effective_phase = phase
+        if skill_name == "ecw:risk-classifier" and phase == "phase1-loaded":
+            fields_dict = parse_status(content)
+            routing = (fields_dict or {}).get("routing") or []
+            # Detect Phase 3 context: routing contains "Phase 3" step that maps to
+            # risk-classifier, and knowledge-track appears earlier in the chain.
+            phase3_in_routing = any(
+                str(step).strip() == "Phase 3" for step in routing
+            )
+            if phase3_in_routing:
+                # Check position: if knowledge-track precedes Phase 3 in routing,
+                # this is a Phase 3 invocation of risk-classifier.
+                steps = [str(s).strip() for s in routing]
+                kt_idx = next(
+                    (i for i, s in enumerate(steps)
+                     if _routing_step_to_skill(s) == "ecw:knowledge-track"),
+                    -1,
+                )
+                p3_idx = next(
+                    (i for i, s in enumerate(steps) if s == "Phase 3"),
+                    -1,
+                )
+                if kt_idx != -1 and p3_idx != -1 and kt_idx < p3_idx:
+                    effective_phase = "phase3-complete"
+
+        if effective_phase:
+            content = update_status_fields(content, {"current_phase": effective_phase})
         if mode:
             content = update_mode(content, mode)
 
@@ -464,37 +493,6 @@ def main():
         return
 
     remaining = _remaining_route(routing, skill_name)
-
-    # knowledge-track fallback: after biz-impact-analysis, if knowledge-track is NOT already
-    # in the remaining Routing chain (old sessions), check ecw.yml and inject it when needed.
-    # Deprecated: new sessions created after issue #45 have knowledge-track in chain.
-    # This fallback handles sessions created with the old routing that lacked knowledge-track.
-    if skill_name == "ecw:biz-impact-analysis":
-        has_kt = any(_routing_step_to_skill(s) == "ecw:knowledge-track" for s in remaining)
-        if not has_kt and risk_level in ("P0", "P1"):
-            try:
-                from ecw_config import read_ecw_config  # noqa: PLC0415
-                cfg = read_ecw_config(cwd)
-                knowledge_root = (cfg.get("paths") or {}).get("knowledge_root")
-            except Exception:
-                knowledge_root = None
-            if knowledge_root:
-                log_trace(cwd, "auto-continue", "PostToolUse",
-                          skill=skill_name, action="knowledge_track_fallback_deprecated",
-                          note="Session predates issue-45; knowledge-track not in chain. "
-                               "This fallback will be removed in a future version.")
-                kt_msg = (
-                    "[ECW AUTO-CONTINUE] Knowledge utilization tracking required for "
-                    f"{risk_level} workflow. "
-                    "Invoke ecw:knowledge-track immediately to record which knowledge files "
-                    "were used (hit/miss/redundant/misleading). "
-                    "Do not ask for confirmation."
-                )
-                log_trace(cwd, "auto-continue", "PostToolUse",
-                          skill=skill_name, action="inject_knowledge_track",
-                          risk_level=risk_level)
-                print(json.dumps({"systemMessage": kt_msg}, ensure_ascii=False))
-                return
 
     remaining_str = " → ".join(remaining) if remaining else ""
 
