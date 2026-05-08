@@ -330,7 +330,7 @@ Over-budget root causes are usually SKILL.md containing content it shouldn't (ro
 
 **Principle**: Selection determined by reasoning density, not task "importance." Simple but critical config change = sonnet; complex P3 analysis = opus.
 
-Defaults in `ecw.yml` `models.defaults.*`, project-overridable via `models.overrides.*`.
+Defaults in `ecw.yml` `models.defaults.*`.
 
 ### Subagent Boundary Declaration
 

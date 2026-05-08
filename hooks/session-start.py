@@ -119,7 +119,6 @@ def _get_project_info(cwd):
     }
     models = cfg.get("models", {})
     defaults = models.get("defaults", {})
-    overrides = models.get("overrides", {})
     STANDARD_DEFAULTS = {
         "analysis": "opus",
         "planning": "opus",
@@ -128,10 +127,8 @@ def _get_project_info(cwd):
         "mechanical": "haiku",
     }
     non_default = {k: v for k, v in defaults.items() if STANDARD_DEFAULTS.get(k) != v}
-    if non_default or overrides:
+    if non_default:
         info["model_config"] = non_default
-        if overrides:
-            info["model_overrides"] = overrides
     return info
 
 
@@ -238,8 +235,6 @@ def main():
             cfg_lines.append(f"- Working mode: {state_fields['working_mode']}")
         if ecw_cfg.get("model_config"):
             cfg_lines.append(f"- Model config (non-default): {ecw_cfg['model_config']}")
-        if ecw_cfg.get("model_overrides"):
-            cfg_lines.append(f"- Model overrides: {ecw_cfg['model_overrides']}")
         sections.append(
             "# [ECW] Project config\n\n" + "\n".join(cfg_lines)
         )

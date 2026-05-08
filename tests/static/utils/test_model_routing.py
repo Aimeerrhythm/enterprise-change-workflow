@@ -63,12 +63,6 @@ class TestEcwYmlModelsSection:
                 f"models.defaults.{tier} = '{model}' not in {VALID_MODELS}"
             )
 
-    def test_models_has_overrides(self):
-        cfg = _load_ecw_yml()
-        overrides = cfg["models"]["overrides"]
-        assert isinstance(overrides, dict), "models.overrides must be a dict"
-
-
 class TestSkillModelReferences:
     """Dispatching SKILL.md files must reference model config."""
 
@@ -134,7 +128,6 @@ class TestSessionStartModelsInjection:
             "project:\n  name: test\n  language: java\n"
             "models:\n  defaults:\n    analysis: sonnet\n    planning: opus\n"
             "    implementation: sonnet\n    verification: sonnet\n    mechanical: haiku\n"
-            "  overrides: {}\n"
         )
         info = session_start._get_project_info(str(tmp_path))
         assert "model_config" in info, (
@@ -148,7 +141,6 @@ class TestSessionStartModelsInjection:
             "project:\n  name: test\n  language: java\n"
             "models:\n  defaults:\n    analysis: opus\n    planning: opus\n"
             "    implementation: sonnet\n    verification: sonnet\n    mechanical: haiku\n"
-            "  overrides: {}\n"
         )
         info = session_start._get_project_info(str(tmp_path))
         assert "model_config" not in info, (

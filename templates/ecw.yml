@@ -132,8 +132,7 @@ knowledge_maintenance:
   # stale-refs → .claude/ecw/state/stale-refs.md
 
 # 模型路由配置
-# 控制各工作流阶段使用的 Claude 模型。项目可按需覆盖默认值以优化成本。
-# overrides 按 agent 模板文件名（去 .md）覆盖，如 {"domain-analyst": "sonnet"}。
+# 控制各工作流阶段使用的 Claude 模型。项目可按需修改 defaults 以优化成本。
 models:
   defaults:
     analysis: opus          # domain-collab, biz-impact-analysis
