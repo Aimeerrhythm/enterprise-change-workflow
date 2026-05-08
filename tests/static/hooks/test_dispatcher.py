@@ -189,7 +189,8 @@ class TestDispatcherRouting:
         mock_mod.check.return_value = ("continue", "test message")
 
         with patch("json.load", return_value=input_data):
-            with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+            with patch.object(dispatcher, "_LOADED_MODULES",
+                              {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                 with patch("builtins.print") as mock_print:
                     with pytest.raises(SystemExit) as exc:
                         dispatcher.main()
@@ -208,7 +209,8 @@ class TestDispatcherRouting:
         mock_mod.check.return_value = ("block", "compilation failed")
 
         with patch("json.load", return_value=input_data):
-            with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+            with patch.object(dispatcher, "_LOADED_MODULES",
+                              {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                 with patch("builtins.print") as mock_print:
                     with pytest.raises(SystemExit) as exc:
                         dispatcher.main()
@@ -228,7 +230,8 @@ class TestDispatcherRouting:
         mock_mod.check.side_effect = RuntimeError("boom")
 
         with patch("json.load", return_value=input_data):
-            with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+            with patch.object(dispatcher, "_LOADED_MODULES",
+                              {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                 with patch("builtins.print") as mock_print:
                     with pytest.raises(SystemExit) as exc:
                         dispatcher.main()
@@ -246,7 +249,8 @@ class TestDispatcherRouting:
 
         with patch.dict(os.environ, {"ECW_RISK_LEVEL": "P3"}):
             with patch("json.load", return_value=input_data):
-                with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+                with patch.object(dispatcher, "_LOADED_MODULES",
+                                  {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                     with patch("builtins.print") as mock_print:
                         with pytest.raises(SystemExit) as exc:
                             dispatcher.main()
@@ -266,7 +270,8 @@ class TestDispatcherRouting:
 
         with patch.dict(os.environ, {"ECW_RISK_LEVEL": "P0"}):
             with patch("json.load", return_value=input_data):
-                with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+                with patch.object(dispatcher, "_LOADED_MODULES",
+                                  {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                     with patch("builtins.print"):
                         with pytest.raises(SystemExit):
                             dispatcher.main()
@@ -287,7 +292,8 @@ class TestDispatcherRouting:
         mock_mod.check.return_value = ("continue", "")
 
         with patch("json.load", return_value=input_data):
-            with patch.object(dispatcher, "_load_subhook", return_value=mock_mod):
+            with patch.object(dispatcher, "_LOADED_MODULES",
+                              {n: mock_mod for n, _, _ in dispatcher.SUB_HOOKS}):
                 with patch("builtins.print") as mock_print:
                     with pytest.raises(SystemExit) as exc:
                         dispatcher.main()

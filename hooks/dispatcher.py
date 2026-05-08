@@ -135,6 +135,21 @@ def _load_subhook(module_filename):
     return mod
 
 
+def _preload_subhooks():
+    """Load all sub-hook modules once at startup rather than per-invocation."""
+    loaded = {}
+    for name, _, _ in SUB_HOOKS:
+        try:
+            loaded[name] = _load_subhook(name)
+        except Exception as e:
+            sys.stderr.write(f"ECW dispatcher: failed to pre-load '{name}': {e}\n")
+            loaded[name] = None
+    return loaded
+
+
+_LOADED_MODULES = _preload_subhooks()
+
+
 # ── ECW project detection ──
 
 def _is_ecw_project(cwd):
@@ -169,7 +184,7 @@ def main():
             continue
 
         try:
-            mod = _load_subhook(module_filename)
+            mod = _LOADED_MODULES.get(module_filename)
             if mod is None:
                 continue
 
