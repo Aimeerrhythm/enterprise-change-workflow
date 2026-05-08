@@ -74,8 +74,11 @@ def main() -> None:
         print(json.dumps({"result": "continue"}))
         return
 
-    file_path = (input_data.get("tool_input") or {}).get("file_path", "")
+    tool_input = input_data.get("tool_input") or {}
+    file_path = tool_input.get("file_path", "")
     cwd = input_data.get("cwd", "")
+    offset = tool_input.get("offset")
+    limit = tool_input.get("limit")
 
     if not file_path or not cwd:
         print(json.dumps({"result": "continue"}))
@@ -107,10 +110,14 @@ def main() -> None:
     log_file = os.path.join(session_dir, "knowledge-reads.jsonl")
 
     rel_path = _relative_path(file_path, cwd)
-    record = {
+    record: dict = {
         "ts": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "file": rel_path,
     }
+    if offset:
+        record["offset"] = offset
+    if limit:
+        record["limit"] = limit
 
     try:
         with open(log_file, "a", encoding="utf-8") as f:
