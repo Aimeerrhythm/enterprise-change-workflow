@@ -35,9 +35,6 @@ traces:
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, tdd]
 
   - name: "P1 single-domain requirement"
@@ -60,9 +57,6 @@ traces:
         - {skill: writing-plans, key: plan-file}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, tdd]
 
   - name: "P2 single-domain requirement"
@@ -113,9 +107,6 @@ traces:
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, writing-plans, spec-challenge, tdd]
 
   - name: "P1 cross-domain requirement"
@@ -141,9 +132,6 @@ traces:
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, writing-plans, spec-challenge, tdd]
 
   - name: "P2 cross-domain requirement"
@@ -193,9 +181,6 @@ traces:
         - {skill: systematic-debugging, key: debug-evidence}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, systematic-debugging, tdd]
 
   - name: "P1 bug fix"
@@ -214,9 +199,6 @@ traces:
         - {skill: systematic-debugging, key: debug-evidence}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, systematic-debugging, tdd]
 
   - name: "P2 bug fix"
@@ -260,9 +242,6 @@ traces:
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier]
 
   # ── Implementation Strategy: subagent-driven (impl-orchestration replaces tdd) ──
@@ -293,9 +272,6 @@ traces:
         - {skill: impl-orchestration, key: session-state}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, impl-orchestration]
 
   - name: "P1 single-domain requirement (impl-orchestration)"
@@ -319,7 +295,4 @@ traces:
         - {skill: impl-orchestration, key: session-state}
         - {skill: impl-verify, key: impl-verify-findings}
         - {skill: knowledge-track, key: doc-tracker}
-        - {skill: risk-classifier-phase3, key: calibration-log}
-        - {skill: risk-classifier-phase3, key: calibration-history}
-        - {skill: risk-classifier-phase3, key: instincts}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, impl-orchestration]

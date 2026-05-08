@@ -241,51 +241,6 @@ class TestSessionStartMain:
 
 
 # ══════════════════════════════════════════════════════
-# _read_instincts (v0.7+)
-# ══════════════════════════════════════════════════════
-
-class TestReadInstincts:
-    """Tests for _read_instincts parsing instincts.md with INSTINCT markers."""
-
-    def test_parses_valid_instinct(self, session_start, tmp_path):
-        """Parses well-formed instinct entry above confidence threshold."""
-        instincts_dir = tmp_path / ".claude" / "ecw" / "state"
-        instincts_dir.mkdir(parents=True)
-        (instincts_dir / "instincts.md").write_text(
-            "# Instincts\n"
-            "<!-- INSTINCT -->\n"
-            "- **Pattern**: order cancel after payment\n"
-            "- **Action**: classify as P0\n"
-            "- **Confidence**: 0.85\n"
-            "- **Source**: calibration-2026-04\n"
-        )
-        result = session_start._read_instincts(str(tmp_path))
-        assert len(result) == 1
-        assert result[0]["pattern"] == "order cancel after payment"
-        assert result[0]["confidence"] == 0.85
-
-    def test_filters_below_threshold(self, session_start, tmp_path):
-        """Entries with confidence < 0.7 are excluded."""
-        instincts_dir = tmp_path / ".claude" / "ecw" / "state"
-        instincts_dir.mkdir(parents=True)
-        (instincts_dir / "instincts.md").write_text(
-            "# Instincts\n"
-            "<!-- INSTINCT -->\n"
-            "- **Pattern**: minor fix\n"
-            "- **Action**: classify as P3\n"
-            "- **Confidence**: 0.5\n"
-            "- **Source**: test\n"
-        )
-        result = session_start._read_instincts(str(tmp_path))
-        assert len(result) == 0
-
-    def test_returns_empty_when_no_file(self, session_start, tmp_path):
-        """No instincts.md → empty list."""
-        result = session_start._read_instincts(str(tmp_path))
-        assert result == []
-
-
-# ══════════════════════════════════════════════════════
 # _read_ecw_config (v0.7+)
 # ══════════════════════════════════════════════════════
 

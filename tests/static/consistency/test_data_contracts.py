@@ -53,15 +53,6 @@ KEY_ALIASES = {
     "session-state": [
         "session-state",
     ],
-    "calibration-log": [
-        "calibration-log",
-    ],
-    "calibration-history": [
-        "calibration-history",
-    ],
-    "instincts": [
-        "instincts",
-    ],
     "workspace-yml": [
         "workspace-yml", "workspace.yml",
     ],
