@@ -15,21 +15,24 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, update_status_fields  # noqa: E402
+from marker_utils import find_session_state, update_status_fields, _is_json_state, _read_json, _write_json  # noqa: E402
 
 
 def _mark_session_ended(state_path):
-    """Update session-state.md to mark status as ended using the STATUS marker block."""
+    """Mark session state as ended."""
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        updated = update_status_fields(content, {"session_status": f"ended ({now})"})
-
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write(updated)
+        if _is_json_state(state_path):
+            data = _read_json(state_path) or {}
+            data["session_status"] = f"ended ({now})"
+            _write_json(state_path, data)
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            updated = update_status_fields(content, {"session_status": f"ended ({now})"})
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write(updated)
 
     except Exception:
         pass  # Best-effort

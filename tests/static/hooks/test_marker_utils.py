@@ -1,15 +1,15 @@
 """Unit tests for hooks/marker_utils.py
 
-Tests the shared marker-based idempotent update utilities:
-- make_markers: correct marker format
-- update_marker_section: replace existing / append new
-- read_marker_section: extract inner content
-- find_session_state: path resolution
-- update_session_state_section: end-to-end file update
+Tests the session state utilities:
+- find_session_state: path resolution (JSON preferred, .md fallback)
+- parse_status: JSON and legacy .md parsing
+- update_status_fields: JSON and legacy .md updates
+- validate_status: field validation
 """
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 
@@ -33,108 +33,28 @@ def marker_utils():
 
 
 # ══════════════════════════════════════════════════════
-# make_markers
-# ══════════════════════════════════════════════════════
-
-class TestMakeMarkers:
-    def test_standard_format(self, marker_utils):
-        start, end = marker_utils.make_markers("LEDGER")
-        assert start == "<!-- ECW:LEDGER:START -->"
-        assert end == "<!-- ECW:LEDGER:END -->"
-
-    def test_stop_marker(self, marker_utils):
-        start, end = marker_utils.make_markers("STOP")
-        assert start == "<!-- ECW:STOP:START -->"
-        assert end == "<!-- ECW:STOP:END -->"
-
-
-# ══════════════════════════════════════════════════════
-# update_marker_section
-# ══════════════════════════════════════════════════════
-
-class TestUpdateMarkerSection:
-    def test_append_when_no_markers(self, marker_utils):
-        """Appends marker section when markers don't exist."""
-        content = "# ECW Session State\n- **Risk Level**: P1\n"
-        result = marker_utils.update_marker_section(content, "STOP", "- new data")
-        assert "<!-- ECW:STOP:START -->" in result
-        assert "<!-- ECW:STOP:END -->" in result
-        assert "- new data" in result
-        assert "Risk Level" in result  # original preserved
-
-    def test_replace_existing_markers(self, marker_utils):
-        """Replaces content between existing markers."""
-        content = (
-            "# ECW Session State\n"
-            "<!-- ECW:STOP:START -->\n"
-            "- old data\n"
-            "<!-- ECW:STOP:END -->\n"
-            "## Ledger\n"
-        )
-        result = marker_utils.update_marker_section(content, "STOP", "- new data")
-        assert "old data" not in result
-        assert "- new data" in result
-        assert "## Ledger" in result  # content after marker preserved
-
-    def test_multiple_markers_independent(self, marker_utils):
-        """Updating one marker section doesn't affect others."""
-        content = (
-            "<!-- ECW:STATUS:START -->\n- status info\n<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:LEDGER:START -->\n| table |\n<!-- ECW:LEDGER:END -->\n"
-        )
-        result = marker_utils.update_marker_section(content, "STATUS", "- updated status")
-        assert "- updated status" in result
-        assert "| table |" in result  # LEDGER untouched
-
-    def test_multiline_inner_content(self, marker_utils):
-        """Handles multi-line content between markers."""
-        content = "# Header\n"
-        inner = "line1\nline2\nline3"
-        result = marker_utils.update_marker_section(content, "TEST", inner)
-        assert "line1\nline2\nline3" in result
-
-
-# ══════════════════════════════════════════════════════
-# read_marker_section
-# ══════════════════════════════════════════════════════
-
-class TestReadMarkerSection:
-    def test_reads_existing_section(self, marker_utils):
-        content = (
-            "# ECW\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "- **Risk Level**: P0\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        inner = marker_utils.read_marker_section(content, "STATUS")
-        assert inner == "- **Risk Level**: P0"
-
-    def test_returns_none_when_missing(self, marker_utils):
-        content = "# ECW\nno markers here\n"
-        assert marker_utils.read_marker_section(content, "STATUS") is None
-
-    def test_reads_correct_section_among_multiple(self, marker_utils):
-        content = (
-            "<!-- ECW:STATUS:START -->\nstatus data\n<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:LEDGER:START -->\nledger data\n<!-- ECW:LEDGER:END -->\n"
-        )
-        assert marker_utils.read_marker_section(content, "STATUS") == "status data"
-        assert marker_utils.read_marker_section(content, "LEDGER") == "ledger data"
-
-
-# ══════════════════════════════════════════════════════
 # find_session_state
 # ══════════════════════════════════════════════════════
 
 class TestFindSessionState:
-    def test_finds_state_dir_path(self, marker_utils, tmp_path):
+    def test_prefers_json_over_md(self, marker_utils, tmp_path):
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
+        state_dir.mkdir(parents=True)
+        (state_dir / "session-state.md").write_text("# ECW")
+        (state_dir / "session-state.json").write_text('{"risk_level": "P2"}')
+
+        result = marker_utils.find_session_state(str(tmp_path))
+        assert result is not None
+        assert result.endswith("session-state.json")
+
+    def test_falls_back_to_md(self, marker_utils, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.md").write_text("# ECW")
 
         result = marker_utils.find_session_state(str(tmp_path))
         assert result is not None
-        assert "session-state.md" in result
+        assert result.endswith("session-state.md")
 
     def test_finds_legacy_path(self, marker_utils, tmp_path):
         legacy_dir = tmp_path / ".claude" / "ecw"
@@ -149,32 +69,100 @@ class TestFindSessionState:
 
 
 # ══════════════════════════════════════════════════════
-# update_session_state_section
+# parse_status (JSON mode)
 # ══════════════════════════════════════════════════════
 
-class TestUpdateSessionStateSection:
-    def test_updates_existing_file(self, marker_utils, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "# ECW\n"
-            "<!-- ECW:STATUS:START -->\n- old\n<!-- ECW:STATUS:END -->\n"
-        )
+class TestParseStatusJson:
+    def test_reads_json_file(self, marker_utils, tmp_path):
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P1",
+            "routing": ["writing-plans", "impl-verify"],
+            "current_phase": "plan-complete",
+            "auto_continue": True,
+        }))
+        result = marker_utils.parse_status(str(state_file))
+        assert result["risk_level"] == "P1"
+        assert result["routing"] == ["writing-plans", "impl-verify"]
 
-        result = marker_utils.update_session_state_section(
-            str(tmp_path), "STATUS", "- new"
-        )
-        assert result is True
-        updated = state_file.read_text()
-        assert "- new" in updated
-        assert "old" not in updated
+    def test_returns_none_for_missing_file(self, marker_utils, tmp_path):
+        result = marker_utils.parse_status(str(tmp_path / "nonexistent.json"))
+        assert result is None
 
-    def test_returns_false_when_no_file(self, marker_utils, tmp_path):
-        result = marker_utils.update_session_state_section(
-            str(tmp_path), "STATUS", "- data"
+    def test_returns_none_for_invalid_json(self, marker_utils, tmp_path):
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text("not json {{{")
+        result = marker_utils.parse_status(str(state_file))
+        assert result is None
+
+
+# ══════════════════════════════════════════════════════
+# parse_status (legacy .md mode)
+# ══════════════════════════════════════════════════════
+
+class TestParseStatusLegacy:
+    def test_parses_yaml_from_markers(self, marker_utils):
+        content = (
+            "<!-- ECW:STATUS:START -->\n"
+            "risk_level: P0\n"
+            "routing: [writing-plans, impl-verify]\n"
+            "current_phase: phase1-complete\n"
+            "auto_continue: true\n"
+            "<!-- ECW:STATUS:END -->\n"
         )
-        assert result is False
+        result = marker_utils.parse_status(content)
+        assert result["risk_level"] == "P0"
+        assert result["auto_continue"] is True
+
+    def test_returns_none_for_no_markers(self, marker_utils):
+        assert marker_utils.parse_status("no markers here") is None
+
+
+# ══════════════════════════════════════════════════════
+# update_status_fields (JSON mode)
+# ══════════════════════════════════════════════════════
+
+class TestUpdateStatusFieldsJson:
+    def test_updates_existing_json(self, marker_utils, tmp_path):
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P2",
+            "current_phase": "plan-complete",
+            "auto_continue": True,
+        }))
+        marker_utils.update_status_fields(str(state_file), {"current_phase": "tdd-loaded"})
+        data = json.loads(state_file.read_text())
+        assert data["current_phase"] == "tdd-loaded"
+        assert data["risk_level"] == "P2"  # preserved
+
+
+# ══════════════════════════════════════════════════════
+# validate_status
+# ══════════════════════════════════════════════════════
+
+class TestValidateStatus:
+    def test_valid_fields(self, marker_utils):
+        fields = {
+            "risk_level": "P1",
+            "routing": ["a", "b"],
+            "current_phase": "test",
+            "auto_continue": True,
+        }
+        assert marker_utils.validate_status(fields) == []
+
+    def test_missing_required(self, marker_utils):
+        errors = marker_utils.validate_status({})
+        assert len(errors) == 4
+
+    def test_invalid_risk_level(self, marker_utils):
+        fields = {
+            "risk_level": "P5",
+            "routing": [],
+            "current_phase": "x",
+            "auto_continue": True,
+        }
+        errors = marker_utils.validate_status(fields)
+        assert any("P5" in e for e in errors)
 
 
 class TestMarkerUtilsModuleExists:

@@ -96,14 +96,12 @@ def get_profile(cwd):
     if env_level in RISK_PROFILE_MAP:
         return RISK_PROFILE_MAP[env_level]
 
-    # 2. session-state.md
+    # 2. session-state
     if cwd:
         state_file = find_session_state(cwd)
         try:
             if state_file:
-                with open(state_file, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                fields = parse_status(content)
+                fields = parse_status(state_file)
                 if fields and fields.get("risk_level"):
                     return RISK_PROFILE_MAP.get(fields["risk_level"].upper(), DEFAULT_PROFILE)
         except Exception:

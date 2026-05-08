@@ -28,6 +28,9 @@ from marker_utils import (  # noqa: E402
     parse_status,
     update_status_fields,
     validate_status,
+    _is_json_state,
+    _read_json,
+    _write_json,
 )
 from trace_logger import log_trace  # noqa: E402
 
@@ -262,10 +265,7 @@ def _get_skill_instincts(cwd: str, skill_name: str) -> str:
 
 
 def _handle_pre_tool_use(state_path, skill_name, cwd=""):
-    """Update Current Phase (in-progress), Next, and Working Mode at skill entry.
-
-    Hard-codes the in-progress state so these fields are always accurate regardless
-    of whether the SKILL.md prompt is followed — fixes Issue #26.
+    """Update Current Phase (in-progress) and Next at skill entry.
 
     Returns a dict with read-only state context for injection, or None.
     """
@@ -275,18 +275,19 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
         return None
 
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
+        if _is_json_state(state_path):
+            fields_dict = _read_json(state_path) or {}
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            fields_dict = parse_status(content) or {}
 
-        fields_dict = parse_status(content)
-        routing = (fields_dict or {}).get("routing") or []
+        routing = fields_dict.get("routing") or []
 
         # ── Routing deviation detection (before field updates) ─────────────
-        # Only check when auto_continue is active and a routing chain is set.
-        auto_continue = (fields_dict or {}).get("auto_continue")
+        auto_continue = fields_dict.get("auto_continue")
         if auto_continue is True and routing:
-            # expected_next is what the previous skill wrote as the next step
-            expected_next = (fields_dict or {}).get("next") or None
+            expected_next = fields_dict.get("next") or None
             deviation = _check_routing_deviation(routing, skill_name, expected_next)
             if deviation:
                 log_trace(cwd, "auto-continue", "PreToolUse",
@@ -295,26 +296,29 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
                           deviation=deviation,
                           severity="warn")
                 if deviation["type"] == "off-chain":
-                    return None  # Do not update any fields for off-chain deviation
+                    return None
 
         next_skill = _next_skill_from_routing(routing, skill_name)
 
-        fields = {}
+        updates = {}
         if in_progress_phase:
-            fields["current_phase"] = in_progress_phase
+            updates["current_phase"] = in_progress_phase
         if next_skill:
-            fields["next"] = next_skill
-        if fields:
-            content = update_status_fields(content, fields)
+            updates["next"] = next_skill
 
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write(content)
+        if updates:
+            if _is_json_state(state_path):
+                fields_dict.update(updates)
+                _write_json(state_path, fields_dict)
+            else:
+                content = update_status_fields(content, updates)
+                with open(state_path, "w", encoding="utf-8") as f:
+                    f.write(content)
 
         log_trace(cwd, "auto-continue", "PreToolUse",
                   skill=skill_name,
                   action="update_fields",
-                  fields_updated={**({"current_phase": in_progress_phase} if in_progress_phase else {}),
-                                  **({"next": next_skill} if next_skill else {})})
+                  fields_updated=updates)
 
         # Build read-only state context for Skill injection (Issue #62 Part 3)
         risk_level = (fields_dict or {}).get("risk_level") or ""
@@ -330,35 +334,27 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
 
 
 def _advance_session_state(state_path, skill_name):
-    """Atomically update Current Phase after a skill completes.
-
-    Single read → in-memory transform → single write. No partial patches.
-    Silently no-ops when the skill has no entry in the mapping tables or the
-    file cannot be read/written — hook errors must never block the workflow.
-    """
+    """Atomically update Current Phase after a skill completes."""
     phase = _SKILL_COMPLETED_PHASE.get(skill_name)
     if not phase:
         return
 
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
+        if _is_json_state(state_path):
+            fields_dict = _read_json(state_path) or {}
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            fields_dict = parse_status(content) or {}
 
-        # Phase 3 guard for risk-classifier: when risk-classifier is invoked as the
-        # Phase 3 calibration step (via "Phase 3" routing alias), current_phase must
-        # be set to "phase3-complete", not "phase1-loaded" (Issue #52 sub-problem 3).
+        # Phase 3 guard for risk-classifier
         effective_phase = phase
         if skill_name == "ecw:risk-classifier" and phase == "phase1-loaded":
-            fields_dict = parse_status(content)
-            routing = (fields_dict or {}).get("routing") or []
-            # Detect Phase 3 context: routing contains "Phase 3" step that maps to
-            # risk-classifier, and knowledge-track appears earlier in the chain.
+            routing = fields_dict.get("routing") or []
             phase3_in_routing = any(
                 str(step).strip() == "Phase 3" for step in routing
             )
             if phase3_in_routing:
-                # Check position: if knowledge-track precedes Phase 3 in routing,
-                # this is a Phase 3 invocation of risk-classifier.
                 steps = [str(s).strip() for s in routing]
                 kt_idx = next(
                     (i for i, s in enumerate(steps)
@@ -373,10 +369,13 @@ def _advance_session_state(state_path, skill_name):
                     effective_phase = "phase3-complete"
 
         if effective_phase:
-            content = update_status_fields(content, {"current_phase": effective_phase})
-
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write(content)
+            if _is_json_state(state_path):
+                fields_dict["current_phase"] = effective_phase
+                _write_json(state_path, fields_dict)
+            else:
+                content = update_status_fields(content, {"current_phase": effective_phase})
+                with open(state_path, "w", encoding="utf-8") as f:
+                    f.write(content)
     except Exception:
         pass  # Never block workflow
 
@@ -435,13 +434,16 @@ def main():
     # ── PostToolUse path ──────────────────────────────────────────────────────
 
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(16384)  # STATUS block is near top; 16KB covers large ledger entries
+        if _is_json_state(state_path):
+            fields_dict = _read_json(state_path)
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read(16384)
+            fields_dict = parse_status(content)
     except Exception:
         print(json.dumps({"result": "continue"}))
         return
 
-    fields_dict = parse_status(content)
     if not fields_dict:
         print(json.dumps({"result": "continue"}))
         return

@@ -18,7 +18,7 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status, _is_json_state, _read_json  # noqa: E402
 
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
@@ -48,11 +48,9 @@ def _append_compact_marker(state_path):
 
 
 def _extract_risk_level(state_path):
-    """Extract risk level from session-state.md STATUS section (YAML format)."""
+    """Extract risk level from session state."""
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(4096)
-        fields = parse_status(content)
+        fields = parse_status(state_path)
         if fields:
             return fields.get("risk_level") or None
     except Exception:
@@ -61,11 +59,9 @@ def _extract_risk_level(state_path):
 
 
 def _extract_current_phase(state_path):
-    """Extract current phase from session-state.md STATUS section (YAML format)."""
+    """Extract current phase from session state."""
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(4096)
-        fields = parse_status(content)
+        fields = parse_status(state_path)
         if fields:
             return fields.get("current_phase") or None
     except Exception:
@@ -74,11 +70,9 @@ def _extract_current_phase(state_path):
 
 
 def _extract_next_skill(state_path):
-    """Extract next skill from session-state.md STATUS section (YAML format)."""
+    """Extract next skill from session state."""
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read(4096)
-        fields = parse_status(content)
+        fields = parse_status(state_path)
         if fields:
             val = fields.get("next", "")
             if val and str(val).lower() not in ('tbd', 'none', 'complete', ''):
@@ -99,9 +93,7 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
     if state_path:
         rel_state = os.path.relpath(state_path, cwd)
         try:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                state_content = f.read()
-            fields = parse_status(state_content)
+            fields = parse_status(state_path)
             if fields:
                 risk = fields.get("risk_level") or None
                 phase = fields.get("current_phase") or None

@@ -27,7 +27,7 @@ from datetime import datetime
 
 # Import shared marker utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, update_marker_section  # noqa: E402
+from marker_utils import find_session_state, _is_json_state, _read_json, _write_json  # noqa: E402
 
 MAX_CONTEXT = 200_000
 ADVISORY_FILE = ".claude/ecw/state/context-health.txt"
@@ -164,9 +164,25 @@ def _build_stop_section(input_data):
     )
 
 
-def _update_with_markers(content, new_inner):
-    """Replace STOP marker section, or append if markers not found."""
-    return update_marker_section(content, "STOP", new_inner)
+def _update_with_markers(state_path, content, new_inner):
+    """Update stop info. For JSON: writes stop field. For legacy md: uses markers."""
+    if _is_json_state(state_path):
+        data = _read_json(state_path) or {}
+        data["stop"] = {"last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "activity": new_inner}
+        _write_json(state_path, data)
+        return json.dumps(data)
+    else:
+        import re as _re
+        start_marker = "<!-- ECW:STOP:START -->"
+        end_marker = "<!-- ECW:STOP:END -->"
+        new_section = f"{start_marker}\n{new_inner}\n{end_marker}"
+        pattern = _re.compile(
+            _re.escape(start_marker) + r".*?" + _re.escape(end_marker), _re.DOTALL
+        )
+        if pattern.search(content):
+            return pattern.sub(new_section, content)
+        return content.rstrip() + "\n\n" + new_section + "\n"
 
 
 def _is_ecw_project(cwd):
@@ -196,22 +212,31 @@ def main():
         return
 
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
+        if _is_json_state(state_path):
+            data = _read_json(state_path) or {}
+            if data.get("session_status", "").startswith("ended"):
+                print(json.dumps({"result": "continue"}))
+                return
+            activity = _extract_activity_summary(input_data)
+            data["stop"] = {"last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "activity": activity}
+            _write_json(state_path, data)
+            _update_context_advisory(cwd, json.dumps(data))
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
 
-        # Skip if session is already marked as ended
-        if re.search(r'\*\*Status\*\*:\s*ended', content, re.IGNORECASE):
-            print(json.dumps({"result": "continue"}))
-            return
+            if re.search(r'\*\*Status\*\*:\s*ended', content, re.IGNORECASE):
+                print(json.dumps({"result": "continue"}))
+                return
 
-        new_section = _build_stop_section(input_data)
-        updated = _update_with_markers(content, new_section)
+            new_section = _build_stop_section(input_data)
+            updated = _update_with_markers(state_path, content, new_section)
 
-        with open(state_path, "w", encoding="utf-8") as f:
-            f.write(updated)
+            with open(state_path, "w", encoding="utf-8") as f:
+                f.write(updated)
 
-        # Check for phase transition → update context health advisory
-        _update_context_advisory(cwd, updated)
+            _update_context_advisory(cwd, updated)
 
     except Exception:
         pass  # Stop hook errors must never block workflow

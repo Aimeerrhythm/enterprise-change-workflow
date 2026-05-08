@@ -17,7 +17,6 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import read_marker_section  # noqa: E402
 from trace_logger import log_trace  # noqa: E402
 
 try:
@@ -178,21 +177,40 @@ def _accumulate_modified_file(cwd, filepath):
 
 
 def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
-    """Validate all marker sections in session-state.md are valid YAML.
+    """Validate session state file format after edit.
 
-    For Write: validates the content being written (from tool_input).
-    For Edit: reads the actual file after the edit has been applied.
+    For JSON files: validates JSON syntax.
+    For legacy .md files: validates STATUS marker section as YAML.
     Returns a list of error strings (empty = all valid).
     """
-    if not _YAML_AVAILABLE:
+    if not filepath:
         return []
 
+    # JSON files: validate JSON parse
+    if filepath.endswith(".json"):
+        if tool_name == "Write":
+            content = tool_input.get("content", "")
+        else:
+            try:
+                with open(filepath, encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+            except Exception:
+                return []
+        if not content:
+            return []
+        try:
+            import json as _json
+            _json.loads(content)
+        except Exception as e:
+            return [f"session-state.json: invalid JSON — {e}"]
+        return []
+
+    # Legacy .md: validate YAML in STATUS markers
+    if not _YAML_AVAILABLE:
+        return []
     if tool_name == "Write":
         content = tool_input.get("content", "")
     elif tool_name == "Edit":
-        # PostToolUse fires after the edit; read the file as it now exists
-        if not filepath:
-            return []
         try:
             with open(filepath, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
@@ -204,16 +222,17 @@ def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
     if not content:
         return []
 
+    import re as _re
     warnings = []
-    for section_name in ("STATUS",):
-        section = read_marker_section(content, section_name)
-        if section is not None:
-            try:
-                _yaml.safe_load(section)
-            except Exception as e:
-                warnings.append(
-                    f"{section_name} section: {e}"
-                )
+    pattern = _re.compile(
+        r"<!-- ECW:STATUS:START -->\n(.*?)\n<!-- ECW:STATUS:END -->", _re.DOTALL
+    )
+    m = pattern.search(content)
+    if m:
+        try:
+            _yaml.safe_load(m.group(1))
+        except Exception as e:
+            warnings.append(f"STATUS section: {e}")
     return warnings
 
 

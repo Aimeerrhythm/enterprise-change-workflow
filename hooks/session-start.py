@@ -18,7 +18,7 @@ import sys
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status, parse_yaml_section, parse_instincts  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status, parse_instincts, _is_json_state, _read_json  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -32,31 +32,37 @@ CHECKPOINT_PREVIEW_BYTES = 512
 
 
 def _read_session_state(cwd):
-    """Read session-state.md content. Returns (content, path) or (None, None)."""
+    """Read session state. Returns (fields_dict, path) or (None, None)."""
     state_path = find_session_state(cwd)
     if not state_path:
         return None, None
     try:
-        with open(state_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-        if content.strip():
-            return content, state_path
+        if _is_json_state(state_path):
+            data = _read_json(state_path)
+            return data, state_path
+        else:
+            with open(state_path, encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            if content.strip():
+                return content, state_path
     except Exception:
         pass
     return None, None
 
 
-def _extract_state_fields(content):
-    """Extract key fields from session-state.md STATUS section (YAML format)."""
-    fields_raw = parse_status(content) or {}
+def _extract_state_fields(state_data):
+    """Extract key fields from session state. Accepts dict (JSON) or str (legacy md)."""
+    if isinstance(state_data, dict):
+        fields_raw = state_data
+    else:
+        fields_raw = parse_status(state_data) or {}
+
     fields = {}
     if fields_raw.get("risk_level"):
         fields["risk_level"] = fields_raw["risk_level"]
     if fields_raw.get("domains"):
         domains = fields_raw["domains"]
         fields["domains"] = ", ".join(domains) if isinstance(domains, list) else str(domains)
-    if fields_raw.get("mode"):
-        fields["mode"] = fields_raw["mode"]
     if fields_raw.get("routing") is not None:
         routing = fields_raw["routing"]
         fields["routing"] = " → ".join(routing) if isinstance(routing, list) else str(routing)
@@ -67,9 +73,6 @@ def _extract_state_fields(content):
             fields["status"] = "ended"
         else:
             fields["status"] = "active"
-    working_mode_data = parse_yaml_section(content, "MODE") or {}
-    if working_mode_data.get("working_mode"):
-        fields["working_mode"] = working_mode_data["working_mode"]
     if fields_raw.get("next"):
         fields["next_skill"] = fields_raw["next"]
     return fields

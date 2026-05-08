@@ -95,15 +95,13 @@ class TestExtractStateFields:
         assert "order" in fields["domains"]
         assert "inventory" in fields["domains"]
 
-    def test_extracts_mode_and_routing(self, session_start):
+    def test_extracts_routing(self, session_start):
         content = (
             "<!-- ECW:STATUS:START -->\n"
-            "mode: cross-domain\n"
             "routing: [domain-collab, writing-plans]\n"
             "<!-- ECW:STATUS:END -->"
         )
         fields = session_start._extract_state_fields(content)
-        assert fields["mode"] == "cross-domain"
         assert "writing-plans" in fields["routing"]
 
     def test_handles_missing_fields(self, session_start):
@@ -136,14 +134,17 @@ class TestGetCheckpointFiles:
         files = session_start._get_checkpoint_files(str(tmp_path))
         assert files == []
 
-    def test_ignores_non_md_files(self, session_start, tmp_path):
+    def test_ignores_non_md_non_json_files(self, session_start, tmp_path):
         sd_dir = tmp_path / ".claude" / "ecw" / "session-data"
         sd_dir.mkdir(parents=True)
         (sd_dir / "notes.txt").write_text("not markdown")
         (sd_dir / "data.json").write_text("{}")
 
         files = session_start._get_checkpoint_files(str(tmp_path))
-        assert files == []
+        # .json is now included, .txt is still excluded
+        names = [f[2] for f in files]
+        assert "notes.txt" not in names
+        assert "data.json" in names
 
 
 # ══════════════════════════════════════════════════════

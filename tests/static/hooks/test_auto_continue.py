@@ -411,14 +411,6 @@ class TestAdvanceSessionState:
         spec.loader.exec_module(mu)
         return mu.parse_status(state_file.read_text())
 
-    def _parse_mode(self, state_file):
-        import importlib.util as _ilu
-        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
-        mu = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(mu)
-        result = mu.parse_yaml_section(state_file.read_text(), "MODE")
-        return result.get("working_mode") if result else None
-
     def test_updates_phase_after_skill_completes(self, tmp_path):
         """Current Phase must advance to phase1-loaded after risk-classifier instructions load."""
         state_file = self._make_state(tmp_path, phase="phase1-complete")
@@ -513,7 +505,6 @@ class TestAdvanceSessionState:
 
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "phase1-loaded"
-        assert self._parse_mode(state_file) == "analysis"
         output = json.loads("".join(captured))
         assert "systemMessage" in output
 
@@ -647,14 +638,6 @@ class TestPreToolUseHandler:
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
         return mu.parse_status(state_file.read_text())
-
-    def _parse_mode(self, state_file):
-        import importlib.util as _ilu
-        spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
-        mu = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(mu)
-        result = mu.parse_yaml_section(state_file.read_text(), "MODE")
-        return result.get("working_mode") if result else None
 
     def _run_pre_tool_use(self, tmp_path, monkeypatch, skill):
         import io
