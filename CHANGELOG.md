@@ -4,6 +4,18 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.4.0] - 2026-05-08
+
+### 架构变更
+
+- **State Ownership Inversion (Issue #62)**: Skills 永不写状态，Hooks 独占状态管理
+  - `auto-continue.py` 5 张静态字典替换为运行时从 `workflow-routes.yml` `skill_metadata` 动态生成
+  - 从 10 个 SKILL.md 删除所有 Downstream Handoff 段落 + Mode switch 指令 + marker 格式引用
+  - PreToolUse 注入只读状态上下文（risk_level, mode, next, routing_remaining）
+  - `marker_utils.parse_instincts()` 统一实现，auto-continue 和 session-start 共用
+  - 新增 skill 只需编辑 `workflow-routes.yml`，无需修改 Python 代码
+  - 结构性消除 12 个历史 Issue 的根因（#5, #21, #26, #31, #33, #36, #40, #43, #45, #49, #50, #54）
+
 ## [1.3.5] - 2026-05-08
 
 ### 修复
@@ -874,6 +886,7 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[1.4.0]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.4.0
 [1.3.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.5
 [1.3.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.4
 [1.3.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.3
