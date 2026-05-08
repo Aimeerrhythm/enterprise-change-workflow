@@ -386,257 +386,6 @@ class TestReadEcwConfig:
         assert cfg == {}
 
 
-# ══════════════════════════════════════════════════════
-# _load_path_mappings
-# ══════════════════════════════════════════════════════
-
-class TestLoadPathMappings:
-    """Tests for path mapping table parsing."""
-
-    def test_normal_table(self, hook_module, tmp_project):
-        """Parse standard markdown table. Note: header row is included (only '域' is filtered)."""
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n"
-            "|------|--------|\n"
-            "| src/order/* | order |\n"
-            "| src/payment/ | payment |\n"
-        )
-        mappings = hook_module._load_path_mappings(str(tmp_project), {})
-        # Header row ("Path", "Domain") is parsed as an entry — known behavior
-        assert len(mappings) == 3
-        assert ("src/order", "order") in mappings
-        assert ("src/payment", "payment") in mappings
-
-    def test_header_row_skipped(self, hook_module, tmp_project):
-        """Header row with '域' is skipped."""
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| 路径 | 域 |\n"
-            "|------|----|\n"
-            "| src/order/* | order |\n"
-        )
-        mappings = hook_module._load_path_mappings(str(tmp_project), {})
-        assert len(mappings) == 1
-
-    def test_path_strip_glob_and_slash(self, hook_module, tmp_project):
-        """Trailing * and / are stripped from paths."""
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| src/biz/order/* | order |\n"
-            "| src/biz/pay/ | payment |\n"
-        )
-        mappings = hook_module._load_path_mappings(str(tmp_project), {})
-        assert ("src/biz/order", "order") in mappings
-        assert ("src/biz/pay", "payment") in mappings
-
-    def test_file_not_found_returns_empty(self, hook_module, tmp_path):
-        """Missing mappings file returns empty list."""
-        mappings = hook_module._load_path_mappings(str(tmp_path), {})
-        assert mappings == []
-
-    def test_custom_path_from_config(self, hook_module, tmp_project):
-        """Custom path_mappings path from config."""
-        custom_path = tmp_project / "custom" / "mappings.md"
-        custom_path.parent.mkdir(parents=True)
-        custom_path.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| app/svc/* | service |\n"
-        )
-        cfg = {"paths": {"path_mappings": "custom/mappings.md"}}
-        mappings = hook_module._load_path_mappings(str(tmp_project), cfg)
-        # Header row is included
-        assert len(mappings) == 2
-        assert ("app/svc", "service") in mappings
-
-
-# ══════════════════════════════════════════════════════
-# check_knowledge_doc_freshness
-# ══════════════════════════════════════════════════════
-
-class TestCheckKnowledgeDocFreshness:
-    """Tests for knowledge document sync reminders."""
-
-    def test_biz_code_changed_knowledge_not(self, hook_module, tmp_project):
-        """Business code changed but knowledge docs not → reminder."""
-        # Create knowledge domain
-        order_dir = tmp_project / ".claude" / "knowledge" / "order"
-        order_dir.mkdir(parents=True)
-        (order_dir / "business-rules.md").write_text("order rules")
-
-        # Create path mappings
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| src/order | order |\n"
-        )
-
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_project),
-            ["src/order/OrderService.java"]
-        )
-        assert len(reminders) == 1
-        assert "order" in reminders[0]
-
-    def test_biz_code_and_knowledge_both_changed(self, hook_module, tmp_project):
-        """Both code and knowledge changed → no reminder."""
-        order_dir = tmp_project / ".claude" / "knowledge" / "order"
-        order_dir.mkdir(parents=True)
-        (order_dir / "business-rules.md").write_text("order rules")
-
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| src/order | order |\n"
-        )
-
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_project),
-            ["src/order/OrderService.java", ".claude/knowledge/order/business-rules.md"]
-        )
-        assert reminders == []
-
-    def test_heuristic_biz_path_match(self, hook_module, tmp_project):
-        """Heuristic /biz/domain/ path matching works."""
-        order_dir = tmp_project / ".claude" / "knowledge" / "order"
-        order_dir.mkdir(parents=True)
-        (order_dir / "business-rules.md").write_text("rules")
-
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_project),
-            ["src/main/java/com/example/biz/order/OrderServiceImpl.java"]
-        )
-        assert len(reminders) == 1
-
-    def test_no_knowledge_dir_returns_empty(self, hook_module, tmp_path):
-        """No knowledge directory → no reminders."""
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_path),
-            ["src/Main.java"]
-        )
-        assert reminders == []
-
-    def test_domain_dir_exists_but_no_md_files(self, hook_module, tmp_project):
-        """Domain dir exists but no .md files → no reminder."""
-        order_dir = tmp_project / ".claude" / "knowledge" / "order"
-        order_dir.mkdir(parents=True)
-
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| src/order | order |\n"
-        )
-
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_project),
-            ["src/order/OrderService.java"]
-        )
-        assert reminders == []
-
-    def test_knowledge_root_trailing_slash(self, hook_module, tmp_project):
-        """knowledge_root without trailing / is normalized."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "paths:\n  knowledge_root: .claude/knowledge\n"
-        )
-
-        order_dir = tmp_project / ".claude" / "knowledge" / "order"
-        order_dir.mkdir(parents=True)
-        (order_dir / "rules.md").write_text("rules")
-
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text(
-            "| Path | Domain |\n|---|---|\n"
-            "| src/order | order |\n"
-        )
-
-        reminders = hook_module.check_knowledge_doc_freshness(
-            str(tmp_project),
-            ["src/order/OrderService.java"]
-        )
-        assert len(reminders) == 1
-
-
-# ══════════════════════════════════════════════════════
-# check_test_coverage
-# ══════════════════════════════════════════════════════
-
-class TestCheckTestCoverage:
-    """Tests for TDD test file coverage check."""
-
-    def test_check_disabled_returns_empty(self, hook_module, tmp_project):
-        """check_test_files=false → empty."""
-        # Default ecw.yml has check_test_files: false
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project), ["src/main/java/BizServiceImpl.java"]
-        )
-        assert reminders == []
-
-    def test_check_enabled_test_exists(self, hook_module, tmp_project):
-        """BizServiceImpl changed + test exists → no reminder."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text("tdd:\n  check_test_files: true\n")
-
-        test_file = tmp_project / "src" / "test" / "java" / "BizServiceTest.java"
-        test_file.parent.mkdir(parents=True)
-        test_file.write_text("test")
-
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project),
-            ["src/main/java/BizServiceImpl.java"]
-        )
-        assert reminders == []
-
-    def test_check_enabled_test_missing(self, hook_module, tmp_project):
-        """BizServiceImpl changed + no test → reminder."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text("tdd:\n  check_test_files: true\n")
-
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project),
-            ["src/main/java/BizServiceImpl.java"]
-        )
-        assert len(reminders) == 1
-        assert "BizService" in reminders[0]
-
-    def test_manager_impl_checked(self, hook_module, tmp_project):
-        """ManagerImpl files are also checked."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text("tdd:\n  check_test_files: true\n")
-
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project),
-            ["src/main/java/OrderManagerImpl.java"]
-        )
-        assert len(reminders) == 1
-
-    def test_non_biz_files_ignored(self, hook_module, tmp_project):
-        """Non-BizService/Manager java files are not checked."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text("tdd:\n  check_test_files: true\n")
-
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project),
-            ["src/main/java/Controller.java", "src/main/java/Utils.java"]
-        )
-        assert reminders == []
-
-    def test_path_conversion_main_to_test(self, hook_module, tmp_project):
-        """Verify src/main/java → src/test/java + Impl → Test conversion."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text("tdd:\n  check_test_files: true\n")
-
-        # Create the expected test file at the converted path
-        test_file = tmp_project / "src" / "test" / "java" / "com" / "OrderBizServiceTest.java"
-        test_file.parent.mkdir(parents=True)
-        test_file.write_text("test")
-
-        reminders = hook_module.check_test_coverage(
-            str(tmp_project),
-            ["src/main/java/com/OrderBizServiceImpl.java"]
-        )
-        assert reminders == []
 
 
 # ══════════════════════════════════════════════════════
@@ -646,16 +395,8 @@ class TestCheckTestCoverage:
 class TestProfileAwareness:
     """Tests for risk-level-driven check skipping via check()."""
 
-    def test_minimal_profile_skips_knowledge_reminders(self, hook_module, tmp_project):
-        """P3 (minimal) profile skips knowledge doc freshness checks."""
-        # Set up: business code changed, knowledge docs not updated
-        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
-        domain_dir.mkdir(parents=True)
-        (domain_dir / "business-rules.md").write_text("# Rules\n")
-
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
-
+    def test_minimal_profile_passes(self, hook_module, tmp_project):
+        """P3 (minimal) profile passes without soft reminders."""
         input_data = {
             "tool_name": "TaskUpdate",
             "tool_input": {"status": "completed"},
@@ -664,62 +405,11 @@ class TestProfileAwareness:
         config = {"_runtime_profile": "minimal"}
 
         with patch.object(hook_module, "get_changed_files",
-                          return_value=(["order-biz/src/OrderService.java"], [])):
+                          return_value=(["src/OrderService.java"], [])):
             with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
                 with patch.object(hook_module, "check_java_tests", return_value=([], [])):
                     action, message = hook_module.check(input_data, config)
                     assert action == "continue"
-                    assert "知识文档同步提醒" not in message
-
-    def test_standard_profile_includes_knowledge_reminders(self, hook_module, tmp_project):
-        """P1 (standard) profile includes knowledge doc freshness checks."""
-        domain_dir = tmp_project / ".claude" / "knowledge" / "order"
-        domain_dir.mkdir(parents=True)
-        (domain_dir / "business-rules.md").write_text("# Rules\n")
-
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
-        mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
-
-        input_data = {
-            "tool_name": "TaskUpdate",
-            "tool_input": {"status": "completed"},
-            "cwd": str(tmp_project),
-        }
-        config = {"_runtime_profile": "standard"}
-
-        with patch.object(hook_module, "get_changed_files",
-                          return_value=(["order-biz/src/OrderService.java"], [])):
-            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
-                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
-                    action, message = hook_module.check(input_data, config)
-                    assert action == "continue"
-                    assert "知识文档同步提醒" in message
-
-    def test_minimal_profile_skips_test_coverage(self, hook_module, tmp_project):
-        """P3 (minimal) profile skips TDD test coverage checks."""
-        # Enable tdd.check_test_files in ecw.yml
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "verification:\n  run_tests: false\n"
-            "tdd:\n  check_test_files: true\n"
-            "paths:\n  knowledge_root: .claude/knowledge/\n"
-        )
-
-        input_data = {
-            "tool_name": "TaskUpdate",
-            "tool_input": {"status": "completed"},
-            "cwd": str(tmp_project),
-        }
-        config = {"_runtime_profile": "minimal"}
-
-        with patch.object(hook_module, "get_changed_files",
-                          return_value=(["src/main/java/OrderBizServiceImpl.java"], [])):
-            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
-                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
-                    action, message = hook_module.check(input_data, config)
-                    assert action == "continue"
-                    assert "TDD 测试覆盖提醒" not in message
 
 
 class TestEcwConfiguredGuard:
@@ -801,7 +491,6 @@ class TestEcwConfiguredGuard:
                 with patch.object(hook_module, "check_java_tests", return_value=([], [])):
                     action, message = hook_module.check(input_data, config)
                     assert action == "continue"
-                    assert "知识文档同步提醒" in message
 
     def test_no_config_defaults_to_standard(self, hook_module, tmp_project):
         """check() without config defaults to standard profile."""
@@ -824,7 +513,6 @@ class TestEcwConfiguredGuard:
                 with patch.object(hook_module, "check_java_tests", return_value=([], [])):
                     action, message = hook_module.check(input_data)  # No config
                     assert action == "continue"
-                    assert "知识文档同步提醒" in message
 
     def test_blocking_checks_run_at_minimal(self, hook_module, tmp_project):
         """P3 (minimal) still runs blocking checks (broken refs, compilation)."""
@@ -848,46 +536,26 @@ class TestEcwConfiguredGuard:
                     assert "不存在的路径" in message
 
 class TestOutputFormat:
-    """Tests for output_fail and output_pass JSON format."""
+    """Tests for _format_fail_message and _format_pass_message."""
 
-    def test_output_fail_format(self, hook_module):
-        """output_fail produces deny JSON."""
-        with patch("builtins.print") as mock_print:
-            hook_module.output_fail(["issue 1", "issue 2"])
-            output = json.loads(mock_print.call_args[0][0])
-            assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
-            assert "issue 1" in output["systemMessage"]
+    def test_fail_format(self, hook_module):
+        msg = hook_module._format_fail_message(["issue 1", "issue 2"])
+        assert "issue 1" in msg
+        assert "ECW Verify" in msg
 
-    def test_output_fail_truncates(self, hook_module):
-        """output_fail truncates after 10 issues."""
+    def test_fail_truncates(self, hook_module):
         issues = [f"issue {i}" for i in range(15)]
-        with patch("builtins.print") as mock_print:
-            hook_module.output_fail(issues)
-            output = json.loads(mock_print.call_args[0][0])
-            assert "还有 5 个问题" in output["systemMessage"]
+        msg = hook_module._format_fail_message(issues)
+        assert "还有 5 个问题" in msg
 
-    def test_output_pass_format(self, hook_module):
-        """output_pass produces pass JSON."""
-        with patch("builtins.print") as mock_print:
-            hook_module.output_pass(3, 1)
-            output = json.loads(mock_print.call_args[0][0])
-            assert "hookSpecificOutput" not in output
-            assert "技术检查通过" in output["systemMessage"]
+    def test_pass_format(self, hook_module):
+        msg = hook_module._format_pass_message(3, 1)
+        assert "技术检查通过" in msg
 
-    def test_output_pass_with_reminders(self, hook_module):
-        """output_pass includes knowledge and test reminders."""
-        with patch("builtins.print") as mock_print:
-            hook_module.output_pass(
-                2, 0,
-                warnings=["compile warning"],
-                knowledge_reminders=["order domain needs sync"],
-                test_reminders=["missing test for OrderBizService"]
-            )
-            output = json.loads(mock_print.call_args[0][0])
-            msg = output["systemMessage"]
-            assert "compile warning" in msg
-            assert "order domain" in msg
-            assert "OrderBizService" in msg
+    def test_output_pass_with_warnings(self, hook_module):
+        """output_pass includes compile warnings."""
+        msg = hook_module._format_pass_message(2, 0, warnings=["compile warning"])
+        assert "compile warning" in msg
 
 
 # ══════════════════════════════════════════════════════
@@ -993,250 +661,3 @@ class TestArtifactFilteringInCheck:
                         # check_java_compilation receives only source files
                         mock_compile.assert_called_once_with(str(tmp_project), ["src/Main.java"])
 
-
-# ══════════════════════════════════════════════════════
-# check_knowledge_maintenance
-# ══════════════════════════════════════════════════════
-
-class TestCheckKnowledgeMaintenance:
-    """Tests for the knowledge maintenance reminder system (stale-refs, doc-tracker, repo-map)."""
-
-    # ── stale-refs ──
-
-    def test_stale_refs_file_produces_reminder(self, hook_module, tmp_project):
-        """stale-refs.md with entries → reminder."""
-        state_dir = tmp_project / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        (state_dir / "stale-refs.md").write_text(
-            "# Knowledge Stale References\n\n"
-            "## Stale Class References\n\n"
-            "| Doc | Class | Status |\n"
-            "|-----|-------|--------|\n"
-            "| knowledge/order/rules.md | `OrderBizServiceImpl` | Not found in codebase |\n"
-            "| knowledge/order/rules.md | `OldManagerImpl` | Not found in codebase |\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        assert len(reminders) == 1
-        assert "过时引用" in reminders[0]
-
-    def test_no_stale_refs_file_no_reminder(self, hook_module, tmp_project):
-        """No stale-refs.md → no stale reminder."""
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        stale_reminders = [r for r in reminders if "过时引用" in r]
-        assert stale_reminders == []
-
-    def test_empty_stale_refs_no_reminder(self, hook_module, tmp_project):
-        """stale-refs.md exists but empty → no stale reminder."""
-        state_dir = tmp_project / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        (state_dir / "stale-refs.md").write_text(
-            "# Knowledge Stale References\n\nNo issues found.\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        stale_reminders = [r for r in reminders if "过时引用" in r]
-        assert stale_reminders == []
-
-    # ── doc-tracker misleading ──
-
-    def test_doc_misleading_produces_reminder(self, hook_module, tmp_project):
-        """doc-tracker with doc-misleading entries → reminder."""
-        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
-        km_dir.mkdir(parents=True, exist_ok=True)
-        (km_dir / "doc-tracker.md").write_text(
-            "# 文档利用追踪\n\n## 记录\n\n"
-            "### 2026-04-23 - 修复入库\n"
-            "- **doc-misleading**: .claude/knowledge/inbound/receive.md §状态机 → 状态值与代码不一致\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
-        assert len(misleading_reminders) == 1
-        assert "receive.md" in misleading_reminders[0]
-
-    def test_doc_tracker_no_misleading_no_reminder(self, hook_module, tmp_project):
-        """doc-tracker with only doc-hit entries → no misleading reminder."""
-        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
-        km_dir.mkdir(parents=True, exist_ok=True)
-        (km_dir / "doc-tracker.md").write_text(
-            "# 文档利用追踪\n\n## 记录\n\n"
-            "### 2026-04-23 - 正常任务\n"
-            "- **doc-hit**: .claude/knowledge/order/rules.md §并发控制 → 帮助了任务\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
-        assert misleading_reminders == []
-
-    def test_no_doc_tracker_file_no_reminder(self, hook_module, tmp_project):
-        """No doc-tracker.md → no misleading reminder."""
-        reminders = hook_module.check_knowledge_maintenance(str(tmp_project), [])
-        misleading_reminders = [r for r in reminders if "misleading" in r.lower() or "不一致" in r]
-        assert misleading_reminders == []
-
-    # ── repo-map refresh ──
-
-    def test_component_file_change_produces_repomap_reminder(self, hook_module, tmp_project):
-        """Component type file changed + repo-map exists → refresh reminder."""
-        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
-        km_dir.mkdir(parents=True, exist_ok=True)
-        (km_dir / "repo-map.md").write_text("# Repo Map\n")
-
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "component_types:\n"
-            "  - name: BizService\n"
-            "    grep_pattern: \"class {name}\"\n"
-            "    search_path: src/main/java/\n"
-            "  - name: Manager\n"
-            "    grep_pattern: \"class {name}\"\n"
-            "    search_path: src/main/java/\n"
-            "knowledge_maintenance:\n"
-            "  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(
-            str(tmp_project),
-            ["src/main/java/com/biz/order/OrderBizService.java"]
-        )
-        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
-        assert len(repomap_reminders) == 1
-
-    def test_non_component_file_no_repomap_reminder(self, hook_module, tmp_project):
-        """Non-component file changed → no repo-map reminder."""
-        km_dir = tmp_project / ".claude" / "ecw" / "knowledge-ops"
-        km_dir.mkdir(parents=True, exist_ok=True)
-        (km_dir / "repo-map.md").write_text("# Repo Map\n")
-
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "component_types:\n"
-            "  - name: BizService\n"
-            "    grep_pattern: \"class {name}\"\n"
-            "    search_path: src/main/java/\n"
-            "knowledge_maintenance:\n"
-            "  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(
-            str(tmp_project),
-            ["src/main/java/com/util/Helper.java"]
-        )
-        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
-        assert repomap_reminders == []
-
-    def test_no_repomap_file_no_reminder(self, hook_module, tmp_project):
-        """Component file changed but no repo-map file exists → no reminder."""
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "component_types:\n"
-            "  - name: BizService\n"
-            "    grep_pattern: \"class {name}\"\n"
-            "    search_path: src/main/java/\n"
-            "knowledge_maintenance:\n"
-            "  stale_days: 90\n"
-        )
-
-        reminders = hook_module.check_knowledge_maintenance(
-            str(tmp_project),
-            ["src/main/java/com/biz/OrderBizService.java"]
-        )
-        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
-        assert repomap_reminders == []
-
-    def test_no_component_types_no_repomap_reminder(self, hook_module, tmp_project):
-        """No component_types in config → no repo-map reminder."""
-        reminders = hook_module.check_knowledge_maintenance(
-            str(tmp_project),
-            ["src/main/java/com/biz/OrderBizService.java"]
-        )
-        repomap_reminders = [r for r in reminders if "repo-map" in r.lower() or "repomap" in r.lower() or "结构索引" in r]
-        assert repomap_reminders == []
-
-    # ── integration with check() ──
-
-    def test_km_reminders_in_check_output(self, hook_module, tmp_project):
-        """check() includes km_reminders in pass message."""
-        state_dir = tmp_project / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        (state_dir / "stale-refs.md").write_text(
-            "| Doc | Class | Status |\n|---|---|---|\n"
-            "| rules.md | `OldClass` | Not found |\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "verification:\n  run_tests: false\n"
-            "paths:\n  knowledge_root: .claude/knowledge/\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        input_data = {
-            "tool_name": "TaskUpdate",
-            "tool_input": {"status": "completed"},
-            "cwd": str(tmp_project),
-        }
-        config = {"_runtime_profile": "standard"}
-
-        with patch.object(hook_module, "get_changed_files",
-                          return_value=(["src/Main.java"], [])):
-            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
-                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
-                    action, message = hook_module.check(input_data, config)
-                    assert action == "continue"
-                    assert "知识库维护提醒" in message
-
-    def test_minimal_profile_skips_km_reminders(self, hook_module, tmp_project):
-        """P3 (minimal) profile skips knowledge maintenance reminders."""
-        state_dir = tmp_project / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        (state_dir / "stale-refs.md").write_text(
-            "| Doc | Class | Status |\n|---|---|---|\n"
-            "| rules.md | `OldClass` | Not found |\n"
-        )
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "project:\n  name: test\n  language: java\n"
-            "verification:\n  run_tests: false\n"
-            "paths:\n  knowledge_root: .claude/knowledge/\n"
-            "knowledge_maintenance:\n  stale_days: 90\n"
-        )
-
-        input_data = {
-            "tool_name": "TaskUpdate",
-            "tool_input": {"status": "completed"},
-            "cwd": str(tmp_project),
-        }
-        config = {"_runtime_profile": "minimal"}
-
-        with patch.object(hook_module, "get_changed_files",
-                          return_value=(["src/Main.java"], [])):
-            with patch.object(hook_module, "check_java_compilation", return_value=([], [])):
-                with patch.object(hook_module, "check_java_tests", return_value=([], [])):
-                    action, message = hook_module.check(input_data, config)
-                    assert action == "continue"
-                    assert "知识库维护提醒" not in message
