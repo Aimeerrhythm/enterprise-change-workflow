@@ -334,8 +334,9 @@ enterprise-change-workflow/
 ├── scripts/java/                # Java/Spring project scanners (3 scripts)
 ├── scripts/calibration-collector.py  # Multi-dimensional calibration data collector
 ├── docs/                        # Design reference
-│   ├── design-principles.md     # Amplifiers vs. crutches, five tests
-│   ├── design-reference.md      # Token budgets, model selection
+│   ├── design-principles.md     # Architecture principles, six litmus tests
+│   ├── component-design-patterns.md # Component patterns, token budgets, model selection
+│   ├── artifact-reference.md    # Complete file path reference
 │   └── workflow-execution-flow.md  # Workflow execution flow details
 ├── tests/                       # Lint + hook unit tests + promptfoo evals + chain evals
 ├── CLAUDE.md

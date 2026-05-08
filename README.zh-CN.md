@@ -334,8 +334,9 @@ enterprise-change-workflow/
 ├── scripts/java/                # Java/Spring 扫描脚本（3 个）
 ├── scripts/calibration-collector.py  # 多维校准数据采集器
 ├── docs/                        # 设计参考文档
-│   ├── design-principles.md     # 放大器 vs. 拐杖，五个试金石
-│   ├── design-reference.md      # Token 预算、模型选择指南
+│   ├── design-principles.md     # 架构原则，六个试金石
+│   ├── component-design-patterns.md # 组件设计模式、Token 预算、模型选择
+│   ├── artifact-reference.md    # 完整文件路径参考
 │   └── workflow-execution-flow.md  # 工作流执行流程详解
 ├── tests/                       # Lint + Hook 单测 + promptfoo eval + chain eval
 ├── CLAUDE.md

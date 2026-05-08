@@ -333,3 +333,46 @@ Layer 3: 被动存档（CHANGELOG、理论反思文档）
 3. CLAUDE.md 每个 section 问："过去 10 个 session 有几个用到了？"低于 30% 就外置
 4. 检查 docs/ 下是否有"应该加载但没被 CLAUDE.md 引用"的孤岛文档
 
+---
+
+## 9. Skill Token 预算与模型选择
+
+### Token 预算
+
+| Skill 类型 | 目标 | 示例 |
+|-----------|------|------|
+| 简单单步 | ~2,500 tokens | cross-review |
+| 标准多步 | ~4,000 tokens | requirements-elicitation, tdd, biz-impact-analysis |
+| 复杂编排器 | ~5,000 tokens | risk-classifier, impl-orchestration |
+
+运行 `python3 tests/static/lint_skills.py` 查看实际值（警告阈值 20,000 tokens）。
+
+超预算的主因通常是 SKILL.md 包含了不该有的内容（路由逻辑、格式描述、重复的 anti-pattern 列表）。先按 §1-§8 的原则审查，再考虑"写得更短"。
+
+### 模型选择
+
+| 模型 | 适用场景 |
+|------|---------|
+| opus | 深度推理：对抗性审查、跨域分析、Phase 2 精确定级 |
+| sonnet | 实现执行：implementer、TDD cycle、spec-reviewer |
+| haiku | 轻量机械任务（目前未使用） |
+
+**原则**：选择由推理密度决定，不是任务"重要程度"。简单但关键的配置变更 = sonnet；复杂的 P3 分析 = opus。
+
+默认值在 `ecw.yml` `models.defaults.*` 配置，可按项目覆盖（`models.overrides.*`）。
+
+### Subagent 边界声明
+
+每个 agent prompt 必须包含：
+1. 身份声明（"你是一个单任务 agent"）
+2. 禁止项（"不要调用/加载/派生其他 skill"）
+3. 范围限制（"你唯一的工作是……"）
+
+缺少声明 → agent 尝试超范围操作（历史案例：spec-challenge agent 试图自行调用 tdd）。
+
+### 上下文管理
+
+- 上下文超过 ~100K tokens 时建议拆分新会话
+- `session-state.md` 是唯一跨会话恢复状态
+- PreCompact hook 自动保存检查点——Skill 无需手动写检查点逻辑
+
