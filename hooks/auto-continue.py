@@ -23,11 +23,9 @@ import yaml
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
-    append_timeline_entry,
     find_session_state,
     parse_instincts,
     parse_status,
-    update_mode,
     update_status_fields,
     validate_status,
 )
@@ -57,7 +55,6 @@ def _load_routes_from_file(routes_path=None):
     off_chain_list = data.get("off_chain_skills", [])
 
     completed_phase = {}
-    mode = {}
     routing_aliases = {}
     step_to_skill = {}
 
@@ -65,7 +62,6 @@ def _load_routes_from_file(routes_path=None):
         full_name = f"ecw:{skill_key}"
         phase_name = meta.get("phase_name", skill_key)
         completed_phase[full_name] = f"{phase_name}-loaded"
-        mode[full_name] = meta["mode"]
 
         aliases = meta.get("routing_aliases", [])
         if aliases:
@@ -77,7 +73,6 @@ def _load_routes_from_file(routes_path=None):
 
     return {
         "completed_phase": completed_phase,
-        "mode": mode,
         "routing_aliases": routing_aliases,
         "step_to_skill": step_to_skill,
         "off_chain": off_chain,
@@ -88,12 +83,11 @@ try:
     _mappings = _load_routes_from_file()
 except Exception:
     _mappings = {
-        "completed_phase": {}, "mode": {}, "routing_aliases": {},
+        "completed_phase": {}, "routing_aliases": {},
         "step_to_skill": {}, "off_chain": set(),
     }
 
 _SKILL_COMPLETED_PHASE = _mappings["completed_phase"]
-_SKILL_MODE = _mappings["mode"]
 _SKILL_ROUTING_ALIASES = _mappings["routing_aliases"]
 _ROUTING_STEP_TO_SKILL = _mappings["step_to_skill"]
 _OFF_CHAIN_ALLOWED = _mappings["off_chain"]
@@ -276,9 +270,8 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
     Returns a dict with read-only state context for injection, or None.
     """
     in_progress_phase = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else None
-    mode = _SKILL_MODE.get(skill_name)
 
-    if not in_progress_phase and not mode:
+    if not in_progress_phase:
         return None
 
     try:
@@ -313,14 +306,6 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
             fields["next"] = next_skill
         if fields:
             content = update_status_fields(content, fields)
-        if mode:
-            content = update_mode(content, mode)
-
-        # Append TIMELINE entry (backfills previous entry's end/duration_s automatically).
-        # Only for skills we track in _SKILL_MODE — same guard as STATUS updates above.
-        if skill_name in _SKILL_MODE:
-            phase = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
-            content = append_timeline_entry(content, phase)
 
         with open(state_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -329,15 +314,13 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
                   skill=skill_name,
                   action="update_fields",
                   fields_updated={**({"current_phase": in_progress_phase} if in_progress_phase else {}),
-                                  **({"next": next_skill} if next_skill else {}),
-                                  **({"mode": mode} if mode else {})})
+                                  **({"next": next_skill} if next_skill else {})})
 
         # Build read-only state context for Skill injection (Issue #62 Part 3)
         risk_level = (fields_dict or {}).get("risk_level") or ""
         remaining = _remaining_route(routing, skill_name)
         return {
             "risk_level": risk_level,
-            "mode": mode or "",
             "next": next_skill or "",
             "routing_remaining": remaining,
         }
@@ -347,15 +330,14 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
 
 
 def _advance_session_state(state_path, skill_name):
-    """Atomically update Current Phase and Working Mode after a skill completes.
+    """Atomically update Current Phase after a skill completes.
 
     Single read → in-memory transform → single write. No partial patches.
     Silently no-ops when the skill has no entry in the mapping tables or the
     file cannot be read/written — hook errors must never block the workflow.
     """
     phase = _SKILL_COMPLETED_PHASE.get(skill_name)
-    mode = _SKILL_MODE.get(skill_name)
-    if not phase and not mode:
+    if not phase:
         return
 
     try:
@@ -392,8 +374,6 @@ def _advance_session_state(state_path, skill_name):
 
         if effective_phase:
             content = update_status_fields(content, {"current_phase": effective_phase})
-        if mode:
-            content = update_mode(content, mode)
 
         with open(state_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -436,8 +416,7 @@ def main():
         parts = []
         if state_ctx and state_ctx.get("risk_level"):
             ctx_line = (
-                f"[ECW STATE — read-only] risk={state_ctx['risk_level']}, "
-                f"mode={state_ctx['mode']}"
+                f"[ECW STATE — read-only] risk={state_ctx['risk_level']}"
             )
             if state_ctx.get("next"):
                 ctx_line += f", next={state_ctx['next']}"

@@ -205,7 +205,7 @@ def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
         return []
 
     warnings = []
-    for section_name in ("STATUS", "MODE", "LEDGER"):
+    for section_name in ("STATUS",):
         section = read_marker_section(content, section_name)
         if section is not None:
             try:

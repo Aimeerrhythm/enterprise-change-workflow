@@ -432,20 +432,6 @@ class TestAdvanceSessionState:
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "requirements-loaded"
 
-    def test_updates_mode_after_writing_plans(self, tmp_path):
-        """Working Mode must update to 'planning' after writing-plans finishes."""
-        state_file = self._make_state(tmp_path, mode="analysis")
-        self.hook._advance_session_state(str(state_file), "ecw:writing-plans")
-        assert self._parse_mode(state_file) == "planning"
-
-    def test_updates_both_fields_atomically(self, tmp_path):
-        """Both Current Phase and Working Mode must be written in a single update."""
-        state_file = self._make_state(tmp_path, phase="plan-complete", mode="planning")
-        self.hook._advance_session_state(str(state_file), "ecw:tdd")
-        fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "tdd-loaded"
-        assert self._parse_mode(state_file) == "implementation"
-
     def test_preserves_unrelated_fields(self, tmp_path):
         """Risk Level, Auto-Continue, and Next must not be modified."""
         state_file = self._make_state(tmp_path)
@@ -490,13 +476,6 @@ class TestAdvanceSessionState:
                 f"loaded), not on actual work completion."
             )
 
-    def test_all_skills_have_mode_mapping(self):
-        """Every key in _SKILL_MODE must map to a known working mode."""
-        known_modes = {"analysis", "planning", "implementation", "verification"}
-        for skill, mode in self.hook._SKILL_MODE.items():
-            assert mode in known_modes, (
-                f"Skill '{skill}' has unknown mode '{mode}'"
-            )
 
     def test_main_triggers_advance_when_auto_continue_active(self, tmp_path, monkeypatch):
         """Full main() path: _advance_session_state must be called when Auto-Continue: yes."""
@@ -722,14 +701,6 @@ class TestPreToolUseHandler:
             "When spec-challenge starts, Next must be updated to ecw:tdd (via TDD:RED alias)"
         )
 
-    def test_pre_tool_use_updates_working_mode(self, tmp_path, monkeypatch):
-        """At skill entry, Working Mode must switch to the skill's mode."""
-        routing = "ecw:writing-plans → ecw:tdd → ecw:impl-verify"
-        self._make_state(tmp_path, routing, next_val="ecw:tdd", phase="plan-complete")
-        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:tdd")
-        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
-        assert self._parse_mode(state_file) == "implementation"
-
     def test_pre_tool_use_injects_readonly_state_context(self, tmp_path, monkeypatch):
         """PreToolUse injects read-only state context as systemMessage (Issue #62)."""
         routing = "ecw:spec-challenge → TDD:RED → ecw:impl-verify"
@@ -741,7 +712,6 @@ class TestPreToolUseHandler:
         msg = output["systemMessage"]
         assert "ECW STATE" in msg
         assert "risk=P0" in msg
-        assert "mode=planning" in msg
 
     def test_pre_tool_use_does_not_update_next_when_last_skill(self, tmp_path, monkeypatch):
         """When the skill is last in the chain, Next must not be overwritten to None."""

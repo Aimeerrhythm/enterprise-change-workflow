@@ -10,15 +10,12 @@ Marker format:
     <!-- ECW:{NAME}:END -->
 
 Standard marker names for session-state.md:
-    LEDGER  — Subagent Ledger table
     STATUS  — Current workflow status fields
-    MODE    — Working mode declaration
     STOP    — Stop hook auto-update (timestamp + activity)
 """
 
 import os
 import re
-from datetime import datetime, timezone
 
 import yaml
 
@@ -142,82 +139,6 @@ def parse_status(content):
     return result
 
 
-def parse_ledger(content):
-    """Parse LEDGER section as YAML list of dicts. Returns list or None."""
-    result = parse_yaml_section(content, "LEDGER")
-    if result is None:
-        return None
-    if not isinstance(result, list):
-        return None
-    return result
-
-
-def append_ledger_entry(content, entry):
-    """Append one entry to LEDGER list. Creates section if absent.
-
-    This function serializes the full LEDGER list back into the
-    <!-- ECW:LEDGER:START --> / <!-- ECW:LEDGER:END --> marker block via
-    update_yaml_section → update_marker_section. The end marker is always
-    kept as the closing boundary; nothing is written outside it.
-
-    WARNING: Do NOT use raw string append / file.write() to add Ledger
-    entries directly to the end of session-state.md. Raw appends place the
-    new content *after* <!-- ECW:LEDGER:END -->, which is outside the marker
-    block and therefore invisible to every hook parser that reads this
-    section. Always go through this function (preferred) or, when using the
-    Edit tool manually, insert the new row immediately *before* the
-    <!-- ECW:LEDGER:END --> line.
-    """
-    ledger = parse_ledger(content) or []
-    ledger.append(entry)
-    return update_yaml_section(content, "LEDGER", ledger)
-
-
-def append_timeline_entry(content: str, phase: str) -> str:
-    """Append a new TIMELINE entry and backfill the previous entry's end/duration_s.
-
-    Each call:
-    1. Reads the TIMELINE YAML list (creates empty list if block absent or empty).
-    2. If the last entry has end=None, backfills its end to now and computes duration_s
-       from its start (integer seconds). Already-set end values are never overwritten.
-    3. Appends a new entry: phase=phase, start=now, end=None, duration_s=None.
-    4. Writes the updated list back into the <!-- ECW:TIMELINE:START/END --> block,
-       creating the block if it does not exist.
-
-    The marker tag is ECW:TIMELINE.
-    """
-    now = datetime.now().replace(microsecond=0)
-    now_str = now.isoformat()
-
-    # Parse existing timeline (list of dicts), or start empty
-    timeline = parse_yaml_section(content, "TIMELINE")
-    if not isinstance(timeline, list):
-        timeline = []
-
-    # Backfill previous entry if end is None
-    if timeline:
-        last = timeline[-1]
-        if isinstance(last, dict) and last.get("end") is None:
-            last["end"] = now_str
-            # Calculate duration from start
-            start_val = last.get("start")
-            if start_val:
-                try:
-                    start_dt = datetime.fromisoformat(str(start_val).strip('"\''))
-                    duration = int((now - start_dt).total_seconds())
-                    last["duration_s"] = duration
-                except (ValueError, TypeError):
-                    last["duration_s"] = None
-
-    # Append new entry
-    timeline.append({
-        "phase": phase,
-        "start": now_str,
-        "end": None,
-        "duration_s": None,
-    })
-
-    return update_yaml_section(content, "TIMELINE", timeline)
 
 
 def validate_status(fields):
@@ -262,17 +183,6 @@ def update_status_fields(content, fields):
     return update_yaml_section(content, "STATUS", status)
 
 
-def update_mode(content, mode_value):
-    """Update the Working Mode in the MODE marker section.
-
-    Args:
-        content: Full file content.
-        mode_value: New mode string (e.g. "planning", "verification").
-
-    Returns:
-        Updated file content.
-    """
-    return update_yaml_section(content, "MODE", {"working_mode": mode_value})
 
 
 def update_session_state_section(cwd, name, new_inner):

@@ -93,25 +93,11 @@ class TestDynamicLoading:
                 f"Skill '{skill}' appears in routes.yml chain but has no phase mapping"
             )
 
-    def test_skill_mode_keys_match_completed_phase(self):
-        """_SKILL_MODE must have the same keys as _SKILL_COMPLETED_PHASE."""
-        assert set(self.mod._SKILL_MODE.keys()) == set(self.mod._SKILL_COMPLETED_PHASE.keys()), (
-            "_SKILL_MODE and _SKILL_COMPLETED_PHASE must have identical key sets"
-        )
-
     def test_all_phase_values_end_with_loaded(self):
         """All phase values must end with '-loaded'."""
         for skill, phase in self.mod._SKILL_COMPLETED_PHASE.items():
             assert phase.endswith("-loaded"), (
                 f"Skill '{skill}' phase '{phase}' must end with '-loaded'"
-            )
-
-    def test_all_modes_are_known(self):
-        """All mode values must be one of the known working modes."""
-        known_modes = {"analysis", "planning", "implementation", "verification"}
-        for skill, mode in self.mod._SKILL_MODE.items():
-            assert mode in known_modes, (
-                f"Skill '{skill}' has unknown mode '{mode}'"
             )
 
     def test_off_chain_includes_manual_skills(self):
@@ -154,8 +140,6 @@ class TestDynamicLoadingWithModifiedRoutes:
         mappings = mod._load_routes_from_file(str(tmp_routes))
         assert "ecw:dummy-new-skill" in mappings["completed_phase"]
         assert mappings["completed_phase"]["ecw:dummy-new-skill"] == "dummy-loaded"
-        assert "ecw:dummy-new-skill" in mappings["mode"]
-        assert mappings["mode"]["ecw:dummy-new-skill"] == "verification"
 
 
 class TestBehaviorPreservation:
@@ -173,15 +157,6 @@ class TestBehaviorPreservation:
 
     def test_impl_verify_phase(self):
         assert self.mod._SKILL_COMPLETED_PHASE["ecw:impl-verify"] == "verify-loaded"
-
-    def test_tdd_mode(self):
-        assert self.mod._SKILL_MODE["ecw:tdd"] == "implementation"
-
-    def test_writing_plans_mode(self):
-        assert self.mod._SKILL_MODE["ecw:writing-plans"] == "planning"
-
-    def test_biz_impact_mode(self):
-        assert self.mod._SKILL_MODE["ecw:biz-impact-analysis"] == "verification"
 
     def test_remaining_route_still_works(self):
         routing = ["writing-plans", "TDD:RED", "Implementation(GREEN)", "impl-verify"]
@@ -204,11 +179,7 @@ class TestBehaviorPreservation:
             "routing: [writing-plans, impl-verify]\n"
             "current_phase: plan-complete\n"
             "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: planning\n"
-            "<!-- ECW:MODE:END -->\n"
         )
         self.mod._advance_session_state(str(state_file), "ecw:impl-verify")
         content = state_file.read_text()
         assert "verify-loaded" in content
-        assert "verification" in content
