@@ -141,10 +141,12 @@ class TestRiskClassifierWriteInstruction:
     def load_skill(self):
         self.content = RISK_CLASSIFIER_SKILL.read_text(encoding="utf-8")
 
-    def test_write_instruction_mentions_status_marker(self):
-        assert "ECW:STATUS:START" in self.content, (
-            "risk-classifier SKILL.md write instruction must explicitly name "
-            "'ECW:STATUS:START' marker — 'read the template' alone is not enough"
+    def test_write_instruction_mentions_marker_format(self):
+        assert any(phrase in self.content for phrase in [
+            "ECW:STATUS:START", "marker", "session-state-format.md"
+        ]), (
+            "risk-classifier SKILL.md must reference marker format "
+            "(either directly or via session-state-format.md)"
         )
 
     def test_write_instruction_explains_consequence(self):

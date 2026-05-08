@@ -894,27 +894,8 @@ MODE_SWITCH_GOLDEN = {
 
 
 def check_mode_switch_consistency(result: LintResult):
-    """Skills listed in session-state-format.md mode table must have Mode switch instruction."""
-    for mode, skills in MODE_SWITCH_GOLDEN.items():
-        for skill_name in skills:
-            skill_md = SKILLS_DIR / skill_name / "SKILL.md"
-            if not skill_md.exists():
-                result.error(f"[mode-switch] skills/{skill_name}/SKILL.md not found")
-                continue
-            content = skill_md.read_text(encoding="utf-8")
-            if "Mode switch" not in content:
-                result.error(
-                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
-                    f"missing 'Mode switch' instruction (expected mode: {mode})"
-                )
-                continue
-            idx = content.index("Mode switch")
-            nearby = content[idx:idx + 200]
-            if mode not in nearby.lower():
-                result.error(
-                    f"[mode-switch] skills/{skill_name}/SKILL.md: "
-                    f"'Mode switch' found but expected mode '{mode}' not in nearby text"
-                )
+    """Disabled (Issue #62): hooks now own Mode switch; Skills must NOT contain it."""
+    pass
 
 
 # ══════════════════════════════════════════════════════

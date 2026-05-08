@@ -4,6 +4,9 @@
 # Absence indicates accidental deletion of core sections during refactoring.
 #
 # Format: skill_directory_name -> list of required anchors
+#
+# Note (Issue #62): "Mode switch", "Downstream Handoff", and "auto_continue"
+# removed — hooks now own state management; Skills must NOT contain these.
 
 risk-classifier:
   - "Phase 1"
@@ -17,7 +20,6 @@ risk-classifier:
   - "P3"
   - "Fast Track"
   - "Common Mistakes"
-  - "Mode switch"
   - "Announce at start"
 
 tdd:
@@ -29,8 +31,6 @@ tdd:
   - "P0"
   - "P1"
   - "P2"
-  - "Downstream Handoff"
-  - "auto_continue"
 
 impl-verify:
   - "must-fix"
@@ -38,17 +38,14 @@ impl-verify:
   - "Round"
   - "convergence"
   - "Announce at start"
-  - "auto_continue"
 
 domain-collab:
   - "Round 1"
   - "Round 2"
   - "Round 3"
   - "Coordinator"
-  - "Mode switch"
   - "Announce at start"
   - "Your Thought"
-  - "auto_continue"
 
 impl-orchestration:
   - "implementer.md"
@@ -58,36 +55,29 @@ impl-orchestration:
 systematic-debugging:
   - "root cause"
   - "reproduction"
-  - "Mode switch"
 
 writing-plans:
   - "Plan"
   - "rollback"
   - "Your Thought"
-  - "auto_continue"
 
 spec-challenge:
   - "Fatal Flaw"
   - "adversarial"
-  - "Mode switch"
   - "Announce at start"
   - "Your Thought"
-  - "auto_continue"
   - "User Decisions"
 
 requirements-elicitation:
   - "Systematic Questioning"
   - "Questioning Dimension"
-  - "Mode switch"
   - "Announce at start"
-  - "auto_continue"
 
 biz-impact-analysis:
   - "biz-impact-analysis"
   - "knowledge"
   - "Announce at start"
   - "Your Thought"
-  - "auto_continue"
 
 cross-review:
   - "cross-file"
