@@ -59,9 +59,17 @@ def pre_compact_module():
 class TestPreCompactHook:
     """Verify the pre-compact.py hook output conforms to the Claude hook protocol."""
 
+    @pytest.fixture(autouse=True)
+    def _ecw_project(self, tmp_path):
+        """Create a minimal ECW project so main() proceeds past the ECW guard."""
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True, exist_ok=True)
+        (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
+        self._cwd = str(tmp_path)
+
     def test_pre_compact_outputs_valid_json(self, run_pre_compact):
         """Hook stdout must be parseable JSON."""
-        result = run_pre_compact({})
+        result = run_pre_compact({"cwd": self._cwd})
         assert result.returncode == 0, (
             f"pre-compact.py exited with code {result.returncode}; "
             f"stderr: {result.stderr}"
@@ -71,7 +79,7 @@ class TestPreCompactHook:
 
     def test_pre_compact_has_system_message(self, run_pre_compact):
         """Output must contain a 'systemMessage' field (the recovery prompt)."""
-        result = run_pre_compact({})
+        result = run_pre_compact({"cwd": self._cwd})
         output = json.loads(result.stdout)
         assert "systemMessage" in output, (
             "pre-compact.py output must include 'systemMessage' for context recovery"
@@ -80,17 +88,17 @@ class TestPreCompactHook:
         assert len(output["systemMessage"]) > 0, "systemMessage must not be empty"
 
     def test_pre_compact_mentions_session_state(self, run_pre_compact):
-        """systemMessage must reference session-state.md so the LLM reads it after compaction."""
-        result = run_pre_compact({})
+        """systemMessage must reference session-state so the LLM reads it after compaction."""
+        result = run_pre_compact({"cwd": self._cwd})
         output = json.loads(result.stdout)
         msg = output["systemMessage"]
-        assert "session-state.md" in msg, (
-            "systemMessage must mention 'session-state.md' for post-compaction recovery"
+        assert "session-state" in msg, (
+            "systemMessage must mention 'session-state' for post-compaction recovery"
         )
 
     def test_pre_compact_mentions_session_data(self, run_pre_compact):
         """systemMessage must reference the session-data directory for checkpoint files."""
-        result = run_pre_compact({})
+        result = run_pre_compact({"cwd": self._cwd})
         output = json.loads(result.stdout)
         msg = output["systemMessage"]
         assert "session-data" in msg, (
@@ -99,7 +107,7 @@ class TestPreCompactHook:
 
     def test_pre_compact_result_continue(self, run_pre_compact):
         """result field must be 'continue' — the hook must not block the workflow."""
-        result = run_pre_compact({})
+        result = run_pre_compact({"cwd": self._cwd})
         output = json.loads(result.stdout)
         # The hook protocol uses either a top-level "result" or nested structure.
         # Accept either pattern.
@@ -133,52 +141,40 @@ class TestPreCompactHookScriptExists:
 # ══════════════════════════════════════════════════════
 
 class TestExtractHelpers:
-    """Tests for session-state.md field extraction helpers."""
+    """Tests for session-state.json field extraction helpers."""
 
     def test_extract_risk_level_p0(self, pre_compact_module, tmp_path):
-        f = tmp_path / "state.md"
-        f.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "current_phase: implementation\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->"
-        )
+        f = tmp_path / "state.json"
+        f.write_text(json.dumps({
+            "risk_level": "P0", "current_phase": "implementation",
+            "routing": [], "auto_continue": True,
+        }))
         assert pre_compact_module._extract_risk_level(str(f)) == "P0"
 
     def test_extract_risk_level_p3(self, pre_compact_module, tmp_path):
-        f = tmp_path / "state.md"
-        f.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P3\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "current_phase: impl-complete\n"
-            "<!-- ECW:STATUS:END -->"
-        )
+        f = tmp_path / "state.json"
+        f.write_text(json.dumps({
+            "risk_level": "P3", "routing": [], "auto_continue": True,
+            "current_phase": "impl-complete",
+        }))
         assert pre_compact_module._extract_risk_level(str(f)) == "P3"
 
     def test_extract_risk_level_missing(self, pre_compact_module, tmp_path):
-        f = tmp_path / "state.md"
-        f.write_text("No risk info here\n")
+        f = tmp_path / "state.json"
+        f.write_text("not json at all")
         assert pre_compact_module._extract_risk_level(str(f)) is None
 
     def test_extract_current_phase(self, pre_compact_module, tmp_path):
-        f = tmp_path / "state.md"
-        f.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "current_phase: requirements-elicitation\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "risk_level: P1\n"
-            "<!-- ECW:STATUS:END -->"
-        )
+        f = tmp_path / "state.json"
+        f.write_text(json.dumps({
+            "current_phase": "requirements-elicitation", "routing": [],
+            "auto_continue": True, "risk_level": "P1",
+        }))
         assert pre_compact_module._extract_current_phase(str(f)) == "requirements-elicitation"
 
     def test_extract_current_phase_missing(self, pre_compact_module, tmp_path):
-        f = tmp_path / "state.md"
-        f.write_text("No phase info\n")
+        f = tmp_path / "state.json"
+        f.write_text("not json at all")
         assert pre_compact_module._extract_current_phase(str(f)) is None
 
 
@@ -191,19 +187,17 @@ class TestBuildRecoveryMessage:
 
     def test_with_state_risk_phase_and_checkpoints(self, pre_compact_module, tmp_path):
         """Full happy path: state + risk + phase + checkpoint files."""
-        state = tmp_path / ".claude" / "ecw" / "session-data" / "wf1" / "session-state.md"
+        state = tmp_path / ".claude" / "ecw" / "session-data" / "wf1" / "session-state.json"
         state.parent.mkdir(parents=True)
-        state.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "current_phase: implementation\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->"
-        )
+        state.write_text(json.dumps({
+            "risk_level": "P0",
+            "current_phase": "implementation",
+            "routing": [],
+            "auto_continue": True,
+        }))
 
         checkpoint_files = [
-            ".claude/ecw/session-data/wf1/session-state.md",
+            ".claude/ecw/session-data/wf1/session-state.json",
             ".claude/ecw/session-data/wf1/domain-collab-report.md",
             ".claude/ecw/session-data/wf1/requirements-summary.md",
         ]
@@ -291,19 +285,11 @@ class TestFindSessionState:
     def test_finds_in_session_data_subdir(self, pre_compact_module, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260418-1200"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text("# State")
+        (state_dir / "session-state.json").write_text('{"risk_level": "P1"}')
         find_session_state = pre_compact_module.find_session_state
         result = find_session_state(str(tmp_path))
         assert result is not None
-        assert "session-state.md" in result
-
-    def test_falls_back_to_legacy(self, pre_compact_module, tmp_path):
-        legacy = tmp_path / ".claude" / "ecw" / "session-state.md"
-        legacy.parent.mkdir(parents=True)
-        legacy.write_text("# Legacy State")
-        find_session_state = pre_compact_module.find_session_state
-        result = find_session_state(str(tmp_path))
-        assert result is not None
+        assert "session-state.json" in result
 
     def test_returns_none_when_missing(self, pre_compact_module, tmp_path):
         find_session_state = pre_compact_module.find_session_state

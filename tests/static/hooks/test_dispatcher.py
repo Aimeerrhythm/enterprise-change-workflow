@@ -64,16 +64,16 @@ class TestGetProfile:
             assert dispatcher.get_profile("/fake") == "strict"
 
     def test_session_state_risk_level(self, dispatcher, tmp_path):
-        """Risk level read from session-state.md when env not set."""
+        """Risk level read from session-state.json when env not set."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-workflow"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: []\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->"
+        (state_dir / "session-state.json").write_text(
+            json.dumps({
+                "risk_level": "P0",
+                "auto_continue": True,
+                "routing": [],
+                "current_phase": "phase1-complete",
+            })
         )
 
         with patch.dict(os.environ, {}, clear=False):
@@ -158,6 +158,13 @@ class TestLoadSubhook:
 
 class TestDispatcherRouting:
     """Tests for the main dispatcher routing logic."""
+
+    @pytest.fixture(autouse=True)
+    def _ecw_project(self, tmp_path):
+        """Create minimal ECW project structure so _is_ecw_project() returns True."""
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        ecw_dir.mkdir(parents=True, exist_ok=True)
+        (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
 
     def test_non_matching_tool_passes_through(self, dispatcher):
         """Read tool → no sub-hook matches → continue."""

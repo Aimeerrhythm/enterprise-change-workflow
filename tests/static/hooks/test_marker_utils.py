@@ -1,9 +1,9 @@
 """Unit tests for hooks/marker_utils.py
 
 Tests the session state utilities:
-- find_session_state: path resolution (JSON preferred, .md fallback)
-- parse_status: JSON and legacy .md parsing
-- update_status_fields: JSON and legacy .md updates
+- find_session_state: path resolution (JSON only)
+- parse_status: JSON parsing
+- update_status_fields: JSON updates
 - validate_status: field validation
 """
 from __future__ import annotations
@@ -37,42 +37,24 @@ def marker_utils():
 # ══════════════════════════════════════════════════════
 
 class TestFindSessionState:
-    def test_prefers_json_over_md(self, marker_utils, tmp_path):
+    def test_finds_json_file(self, marker_utils, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text("# ECW")
         (state_dir / "session-state.json").write_text('{"risk_level": "P2"}')
 
         result = marker_utils.find_session_state(str(tmp_path))
         assert result is not None
         assert result.endswith("session-state.json")
 
-    def test_falls_back_to_md(self, marker_utils, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
-        state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text("# ECW")
-
-        result = marker_utils.find_session_state(str(tmp_path))
-        assert result is not None
-        assert result.endswith("session-state.md")
-
-    def test_finds_legacy_path(self, marker_utils, tmp_path):
-        legacy_dir = tmp_path / ".claude" / "ecw"
-        legacy_dir.mkdir(parents=True)
-        (legacy_dir / "session-state.md").write_text("# ECW")
-
-        result = marker_utils.find_session_state(str(tmp_path))
-        assert result is not None
-
     def test_returns_none_when_missing(self, marker_utils, tmp_path):
         assert marker_utils.find_session_state(str(tmp_path)) is None
 
 
 # ══════════════════════════════════════════════════════
-# parse_status (JSON mode)
+# parse_status
 # ══════════════════════════════════════════════════════
 
-class TestParseStatusJson:
+class TestParseStatus:
     def test_reads_json_file(self, marker_utils, tmp_path):
         state_file = tmp_path / "session-state.json"
         state_file.write_text(json.dumps({
@@ -94,28 +76,6 @@ class TestParseStatusJson:
         state_file.write_text("not json {{{")
         result = marker_utils.parse_status(str(state_file))
         assert result is None
-
-
-# ══════════════════════════════════════════════════════
-# parse_status (legacy .md mode)
-# ══════════════════════════════════════════════════════
-
-class TestParseStatusLegacy:
-    def test_parses_yaml_from_markers(self, marker_utils):
-        content = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "routing: [writing-plans, impl-verify]\n"
-            "current_phase: phase1-complete\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        result = marker_utils.parse_status(content)
-        assert result["risk_level"] == "P0"
-        assert result["auto_continue"] is True
-
-    def test_returns_none_for_no_markers(self, marker_utils):
-        assert marker_utils.parse_status("no markers here") is None
 
 
 # ══════════════════════════════════════════════════════

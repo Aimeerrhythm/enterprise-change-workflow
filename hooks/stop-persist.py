@@ -19,7 +19,7 @@ import sys
 
 # Import shared marker utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, _is_json_state, _read_json  # noqa: E402
+from marker_utils import find_session_state, parse_status  # noqa: E402
 
 MAX_CONTEXT = 200_000
 ADVISORY_FILE = ".claude/ecw/state/context-health.txt"
@@ -138,19 +138,11 @@ def main():
         return
 
     try:
-        if _is_json_state(state_path):
-            data = _read_json(state_path) or {}
-            if data.get("session_status", "").startswith("ended"):
-                print(json.dumps({"result": "continue"}))
-                return
-            _update_context_advisory(cwd, json.dumps(data))
-        else:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            if re.search(r'\*\*Status\*\*:\s*ended', content, re.IGNORECASE):
-                print(json.dumps({"result": "continue"}))
-                return
-            _update_context_advisory(cwd, content)
+        data = parse_status(state_path) or {}
+        if data.get("session_status", "").startswith("ended"):
+            print(json.dumps({"result": "continue"}))
+            return
+        _update_context_advisory(cwd, json.dumps(data))
     except Exception:
         pass  # Stop hook errors must never block workflow
 

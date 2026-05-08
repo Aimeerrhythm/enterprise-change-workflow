@@ -15,7 +15,7 @@ import sys
 
 try:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from marker_utils import find_session_state, _is_json_state, _read_json  # noqa: E402
+    from marker_utils import find_session_state, parse_status  # noqa: E402
     _HAS_MARKER_UTILS = True
 except ImportError:
     _HAS_MARKER_UTILS = False
@@ -193,18 +193,12 @@ def _check_stale_diff_range(command, cwd):
     if not state_file:
         return None
     try:
-        if _is_json_state(state_file):
-            data = _read_json(state_file) or {}
-            baseline = data.get("baseline_commit")
-        else:
-            with open(state_file, encoding="utf-8", errors="ignore") as f:
-                content = f.read(4096)
-            m = re.search(r'(?:\*\*Baseline Commit\*\*|baseline_commit):\s*([0-9a-f]{7,40})\b', content, re.IGNORECASE)
-            baseline = m.group(1) if m else None
+        data = parse_status(state_file) or {}
+        baseline = data.get("baseline_commit")
     except Exception:
         return None
 
-    if not baseline:
+    if not baseline or str(baseline).strip().upper() in ("TBD", "", "NONE"):
         return None
 
     corrected = re.sub(r'\b(?:master|origin/master)(\.\.\.HEAD)\b', baseline + r'\1', command)

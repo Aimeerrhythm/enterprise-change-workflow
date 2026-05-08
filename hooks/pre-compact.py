@@ -18,7 +18,7 @@ from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status, _is_json_state, _read_json  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status  # noqa: E402
 
 
 COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"

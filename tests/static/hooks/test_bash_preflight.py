@@ -6,6 +6,7 @@ safe command passthrough, and edge cases.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -384,19 +385,15 @@ class TestSedBypassBlocking:
 # Stale Diff Range Detection
 # ══════════════════════════════════════════════════════
 
-SESSION_STATE_WITH_BASELINE = """\
-<!-- ECW:STATUS:START -->
-- **Risk Level**: P1
-- **Baseline Commit**: abc1234567890def
-<!-- ECW:STATUS:END -->
-"""
+SESSION_STATE_WITH_BASELINE = json.dumps({
+    "risk_level": "P1",
+    "baseline_commit": "abc1234567890def",
+})
 
-SESSION_STATE_NO_BASELINE = """\
-<!-- ECW:STATUS:START -->
-- **Risk Level**: P1
-- **Baseline Commit**: TBD
-<!-- ECW:STATUS:END -->
-"""
+SESSION_STATE_NO_BASELINE = json.dumps({
+    "risk_level": "P1",
+    "baseline_commit": "TBD",
+})
 
 
 class TestStaleDiffRange:
@@ -407,7 +404,7 @@ class TestStaleDiffRange:
     def _write_session_state(self, tmp_path, content):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-test"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(content)
+        (state_dir / "session-state.json").write_text(content)
 
     def test_master_head_blocked_when_baseline_present(self, bash_preflight, tmp_path):
         self._write_session_state(tmp_path, SESSION_STATE_WITH_BASELINE)
@@ -447,28 +444,24 @@ class TestStaleDiffRange:
         assert action == "continue"
 
     def test_yaml_format_baseline_blocks(self, bash_preflight, tmp_path):
-        """YAML-format baseline_commit (issue #53) triggers stale-diff block."""
-        yaml_state = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "baseline_commit: abc1234567890def\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        self._write_session_state(tmp_path, yaml_state)
+        """JSON-format baseline_commit triggers stale-diff block."""
+        json_state = json.dumps({
+            "risk_level": "P1",
+            "baseline_commit": "abc1234567890def",
+        })
+        self._write_session_state(tmp_path, json_state)
         inp = self._make_cwd_input("git diff --stat master...HEAD", str(tmp_path))
         action, msg = bash_preflight.check(inp)
         assert action == "block"
         assert "abc1234567890def" in msg
 
     def test_yaml_format_tbd_passes_through(self, bash_preflight, tmp_path):
-        """YAML-format baseline_commit: TBD does not block (issue #53)."""
-        yaml_state = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "baseline_commit: TBD\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        self._write_session_state(tmp_path, yaml_state)
+        """JSON-format baseline_commit: TBD does not block."""
+        json_state = json.dumps({
+            "risk_level": "P1",
+            "baseline_commit": "TBD",
+        })
+        self._write_session_state(tmp_path, json_state)
         inp = self._make_cwd_input("git diff master...HEAD", str(tmp_path))
         action, _ = bash_preflight.check(inp)
         assert action == "continue"

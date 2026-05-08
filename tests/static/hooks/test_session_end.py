@@ -1,7 +1,7 @@
 """Unit tests for hooks/session-end.py
 
 Tests the SessionEnd hook's cleanup behavior:
-- Marks session-state.md status as "ended" with timestamp (via STATUS YAML block)
+- Marks session-state.json status as "ended" with timestamp
 - Cleans up transient state files
 - Graceful handling when no state exists
 """
@@ -36,68 +36,39 @@ def session_end():
 # Mark Session Ended
 # ══════════════════════════════════════════════════════
 
-_STATUS_BLOCK = """\
-# ECW Session State
-
-<!-- ECW:STATUS:START -->
-risk_level: P1
-current_phase: phase2-complete
-auto_continue: true
-<!-- ECW:STATUS:END -->
-"""
+_STATE_JSON = json.dumps({
+    "risk_level": "P1",
+    "current_phase": "phase2-complete",
+    "auto_continue": True,
+})
 
 
 class TestMarkSessionEnded:
-    """Tests for _mark_session_ended function — uses STATUS YAML block (issue #54)."""
+    """Tests for _mark_session_ended function."""
 
-    def test_writes_session_status_to_status_block(self, session_end, tmp_path):
-        """session_status field is written into the STATUS marker block."""
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(_STATUS_BLOCK)
-
-        session_end._mark_session_ended(str(state_file))
-        content = state_file.read_text()
-        assert "session_status:" in content
-        assert "ended" in content
-
-    def test_session_status_inside_markers(self, session_end, tmp_path):
-        """session_status is placed within ECW:STATUS markers, not appended at end."""
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(_STATUS_BLOCK)
+    def test_writes_session_status(self, session_end, tmp_path):
+        """session_status field is written to session-state.json."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(_STATE_JSON)
 
         session_end._mark_session_ended(str(state_file))
-        content = state_file.read_text()
-
-        # Find marker positions
-        start_idx = content.find("<!-- ECW:STATUS:START -->")
-        end_idx = content.find("<!-- ECW:STATUS:END -->")
-        ended_idx = content.find("session_status:")
-        assert start_idx < ended_idx < end_idx, (
-            "session_status must be inside STATUS markers"
-        )
+        data = json.loads(state_file.read_text())
+        assert "session_status" in data
+        assert "ended" in data["session_status"]
 
     def test_existing_fields_preserved(self, session_end, tmp_path):
-        """Existing STATUS fields (risk_level, etc.) are preserved after update."""
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(_STATUS_BLOCK)
+        """Existing fields (risk_level, etc.) are preserved after update."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(_STATE_JSON)
 
         session_end._mark_session_ended(str(state_file))
-        content = state_file.read_text()
-        assert "risk_level: P1" in content or "risk_level" in content
-        assert "current_phase" in content
-
-    def test_noop_when_no_status_block(self, session_end, tmp_path):
-        """No STATUS block → file unchanged (update_status_fields no-ops)."""
-        original = "# ECW\nsome content without markers\n"
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(original)
-
-        session_end._mark_session_ended(str(state_file))
-        assert state_file.read_text() == original
+        data = json.loads(state_file.read_text())
+        assert data["risk_level"] == "P1"
+        assert data["current_phase"] == "phase2-complete"
 
     def test_file_unreadable_no_exception(self, session_end, tmp_path):
         """Unreadable file path does not raise an exception."""
-        session_end._mark_session_ended(str(tmp_path / "nonexistent.md"))  # Should not raise
+        session_end._mark_session_ended(str(tmp_path / "nonexistent.json"))  # Should not raise
 
 
 # ══════════════════════════════════════════════════════
@@ -148,11 +119,11 @@ class TestSessionEndMain:
                 assert output["result"] == "continue"
 
     def test_marks_state_and_cleans_up(self, session_end, tmp_path):
-        """Full flow: marks ended in STATUS block + cleans up modified-files.txt."""
+        """Full flow: marks ended in JSON + cleans up modified-files.txt."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-wf"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(_STATUS_BLOCK)
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(_STATE_JSON)
         mf = tmp_path / ".claude" / "ecw" / "state" / "modified-files.txt"
         mf.parent.mkdir(parents=True, exist_ok=True)
         mf.write_text("foo.py\n")
@@ -168,7 +139,7 @@ class TestSessionEndMain:
                 output = json.loads(mock_print.call_args[0][0])
                 assert output["result"] == "continue"
 
-        assert "ended" in state_file.read_text()
+        assert "ended" in json.loads(state_file.read_text()).get("session_status", "")
         assert not mf.exists()
 
     def test_empty_cwd_returns_continue(self, session_end):

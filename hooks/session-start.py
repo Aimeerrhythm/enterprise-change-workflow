@@ -17,7 +17,7 @@ import sys
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status, _is_json_state, _read_json  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -36,25 +36,16 @@ def _read_session_state(cwd):
     if not state_path:
         return None, None
     try:
-        if _is_json_state(state_path):
-            data = _read_json(state_path)
-            return data, state_path
-        else:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            if content.strip():
-                return content, state_path
+        data = parse_status(state_path)
+        return data, state_path
     except Exception:
         pass
     return None, None
 
 
 def _extract_state_fields(state_data):
-    """Extract key fields from session state. Accepts dict (JSON) or str (legacy md)."""
-    if isinstance(state_data, dict):
-        fields_raw = state_data
-    else:
-        fields_raw = parse_status(state_data) or {}
+    """Extract key fields from session state dict."""
+    fields_raw = state_data or {}
 
     fields = {}
     if fields_raw.get("risk_level"):
@@ -194,6 +185,7 @@ def main():
     state_fields = {}
     if state_content:
         state_fields = _extract_state_fields(state_content)
+        state_text = json.dumps(state_content, indent=2, ensure_ascii=False)
 
         # Check if session was marked as ended
         status = state_fields.get("status", "").lower()
@@ -202,9 +194,10 @@ def main():
             pass
         else:
             # Truncate to MAX_STATE_LINES for context budget
-            lines = state_content.splitlines()[:MAX_STATE_LINES]
+            all_lines = state_text.splitlines()
+            lines = all_lines[:MAX_STATE_LINES]
             truncated = "\n".join(lines)
-            if len(lines) < len(state_content.splitlines()):
+            if len(lines) < len(all_lines):
                 truncated += "\n... (truncated)"
 
             rel_path = os.path.relpath(state_path, cwd)

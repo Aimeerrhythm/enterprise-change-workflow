@@ -7,7 +7,7 @@ PreToolUse (fires when a Skill is about to be invoked):
   - Updates Working Mode for the current skill
 
 PostToolUse (fires after each Skill tool invocation):
-  - Atomically updates Current Phase (completed) and Working Mode in session-state.md
+  - Atomically updates Current Phase (completed) and Working Mode in session-state.json
   - Injects the remaining routing chain as a systemMessage so the model chains immediately
 
 Replaces the repeated "CRITICAL — Auto-Continue Rule" prompt blocks (Issue #5).
@@ -16,7 +16,6 @@ Fixes stale Current Phase / Working Mode / Next fields (Issue #21, Issue #26).
 
 import json
 import os
-import re
 import sys
 
 import yaml
@@ -27,9 +26,6 @@ from marker_utils import (  # noqa: E402
     parse_status,
     update_status_fields,
     validate_status,
-    _is_json_state,
-    _read_json,
-    _write_json,
 )
 from trace_logger import log_trace  # noqa: E402
 
@@ -256,12 +252,7 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
         return None
 
     try:
-        if _is_json_state(state_path):
-            fields_dict = _read_json(state_path) or {}
-        else:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            fields_dict = parse_status(content) or {}
+        fields_dict = parse_status(state_path) or {}
 
         routing = fields_dict.get("routing") or []
 
@@ -288,13 +279,7 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
             updates["next"] = next_skill
 
         if updates:
-            if _is_json_state(state_path):
-                fields_dict.update(updates)
-                _write_json(state_path, fields_dict)
-            else:
-                content = update_status_fields(content, updates)
-                with open(state_path, "w", encoding="utf-8") as f:
-                    f.write(content)
+            fields_dict = update_status_fields(state_path, updates)
 
         log_trace(cwd, "auto-continue", "PreToolUse",
                   skill=skill_name,
@@ -321,12 +306,7 @@ def _advance_session_state(state_path, skill_name):
         return
 
     try:
-        if _is_json_state(state_path):
-            fields_dict = _read_json(state_path) or {}
-        else:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            fields_dict = parse_status(content) or {}
+        fields_dict = parse_status(state_path) or {}
 
         # Phase 3 guard for risk-classifier
         effective_phase = phase
@@ -350,13 +330,7 @@ def _advance_session_state(state_path, skill_name):
                     effective_phase = "phase3-complete"
 
         if effective_phase:
-            if _is_json_state(state_path):
-                fields_dict["current_phase"] = effective_phase
-                _write_json(state_path, fields_dict)
-            else:
-                content = update_status_fields(content, {"current_phase": effective_phase})
-                with open(state_path, "w", encoding="utf-8") as f:
-                    f.write(content)
+            update_status_fields(state_path, {"current_phase": effective_phase})
     except Exception:
         pass  # Never block workflow
 
@@ -412,12 +386,7 @@ def main():
     # ── PostToolUse path ──────────────────────────────────────────────────────
 
     try:
-        if _is_json_state(state_path):
-            fields_dict = _read_json(state_path)
-        else:
-            with open(state_path, encoding="utf-8", errors="ignore") as f:
-                content = f.read(16384)
-            fields_dict = parse_status(content)
+        fields_dict = parse_status(state_path)
     except Exception:
         print(json.dumps({"result": "continue"}))
         return

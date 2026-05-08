@@ -42,70 +42,45 @@ class TestReadSessionState:
     """Tests for _read_session_state function."""
 
     def test_reads_state_dir_path(self, session_start, tmp_path):
-        """Detects session-state.md in .claude/ecw/session-data/{workflow-id}/ directory."""
+        """Detects session-state.json in .claude/ecw/session-data/{workflow-id}/ directory."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text("# ECW Session State\n- **Risk Level**: P1\n")
+        (state_dir / "session-state.json").write_text(
+            json.dumps({"risk_level": "P1", "current_phase": "phase1-complete"})
+        )
 
         content, path = session_start._read_session_state(str(tmp_path))
         assert content is not None
-        assert "Risk Level" in content
-        assert "session-state.md" in path
-
-    def test_reads_legacy_path(self, session_start, tmp_path):
-        """Falls back to .claude/ecw/session-state.md (legacy path)."""
-        state_dir = tmp_path / ".claude" / "ecw"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text("# ECW Session State\n- **Risk Level**: P0\n")
-
-        content, path = session_start._read_session_state(str(tmp_path))
-        assert content is not None
-        assert "P0" in content
+        assert content["risk_level"] == "P1"
+        assert "session-state.json" in path
 
     def test_returns_none_when_no_state(self, session_start, tmp_path):
-        """Returns (None, None) when no session-state.md exists."""
+        """Returns (None, None) when no session-state.json exists."""
         content, path = session_start._read_session_state(str(tmp_path))
         assert content is None
         assert path is None
-
-    def test_skips_empty_file(self, session_start, tmp_path):
-        """Skips session-state.md if it's empty."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text("")
-
-        content, path = session_start._read_session_state(str(tmp_path))
-        assert content is None
 
 
 class TestExtractStateFields:
     """Tests for _extract_state_fields function."""
 
     def test_extracts_risk_level(self, session_start):
-        content = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "domains: [order, inventory]\n"
-            "<!-- ECW:STATUS:END -->"
-        )
-        fields = session_start._extract_state_fields(content)
+        fields = session_start._extract_state_fields({
+            "risk_level": "P0",
+            "domains": ["order", "inventory"],
+        })
         assert fields["risk_level"] == "P0"
         assert "order" in fields["domains"]
         assert "inventory" in fields["domains"]
 
     def test_extracts_routing(self, session_start):
-        content = (
-            "<!-- ECW:STATUS:START -->\n"
-            "routing: [domain-collab, writing-plans]\n"
-            "<!-- ECW:STATUS:END -->"
-        )
-        fields = session_start._extract_state_fields(content)
+        fields = session_start._extract_state_fields({
+            "routing": ["domain-collab", "writing-plans"],
+        })
         assert "writing-plans" in fields["routing"]
 
     def test_handles_missing_fields(self, session_start):
-        fields = session_start._extract_state_fields("no fields here")
+        fields = session_start._extract_state_fields({})
         assert len(fields) == 0
 
 
@@ -168,15 +143,12 @@ class TestSessionStartMain:
         """Active session-state → additionalContext includes state content."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "current_phase: phase1-complete\n"
-            "auto_continue: true\n"
-            "routing: [ecw:writing-plans]\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        (state_dir / "session-state.json").write_text(json.dumps({
+            "risk_level": "P1",
+            "current_phase": "phase1-complete",
+            "auto_continue": True,
+            "routing": ["ecw:writing-plans"],
+        }))
 
         input_data = {"cwd": str(tmp_path)}
         with patch("json.load", return_value=input_data):

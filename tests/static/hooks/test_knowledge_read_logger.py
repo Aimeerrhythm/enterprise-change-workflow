@@ -49,8 +49,8 @@ def project(tmp_path):
     )
     session_dir = ecw_dir / "session-data" / "20260505-test"
     session_dir.mkdir(parents=True)
-    (session_dir / "session-state.md").write_text(
-        "# ECW Session\n<!-- ECW:STATUS:START -->\nrisk_level: P1\n<!-- ECW:STATUS:END -->\n",
+    (session_dir / "session-state.json").write_text(
+        json.dumps({"risk_level": "P1", "auto_continue": True, "routing": []}),
         encoding="utf-8",
     )
     knowledge_dir = tmp_path / ".claude" / "knowledge" / "common"
@@ -229,7 +229,7 @@ class TestDefaultKnowledgeRoot:
         """No ecw.yml → still detect knowledge files under .claude/knowledge/."""
         session_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260505-default"
         session_dir.mkdir(parents=True)
-        (session_dir / "session-state.md").write_text("# ECW\n", encoding="utf-8")
+        (session_dir / "session-state.json").write_text('{"risk_level": "P1"}', encoding="utf-8")
         kf = str(tmp_path / ".claude" / "knowledge" / "rules.md")
         Path(kf).parent.mkdir(parents=True)
         Path(kf).write_text("# rules\n", encoding="utf-8")

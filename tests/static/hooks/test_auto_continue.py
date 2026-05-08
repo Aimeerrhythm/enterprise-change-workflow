@@ -181,19 +181,14 @@ class TestSpecChallengeHookBehavior:
     def _make_state(self, tmp_path, phase="plan-complete"):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-ff01"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:writing-plans, ecw:spec-challenge, ecw:tdd]\n"
-            "next: ecw:tdd\n"
-            f"current_phase: {phase}\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: planning\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P0",
+            "auto_continue": True,
+            "routing": ["ecw:writing-plans", "ecw:spec-challenge", "ecw:tdd"],
+            "next": "ecw:tdd",
+            "current_phase": phase,
+        }))
         return state_file
 
     def _parse_state(self, state_file):
@@ -201,7 +196,7 @@ class TestSpecChallengeHookBehavior:
         spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
-        return mu.parse_status(state_file.read_text())
+        return mu.parse_status(str(state_file))
 
     def test_phase_advances_to_spec_challenge_loaded(self, tmp_path):
         """Phase must advance to spec-challenge-loaded (instructions loaded, work pending) — hook sets this, SKILL.md Downstream Handoff sets spec-challenge-complete when done."""
@@ -389,19 +384,13 @@ class TestAdvanceSessionState:
     def _make_state(self, tmp_path, phase="phase1-complete", mode="analysis"):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-ab12"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "# ECW Session State\n\n"
-            "<!-- ECW:STATUS:START -->\n"
-            f"current_phase: {phase}\n"
-            "risk_level: P1\n"
-            "auto_continue: true\n"
-            "next: ecw:requirements-elicitation\n"
-            "<!-- ECW:STATUS:END -->\n\n"
-            "<!-- ECW:MODE:START -->\n"
-            f"working_mode: {mode}\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(json.dumps({
+            "current_phase": phase,
+            "risk_level": "P1",
+            "auto_continue": True,
+            "next": "ecw:requirements-elicitation",
+        }))
         return state_file
 
     def _parse_state(self, state_file):
@@ -409,7 +398,7 @@ class TestAdvanceSessionState:
         spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
-        return mu.parse_status(state_file.read_text())
+        return mu.parse_status(str(state_file))
 
     def test_updates_phase_after_skill_completes(self, tmp_path):
         """Current Phase must advance to phase1-loaded after risk-classifier instructions load."""
@@ -475,19 +464,14 @@ class TestAdvanceSessionState:
 
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-cd34"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "auto_continue: true\n"
-            "routing: [ecw:risk-classifier, ecw:writing-plans]\n"
-            "next: ecw:writing-plans\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: analysis\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P1",
+            "auto_continue": True,
+            "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
+            "next": "ecw:writing-plans",
+            "current_phase": "phase1-complete",
+        }))
 
         payload = json.dumps({
             "tool_name": "Skill",
@@ -610,26 +594,18 @@ class TestPreToolUseHandler:
     def _make_state(self, tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete"):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        # routing is a list or string; convert to YAML list
+        state_file = state_dir / "session-state.json"
         if isinstance(routing, str):
             routing_list = [s.strip() for s in routing.split("→")]
         else:
             routing_list = routing
-        import yaml as _yaml
-        routing_yaml = _yaml.dump(routing_list, default_flow_style=True).strip()
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            f"routing: {routing_yaml}\n"
-            f"next: {next_val}\n"
-            f"current_phase: {phase}\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: planning\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file.write_text(json.dumps({
+            "risk_level": "P0",
+            "auto_continue": True,
+            "routing": routing_list,
+            "next": next_val,
+            "current_phase": phase,
+        }))
         return state_file
 
     def _parse_state(self, state_file):
@@ -637,7 +613,7 @@ class TestPreToolUseHandler:
         spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
-        return mu.parse_status(state_file.read_text())
+        return mu.parse_status(str(state_file))
 
     def _run_pre_tool_use(self, tmp_path, monkeypatch, skill):
         import io
@@ -662,7 +638,7 @@ class TestPreToolUseHandler:
         routing = "ecw:writing-plans → ecw:spec-challenge → TDD:RED → ecw:impl-verify"
         self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
-        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
+        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.json"
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "spec-challenge", (
             "PreToolUse must update Current Phase to the in-progress skill name"
@@ -678,7 +654,7 @@ class TestPreToolUseHandler:
         routing = "ecw:writing-plans → ecw:spec-challenge → TDD:RED → Implementation(GREEN) → ecw:impl-verify"
         self._make_state(tmp_path, routing, next_val="ecw:spec-challenge", phase="plan-complete")
         self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
-        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
+        state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.json"
         fields = self._parse_state(state_file)
         assert fields["next"] == "ecw:tdd", (
             "When spec-challenge starts, Next must be updated to ecw:tdd (via TDD:RED alias)"
@@ -733,25 +709,18 @@ class TestKnowledgeTrackInjection:
             routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track → Phase 3"
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-dd01"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
+        state_file = state_dir / "session-state.json"
         if isinstance(routing, str):
             routing_list = [s.strip() for s in routing.split("→")]
         else:
             routing_list = routing
-        import yaml as _yaml
-        routing_yaml = _yaml.dump(routing_list, default_flow_style=True).strip()
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            f"risk_level: {risk_level}\n"
-            "auto_continue: true\n"
-            f"routing: {routing_yaml}\n"
-            "next: ecw:biz-impact-analysis\n"
-            "current_phase: verify-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: verification\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file.write_text(json.dumps({
+            "risk_level": risk_level,
+            "auto_continue": True,
+            "routing": routing_list,
+            "next": "ecw:biz-impact-analysis",
+            "current_phase": "verify-complete",
+        }))
         return state_file
 
     def _make_ecw_yml(self, tmp_path, with_knowledge_root=True):
@@ -844,7 +813,7 @@ class TestIssue52Phase3RoutingAlias:
         spec = _ilu.spec_from_file_location("marker_utils", HOOKS_DIR / "marker_utils.py")
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
-        return mu.parse_status(state_file.read_text())
+        return mu.parse_status(str(state_file))
 
     # ── Sub-problem 1: Phase 3 alias ───────────────────────────────────────────
 
@@ -876,20 +845,15 @@ class TestIssue52Phase3RoutingAlias:
         import io
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp2"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
+        state_file = state_dir / "session-state.json"
         original_phase = "biz-impact-loaded"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:impl-verify, ecw:biz-impact-analysis]\n"
-            "next: ecw:biz-impact-analysis\n"
-            f"current_phase: {original_phase}\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: verification\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file.write_text(json.dumps({
+            "risk_level": "P0",
+            "auto_continue": True,
+            "routing": ["ecw:impl-verify", "ecw:biz-impact-analysis"],
+            "next": "ecw:biz-impact-analysis",
+            "current_phase": original_phase,
+        }))
         original_content = state_file.read_text()
 
         payload = json.dumps({
@@ -907,7 +871,7 @@ class TestIssue52Phase3RoutingAlias:
 
         # File must be unchanged — off-chain deviation must not update any fields
         assert state_file.read_text() == original_content, (
-            "Off-chain deviation in PreToolUse must NOT update session-state.md fields "
+            "Off-chain deviation in PreToolUse must NOT update session-state.json fields "
             "(Issue #52 SP2: missing return caused current_phase/working_mode/TIMELINE "
             "to be incorrectly overwritten)"
         )
@@ -918,20 +882,14 @@ class TestIssue52Phase3RoutingAlias:
         """risk-classifier completing Phase 3 must set current_phase=phase3-complete — Issue #52 SP3."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp3"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        # Routing with knowledge-track before Phase 3: this is the Phase 3 context
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:biz-impact-analysis, ecw:knowledge-track, Phase 3]\n"
-            "next: ecw:risk-classifier\n"
-            "current_phase: risk-classifier\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: analysis\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P0",
+            "auto_continue": True,
+            "routing": ["ecw:biz-impact-analysis", "ecw:knowledge-track", "Phase 3"],
+            "next": "ecw:risk-classifier",
+            "current_phase": "risk-classifier",
+        }))
         self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "phase3-complete", (
@@ -944,20 +902,14 @@ class TestIssue52Phase3RoutingAlias:
         """risk-classifier completing Phase 1 must still set phase1-loaded — Issue #52 SP3 guard."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-sp3b"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        # Routing without knowledge-track before Phase 3: this is Phase 1 context
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:risk-classifier, ecw:requirements-elicitation, ecw:writing-plans]\n"
-            "next: ecw:requirements-elicitation\n"
-            "current_phase: risk-classifier\n"
-            "<!-- ECW:STATUS:END -->\n"
-            "<!-- ECW:MODE:START -->\n"
-            "working_mode: analysis\n"
-            "<!-- ECW:MODE:END -->\n"
-        )
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(json.dumps({
+            "risk_level": "P0",
+            "auto_continue": True,
+            "routing": ["ecw:risk-classifier", "ecw:requirements-elicitation", "ecw:writing-plans"],
+            "next": "ecw:requirements-elicitation",
+            "current_phase": "risk-classifier",
+        }))
         self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "phase1-loaded", (
