@@ -18,8 +18,6 @@ import json
 import os
 import sys
 
-import yaml
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
     find_session_state,
@@ -27,218 +25,18 @@ from marker_utils import (  # noqa: E402
     update_status_fields,
     validate_status,
 )
-from trace_logger import log_trace  # noqa: E402
-
-# ── Dynamic mapping generation from workflow-routes.yml ──────────────────────
-# All mapping tables are generated at module load from the single source of truth.
-# Adding/modifying a skill only requires editing workflow-routes.yml.
-
-_ROUTES_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "..", "skills", "risk-classifier", "workflow-routes.yml",
+from routes_utils import (  # noqa: E402
+    SKILL_COMPLETED_PHASE as _SKILL_COMPLETED_PHASE,
+    SKILL_ROUTING_ALIASES as _SKILL_ROUTING_ALIASES,
+    ROUTING_STEP_TO_SKILL as _ROUTING_STEP_TO_SKILL,
+    OFF_CHAIN_ALLOWED as _OFF_CHAIN_ALLOWED,
+    _load_routes_from_file,
+    remaining_route as _remaining_route,
+    routing_step_to_skill as _routing_step_to_skill,
+    check_routing_deviation as _check_routing_deviation,
+    next_skill_from_routing as _next_skill_from_routing,
 )
-
-
-def _load_routes_from_file(routes_path=None):
-    """Parse workflow-routes.yml and generate all mapping tables.
-
-    Returns dict with keys: completed_phase, mode, routing_aliases,
-    step_to_skill, off_chain.
-    """
-    path = routes_path or _ROUTES_FILE
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
-    metadata = data.get("skill_metadata", {})
-    off_chain_list = data.get("off_chain_skills", [])
-
-    completed_phase = {}
-    routing_aliases = {}
-    step_to_skill = {}
-
-    for skill_key, meta in metadata.items():
-        full_name = f"ecw:{skill_key}"
-        phase_name = meta.get("phase_name", skill_key)
-        completed_phase[full_name] = f"{phase_name}-loaded"
-
-        aliases = meta.get("routing_aliases", [])
-        if aliases:
-            routing_aliases[full_name] = aliases
-            for alias in aliases:
-                step_to_skill[alias] = full_name
-
-    off_chain = {f"ecw:{s}" for s in off_chain_list}
-
-    return {
-        "completed_phase": completed_phase,
-        "routing_aliases": routing_aliases,
-        "step_to_skill": step_to_skill,
-        "off_chain": off_chain,
-    }
-
-
-try:
-    _mappings = _load_routes_from_file()
-except Exception:
-    _mappings = {
-        "completed_phase": {}, "routing_aliases": {},
-        "step_to_skill": {}, "off_chain": set(),
-    }
-
-_SKILL_COMPLETED_PHASE = _mappings["completed_phase"]
-_SKILL_ROUTING_ALIASES = _mappings["routing_aliases"]
-_ROUTING_STEP_TO_SKILL = _mappings["step_to_skill"]
-_OFF_CHAIN_ALLOWED = _mappings["off_chain"]
-
-
-def _remaining_route(routing, current_skill):
-    """Extract steps after current_skill in the routing list.
-
-    routing: list of step strings (YAML routing list from session-state.md).
-    Returns [] when current_skill is not found, not the full chain —
-    injecting the full chain would cause the model to re-run the entire workflow.
-    """
-    if not routing:
-        return []
-    if isinstance(routing, str):
-        # Legacy: accept string for backward compatibility during migration
-        routing = [s.strip() for s in routing.split("→")]
-
-    aliases = _SKILL_ROUTING_ALIASES.get(current_skill, [])
-    short_name = current_skill.replace("ecw:", "").lower() if current_skill.startswith("ecw:") else ""
-
-    # Use last-match so multi-step skills (e.g., TDD:RED + Implementation(GREEN))
-    # correctly return what follows their final alias step.
-    last_match = -1
-    for i, step in enumerate(routing):
-        step_lower = step.lower()
-        if current_skill == step or (short_name and short_name == step_lower):
-            last_match = i
-        else:
-            for alias in aliases:
-                if alias.lower() == step_lower:
-                    last_match = i
-                    break
-
-    return routing[last_match + 1:] if last_match != -1 else []
-
-
-def _routing_step_to_skill(step):
-    """Convert a single Routing chain step to an ECW skill name.
-
-    Returns None for non-skill steps (e.g. Phase 2, Implementation(GREEN), etc.).
-    Note: Phase 3 maps to ecw:risk-classifier via routing alias (Issue #52).
-    """
-    step_stripped = step.strip()
-    if not step_stripped:
-        return None
-
-    # Direct match against known full skill names (e.g. "ecw:impl-verify")
-    if step_stripped in _SKILL_COMPLETED_PHASE:
-        return step_stripped
-
-    # Static alias table (e.g. "TDD:RED" → "ecw:tdd")
-    step_lower = step_stripped.lower()
-    for alias, skill in _ROUTING_STEP_TO_SKILL.items():
-        if alias.lower() == step_lower:
-            return skill
-
-    # Short-name match: strip "ecw:" from known skills and compare
-    for skill_name in _SKILL_COMPLETED_PHASE:
-        short = skill_name.replace("ecw:", "").lower()
-        if short == step_lower:
-            return skill_name
-
-    return None  # non-skill step
-
-
-def _check_routing_deviation(routing_list, current_skill, expected_next):
-    """Check if current_skill deviates from the Routing chain.
-
-    Args:
-        routing_list: Routing chain as a list of steps (from session-state.md).
-        current_skill: The skill being invoked now (e.g., "ecw:impl-verify").
-        expected_next: The skill that was expected next (from fields_dict["next"]).
-
-    Returns:
-        dict with {"type": "off-chain"|"out-of-order", "detail": str} if deviation detected.
-        None if no deviation.
-    """
-    # Whitelist: manual-only tools are legitimately off-chain
-    if current_skill in _OFF_CHAIN_ALLOWED:
-        return None
-
-    # Empty or None routing: no chain to validate
-    if not routing_list:
-        return None
-
-    # Build set of all skills in the routing chain
-    chain_skills = set()
-    for step in routing_list:
-        skill = _routing_step_to_skill(step)
-        if skill:
-            chain_skills.add(skill)
-
-    # Check if current skill is off-chain
-    if current_skill not in chain_skills:
-        return {
-            "type": "off-chain",
-            "detail": f"Skill '{current_skill}' not found in routing chain {routing_list}",
-        }
-
-    # Check if current skill is out-of-order (expected_next exists and doesn't match)
-    if expected_next and current_skill != expected_next:
-        return {
-            "type": "out-of-order",
-            "detail": f"Expected '{expected_next}' but got '{current_skill}'",
-        }
-
-    return None
-
-
-def _next_skill_from_routing(routing, current_skill):
-    """Find the next ECW skill to invoke after current_skill in the routing chain.
-
-    routing: list of step strings (YAML routing list from session-state.md).
-    Handles Routing aliases (e.g., TDD:RED → ecw:tdd, Implementation(GREEN) is still tdd).
-    Returns the full ECW skill name (e.g., 'ecw:impl-verify') or None if not found.
-    """
-    if not routing:
-        return None
-    if isinstance(routing, str):
-        # Legacy: accept string for backward compatibility during migration
-        routing = [s.strip() for s in routing.split("→")]
-
-    aliases = _SKILL_ROUTING_ALIASES.get(current_skill, [])
-    short_name = current_skill.replace("ecw:", "").lower() if current_skill.startswith("ecw:") else ""
-
-    # Find the LAST position where current_skill (or any of its aliases) appears.
-    # Using last-match so multi-step skills like tdd (TDD:RED + Implementation(GREEN))
-    # correctly find what follows their final alias.
-    last_match_idx = -1
-    for i, step in enumerate(routing):
-        step_lower = step.lower()
-        if current_skill == step:
-            last_match_idx = i
-            continue
-        if short_name and short_name == step_lower:
-            last_match_idx = i
-            continue
-        for alias in aliases:
-            if alias.lower() == step_lower:
-                last_match_idx = i
-                break
-
-    if last_match_idx == -1:
-        return None
-
-    # Walk remaining steps and return the first that resolves to an ECW skill.
-    for step in routing[last_match_idx + 1:]:
-        skill = _routing_step_to_skill(step)
-        if skill:
-            return skill
-
-    return None
+from trace_logger import log_trace  # noqa: E402
 
 
 def _handle_pre_tool_use(state_path, skill_name, cwd=""):
