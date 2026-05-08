@@ -94,12 +94,60 @@ ECW 已经将变更分为 P0-P3。这个信号应该传播到所有决策：
 
 ---
 
-## 总结：五个试金石
+## 状态所有权反转（State Ownership Inversion）
 
-在给 ECW 添加任何新功能或新层之前，用这五个问题检验：
+> 来源：Issue #62 实践。结构性消除了 12 个历史 Issue 的根因。
+
+在 LLM Prompt + Hook 混合系统中，**状态管理职责共享**是最隐蔽的系统性耦合源。表面上看是"改了 A 忘改 B"的疏忽，根因是同一知识在两种载体（Python 代码 + 自然语言 Prompt）中各有一份副本。
+
+### 原则
+
+**状态写入权单一归属：程序逻辑（Hook）独占写入，Prompt（SKILL.md）永远只读。**
+
+| | 改造前 | 改造后 |
+|---|---|---|
+| Skill 职责 | 产出 artifact + 写 session-state + 描述路由 | **只产出 artifact** |
+| Hook 职责 | 补充写 state + 校验 + 注入 | **独占写 state + 路由决策 + 注入只读上下文** |
+| SKILL.md 包含 | 业务逻辑 + 状态格式 + marker 语法 + 路由规则 | **只有业务逻辑** |
+
+### 判断标准
+
+一条 Prompt 指令是"状态写入"还是"业务逻辑"？
+
+- "把 `current_phase` 改为 `plan-complete`" → 状态写入 → 属于 Hook
+- "计算 implementation_strategy 并记录到 session-state" → 业务逻辑产出（artifact 的一部分）→ 可留在 Skill
+- "根据 risk level 决定下一步调什么" → 路由决策 → 属于 Hook
+
+### 实施模式
+
+1. **声明式配置** — 所有 skill 元数据（phase_name、mode、routing_aliases、off_chain）声明在 `workflow-routes.yml`，代码运行时解析
+2. **只读注入** — Hook PreToolUse 注入 `[ECW STATE — read-only]`，Skill 可感知状态但无写入指令
+3. **Grep 验收** — CI 级别硬性阻止 Prompt 中出现状态字段名（`current_phase`、`working_mode`、`ECW:STATUS`）
+
+### 耦合消除的量化
+
+| 变更场景 | 改造前需改几处 | 改造后需改几处 |
+|----------|--------------|--------------|
+| 新增一个 Skill | 5 处（routes.yml + 4 dict + SKILL.md Handoff） | **1 处**（routes.yml） |
+| 修改 session-state 字段名 | 10+ 处 | **1 处**（hooks 内部） |
+| 修改 marker 格式 | 12+ 处 | **1 处**（hooks 内部） |
+| 修改路由规则 | 2 处 | **1 处**（routes.yml） |
+
+### 适用边界
+
+- 适用于：任何 LLM agent 系统中 prompt 和程序逻辑共同管理的状态
+- 不适用于：Skill 的业务逻辑产出（如 risk-classifier 创建初始 session-state.md 是 artifact production）
+- 灰色地带：参考模板文件（如 `session-state-format.md`）保留格式字符串是合理的——它不是"写状态转移"，而是"定义 artifact 格式"
+
+---
+
+## 总结：六个试金石
+
+在给 ECW 添加任何新功能或新层之前，用这六个问题检验：
 
 1. **模型升级测试** — 10 倍聪明的模型来了，这层还有用吗？
 2. **放大器还是拐杖** — 它在编排模型做不到的事，还是在补偿模型暂时做不好的事？
 3. **确定性测试** — 如果这件事必须可靠发生，它是一个机制还是一条 Prompt？
 4. **唯一来源测试** — 这个事实/规则是否只在一个地方定义？
 5. **风险比例测试** — 开销是否与风险等级成正比？
+6. **写入权测试** — 这个状态变更由谁负责？如果答案是"Prompt 和 Hook 都写"，就是耦合。
