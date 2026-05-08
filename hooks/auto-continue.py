@@ -24,7 +24,6 @@ import yaml
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
     find_session_state,
-    parse_instincts,
     parse_status,
     update_status_fields,
     validate_status,
@@ -246,24 +245,6 @@ def _next_skill_from_routing(routing, current_skill):
     return None
 
 
-def _get_skill_instincts(cwd: str, skill_name: str) -> str:
-    """Read instincts for a specific skill and format for injection.
-
-    Delegates to marker_utils.parse_instincts() for parsing (Issue #62 Part 4).
-    Returns formatted instincts string for injection, or "" when none found.
-    """
-    entries = parse_instincts(cwd, skill_name=skill_name)
-    if not entries:
-        return ""
-    skill_key = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
-    instincts = [f"- {e['pattern']} → {e['action']}" for e in entries]
-    return (
-        f"[ECW INSTINCTS for {skill_key}] Historical calibration data — "
-        f"adjust your decisions based on these learned patterns:\n"
-        + "\n".join(instincts)
-    )
-
-
 def _handle_pre_tool_use(state_path, skill_name, cwd=""):
     """Update Current Phase (in-progress) and Next at skill entry.
 
@@ -409,7 +390,6 @@ def main():
 
     if hook_event == "PreToolUse":
         state_ctx = _handle_pre_tool_use(state_path, skill_name, cwd=cwd)
-        instincts_msg = _get_skill_instincts(cwd, skill_name)
 
         # Build read-only state context message (Issue #62 Part 3)
         parts = []
@@ -422,8 +402,6 @@ def main():
             if state_ctx.get("routing_remaining"):
                 ctx_line += f", remaining={' → '.join(state_ctx['routing_remaining'])}"
             parts.append(ctx_line)
-        if instincts_msg:
-            parts.append(instincts_msg)
 
         if parts:
             print(json.dumps({"systemMessage": "\n\n".join(parts)}, ensure_ascii=False))

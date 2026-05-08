@@ -203,66 +203,6 @@ def write_session_state(state_path, data):
     _write_json(state_path, data)
 
 
-def parse_instincts(cwd, skill_name=None, min_confidence=0.0):
-    """Parse instincts.md and return entries, optionally filtered by skill and confidence."""
-    instincts_path = os.path.join(cwd, ".claude", "ecw", "state", "instincts.md")
-    if not os.path.exists(instincts_path):
-        return []
-    try:
-        with open(instincts_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-    except Exception:
-        return []
-
-    if not content.strip():
-        return []
-
-    skill_key = None
-    if skill_name:
-        skill_key = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
-
-    results = []
-
-    sections = re.split(r'\n##\s+', content)
-    for section in sections:
-        lines = section.strip().splitlines()
-        if not lines:
-            continue
-        section_skill = lines[0].strip().lower()
-
-        if skill_key and section_skill != skill_key.lower():
-            continue
-
-        section_body = "\n".join(lines[1:])
-        if "no instincts yet" in section_body.lower():
-            continue
-
-        blocks = section_body.split("<!-- INSTINCT -->")
-        for block in blocks[1:]:
-            entry = {"skill": section_skill}
-            for line in block.splitlines():
-                line = line.strip()
-                if line.startswith("- **Pattern**:"):
-                    entry["pattern"] = line.split(":", 1)[1].strip()
-                elif line.startswith("- **Action**:"):
-                    entry["action"] = line.split(":", 1)[1].strip()
-                elif line.startswith("- **Confidence**:"):
-                    try:
-                        entry["confidence"] = float(line.split(":", 1)[1].strip())
-                    except ValueError:
-                        entry["confidence"] = 0.0
-                elif line.startswith("- **Source**:"):
-                    entry["source"] = line.split(":", 1)[1].strip()
-
-            if not entry.get("pattern") or not entry.get("action"):
-                continue
-            if entry.get("confidence", 0.0) < min_confidence:
-                continue
-            results.append(entry)
-
-    return results
-
-
 class CheckpointStore:
     """Unified read/write/exists/list API for ECW session-data checkpoint files."""
 
