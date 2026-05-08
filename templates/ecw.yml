@@ -141,7 +141,6 @@ models:
     implementation: sonnet  # impl-orchestration, tdd
     verification: sonnet    # impl-verify, requirements-elicitation, risk-classifier Phase 2
     mechanical: haiku       # 简单任务 (enum/DTO/config)
-  overrides: {}
 
 # impl-orchestration 配置
 # 控制 impl-orchestration 的并行执行行为和预检设置。
