@@ -152,6 +152,15 @@ Before submitting changes:
 - [ ] `templates/ecw.yml` updated if new configuration keys were introduced
 - [ ] Cross-references between Skills validated (linter checks this)
 
+### Architecture Compliance (mandatory for hook/skill changes)
+
+- [ ] **State Ownership**: `grep -rn "current_phase\|working_mode\|ECW:STATUS" skills/` returns 0 hits (excluding template files)
+- [ ] **No Downstream Handoff**: `grep -rn "Downstream Handoff" skills/` returns 0 hits
+- [ ] **Single Source**: Any new mapping/routing is declared in `workflow-routes.yml`, not hardcoded in Python
+- [ ] **Determinism check**: If the change adds a behavior that MUST happen reliably, it's a Hook/script, not a Prompt instruction
+- [ ] **docs/design-principles.md** 6 litmus tests pass for the proposed design
+- [ ] **docs/component-design-patterns.md** anti-patterns not introduced
+
 ### Issue 写作规范（必须遵守）
 
 - [ ] Issue 使用对应模板（bug.md / arch.md），所有必填 section 已填写

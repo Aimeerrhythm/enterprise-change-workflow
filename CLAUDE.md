@@ -93,6 +93,19 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/knowledge/common/external-systems.md` | External system integrations |
 | `.claude/knowledge/common/e2e-paths.md` | End-to-end critical paths |
 
+## Architecture Design Reference
+
+**Before implementing new features or fixing issues**, read `docs/design-principles.md` (6 litmus tests + State Ownership Inversion) and `docs/component-design-patterns.md` (7 component patterns). Use as:
+
+1. **Design checklist** — Does the proposed change pass all 6 litmus tests?
+2. **Bug root cause** — Does the bug violate a known principle? If yes, fix by reverting to the principle (not patching around it).
+3. **Regression baseline** — After refactor, confirm no anti-patterns from the docs have been introduced.
+
+Key rules (always enforced):
+- **State Ownership Inversion**: Skills never write state (`current_phase`, `working_mode`, `next`). Hooks own all state transitions. Routing decisions live in `workflow-routes.yml`, not in SKILL.md.
+- **Single Source of Truth**: Any fact/rule defined in exactly one place. If you need to update N files for one change, architecture is wrong.
+- **Determinism over Probability**: If behavior MUST happen reliably, implement as Hook/script, not as Prompt instruction.
+
 ## Completion Verification Rules
 
 **Verification chain before declaring a task "complete":**
@@ -110,7 +123,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 
 ## Skill Auto-Continue Mechanism
 
-Skill-to-skill chaining (e.g., domain-collab → Phase 2 → writing-plans) is enforced by the `auto-continue` PostToolUse hook (`hooks/auto-continue.py`), not by prompt instructions in individual Skill files. The hook fires after each ECW Skill loads, reads `session-state.md` `Auto-Continue` field, and injects the remaining routing chain as `systemMessage`. Individual Skills only contain a compact "Downstream Handoff" block with per-risk-level routing logic.
+Skill-to-skill chaining (e.g., domain-collab → Phase 2 → writing-plans) is enforced by the `auto-continue` PostToolUse hook (`hooks/auto-continue.py`), not by prompt instructions in individual Skill files. The hook fires after each ECW Skill completes, reads `session-state.md` routing chain, and injects the remaining route as `systemMessage`. Individual Skills contain only business logic — no state transitions, no routing decisions (State Ownership Inversion).
 
 ## Documentation Sync Rules
 
