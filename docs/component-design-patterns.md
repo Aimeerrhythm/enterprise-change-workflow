@@ -1,58 +1,66 @@
-# ECW 核心组件设计模式
+# ECW Component Design Patterns & Engineering Constraints
 
-本文档记录 ECW 各核心组件在演进过程中沉淀出的设计模式和工程约束。每个模式都源自真实的失败案例或架构决策。
+Read relevant sections only (not the full document):
+
+| What you're doing | Read |
+|-------------------|------|
+| Adding/modifying a Skill | §1 Hook Lifecycle, §3 Declarative Routing, §9 Skill Constraints |
+| Modifying Hook logic | §1 Hook Lifecycle, §2 Markers, §7 Error Handling |
+| Modifying state management | §2 Markers, §4 Read-Only Injection, §6 Checkpoint Store |
+| Modifying calibration/Instincts | §5 Instincts |
+| Managing documentation | §8 Document Loading Implementation |
 
 ---
 
-## 1. Hook 生命周期模型
+## 1. Hook Lifecycle Model
 
-ECW 使用 Claude Code 的 PreToolUse / PostToolUse hook 机制实现确定性流程控制。
+ECW uses Claude Code's PreToolUse / PostToolUse hook mechanism for deterministic flow control.
 
-### 时序
+### Sequence
 
 ```
-用户请求 → LLM 决定调用 Skill
+User request → LLM decides to call Skill
             ↓
      ┌─── PreToolUse ───┐
-     │ 1. 写入 in-progress state     │
-     │ 2. 计算 next skill             │
-     │ 3. 注入只读上下文 (systemMessage) │
-     │ 4. 注入 instincts (if any)     │
-     └──────────────────────────────┘
+     │ 1. Write in-progress state        │
+     │ 2. Compute next skill             │
+     │ 3. Inject read-only context       │
+     │ 4. Inject instincts (if any)      │
+     └──────────────────────────────────┘
             ↓
-     Skill 执行（LLM 读取 SKILL.md 并执行业务逻辑）
+     Skill executes (LLM reads SKILL.md + performs business logic)
             ↓
      ┌─── PostToolUse ──┐
-     │ 1. 写入 completed state        │
-     │ 2. 计算 remaining route        │
-     │ 3. 注入 auto-continue 指令     │
-     └──────────────────────────────┘
+     │ 1. Write completed state          │
+     │ 2. Compute remaining route        │
+     │ 3. Inject auto-continue directive │
+     └──────────────────────────────────┘
             ↓
-     LLM 看到 systemMessage → 立即调用下一个 Skill
+     LLM sees systemMessage → immediately calls next Skill
 ```
 
-### 设计约束
+### Design Constraints
 
-| 约束 | 原因 |
-|------|------|
-| Hook 永远不返回 `{"result": "block"}` | 阻断 skill 调用会破坏用户体验且不可恢复 |
-| Hook 异常必须静默吞掉 | `except: pass` — 宁可状态不更新也不能阻塞工作流 |
-| PreToolUse 不注入 "do not ask" | 某些 Skill（spec-challenge）有 mandatory 用户确认流 |
-| PostToolUse 是唯一路由决策点 | Skill 本身不做"下一步去哪"的决策 |
+| Constraint | Reason |
+|-----------|--------|
+| Hook never returns `{"result": "block"}` | Blocking a skill call breaks UX and is unrecoverable |
+| Hook exceptions must be silently swallowed | `except: pass` — stale state is better than blocked workflow |
+| PreToolUse does not inject "do not ask" | Some Skills (spec-challenge) have mandatory user confirmation |
+| PostToolUse is the sole routing decision point | Skills themselves never decide "where to go next" |
 
-### 反模式
+### Anti-patterns
 
-- ❌ Skill 中写 `current_phase` / `next` / `working_mode`（状态所有权反转原则）
-- ❌ Hook 中硬编码 skill 映射表（应从 routes.yml 动态加载）
-- ❌ PreToolUse 和 PostToolUse 都写同一个字段（竞争导致状态不一致）
+- ❌ Skill writes `current_phase` / `next` / `working_mode` (State Ownership Inversion)
+- ❌ Hook hardcodes skill mapping table (should dynamically load from routes.yml)
+- ❌ PreToolUse and PostToolUse both write the same field (race condition → inconsistent state)
 
 ---
 
 ## 2. Marker-Based Idempotent Section Updates
 
-`marker_utils.py` 的核心设计：用 HTML 注释 marker 将文件划分为独立可寻址的 section。
+`marker_utils.py` core design: HTML comment markers partition a file into independently addressable sections.
 
-### 格式
+### Format
 
 ```markdown
 <!-- ECW:STATUS:START -->
@@ -62,66 +70,66 @@ routing: [writing-plans, spec-challenge, impl-verify]
 <!-- ECW:STATUS:END -->
 ```
 
-### 为什么不用整文件覆盖
+### Why Not Whole-File Overwrite
 
-session-state.md 由多个 Hook 分别管理不同 section（STATUS、MODE、LEDGER、TIMELINE、STOP）。整文件覆盖 = 多写入者竞争 = 数据丢失。Marker 机制让每个写入者只修改自己的 section，其余保持不变。
+session-state.md is managed by multiple Hooks writing different sections (STATUS, MODE, LEDGER, TIMELINE, STOP). Whole-file overwrite = multi-writer race = data loss. Markers let each writer modify only its section.
 
-### API 设计
+### API
 
 ```python
-# 读：精确提取
-parse_status(content) → dict        # STATUS section as YAML
-read_marker_section(content, name) → str  # raw section content
+# Read: precise extraction
+parse_status(content) → dict
+read_marker_section(content, name) → str
 
-# 写：原子替换
+# Write: atomic replacement
 update_status_fields(content, {"current_phase": "plan-loaded"}) → content
 update_yaml_section(content, "LEDGER", data) → content
 
-# 创建/追加
-append_ledger_entry(content, entry) → content  # 在 END marker 之前插入
-append_timeline_entry(content, phase) → content  # 自动回填上条 duration
+# Create/Append
+append_ledger_entry(content, entry) → content   # inserts before END marker
+append_timeline_entry(content, phase) → content  # auto-backfills previous duration
 ```
 
-### 设计约束
+### Design Constraints
 
-| 约束 | 原因 |
-|------|------|
-| YAML 格式（非 Markdown） | LLM 容易生成有效 YAML；程序可精确解析 |
-| 新增 section 自动 append 到文件尾 | 向前兼容——旧文件不含新 section 时自动创建 |
-| `append_ledger_entry` 是唯一入口 | 禁止 LLM 直接 `Edit` 追加到文件尾（会写到 END marker 之外） |
+| Constraint | Reason |
+|-----------|--------|
+| YAML format (not Markdown) | LLM generates valid YAML easily; programs parse precisely |
+| New sections auto-append to file end | Forward compatibility — old files without new section get it created |
+| `append_ledger_entry` is the only entry point | Prevents LLM `Edit` from appending beyond END marker |
 
-### 失败案例
+### Historical Failures
 
-- Issue #36: LLM 把 Ledger 写到 `<!-- ECW:LEDGER:END -->` 之后 → 所有 hook parser 读不到
-- Issue #33: LLM 写 `phase1-complete` vs Hook 写 `phase1-loaded` → 同字段双写冲突
-- Issue #40: 从 Markdown 迁移到 YAML 格式，需要同步改 10+ SKILL.md 中的格式描述
+- Issue #36: LLM wrote Ledger after `<!-- ECW:LEDGER:END -->` → all hook parsers missed it
+- Issue #33: LLM wrote `phase1-complete` vs Hook wrote `phase1-loaded` → same-field dual-write conflict
+- Issue #40: Markdown→YAML migration required syncing 10+ SKILL.md format descriptions
 
-**根治方案**: State Ownership Inversion — Skill 不写 state，只有一个写入者。
+**Root fix**: State Ownership Inversion — Skill never writes state, single writer only.
 
 ---
 
-## 3. 声明式路由配置
+## 3. Declarative Routing Configuration
 
-`workflow-routes.yml` 是整个 ECW 路由系统的 Single Source of Truth。
+`workflow-routes.yml` is the Single Source of Truth for ECW's routing system.
 
-### 设计哲学
+### Design Philosophy
 
-路由规则是**治理产物**（由组织决定 P0 变更必须走什么流程），不是**技术实现细节**。它应该以非技术人员可读的声明式格式存在，而不是散落在 Python 代码的 if-else 分支中。
+Routing rules are **governance artifacts** (organization decides what process P0 changes must follow), not technical implementation details. They should exist in a declarative, non-technical-reader-friendly format — not scattered across Python if-else branches.
 
-### 文件结构
+### File Structure
 
 ```yaml
-routes:         # 路由矩阵（level × mode × type → chain）
-skill_metadata: # 每个 Skill 的元数据（mode, phase_name, aliases）
-off_chain_skills: # 手动工具白名单
-impl_strategy:  # 实现策略决策规则
-post_impl_tasks: # 后续任务创建规则
+routes:           # Routing matrix (level × mode × type → chain)
+skill_metadata:   # Per-skill metadata (mode, phase_name, aliases)
+off_chain_skills: # Manual tool whitelist
+impl_strategy:    # Implementation strategy decision rules
+post_impl_tasks:  # Post-implementation task creation rules
 ```
 
-### 动态加载模式
+### Dynamic Loading
 
 ```python
-# 启动时解析 routes.yml → 生成 5 张映射表
+# Parse routes.yml at startup → generate 5 mapping tables
 _mappings = _load_routes_from_file()
 _SKILL_COMPLETED_PHASE = _mappings["completed_phase"]
 _SKILL_MODE = _mappings["mode"]
@@ -130,249 +138,211 @@ _ROUTING_STEP_TO_SKILL = _mappings["step_to_skill"]
 _OFF_CHAIN_ALLOWED = _mappings["off_chain"]
 ```
 
-### 验证方式
+### Validation
 
-- `test_data_contracts.py`: 验证所有 route chain 中的 skill 都存在对应目录
-- `test_workflow_simulator.py`: 模拟完整 trace，验证 must_include / must_exclude
-- `test_dynamic_routes.py`: 验证动态加载正确性和行为保持
+- `test_data_contracts.py`: validates all route chain skills have corresponding directories
+- `test_workflow_simulator.py`: simulates full traces, verifies must_include / must_exclude
+- `test_dynamic_routes.py`: validates dynamic loading correctness
 
-### 新增 Skill 的流程
+### Adding a New Skill
 
-1. 创建 `skills/{name}/SKILL.md`
-2. 在 `workflow-routes.yml` 的 `skill_metadata` 添加 mode + phase_name
-3. 如有路由别名（如 TDD:RED → ecw:tdd），添加 `routing_aliases`
-4. 在 `routes` 中将其加入对应 chain
-5. **不需要改任何 Python 代码**
+1. Create `skills/{name}/SKILL.md`
+2. Add mode + phase_name to `skill_metadata` in `workflow-routes.yml`
+3. If routing aliases exist (e.g., TDD:RED → ecw:tdd), add `routing_aliases`
+4. Add to appropriate chain in `routes`
+5. **No Python code changes needed**
 
 ---
 
-## 4. 只读上下文注入模式
+## 4. Read-Only Context Injection
 
-Skill 需要感知当前工作流状态（做决策用），但不应修改状态（避免双写）。
+Skills need workflow state awareness (for decisions) but must not modify state (to avoid dual-write).
 
-### 解法
+### Solution
 
-PreToolUse hook 在 Skill 加载时注入一条 `systemMessage`：
+PreToolUse hook injects a `systemMessage` when a Skill loads:
 
 ```
 [ECW STATE — read-only] risk=P0, mode=planning, next=ecw:tdd, remaining=TDD:RED → impl-verify
 ```
 
-Skill 读到这条消息后知道当前上下文，但没有任何"请你写入 X"的指令。
+The Skill reads this and knows the current context, but receives no "please write X" instructions.
 
-### 设计要点
+### Design Points
 
-| 要点 | 说明 |
-|------|------|
-| 前缀 `[ECW STATE — read-only]` | 明确告诉 LLM 这是只读信息，不是待执行指令 |
-| 紧凑格式（一行） | 最小化 token 占用——每个 Skill 调用都会注入 |
-| 与 instincts 合并 | 同一条 systemMessage 包含状态 + 历史校准，减少注入次数 |
-| 无状态时不注入 | 新 session 首次调用 risk-classifier 时无 session-state → 不注入 |
+| Point | Rationale |
+|-------|-----------|
+| Prefix `[ECW STATE — read-only]` | Explicitly tells LLM this is read-only info, not executable instructions |
+| Compact format (one line) | Minimize token cost — injected on every Skill call |
+| Merged with instincts | Same systemMessage contains state + historical calibration, reducing injection count |
+| No injection when stateless | First risk-classifier call in new session has no session-state → nothing injected |
 
 ---
 
-## 5. Instincts（学习型规则）设计
+## 5. Instincts (Learned Rules) Design
 
-Phase 3 Calibration 产出的 heuristic rules，存储在 `instincts.md`，通过 PreToolUse 注入对应 Skill。
+Phase 3 Calibration produces heuristic rules stored in `instincts.md`, injected via PreToolUse to corresponding Skills.
 
-### 架构位置
+### Architecture Position
 
 ```
-Phase 3 产出 → instincts.md → parse_instincts() → PreToolUse 注入 → 影响 Skill 决策
+Phase 3 output → instincts.md → parse_instincts() → PreToolUse injection → influences Skill decisions
 ```
 
-### 设计约束
+### Design Constraints
 
-| 约束 | 原因 |
-|------|------|
-| 按 skill section 分割 | 不同 Skill 的校准数据不应互相干扰 |
-| session-start 只注入高置信度（≥ 0.7） | 低置信度 instinct 可能误导 |
-| auto-continue 注入全部（无 confidence 过滤） | per-skill 注入已经做了精确路由 |
-| 统一解析函数 `parse_instincts()` | 避免两处实现漂移（Issue #62 修复） |
+| Constraint | Reason |
+|-----------|--------|
+| Partitioned by skill section | Different Skills' calibration data should not interfere |
+| session-start injects only high confidence (≥ 0.7) | Low-confidence instincts may mislead |
+| auto-continue injects all (no confidence filter) | Per-skill injection already provides precise routing |
+| Unified parser `parse_instincts()` | Avoids two implementations drifting (Issue #62 fix) |
 
-### 格式
+### Format
 
 ```markdown
 ## risk-classifier
 
 <!-- INSTINCT -->
-- **Pattern**: 涉及状态机的变更被低估
-- **Action**: 有状态流转关键词时 +1 级
+- **Pattern**: State machine changes get underestimated
+- **Action**: +1 level when state transition keywords present
 - **Confidence**: 0.85
 - **Source**: 20260501-a3f1 calibration
 ```
 
 ---
 
-## 6. Checkpoint Store 设计
+## 6. Checkpoint Store Design
 
-`CheckpointStore` 类提供 session-data checkpoint 文件的统一 CRUD。
+`CheckpointStore` class provides unified CRUD for session-data checkpoint files.
 
-### 为什么需要抽象
+### Why Abstraction Is Needed
 
-ECW 有 15+ 种 checkpoint 文件（session-state, domain-collab-report, phase2-assessment, impl-verify-findings...）。每个 Hook/Skill 都需要：
-- 找到当前 workflow 的目录
-- 检查文件存在性
-- 读写文件
-
-没有抽象 = 每处都重复目录拼接 + 错误处理逻辑。
+ECW has 15+ checkpoint file types. Each Hook/Skill needs to: find current workflow directory, check file existence, read/write files. Without abstraction = repeated path construction + error handling everywhere.
 
 ### API
 
 ```python
-store = CheckpointStore.from_latest_workflow(cwd)  # 找最新 workflow
-store.write("phase2-assessment", content)           # 创建目录 + 写入
+store = CheckpointStore.from_latest_workflow(cwd)  # find latest workflow
+store.write("phase2-assessment", content)           # create dirs + write
 content = store.read("knowledge-summary")           # None if missing
 store.exists("impl-verify-findings")                # bool
 store.list()                                        # ["session-state", ...]
 ```
 
-### 设计要点
+### Design Points
 
-- **workflow-id 隔离**: 每个 workflow 有独立子目录（`{YYYYMMDD}-{xxxx}`），避免覆盖
-- **from_latest_workflow()**: 自动找最新目录，Hook 不需要知道具体 workflow-id
-- **创建目录 on write**: `write()` 内部 `os.makedirs(exist_ok=True)`，调用方无需关心
-
----
-
-## 7. 错误处理哲学
-
-ECW hook 系统的错误处理遵循一个核心原则：**Hook 故障永不阻塞工作流。**
-
-### 分层策略
-
-| 层级 | 错误处理 | 原因 |
-|------|---------|------|
-| Hook 顶层 | `except: pass` + `{"result": "continue"}` | 用户操作不应因 hook bug 而失败 |
-| 状态写入 | `try/except` 包裹，失败 = 状态过期但流程继续 | 过期状态比阻塞工作流的代价低 |
-| 配置读取 | fallback default（如 risk_level 缺失 → 默认 P0） | 安全侧兜底 |
-| 文件解析 | YAML 解析失败 → 返回 None → 调用方判断 | 不传播异常到上游 |
-
-### 反模式
-
-- ❌ Hook 中 `raise` 导致 Claude Code 报错
-- ❌ `sys.exit(1)` 终止进程
-- ❌ 重试循环（Hook 执行有隐式时限，重试可能超时）
-
-### 日志而非断言
-
-用 `log_trace()` 记录异常状态用于事后诊断，不用 `assert` 在运行时中断。`trace.jsonl` 是回顾工具，不是实时监控。
+- **workflow-id isolation**: each workflow has independent subdirectory (`{YYYYMMDD}-{xxxx}`)
+- **from_latest_workflow()**: auto-finds latest directory, Hooks don't need specific workflow-id
+- **Create dirs on write**: `write()` internally calls `os.makedirs(exist_ok=True)`
 
 ---
 
-## 8. 文档加载体系设计
+## 7. Error Handling Strategy
 
-Claude Code 的 context window 是稀缺资源。每个 session 自动加载的文档**直接占用推理预算**——多一行无用信息 = 少一行有效推理空间。
+Core principle: **Hook failures never block the workflow.**
 
-### 三原则
+### Layered Strategy
 
-| 原则 | 含义 | 违反时的表现 |
-|------|------|-------------|
-| **精简** | 每个 token 都必须对 session 内的决策有贡献 | 文档越写越长，但模型行为没有因此变好 |
-| **按需加载** | 只在需要时才进入上下文，不需要时零开销 | 低频参考信息占据每个 session 的固定 token |
-| **有效** | 加载的内容必须能直接影响模型行为（约束/规则/上下文） | 文档存在但模型表现得像没读过一样 |
+| Layer | Error handling | Reason |
+|-------|--------------|--------|
+| Hook top-level | `except: pass` + `{"result": "continue"}` | User operations must not fail due to hook bugs |
+| State writes | `try/except` wrapped, failure = stale state but flow continues | Stale state costs less than blocked workflow |
+| Config reads | Fallback defaults (e.g., missing risk_level → default P0) | Fail to safe side |
+| File parsing | YAML parse failure → return None → caller decides | Don't propagate exceptions upstream |
 
-### 文档分层架构
+### Anti-patterns
 
-```
-Layer 0: 每 session 自动加载（CLAUDE.md + Memory index）
-  → 只放"违反就出错"的硬性规则
-  → 目标: < 2000 tokens
+- ❌ `raise` in Hook causing Claude Code error
+- ❌ `sys.exit(1)` terminating process
+- ❌ Retry loops (Hooks have implicit time limits, retries may timeout)
 
-Layer 1: 动态注入（session-start hook）
-  → 只在有活跃工作流时注入相关状态
-  → 条件触发，无工作流时零开销
+### Logging, Not Assertions
 
-Layer 2: 按需读取（docs/、templates/、prompts/）
-  → CLAUDE.md 提供指引（"实现前读 X"），但不内联全文
-  → 模型在需要时通过 Read tool 自行获取
-
-Layer 3: 被动存档（CHANGELOG、理论反思文档）
-  → 不引用、不加载、不影响行为
-  → 仅供人类审阅或历史考古
-```
-
-### CLAUDE.md 内容准入标准
-
-一段内容要进入 CLAUDE.md（Layer 0），必须同时满足：
-
-1. **高频** — 超过 50% 的 session 需要参考它
-2. **行为约束** — 它是规则/约束/流程，不是知识/参考/背景
-3. **不可推导** — 不能通过阅读代码或现有文件推导出来
-
-| 适合 CLAUDE.md | 不适合 CLAUDE.md |
-|---------------|-----------------|
-| "Skills 不写状态" | 15 个 skill 的逐条描述（代码里有 frontmatter） |
-| "impl-verify 在标记完成前执行" | 25 个 artifact 文件的完整路径表（低频查询） |
-| "workflow-routes.yml 是路由唯一来源" | 每个 skill 的触发条件表（hook 自动处理） |
-
-### Memory 文件准入标准
-
-一条 memory 值得存在，必须满足：
-
-1. **未来有行动价值** — 不是"已完成的记录"，而是"下次遇到时要遵循的规则"
-2. **不可从代码/文档推导** — 如果 `docs/design-principles.md` 已经写了同样的内容，memory 就是冗余副本
-3. **不会自然过期** — project 类 memory 有保质期，完成后应清理
-
-### 反模式
-
-| 反模式 | 后果 | 修正 |
-|--------|------|------|
-| 把完整表格放 CLAUDE.md | 每 session 多 1000+ tokens，99% 用不上 | 外置到 docs/，CLAUDE.md 只留一行链接 |
-| Memory 记录"做了什么" | 变成历史日志，越积越多但无行动价值 | 只记"下次怎么做"，完成的及时清理 |
-| CLAUDE.md 复述 SKILL.md 内容 | 两处维护，必然漂移 | CLAUDE.md 只说"存在某规则"，不重复规则内容 |
-| 所有文档平铺在 CLAUDE.md | 无法区分"必须遵守"vs"按需参考" | 严格分层：Layer 0 只放硬性规则 |
-| "以防万一"多加几行 | 积少成多，半年后 CLAUDE.md 膨胀到 5000+ tokens | 定期审查：每行问"删掉它模型会出错吗？"不会就删 |
-
-### 定期审查机制
-
-每 5 个版本（或每月）执行一次文档审查：
-
-1. `wc -c CLAUDE.md` — 超过 8000 chars（~2000 tokens）就需要瘦身
-2. 逐条 Memory 问："这条删了，下次 session 会犯错吗？"
-3. CLAUDE.md 每个 section 问："过去 10 个 session 有几个用到了？"低于 30% 就外置
-4. 检查 docs/ 下是否有"应该加载但没被 CLAUDE.md 引用"的孤岛文档
+Use `log_trace()` to record anomalies for post-hoc diagnosis. Never use `assert` for runtime interruption. `trace.jsonl` is a retrospective tool, not real-time monitoring.
 
 ---
 
-## 9. Skill Token 预算与模型选择
+## 8. Document Loading Implementation
 
-### Token 预算
+> Principle definition: `design-principles.md` §7. This section covers admission criteria and review mechanisms.
 
-| Skill 类型 | 目标 | 示例 |
-|-----------|------|------|
-| 简单单步 | ~2,500 tokens | cross-review |
-| 标准多步 | ~4,000 tokens | requirements-elicitation, tdd, biz-impact-analysis |
-| 复杂编排器 | ~5,000 tokens | risk-classifier, impl-orchestration |
+### CLAUDE.md Admission Criteria
 
-运行 `python3 tests/static/lint_skills.py` 查看实际值（警告阈值 20,000 tokens）。
+| Belongs in CLAUDE.md | Does NOT belong |
+|---------------------|-----------------|
+| "Skills never write state" | Per-skill descriptions (code has frontmatter) |
+| "impl-verify runs before marking complete" | Full artifact path table (low-frequency lookup) |
+| "workflow-routes.yml is sole routing source" | Per-skill trigger conditions (hook handles automatically) |
 
-超预算的主因通常是 SKILL.md 包含了不该有的内容（路由逻辑、格式描述、重复的 anti-pattern 列表）。先按 §1-§8 的原则审查，再考虑"写得更短"。
+### Memory Admission Criteria
 
-### 模型选择
+A memory entry must satisfy:
 
-| 模型 | 适用场景 |
-|------|---------|
-| opus | 深度推理：对抗性审查、跨域分析、Phase 2 精确定级 |
-| sonnet | 实现执行：implementer、TDD cycle、spec-reviewer |
-| haiku | 轻量机械任务（目前未使用） |
+1. **Future action value** — not "what was done" but "what to follow next time"
+2. **Not derivable from code/docs** — if `design-principles.md` already states it, memory is redundant
+3. **Won't naturally expire** — project-type memories have shelf life, clean up when done
 
-**原则**：选择由推理密度决定，不是任务"重要程度"。简单但关键的配置变更 = sonnet；复杂的 P3 分析 = opus。
+### Anti-patterns
 
-默认值在 `ecw.yml` `models.defaults.*` 配置，可按项目覆盖（`models.overrides.*`）。
+| Anti-pattern | Consequence | Fix |
+|-------------|-------------|-----|
+| Full tables in CLAUDE.md | +1000 tokens/session, 99% unused | Externalize to docs/, one-line link in CLAUDE.md |
+| Memory records "what was done" | Grows into history log, no action value | Only record "what to do next time", clean up completed |
+| CLAUDE.md restates SKILL.md content | Dual maintenance, inevitable drift | CLAUDE.md says "rule exists", doesn't repeat content |
+| All docs flat in CLAUDE.md | Can't distinguish "must follow" vs "reference" | Strict layering: Layer 0 = hard rules only |
+| "Just in case" extra lines | Accumulates, CLAUDE.md bloats to 5000+ tokens in 6 months | Periodic review: "would removing this cause errors?" If no → remove |
 
-### Subagent 边界声明
+### Periodic Review
 
-每个 agent prompt 必须包含：
-1. 身份声明（"你是一个单任务 agent"）
-2. 禁止项（"不要调用/加载/派生其他 skill"）
-3. 范围限制（"你唯一的工作是……"）
+Every 5 versions (or monthly):
 
-缺少声明 → agent 尝试超范围操作（历史案例：spec-challenge agent 试图自行调用 tdd）。
+1. `wc -c CLAUDE.md` — over 8000 chars (~2000 tokens) → needs trimming
+2. Per Memory entry: "If deleted, would next session make mistakes?"
+3. Per CLAUDE.md section: "How many of the last 10 sessions used this?" Below 30% → externalize
+4. Check docs/ for orphan files not referenced by CLAUDE.md
 
-### 上下文管理
+---
 
-- 上下文超过 ~100K tokens 时建议拆分新会话
-- `session-state.md` 是唯一跨会话恢复状态
-- PreCompact hook 自动保存检查点——Skill 无需手动写检查点逻辑
+## 9. Skill Engineering Constraints
 
+Constraints for Skill authors: token budgets, model selection, and subagent boundaries.
+
+### Token Budget
+
+| Skill type | Target | Examples |
+|-----------|--------|----------|
+| Simple single-step | ~2,500 tokens | cross-review |
+| Standard multi-step | ~4,000 tokens | requirements-elicitation, tdd, biz-impact-analysis |
+| Complex orchestrator | ~5,000 tokens | risk-classifier, impl-orchestration |
+
+Run `python3 tests/static/lint_skills.py` to check actual values (warning threshold: 20,000 tokens).
+
+Over-budget root causes are usually SKILL.md containing content it shouldn't (routing logic, format descriptions, repeated anti-pattern lists). Audit against `design-principles.md` first, then consider "write shorter."
+
+### Model Selection
+
+| Model | Use case |
+|-------|----------|
+| opus | Deep reasoning: adversarial review, cross-domain analysis, Phase 2 precise grading |
+| sonnet | Implementation execution: implementer, TDD cycle, spec-reviewer |
+| haiku | Lightweight mechanical tasks (currently unused) |
+
+**Principle**: Selection determined by reasoning density, not task "importance." Simple but critical config change = sonnet; complex P3 analysis = opus.
+
+Defaults in `ecw.yml` `models.defaults.*`, project-overridable via `models.overrides.*`.
+
+### Subagent Boundary Declaration
+
+Every agent prompt must include:
+1. Identity declaration ("You are a single-task agent")
+2. Prohibitions ("Do not call/load/derive other skills")
+3. Scope limits ("Your only job is...")
+
+Missing declarations → agent attempts out-of-scope operations (historical: spec-challenge agent tried to self-invoke tdd).
+
+### Context Management
+
+- Recommend splitting to new session when context exceeds ~100K tokens
+- `session-state.md` is the only cross-session state recovery mechanism
+- PreCompact hook auto-saves checkpoints — Skills don't need manual checkpoint logic

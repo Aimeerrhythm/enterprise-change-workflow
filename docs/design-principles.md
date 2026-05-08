@@ -1,182 +1,205 @@
-# ECW 设计原则
+# ECW Architecture Specification
 
-## 模型升级测试
+Defines ECW's architectural constraints. Each principle includes a rule statement and judgment criteria; anti-patterns are in `component-design-patterns.md` where applicable.
 
-构建任何一层脚手架之前，先问自己：**下一代模型来的时候，这一层还有用吗？**
-
-好的脚手架会因为模型升级而变强。坏的脚手架会被模型升级淘汰。
-
-### 放大器 vs 拐杖
-
-每个组件都属于两类之一：
-
-- **放大器（Amplifier）**— 编排模型*自身做不到的事*（治理流程、审计追踪、组织规范）。模型越强，放大器产出越好。
-- **拐杖（Crutch）**— 补偿模型*当前做不好的事*（分步思考引导、格式强制、上下文窗口变通）。模型变强后，拐杖就是死重。
-
-设计规则：**重投放大器，轻装拐杖，保持拐杖可替换。**
-
-### 什么经得住模型升级
-
-| 持久（放大器） | 脆弱（拐杖） |
-|---------------|-------------|
-| 风险分级与工作流路由（治理） | 分步 Prompt 模板（思考引导） |
-| 对抗性审查 / 独立验证（认识论原则） | 显式的 keyword→domain 路由表（智能补偿） |
-| 审计记录与校准历史（合规） | 上下文 checkpoint 文件（窗口大小变通） |
-| 代码中不存在的显式业务知识（信息） | 输出格式强制与结构约束（能力补偿） |
-| 质量门禁与完成校验 Hook（确定性机制） | Skill 中的 "Common Mistakes" 列表（特定模型版本行为） |
-
-### 交通法规类比
-
-> 好的 AI 脚手架应该像交通法规，不像驾驶教练。法规不会因为司机技术进步而过时，但教练的很多指导会。
-
-ECW 应该定义**约束**（什么必须发生），而不是**路径**（怎么思考）。
-
-- 好：「P0 变更必须经过对抗性审查后才能进入实现」
-- 坏：「分析影响时，先看直接依赖，再看传递依赖，再看 MQ 链路……」
+Full design rationale and derivation: `essays/design-principles-essay.md`.
 
 ---
 
-## 流程与 Prompt 分离
+## 1. Model Upgrade Test
 
-一个 Skill 文件不应混合三种生命周期不同的关注点：
+**Rule: Invest in amplifiers, keep crutches lightweight and replaceable.**
 
-| 关注点 | 生命周期 | 例子 |
-|--------|----------|------|
-| **流程逻辑** | 持久——绑定治理需求 | P0 单域 → requirements-elicitation → Phase 2 → writing-plans → spec-challenge |
-| **输出模板** | 中等——随 UI/消费方需求变化 | Phase 1 报告格式、YAML schema |
-| **思考指令** | 短命——随模型能力提升而简化 | "提取关键词 → 匹配域 → 检查敏感词" |
+### Criteria
 
-把它们耦合在一个文件里意味着：改模板可能破坏流程逻辑，为新模型简化 Prompt 要在 500 行文件里做手术。
+| Amplifier | Crutch |
+|-----------|--------|
+| Orchestrates what models *cannot* do (governance, audit, compliance) | Compensates what models *currently* struggle with (format enforcement, step-by-step guidance) |
+| Stronger model → better output | Stronger model → dead weight |
 
-**原则：流程定义应该是声明式的、模型无关的。Prompt 工程应该可以在不触碰工作流图的情况下替换。**
+### Design Corollary
 
----
+ECW defines **constraints** (what must happen), not **paths** (how to think).
 
-## 确定性优先于概率性
-
-当某个行为必须可靠发生时，用确定性机制实现（Hook、脚本、状态机），而不是用 Prompt 指令请求。
-
-判断一条 Prompt 指令应该被机制化的信号：
-- 它在 Skill 文件中出现了 3 次以上（重复 = 遵守不可靠）
-- 它使用了「MUST」「CRITICAL」「NEVER」等强调词（强调 = 在补偿不合规）
-- 违反它会导致工作流损坏（高后果 = 需要保证）
-
-例：「Auto-Continue」（Skill 之间不要追问确认）仅在 risk-classifier 中就用 CRITICAL 标记重复了 3 次。这应该是 Hook 驱动的流程控制，而不是 Prompt 层面的请求。
+- Compliant: "P0 changes must pass adversarial review before implementation"
+- Violation: "When analyzing impact, first check direct deps, then transitive deps, then MQ chains..."
 
 ---
 
-## 最小化文件状态
+## 2. Process–Prompt Separation
 
-当 Skill 之间通过文件通信时，每个消费者都需要防御性代码（存在性检查、格式校验、损坏恢复）。ECW 当前有 20+ 处 "if file missing, log warning and degrade" 模式。
+**Rule: Process definitions are declarative and model-agnostic. Prompt engineering is replaceable without touching the workflow graph.**
 
-这不是健壮性——这是生产者与消费者之间契约太弱的信号。
+### Criteria
 
-**原则：**
-1. 将 checkpoint 读写集中到统一 API 后面（类似 `marker_utils.py` 但更完整）
-2. 质疑每个 checkpoint 文件是否真的需要——如果唯一消费者在同一个 Skill 内，就不需要持久化
-3. 接受约束（Claude Code Skill 只能通过文件共享状态），但最小化接触面
+A Skill file must not mix concerns with different lifecycles:
 
----
+| Concern | Lifecycle | Separation method |
+|---------|-----------|-------------------|
+| Process logic | Durable (tied to governance) | `workflow-routes.yml` |
+| Output templates | Medium (changes with consumers) | `templates/` |
+| Thinking instructions | Short-lived (simplifies with model upgrades) | Inside SKILL.md |
 
-## 风险等级应驱动一切
+### Anti-patterns
 
-ECW 已经将变更分为 P0-P3。这个信号应该传播到所有决策：
-
-| 决策 | 当前状态 | 更好的做法 |
-|------|----------|-----------|
-| 调用哪些 Skill | 风险驱动（好） | — |
-| 模型选择 | 按任务类型静态分配 | `f(task_type, risk_level)` |
-| Hook 严格度 | 风险驱动（好） | — |
-| 验证深度 | 风险驱动（好） | — |
-| Prompt 详细度 | 所有等级相同 | 低风险用更轻量的 Prompt |
-
-**原则：风险分级器是最重要的组件。所有下游决策都应引用它的输出。**
+See `component-design-patterns.md` §1 anti-patterns, §3 new-Skill workflow.
 
 ---
 
-## 状态所有权反转（State Ownership Inversion）
+## 3. Determinism over Probability
 
-> 来源：Issue #62 实践。结构性消除了 12 个历史 Issue 的根因。
+**Rule: Behavior that MUST happen reliably → implement as Hook/script/state machine, not Prompt instruction.**
 
-在 LLM Prompt + Hook 混合系统中，**状态管理职责共享**是最隐蔽的系统性耦合源。表面上看是"改了 A 忘改 B"的疏忽，根因是同一知识在两种载体（Python 代码 + 自然语言 Prompt）中各有一份副本。
+### Criteria
 
-### 原则
+Signals that a Prompt instruction should be mechanized:
+- Appears 3+ times across Skill files (repetition = unreliable compliance)
+- Uses emphasis words: "MUST", "CRITICAL", "NEVER" (emphasis = compensating for non-compliance)
+- Violation causes workflow corruption (high consequence = needs guarantee)
 
-**状态写入权单一归属：程序逻辑（Hook）独占写入，Prompt（SKILL.md）永远只读。**
+### Anti-patterns
 
-| | 改造前 | 改造后 |
+See `component-design-patterns.md` §1 design constraints.
+
+---
+
+## 4. Single Source of Truth
+
+**Rule: Any fact, rule, or mapping is defined in exactly one authoritative location. Other locations reference, never redefine.**
+
+### Criteria
+
+Violation signals:
+- Same mapping exists in both Python dict and YAML
+- Same rule described in both SKILL.md and Hook code
+- Changing one fact requires editing 2+ files
+
+### Resolution
+
+When duplication is found:
+1. Identify the **authoritative source** (typically the one closer to the mechanism layer)
+2. Other locations reference or derive from it
+3. Verify: change one place → system behavior is automatically consistent
+
+### Anti-patterns
+
+- ❌ `workflow-routes.yml` defines routing AND Hook hardcodes a mapping table
+- ❌ SKILL.md describes session-state field format AND Hook defines the same format
+- ❌ Multiple SKILL.md files each describe "downstream handoff" rules
+
+---
+
+## 5. Risk Level Drives Everything
+
+**Rule: Risk classifier is the core component. All downstream decisions (workflow depth, model selection, verification intensity) must reference its output.**
+
+### Criteria
+
+| Decision dimension | Must scale with risk level |
+|-------------------|---------------------------|
+| Workflow chain length | P0 full chain / P3 direct implementation |
+| Model selection | Driven by reasoning density, not risk level alone (see `component-design-patterns.md` §9) |
+| Verification depth | P0 multi-round impl-verify / P2 single round |
+| Prompt verbosity | Low risk → lighter Prompt |
+
+### Anti-patterns
+
+- ❌ All risk levels get the same verification depth (wasteful or insufficient)
+- ❌ Model selection based only on task type, ignoring risk level
+
+---
+
+## 6. State Ownership Inversion
+
+**Rule: State write ownership is singular — program logic (Hooks) owns all writes, Prompts (SKILL.md) are always read-only.**
+
+### Criteria
+
+Which layer does a Prompt instruction belong to?
+
+| Instruction | Belongs to |
+|-------------|-----------|
+| "Set `current_phase` to `plan-complete`" | Hook (state write) |
+| "Compute implementation_strategy and record in session-state" | Skill (business logic artifact) |
+| "Based on risk level, decide what to call next" | Hook (routing decision) |
+
+### Responsibility Matrix
+
+| | Skill | Hook |
 |---|---|---|
-| Skill 职责 | 产出 artifact + 写 session-state + 描述路由 | **只产出 artifact** |
-| Hook 职责 | 补充写 state + 校验 + 注入 | **独占写 state + 路由决策 + 注入只读上下文** |
-| SKILL.md 包含 | 业务逻辑 + 状态格式 + marker 语法 + 路由规则 | **只有业务逻辑** |
+| Produce artifacts | ✓ | — |
+| Write session-state fields | ✗ | ✓ |
+| Routing decisions | ✗ | ✓ |
+| Inject read-only context | — | ✓ |
 
-### 判断标准
+### Boundaries
 
-一条 Prompt 指令是"状态写入"还是"业务逻辑"？
+- Applies: state co-managed by prompt and program logic
+- Does not apply: Skill business logic output (e.g., risk-classifier creating initial session-state is artifact production)
+- Gray area: template files retaining format strings is acceptable (defining artifact format ≠ writing state transitions)
 
-- "把 `current_phase` 改为 `plan-complete`" → 状态写入 → 属于 Hook
-- "计算 implementation_strategy 并记录到 session-state" → 业务逻辑产出（artifact 的一部分）→ 可留在 Skill
-- "根据 risk level 决定下一步调什么" → 路由决策 → 属于 Hook
+### Anti-patterns
 
-### 实施模式
-
-1. **声明式配置** — 所有 skill 元数据（phase_name、mode、routing_aliases、off_chain）声明在 `workflow-routes.yml`，代码运行时解析
-2. **只读注入** — Hook PreToolUse 注入 `[ECW STATE — read-only]`，Skill 可感知状态但无写入指令
-3. **Grep 验收** — CI 级别硬性阻止 Prompt 中出现状态字段名（`current_phase`、`working_mode`、`ECW:STATUS`）
-
-### 耦合消除的量化
-
-| 变更场景 | 改造前需改几处 | 改造后需改几处 |
-|----------|--------------|--------------|
-| 新增一个 Skill | 5 处（routes.yml + 4 dict + SKILL.md Handoff） | **1 处**（routes.yml） |
-| 修改 session-state 字段名 | 10+ 处 | **1 处**（hooks 内部） |
-| 修改 marker 格式 | 12+ 处 | **1 处**（hooks 内部） |
-| 修改路由规则 | 2 处 | **1 处**（routes.yml） |
-
-### 适用边界
-
-- 适用于：任何 LLM agent 系统中 prompt 和程序逻辑共同管理的状态
-- 不适用于：Skill 的业务逻辑产出（如 risk-classifier 创建初始 session-state.md 是 artifact production）
-- 灰色地带：参考模板文件（如 `session-state-format.md`）保留格式字符串是合理的——它不是"写状态转移"，而是"定义 artifact 格式"
+See `component-design-patterns.md` §1 anti-patterns, §3 declarative routing.
 
 ---
 
-## 总结：六个试金石
+## 7. Document Loading Discipline
 
-在给 ECW 添加任何新功能或新层之前，用这六个问题检验：
+**Rule: Context window is a scarce resource. Auto-loaded content must pass three-criteria admission; everything else is loaded on-demand.**
 
-1. **模型升级测试** — 10 倍聪明的模型来了，这层还有用吗？
-2. **放大器还是拐杖** — 它在编排模型做不到的事，还是在补偿模型暂时做不好的事？
-3. **确定性测试** — 如果这件事必须可靠发生，它是一个机制还是一条 Prompt？
-4. **唯一来源测试** — 这个事实/规则是否只在一个地方定义？
-5. **风险比例测试** — 开销是否与风险等级成正比？
-6. **写入权测试** — 这个状态变更由谁负责？如果答案是"Prompt 和 Hook 都写"，就是耦合。
+### Admission Criteria (Layer 0 = CLAUDE.md)
+
+Content enters CLAUDE.md only when it **simultaneously** satisfies:
+
+1. **High frequency** — >50% of sessions need it
+2. **Behavioral constraint** — it's a rule/constraint, not knowledge/reference/background
+3. **Not derivable** — cannot be inferred from reading code or existing files
+
+### Loading Layers
+
+| Layer | Trigger | Content |
+|-------|---------|---------|
+| 0 | Every session (auto) | CLAUDE.md (hard rules + pointers) |
+| 1 | Active workflow exists | session-state summary + instincts |
+| 2 | On-demand when implementing | docs/ reference files |
+| 3 | Never loaded | essays/, CHANGELOG |
+
+### Anti-patterns
+
+See `component-design-patterns.md` §8.
+
+Implementation details (Memory admission, review mechanism): `component-design-patterns.md` §8.
 
 ---
 
-## 如何使用本文档
+## 8. Minimize File State
 
-本文档 + `component-design-patterns.md` 共同构成 ECW 的**架构决策基线**。它们有三种使用方式：
+**Rule: Minimize file-based communication surface between components. Checkpoint I/O goes through unified API. Every checkpoint file must have a clear producer and consumer.**
 
-### 1. 实现前 — 设计 Checklist
+### Criteria
 
-实现新功能时，逐条过六个试金石。如果某条亮红灯，停下来讨论架构方案再动手。
+- A checkpoint file whose only consumer is within the same Skill → no persistence needed
+- A file with 2+ independent writers → needs marker partitioning or writer consolidation
+- Before adding a file: who writes? who reads? can an existing file be reused?
 
-### 2. 出 Bug 时 — 根因归类
+### Anti-patterns
 
-遇到问题先问：**这个 bug 是否违反了已知的设计原则？**
+- ❌ Repeated "if file missing, log warning and degrade" across codebase (signal of weak contracts)
+- ❌ Bypassing `CheckpointStore` / `marker_utils` with direct path manipulation
+- ❌ Skill using `Edit` to append to marker section (writes beyond END marker)
 
-- 如果是 → 修复时回归到原则要求的状态，不要打补丁绕过
-- 如果不是 → 可能发现了新的约束，修复后补充到本文档
+---
 
-### 3. 重构时 — 架构回归标准
+## Litmus Test Quick-Check
 
-重构后跑两道验证：
-1. **功能回归**：`make all` 通过
-2. **架构回归**：本文档中每条原则的"反模式"列表，grep 确认代码中不存在
+Run through before implementing:
 
-如果实现和架构原则冲突，只有两个正确的出路：
-- **改实现** — 使其符合原则
-- **改原则** — 更新本文档，记录为什么原则在这个场景下不适用
-
-绝不允许第三种情况：原则写着 A，代码做着 B，两者悄悄共存。
+1. **Model upgrade** — Would a 10× smarter model still need this layer?
+2. **Amplifier vs crutch** — Orchestrating what models can't do, or compensating what they temporarily struggle with?
+3. **Determinism** — Must it happen reliably? Is it a mechanism or a Prompt?
+4. **Single source** — Is this fact/rule defined in exactly one place?
+5. **Risk proportionality** — Is overhead proportional to risk level?
+6. **Write ownership** — Who owns this state change? "Both Prompt and Hook" = coupling.
+7. **Loading discipline** — Is this content at the correct Layer?
+8. **File state** — Does this checkpoint file need to exist? Who writes, who reads?

@@ -1,6 +1,6 @@
 # ECW Artifact Reference
 
-Complete reference of all ECW project files, auto-generated artifacts, and knowledge files.
+Lookup table for all ECW project files. Use when you need to know where a file lives, when it's written, or what produces/consumes it.
 
 ## Required Files
 

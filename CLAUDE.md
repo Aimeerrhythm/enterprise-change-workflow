@@ -1,13 +1,16 @@
 # Enterprise Change Workflow (ECW) Plugin
 
-## Development Rules (for ECW contributors only)
+ECW is a Claude Code plugin — design all changes as reusable infrastructure: stable interfaces, zero host intrusion, configuration-driven.
 
-**Before implementing new features or fixing issues**, read `docs/design-principles.md` and `docs/component-design-patterns.md`.
+## Rules
 
-Key rules:
 - **State Ownership Inversion**: Skills never write state. Hooks own all state transitions. Routing lives in `workflow-routes.yml`.
-- **Single Source of Truth**: Any fact/rule defined in exactly one place.
+- **Single Source of Truth**: Any fact/rule defined in exactly one place. Other locations reference, never redefine.
 - **Determinism over Probability**: If behavior MUST happen reliably, implement as Hook/script, not Prompt instruction.
-- **Document Loading Discipline**: CLAUDE.md only holds rules that >50% sessions need + directly constrain behavior + can't be derived from code. Full criteria: `docs/component-design-patterns.md` §8.
+- **Document Loading Discipline**: CLAUDE.md only holds rules that >50% sessions need + directly constrain behavior + can't be derived from code.
 
-Project file reference: `docs/artifact-reference.md`. Architecture compliance checklist: `CONTRIBUTING.md`.
+## Workflow
+
+Before implementing, read `docs/design-principles.md` (full). Then read relevant sections of `docs/component-design-patterns.md` (see its index table).
+
+Run `make all` before committing. File reference: `docs/artifact-reference.md`. Compliance checklist: `CONTRIBUTING.md`.
