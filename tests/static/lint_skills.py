@@ -796,7 +796,7 @@ FORBIDDEN_DEFINITIONS = {
     "find_session_state": "marker_utils.find_session_state",
     "_read_ecw_config": "ecw_config.read_ecw_config",
 }
-SHARED_MODULES = {"marker_utils.py", "ecw_config.py"}
+SHARED_MODULES = {"marker_utils.py", "ecw_config.py", "dep_graph.py"}
 
 
 def check_hook_shared_modules(result: LintResult):
