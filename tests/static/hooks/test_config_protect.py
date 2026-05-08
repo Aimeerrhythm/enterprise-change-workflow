@@ -233,7 +233,7 @@ class TestEditablePathPrefixes:
 
     def test_state_file_passes(self, config_protect):
         """Files under .claude/ecw/state/ are editable (process artifacts)."""
-        inp = _make_input("/fake/project/.claude/ecw/state/cost-metrics.jsonl")
+        inp = _make_input("/fake/project/.claude/ecw/state/calibration-history.md")
         action, message = config_protect.check(inp)
         assert action == "continue"
         assert message == ""

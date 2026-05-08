@@ -326,7 +326,6 @@ enterprise-change-workflow/
 │   ├── bash-preflight.py        # Dangerous command pre-check
 │   ├── session-start.py         # Context injection + instinct loading
 │   ├── post-edit-check.py       # Anti-pattern detection on Edit/Write
-│   ├── cost-tracker.py          # Token cost tracking (Stop)
 │   ├── knowledge-read-logger.py # Knowledge file read logging (PostToolUse Read)
 │   ├── marker_utils.py          # Shared marker/status utilities
 │   └── ...
