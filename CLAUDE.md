@@ -46,6 +46,7 @@ Key rules (always enforced):
 - **State Ownership Inversion**: Skills never write state (`current_phase`, `working_mode`, `next`). Hooks own all state transitions. Routing decisions live in `workflow-routes.yml`, not in SKILL.md.
 - **Single Source of Truth**: Any fact/rule defined in exactly one place. If you need to update N files for one change, architecture is wrong.
 - **Determinism over Probability**: If behavior MUST happen reliably, implement as Hook/script, not as Prompt instruction.
+- **Document Loading Discipline**: CLAUDE.md only holds rules that >50% sessions need + directly constrain behavior + can't be derived from code. Everything else goes to `docs/` (read on demand). Never inline large tables or low-frequency reference into CLAUDE.md. Full criteria: `docs/component-design-patterns.md` §8.
 
 ## Completion Verification Rules
 
