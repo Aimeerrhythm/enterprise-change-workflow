@@ -1,7 +1,8 @@
 """Unit tests for hooks/session-end.py
 
 Tests the SessionEnd hook's cleanup behavior:
-- Marks session-state.md as ended
+- Marks session-state.md status as "ended" with timestamp (via STATUS YAML block)
+- Backfills last TIMELINE entry's end timestamp
 - Cleans up transient state files
 - Graceful handling when no state exists
 """
@@ -36,47 +37,173 @@ def session_end():
 # Mark Session Ended
 # ══════════════════════════════════════════════════════
 
+_STATUS_BLOCK = """\
+# ECW Session State
+
+<!-- ECW:STATUS:START -->
+risk_level: P1
+current_phase: phase2-complete
+auto_continue: true
+<!-- ECW:STATUS:END -->
+"""
+
+
 class TestMarkSessionEnded:
-    """Tests for _mark_session_ended function."""
+    """Tests for _mark_session_ended function — uses STATUS YAML block (issue #54)."""
 
-    def test_updates_existing_status(self, session_end, tmp_path):
-        """Updates existing Status field to 'ended'."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "# ECW\n- **Risk Level**: P1\n- **Status**: active\n"
-        )
+    def test_writes_session_status_to_status_block(self, session_end, tmp_path):
+        """session_status field is written into the STATUS marker block."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_STATUS_BLOCK)
 
         session_end._mark_session_ended(str(state_file))
         content = state_file.read_text()
+        assert "session_status:" in content
         assert "ended" in content
-        assert "active" not in content
 
-    def test_adds_status_after_current_phase(self, session_end, tmp_path):
-        """Adds Status field after Current Phase when no Status exists."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "# ECW\n- **Current Phase**: phase2-complete\n"
+    def test_session_status_inside_markers(self, session_end, tmp_path):
+        """session_status is placed within ECW:STATUS markers, not appended at end."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_STATUS_BLOCK)
+
+        session_end._mark_session_ended(str(state_file))
+        content = state_file.read_text()
+
+        # Find marker positions
+        start_idx = content.find("<!-- ECW:STATUS:START -->")
+        end_idx = content.find("<!-- ECW:STATUS:END -->")
+        ended_idx = content.find("session_status:")
+        assert start_idx < ended_idx < end_idx, (
+            "session_status must be inside STATUS markers"
         )
 
-        session_end._mark_session_ended(str(state_file))
-        content = state_file.read_text()
-        assert "**Status**: ended" in content
-        assert "Current Phase" in content
-
-    def test_appends_status_when_no_phase(self, session_end, tmp_path):
-        """Appends Status field when neither Status nor Current Phase exist."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text("# ECW\n- **Risk Level**: P2\n")
+    def test_existing_fields_preserved(self, session_end, tmp_path):
+        """Existing STATUS fields (risk_level, etc.) are preserved after update."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_STATUS_BLOCK)
 
         session_end._mark_session_ended(str(state_file))
         content = state_file.read_text()
-        assert "**Status**: ended" in content
+        assert "risk_level: P1" in content or "risk_level" in content
+        assert "current_phase" in content
+
+    def test_noop_when_no_status_block(self, session_end, tmp_path):
+        """No STATUS block → file unchanged (update_status_fields no-ops)."""
+        original = "# ECW\nsome content without markers\n"
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(original)
+
+        session_end._mark_session_ended(str(state_file))
+        assert state_file.read_text() == original
+
+    def test_file_unreadable_no_exception(self, session_end, tmp_path):
+        """Unreadable file path does not raise an exception."""
+        session_end._mark_session_ended(str(tmp_path / "nonexistent.md"))  # Should not raise
+
+
+# ══════════════════════════════════════════════════════
+# Backfill Last TIMELINE Entry
+# ══════════════════════════════════════════════════════
+
+_TIMELINE_WITH_NULL_END = """\
+# ECW Session State
+
+<!-- ECW:STATUS:START -->
+risk_level: P1
+<!-- ECW:STATUS:END -->
+
+<!-- ECW:TIMELINE:START -->
+- phase: risk-classifier
+  start: '2026-05-08T10:00:00'
+  end: '2026-05-08T10:05:00'
+  duration_s: 300
+- phase: writing-plans
+  start: '2026-05-08T10:05:00'
+  end: null
+  duration_s: null
+<!-- ECW:TIMELINE:END -->
+"""
+
+_TIMELINE_ALREADY_ENDED = """\
+# ECW Session State
+
+<!-- ECW:STATUS:START -->
+risk_level: P1
+<!-- ECW:STATUS:END -->
+
+<!-- ECW:TIMELINE:START -->
+- phase: risk-classifier
+  start: '2026-05-08T10:00:00'
+  end: '2026-05-08T10:05:00'
+  duration_s: 300
+<!-- ECW:TIMELINE:END -->
+"""
+
+
+class TestBackfillLastTimelineEntry:
+    """Tests for _backfill_last_timeline_entry function (issue #54)."""
+
+    def test_null_end_gets_filled(self, session_end, tmp_path):
+        """Last TIMELINE entry with end=null gets an end timestamp on session end."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_TIMELINE_WITH_NULL_END)
+
+        session_end._backfill_last_timeline_entry(str(state_file))
+        content = state_file.read_text()
+
+        # The last timeline entry should no longer have 'end: null'
+        # (yaml dump writes 'null' as 'null' or omits it with None → check for actual timestamp)
+        assert "writing-plans" in content
+        # null should have been replaced with a real timestamp value
+        import yaml
+        import re
+        m = re.search(r'<!-- ECW:TIMELINE:START -->\n(.*?)\n<!-- ECW:TIMELINE:END -->', content, re.DOTALL)
+        assert m, "TIMELINE block not found"
+        timeline = yaml.safe_load(m.group(1))
+        last = timeline[-1]
+        assert last["end"] is not None, "end should have been backfilled"
+        assert last["duration_s"] is not None, "duration_s should have been computed"
+
+    def test_already_ended_not_overwritten(self, session_end, tmp_path):
+        """Last TIMELINE entry that already has end set is not overwritten."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_TIMELINE_ALREADY_ENDED)
+        original = state_file.read_text()
+
+        session_end._backfill_last_timeline_entry(str(state_file))
+        # File content should be unchanged (end already set, no-op)
+        content = state_file.read_text()
+        assert "2026-05-08T10:05:00" in content
+
+    def test_empty_timeline_noop(self, session_end, tmp_path):
+        """Empty TIMELINE block is handled without error."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(
+            "<!-- ECW:TIMELINE:START -->\n<!-- ECW:TIMELINE:END -->\n"
+        )
+        session_end._backfill_last_timeline_entry(str(state_file))  # Should not raise
+
+    def test_no_timeline_block_noop(self, session_end, tmp_path):
+        """No TIMELINE block at all is handled without error."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text("# ECW\nno timeline here\n")
+        session_end._backfill_last_timeline_entry(str(state_file))  # Should not raise
+
+    def test_duration_s_computed_correctly(self, session_end, tmp_path):
+        """duration_s is set to a non-negative integer after backfill."""
+        state_file = tmp_path / "session-state.md"
+        state_file.write_text(_TIMELINE_WITH_NULL_END)
+
+        session_end._backfill_last_timeline_entry(str(state_file))
+
+        import yaml
+        import re
+        content = state_file.read_text()
+        m = re.search(r'<!-- ECW:TIMELINE:START -->\n(.*?)\n<!-- ECW:TIMELINE:END -->', content, re.DOTALL)
+        timeline = yaml.safe_load(m.group(1))
+        last = timeline[-1]
+        assert isinstance(last["duration_s"], int)
+        assert last["duration_s"] >= 0
 
 
 # ══════════════════════════════════════════════════════
@@ -127,14 +254,18 @@ class TestSessionEndMain:
                 assert output["result"] == "continue"
 
     def test_marks_state_and_cleans_up(self, session_end, tmp_path):
-        """Full flow: marks ended + cleans up modified-files.txt."""
+        """Full flow: marks ended in STATUS block + cleans up modified-files.txt."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-wf"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.md"
-        state_file.write_text("# ECW\n- **Risk Level**: P1\n- **Status**: active\n")
+        state_file.write_text(_STATUS_BLOCK)
         mf = tmp_path / ".claude" / "ecw" / "state" / "modified-files.txt"
         mf.parent.mkdir(parents=True, exist_ok=True)
         mf.write_text("foo.py\n")
+
+        # ecw.yml required for main() to proceed
+        ecw_dir = tmp_path / ".claude" / "ecw"
+        (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
 
         input_data = {"cwd": str(tmp_path)}
         with patch("json.load", return_value=input_data):

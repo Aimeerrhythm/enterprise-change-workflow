@@ -107,6 +107,8 @@ After biz-impact-analysis report is output:
 > Invoke `ecw:knowledge-track`.
 > Mark the biz-impact-analysis Task as complete.
 
+完成报告写入和 Ledger 更新后，如果 ecw.yml 中配置了 `knowledge_root` 且风险等级为 P0/P1，在进入 Phase 3 前立即调用 `ecw:knowledge-track`。
+
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 
 ## Subagent Ledger Update
