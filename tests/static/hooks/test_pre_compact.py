@@ -321,12 +321,13 @@ class TestGetSessionDataFiles:
 # ══════════════════════════════════════════════════════
 
 class TestAppendCompactMarker:
-    """Tests for _append_compact_marker appending timestamp to state file."""
+    """Tests for _append_compact_marker recording timestamp in state file."""
 
     def test_appends_marker(self, pre_compact_module, tmp_path):
-        state = tmp_path / "state.md"
-        state.write_text("# ECW State\n")
+        state = tmp_path / "state.json"
+        state.write_text(json.dumps({"risk_level": "P1", "current_phase": "impl-loaded"}))
         pre_compact_module._append_compact_marker(str(state))
-        content = state.read_text()
-        assert "<!-- ECW:COMPACT:" in content
-        assert content.startswith("# ECW State\n")
+        data = json.loads(state.read_text())
+        assert "compact_markers" in data
+        assert len(data["compact_markers"]) == 1
+        assert data["risk_level"] == "P1"  # existing fields preserved
