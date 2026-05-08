@@ -21,8 +21,6 @@ ECW not initialized. Please run /ecw-init first.
 
 Then stop.
 
-**Create upgrade marker:** Run `touch .claude/ecw/.config-edit-allowed` via Bash to temporarily allow config file edits. This marker must be cleaned up in Step 4.
-
 ---
 
 ## Step 1: Run All Idempotent Checks
@@ -195,7 +193,5 @@ Error handling:
 After all fixes (or if all checks passed), **update the `ecw_version` field** in project `.claude/ecw/ecw.yml` to match the current plugin version (read from plugin `package.json`). If the field doesn't exist, add it after the file header comments. Do this before validation so `session-start.py` version check passes on next session.
 
 Then **automatically execute `/ecw-validate-config`** to verify the full configuration health. Do not ask the user — just run it.
-
-**Clean up upgrade marker:** Run `rm -f .claude/ecw/.config-edit-allowed` via Bash to restore config protection.
 
 Output the validation report directly as the final output of the upgrade command.

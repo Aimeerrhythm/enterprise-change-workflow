@@ -283,7 +283,6 @@ ECW 使用统一 Dispatcher 模式。`hooks.json` 注册 6 个事件点：
 | 子模块 | Profile | 说明 |
 |--------|---------|------|
 | `verify-completion` | 全部 | 4 项硬拦截 + 1 项软提醒 |
-| `config-protect` | 全部 | 阻止 AI 修改 ECW 关键配置文件 |
 | `gateguard-fact-force` | standard, strict | 实现者事实溯源守卫 |
 | `secret-scan` | standard, strict | 敏感数据检测 |
 | `bash-preflight` | standard, strict | 危险命令预检 |
@@ -320,7 +319,6 @@ enterprise-change-workflow/
 │   ├── dispatcher.py            # PreToolUse 统一调度器
 │   ├── auto-continue.py         # Skill 间自动衔接（PreToolUse + PostToolUse）
 │   ├── verify-completion.py     # 4 项硬拦截 + 1 项软提醒
-│   ├── config-protect.py        # 配置文件保护
 │   ├── gateguard-fact-force.py  # 实现者事实溯源守卫
 │   ├── secret-scan.py           # 敏感数据检测
 │   ├── bash-preflight.py        # 危险命令预检

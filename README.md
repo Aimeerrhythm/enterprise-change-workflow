@@ -283,7 +283,6 @@ ECW uses a unified dispatcher pattern. `hooks.json` registers 6 event points:
 | Sub-module | Profiles | Description |
 |------------|----------|-------------|
 | `verify-completion` | all | 4 hard blocks + 1 soft reminder before task completion |
-| `config-protect` | all | Block AI from modifying critical ECW config files |
 | `gateguard-fact-force` | standard, strict | Implementer fact-forcing source traceability gate |
 | `secret-scan` | standard, strict | Detect sensitive data (AWS keys, JWT, GitHub tokens) |
 | `bash-preflight` | standard, strict | Dangerous command pre-check (--no-verify, push --force, rm -rf) |
@@ -320,7 +319,6 @@ enterprise-change-workflow/
 │   ├── dispatcher.py            # PreToolUse unified dispatcher
 │   ├── auto-continue.py         # Skill-to-skill auto chaining (PreToolUse + PostToolUse)
 │   ├── verify-completion.py     # 4 hard blocks + 1 soft reminder
-│   ├── config-protect.py        # Config file protection
 │   ├── gateguard-fact-force.py  # Implementer fact-forcing gate
 │   ├── secret-scan.py           # Sensitive data detection
 │   ├── bash-preflight.py        # Dangerous command pre-check
