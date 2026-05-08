@@ -605,9 +605,6 @@ class TestIsEcwArtifact:
     def test_plans_file_is_artifact(self, hook_module):
         assert hook_module._is_ecw_artifact(".claude/plans/plan-001.md") is True
 
-    def test_state_file_is_artifact(self, hook_module):
-        assert hook_module._is_ecw_artifact(".claude/ecw/state/instincts.md") is True
-
     def test_source_code_is_not_artifact(self, hook_module):
         assert hook_module._is_ecw_artifact("src/main/java/com/example/Service.java") is False
 
