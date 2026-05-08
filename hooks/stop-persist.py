@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-"""ECW Stop hook — auto-persist workflow state + context health advisory.
+"""ECW Stop hook — context health advisory on phase transitions.
 
 Runs after every assistant response to:
-1. Update session-state.md with last-updated timestamp and activity summary
-2. Use marker-based idempotent updates (<!-- ECW:STOP:START/END -->)
-3. Detect phase transitions → check context health → write advisory file
-4. Never block normal workflow — all errors are swallowed
+1. Detect phase transitions → check context health → write advisory file
+2. Never block normal workflow — all errors are swallowed
 
 Input (stdin JSON):
   - stop_hook_active: bool
   - tool_calls: list of {tool_name, ...} from this response
   - cwd: working directory
-
-Marker format in session-state.md:
-  <!-- ECW:STOP:START -->
-  ... auto-updated content ...
-  <!-- ECW:STOP:END -->
 """
 
 import glob
@@ -23,47 +16,14 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
 
 # Import shared marker utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, _is_json_state, _read_json, _write_json  # noqa: E402
+from marker_utils import find_session_state, _is_json_state, _read_json  # noqa: E402
 
 MAX_CONTEXT = 200_000
 ADVISORY_FILE = ".claude/ecw/state/context-health.txt"
 PHASE_CACHE_FILE = ".claude/ecw/state/.last-phase"
-
-
-def _extract_activity_summary(input_data):
-    """Extract a brief activity summary from the stop hook input."""
-    tool_calls = input_data.get("tool_calls", [])
-    if not tool_calls:
-        return "No tool calls in this response"
-
-    # Count tool usage
-    tool_counts = {}
-    files_modified = set()
-    for tc in tool_calls:
-        name = tc.get("tool_name", "unknown")
-        tool_counts[name] = tool_counts.get(name, 0) + 1
-        # Track file modifications
-        if name in ("Edit", "Write"):
-            fp = tc.get("tool_input", {}).get("file_path", "")
-            if fp:
-                files_modified.add(os.path.basename(fp))
-
-    parts = []
-    for name, count in sorted(tool_counts.items(), key=lambda x: -x[1]):
-        parts.append(f"{name}({count})")
-    summary = "Tools: " + ", ".join(parts[:8])
-
-    if files_modified:
-        files_str = ", ".join(sorted(files_modified)[:5])
-        if len(files_modified) > 5:
-            files_str += f" +{len(files_modified) - 5} more"
-        summary += f" | Files: {files_str}"
-
-    return summary
 
 
 def _extract_current_phase(content):
@@ -153,38 +113,6 @@ def _update_context_advisory(cwd, state_content):
         pass  # Never block
 
 
-def _build_stop_section(input_data):
-    """Build the marker-enclosed auto-update section."""
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    activity = _extract_activity_summary(input_data)
-
-    return (
-        f"- **Last Updated**: {now}\n"
-        f"- **Activity**: {activity}"
-    )
-
-
-def _update_with_markers(state_path, content, new_inner):
-    """Update stop info. For JSON: writes stop field. For legacy md: uses markers."""
-    if _is_json_state(state_path):
-        data = _read_json(state_path) or {}
-        data["stop"] = {"last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "activity": new_inner}
-        _write_json(state_path, data)
-        return json.dumps(data)
-    else:
-        import re as _re
-        start_marker = "<!-- ECW:STOP:START -->"
-        end_marker = "<!-- ECW:STOP:END -->"
-        new_section = f"{start_marker}\n{new_inner}\n{end_marker}"
-        pattern = _re.compile(
-            _re.escape(start_marker) + r".*?" + _re.escape(end_marker), _re.DOTALL
-        )
-        if pattern.search(content):
-            return pattern.sub(new_section, content)
-        return content.rstrip() + "\n\n" + new_section + "\n"
-
-
 def _is_ecw_project(cwd):
     return bool(cwd) and os.path.isfile(os.path.join(cwd, ".claude", "ecw", "ecw.yml"))
 
@@ -197,9 +125,8 @@ def main():
         print(json.dumps({"result": "continue"}))
         return
 
-    # Skip update when no tool calls occurred — pure text responses don't
-    # represent real progress and updating Last Updated + Activity in that
-    # case creates noise that masks actual phase transitions (Issue #21).
+    # Skip when no tool calls — pure text responses don't represent real progress
+    # and checking phase on every turn creates noise (Issue #21).
     tool_calls = input_data.get("tool_calls", [])
     if not tool_calls:
         print(json.dumps({"result": "continue"}))
@@ -207,7 +134,6 @@ def main():
 
     state_path = find_session_state(cwd)
     if not state_path:
-        # No active session-state — nothing to persist
         print(json.dumps({"result": "continue"}))
         return
 
@@ -217,27 +143,14 @@ def main():
             if data.get("session_status", "").startswith("ended"):
                 print(json.dumps({"result": "continue"}))
                 return
-            activity = _extract_activity_summary(input_data)
-            data["stop"] = {"last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "activity": activity}
-            _write_json(state_path, data)
             _update_context_advisory(cwd, json.dumps(data))
         else:
             with open(state_path, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-
             if re.search(r'\*\*Status\*\*:\s*ended', content, re.IGNORECASE):
                 print(json.dumps({"result": "continue"}))
                 return
-
-            new_section = _build_stop_section(input_data)
-            updated = _update_with_markers(state_path, content, new_section)
-
-            with open(state_path, "w", encoding="utf-8") as f:
-                f.write(updated)
-
-            _update_context_advisory(cwd, updated)
-
+            _update_context_advisory(cwd, content)
     except Exception:
         pass  # Stop hook errors must never block workflow
 
