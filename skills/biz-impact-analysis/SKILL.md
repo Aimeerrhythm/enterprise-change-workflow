@@ -101,13 +101,7 @@ When `ecw:impl-verify` completes:
 
 ## Integration with Phase 3
 
-After biz-impact-analysis report is output:
-
-> **Knowledge utilization tracking**: If ecw.yml `paths.knowledge_root` exists (ECW-ready session):
-> Invoke `ecw:knowledge-track`.
-> Mark the biz-impact-analysis Task as complete.
-
-完成报告写入和 Ledger 更新后，如果 ecw.yml 中配置了 `knowledge_root` 且风险等级为 P0/P1，在进入 Phase 3 前立即调用 `ecw:knowledge-track`。
+After biz-impact-analysis report is output, mark the biz-impact-analysis Task as complete.
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 

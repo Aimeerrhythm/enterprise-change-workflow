@@ -210,7 +210,7 @@ ecw:risk-classifier (P0 / P1 cross-domain)
 
 ### Post-Review: Auto-Continue to Implementation
 
-After spec-challenge completes and user confirms review results (Plan updated), proceed to implementation. Read session-state.md `next` field to determine which skill to invoke next. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
+After spec-challenge completes and user confirms review results (Plan updated), immediately invoke the next skill. Read `next` from `.claude/ecw/session-data/{workflow-id}/session-state.json` and call it directly — do not ask for confirmation, do not output a transition message. The user already approved the full routing chain during Phase 1. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
 
 ### Manual Trigger
 
