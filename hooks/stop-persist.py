@@ -14,7 +14,6 @@ Input (stdin JSON):
 import glob
 import json
 import os
-import re
 import sys
 
 # Import shared marker utilities (same directory)
@@ -27,9 +26,11 @@ PHASE_CACHE_FILE = ".claude/ecw/state/.last-phase"
 
 
 def _extract_current_phase(content):
-    """Extract Current Phase from session-state.md content."""
-    m = re.search(r'\*\*Current Phase\*\*:\s*(.+)', content)
-    return m.group(1).strip() if m else None
+    """Extract current_phase from session-state JSON string."""
+    try:
+        return json.loads(content).get("current_phase") or None
+    except Exception:
+        return None
 
 
 def _check_context_health(cwd):

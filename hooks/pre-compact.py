@@ -12,16 +12,12 @@ Marker format appended to session-state.md:
 
 import json
 import os
-import re
 import sys
 from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import find_session_state, CheckpointStore, parse_status  # noqa: E402
-
-
-COMPACT_MARKER_PREFIX = "<!-- ECW:COMPACT:"
 
 
 def _get_session_data_files(cwd):
@@ -36,13 +32,20 @@ def _get_session_data_files(cwd):
 
 
 def _append_compact_marker(state_path):
-    """Append compaction timestamp marker to session-state.md."""
+    """Record compaction timestamp in session-state JSON (compact_markers field)."""
     try:
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
-        marker = f"\n{COMPACT_MARKER_PREFIX}{now} -->\n"
-
-        with open(state_path, "a", encoding="utf-8") as f:
-            f.write(marker)
+        try:
+            with open(state_path, encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            return
+        markers = data.get("compact_markers") or []
+        markers.append(now)
+        data["compact_markers"] = markers
+        with open(state_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
     except Exception:
         pass  # Best-effort; never block
 
