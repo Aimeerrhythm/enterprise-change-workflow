@@ -101,7 +101,8 @@ class TestExtractCurrentPhase:
     """Tests for _extract_current_phase from session-state content."""
 
     def test_extracts_phase(self, stop_persist):
-        content = "- **Current Phase**: implementation\n- **Risk Level**: P0\n"
+        import json
+        content = json.dumps({"current_phase": "implementation", "risk_level": "P0"})
         assert stop_persist._extract_current_phase(content) == "implementation"
 
     def test_returns_none_when_missing(self, stop_persist):

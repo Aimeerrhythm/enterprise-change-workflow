@@ -106,26 +106,16 @@ def _advance_session_state(state_path, skill_name):
     try:
         fields_dict = parse_status(state_path) or {}
 
-        # Phase 3 guard for risk-classifier
+        # Phase 3 guard for risk-classifier.
+        # knowledge-track's PostToolUse sets next="ecw:risk-classifier" via Phase 3
+        # routing alias. Phase 1 next points to the first downstream skill (e.g.
+        # requirements-elicitation). This is the only reliable discriminator since
+        # current_phase is overwritten to "risk-classifier" by PreToolUse before we
+        # get here, and routing-position checks always fire for P0/P1 chains.
         effective_phase = phase
         if skill_name == "ecw:risk-classifier" and phase == "phase1-loaded":
-            routing = fields_dict.get("routing") or []
-            phase3_in_routing = any(
-                str(step).strip() == "Phase 3" for step in routing
-            )
-            if phase3_in_routing:
-                steps = [str(s).strip() for s in routing]
-                kt_idx = next(
-                    (i for i, s in enumerate(steps)
-                     if _routing_step_to_skill(s) == "ecw:knowledge-track"),
-                    -1,
-                )
-                p3_idx = next(
-                    (i for i, s in enumerate(steps) if s == "Phase 3"),
-                    -1,
-                )
-                if kt_idx != -1 and p3_idx != -1 and kt_idx < p3_idx:
-                    effective_phase = "phase3-complete"
+            if fields_dict.get("next") == "ecw:risk-classifier":
+                effective_phase = "phase3-complete"
 
         if effective_phase:
             update_status_fields(state_path, {"current_phase": effective_phase})
@@ -204,14 +194,19 @@ def main():
 
     routing = fields_dict.get("routing") or []
     risk_level = fields_dict.get("risk_level") or ""
-    next_skill = fields_dict.get("next") or ""
+
+    # Recompute next from routing (authoritative) rather than reading the
+    # LLM-written next field, which may be stale or wrong (Issue #48).
+    next_skill = _next_skill_from_routing(routing, skill_name) or ""
+    if next_skill:
+        update_status_fields(state_path, {"next": next_skill})
 
     # Advance phase and mode atomically before injecting the routing message.
     _advance_session_state(state_path, skill_name)
 
     # spec-challenge has mandatory per-flaw AskUserQuestion confirmation before proceeding.
-    # Phase/mode updates (above) still apply; only skip systemMessage injection so the
-    # "do not ask for confirmation" directive does not override the SKILL.md flow.
+    # PostToolUse fires immediately after Skill instructions load (before LLM executes them),
+    # so injecting "do not ask for confirmation" would suppress the Fatal Flaw flow.
     if skill_name == "ecw:spec-challenge":
         log_trace(cwd, "auto-continue", "PostToolUse",
                   skill=skill_name, action="skip_inject", reason="spec-challenge")
