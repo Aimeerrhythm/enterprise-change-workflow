@@ -309,12 +309,14 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
 
     Hard-codes the in-progress state so these fields are always accurate regardless
     of whether the SKILL.md prompt is followed — fixes Issue #26.
+
+    Returns a dict with read-only state context for injection, or None.
     """
     in_progress_phase = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else None
     mode = _SKILL_MODE.get(skill_name)
 
     if not in_progress_phase and not mode:
-        return
+        return None
 
     try:
         with open(state_path, encoding="utf-8", errors="ignore") as f:
@@ -364,8 +366,19 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
                   fields_updated={**({"current_phase": in_progress_phase} if in_progress_phase else {}),
                                   **({"next": next_skill} if next_skill else {}),
                                   **({"mode": mode} if mode else {})})
+
+        # Build read-only state context for Skill injection (Issue #62 Part 3)
+        risk_level = (fields_dict or {}).get("risk_level") or ""
+        remaining = _remaining_route(routing, skill_name)
+        return {
+            "risk_level": risk_level,
+            "mode": mode or "",
+            "next": next_skill or "",
+            "routing_remaining": remaining,
+        }
     except Exception:
         pass  # Never block workflow
+    return None
 
 
 def _advance_session_state(state_path, skill_name):
@@ -423,10 +436,26 @@ def main():
     hook_event = input_data.get("hook_event_name", "PostToolUse")
 
     if hook_event == "PreToolUse":
-        _handle_pre_tool_use(state_path, skill_name, cwd=cwd)
+        state_ctx = _handle_pre_tool_use(state_path, skill_name, cwd=cwd)
         instincts_msg = _get_skill_instincts(cwd, skill_name)
+
+        # Build read-only state context message (Issue #62 Part 3)
+        parts = []
+        if state_ctx and state_ctx.get("risk_level"):
+            ctx_line = (
+                f"[ECW STATE — read-only] risk={state_ctx['risk_level']}, "
+                f"mode={state_ctx['mode']}"
+            )
+            if state_ctx.get("next"):
+                ctx_line += f", next={state_ctx['next']}"
+            if state_ctx.get("routing_remaining"):
+                ctx_line += f", remaining={' → '.join(state_ctx['routing_remaining'])}"
+            parts.append(ctx_line)
         if instincts_msg:
-            print(json.dumps({"systemMessage": instincts_msg}, ensure_ascii=False))
+            parts.append(instincts_msg)
+
+        if parts:
+            print(json.dumps({"systemMessage": "\n\n".join(parts)}, ensure_ascii=False))
         else:
             print(json.dumps({"result": "continue"}))
         return

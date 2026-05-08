@@ -719,15 +719,18 @@ class TestPreToolUseHandler:
         state_file = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-cc01" / "session-state.md"
         assert self._parse_mode(state_file) == "implementation"
 
-    def test_pre_tool_use_returns_continue_not_system_message(self, tmp_path, monkeypatch):
-        """PreToolUse must return {result: continue}, never inject a systemMessage."""
+    def test_pre_tool_use_injects_readonly_state_context(self, tmp_path, monkeypatch):
+        """PreToolUse injects read-only state context as systemMessage (Issue #62)."""
         routing = "ecw:spec-challenge → TDD:RED → ecw:impl-verify"
         self._make_state(tmp_path, routing)
         output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:spec-challenge")
-        assert output.get("result") == "continue", (
-            "PreToolUse must return continue — it must never block skill execution"
+        assert "systemMessage" in output, (
+            "PreToolUse must inject read-only state context as systemMessage"
         )
-        assert "systemMessage" not in output
+        msg = output["systemMessage"]
+        assert "ECW STATE" in msg
+        assert "risk=P0" in msg
+        assert "mode=planning" in msg
 
     def test_pre_tool_use_does_not_update_next_when_last_skill(self, tmp_path, monkeypatch):
         """When the skill is last in the chain, Next must not be overwritten to None."""
@@ -1027,14 +1030,15 @@ class TestPreToolUseInstinctsInjection:
                "instinct" in output["systemMessage"].lower(), \
             "systemMessage must include the instinct content"
 
-    def test_returns_continue_when_no_instincts(self, tmp_path, monkeypatch):
-        """When no instincts for this skill, PreToolUse returns {result: continue}."""
+    def test_returns_state_context_when_no_instincts(self, tmp_path, monkeypatch):
+        """When no instincts for this skill, PreToolUse still injects state context."""
         self._make_state(tmp_path)
         # No instincts.md created
         output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:writing-plans")
-        assert output.get("result") == "continue", \
-            "Without instincts, PreToolUse must return continue"
-        assert "systemMessage" not in output
+        assert "systemMessage" in output, \
+            "PreToolUse must inject state context even without instincts"
+        assert "ECW STATE" in output["systemMessage"]
+        assert "INSTINCTS" not in output["systemMessage"]
 
     def test_injects_correct_skill_instincts_not_others(self, tmp_path, monkeypatch):
         """Injected instincts must be for the loading skill, not for other skills."""
@@ -1054,9 +1058,10 @@ class TestPreToolUseInstinctsInjection:
             "(no instincts yet)\n"
         )
         output = self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:writing-plans")
-        # writing-plans section has "no instincts yet" → empty → return continue
-        assert output.get("result") == "continue", \
-            "Must return continue when skill section is empty/no-instincts"
+        # writing-plans section has "no instincts yet" → no instincts, but state context still injected
+        assert "systemMessage" in output
+        assert "INSTINCTS" not in output["systemMessage"], \
+            "Must NOT inject instincts from other skills"
 
 
 class TestSessionStartInstinctsCompatibility:
