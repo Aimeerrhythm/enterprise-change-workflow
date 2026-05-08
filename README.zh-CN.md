@@ -326,7 +326,6 @@ enterprise-change-workflow/
 │   ├── bash-preflight.py        # 危险命令预检
 │   ├── session-start.py         # 上下文注入 + instinct 加载
 │   ├── post-edit-check.py       # 反模式检测（Edit/Write）
-│   ├── cost-tracker.py          # Token 成本追踪（Stop）
 │   ├── knowledge-read-logger.py # 知识文件读取日志（PostToolUse Read）
 │   ├── marker_utils.py          # 共享 marker/status 工具模块
 │   └── ...
