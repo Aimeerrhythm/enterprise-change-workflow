@@ -6,7 +6,6 @@ On each new session, detects and injects:
 2. session-data/ checkpoints — latest checkpoint files summary
 3. ecw.yml key config — project name, language, risk level
 4. Pending task recovery hint
-5. High-confidence instincts from Phase 3 calibration
 
 Output is additionalContext injected into the session system prompt.
 """
@@ -18,7 +17,7 @@ import sys
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status, parse_instincts, _is_json_state, _read_json  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status, _is_json_state, _read_json  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -150,19 +149,6 @@ def _check_modified_files(cwd):
     return []
 
 
-# Minimum confidence threshold for instinct injection
-INSTINCT_CONFIDENCE_THRESHOLD = 0.7
-
-
-def _read_instincts(cwd):
-    """Read instincts with confidence > threshold.
-
-    Delegates to marker_utils.parse_instincts() (Issue #62 Part 4).
-    Returns a list of dicts with keys: pattern, action, confidence, source, skill.
-    """
-    return parse_instincts(cwd, min_confidence=INSTINCT_CONFIDENCE_THRESHOLD)
-
-
 def _check_version_mismatch(cwd):
     """Compare plugin version vs ecw.yml ecw_version.
 
@@ -284,22 +270,6 @@ def main():
             file_list += f"\n- ...and {len(prev_modified) - 10} more"
         sections.append(
             f"# [ECW] Previously modified files\n\n{file_list}"
-        )
-
-    # 6. High-confidence instincts from Phase 3 calibration
-    instincts = _read_instincts(cwd)
-    if instincts:
-        lines = []
-        for inst in instincts:
-            conf = inst.get("confidence", 0)
-            lines.append(
-                f"- [{conf:.1f}] {inst['pattern']} → {inst['action']}"
-            )
-        sections.append(
-            "# [ECW] Risk classification instincts (learned from Phase 3)\n\n"
-            "These heuristics are derived from past calibration. "
-            "Consider them during Phase 1 risk assessment.\n\n"
-            + "\n".join(lines)
         )
 
     if not sections:
