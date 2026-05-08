@@ -47,25 +47,12 @@ User request → LLM decides to call Skill
 | Hook exceptions must be silently swallowed | `except: pass` — stale state is better than blocked workflow |
 | PreToolUse does not inject "do not ask" | Some Skills (spec-challenge) have mandatory user confirmation |
 | PostToolUse is the sole routing decision point | Skills themselves never decide "where to go next" |
-| **PostToolUse fires when Skill delivers instructions, not when LLM finishes work** | The `Skill` tool returns immediately after loading SKILL.md. Multi-turn interactions (AskUserQuestion, sub-agent dispatch) happen in subsequent LLM turns — after PostToolUse has already fired. Do not attempt to detect "skill completion" from PostToolUse for interactive skills. |
-| **Entry-point skills are not in the routing chain** | risk-classifier Phase 1 creates session-state.json; it is not listed in the routing it writes. `_next_skill_from_routing(routing, "ecw:risk-classifier")` returns None. The hook cannot recompute `next` for entry-point skills; LLM-written `next` is authoritative for Phase 1. |
-| **Never append text to JSON state files** | Appending any non-JSON text corrupts `json.load()` on every subsequent read. Use read-modify-write for all state updates. |
-
-### Phase 3 Detection Pattern
-
-risk-classifier runs twice: Phase 1 (creates routing) and Phase 3 (calibration). To distinguish them inside `_advance_session_state`:
-
-- **Reliable**: `next == "ecw:risk-classifier"` — set by knowledge-track's PostToolUse via Phase 3 routing alias. Phase 1 `next` points to the first downstream skill.
-- **Unreliable** (do not use): routing-position check (`kt_idx < p3_idx`) — always true for P0/P1 chains; fires incorrectly on Phase 1.
-- **Unreliable** (do not use): `current_phase` check — PreToolUse overwrites `current_phase` to the in-progress skill name before PostToolUse reads it.
 
 ### Anti-patterns
 
 - ❌ Skill writes `current_phase` / `next` / `working_mode` (State Ownership Inversion)
 - ❌ Hook hardcodes skill mapping table (should dynamically load from routes.yml)
 - ❌ PreToolUse and PostToolUse both write the same field (race condition → inconsistent state)
-- ❌ Hook appends text to session-state.json (corrupts JSON; use read-modify-write)
-- ❌ SKILL.md conditionally gates the next skill call (e.g. "invoke X if condition Y") — conditions belong in routing chain, not skill text; LLM misreads conditions as optional gates
 
 ---
 
