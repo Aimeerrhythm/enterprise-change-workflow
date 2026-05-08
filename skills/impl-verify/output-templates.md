@@ -1,8 +1,8 @@
 # Impl-Verify Output Templates
 
-## Per-Round Persistence File Format (impl-verify-round{N}.md)
+## Per-Round Section Format (appended to impl-verify-findings.md)
 
-Each round's results are persisted immediately to an independent file. This file is the source of truth for that round's findings and survives even if the final merge into `impl-verify-findings.md` fails.
+Each round's results are appended immediately to `impl-verify-findings.md` upon receipt. Each round occupies a clearly delimited section with a round header, so findings from completed rounds survive even if subsequent rounds fail or context is compacted.
 
 ```markdown
 ---

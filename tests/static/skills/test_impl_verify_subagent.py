@@ -70,23 +70,22 @@ class TestImplVerifySubagentArchitecture:
 
 
 class TestImplVerifyPerRoundPersistence:
-    """Verify impl-verify has per-round persistence architecture (Issue #22).
+    """Verify impl-verify appends each round's findings immediately to impl-verify-findings.md.
 
-    The coordinator must persist each round's findings to an independent file
-    immediately upon receiving the subagent result, BEFORE attempting the
-    final merge into impl-verify-findings.md. This prevents data loss when
-    the merge step fails or context is compacted mid-verification.
+    The coordinator must append each round's results to impl-verify-findings.md
+    immediately upon receiving the subagent result. This prevents data loss when
+    subsequent rounds fail or context is compacted mid-verification.
     """
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = (ROOT / "skills" / "impl-verify" / "SKILL.md").read_text()
 
-    def test_per_round_file_naming_convention(self):
-        """SKILL.md must define per-round file naming (impl-verify-round{N}.md)."""
-        assert "impl-verify-round" in self.content, (
-            "Must define per-round file naming convention "
-            "(e.g., impl-verify-round1.md, impl-verify-round2.md)"
+    def test_findings_file_used_for_per_round_persistence(self):
+        """SKILL.md must direct coordinator to write findings to impl-verify-findings.md."""
+        assert "impl-verify-findings.md" in self.content, (
+            "Must direct coordinator to persist each round's findings "
+            "to impl-verify-findings.md"
         )
 
     def test_immediate_persistence_directive(self):
@@ -97,41 +96,50 @@ class TestImplVerifyPerRoundPersistence:
             "upon receipt, not defer to final merge"
         )
 
-    def test_merge_after_per_round_persistence(self):
-        """In coordinator responsibilities, per-round persistence step precedes merge step."""
+    def test_findings_file_appended_per_round(self):
+        """Coordinator responsibilities must describe incremental append to findings.md."""
         content = self.content
-        # Find the Coordinator responsibilities section
         coord_start = content.find("Coordinator responsibilities")
         assert coord_start != -1, "Must have Coordinator responsibilities section"
         coord_section = content[coord_start:]
-        round_file_pos = coord_section.find("impl-verify-round")
-        findings_file_pos = coord_section.find("impl-verify-findings.md")
-        assert round_file_pos != -1 and findings_file_pos != -1, (
-            "Both per-round files and findings.md must be mentioned "
-            "in Coordinator responsibilities"
+        assert "impl-verify-findings.md" in coord_section, (
+            "impl-verify-findings.md must be mentioned in Coordinator responsibilities"
         )
-        assert round_file_pos < findings_file_pos, (
-            "Per-round persistence must be described before final merge "
-            "to impl-verify-findings.md in coordinator flow"
+        first_findings_pos = coord_section.find("impl-verify-findings.md")
+        finalize_keywords = ["finalize", "complete and deduplicated", "before creating any fix"]
+        finalize_pos = -1
+        for kw in finalize_keywords:
+            pos = coord_section.find(kw)
+            if pos != -1:
+                finalize_pos = pos
+                break
+        assert finalize_pos != -1, (
+            "Coordinator responsibilities must describe a finalize step "
+            "that comes after per-round appends"
+        )
+        assert first_findings_pos < finalize_pos, (
+            "Per-round append to findings.md must be described before the finalize step"
         )
 
     def test_degraded_round_still_persists_completed(self):
-        """Even when some rounds fail, completed round files must be preserved."""
+        """Even when some rounds fail, completed round results in findings.md are preserved."""
         lower = self.content.lower()
         has_partial = (
             "partial" in lower
             or "completed round" in lower
             or "already persisted" in lower
+            or "remain intact" in lower
             or "surviving round" in lower
         )
         assert has_partial, (
-            "Must describe that completed round files survive even when "
-            "other rounds fail or the merge step errors"
+            "Must describe that completed round findings survive even when "
+            "other rounds fail"
         )
 
     def test_output_templates_has_per_round_format(self):
-        """output-templates.md must define per-round file format."""
+        """output-templates.md must define per-round section format for findings.md."""
         templates = (ROOT / "skills" / "impl-verify" / "output-templates.md").read_text()
-        assert "impl-verify-round" in templates, (
-            "output-templates.md must document per-round file format"
+        assert "impl-verify-findings.md" in templates, (
+            "output-templates.md must document the per-round section format "
+            "appended to impl-verify-findings.md"
         )
