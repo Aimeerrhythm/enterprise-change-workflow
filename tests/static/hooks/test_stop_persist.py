@@ -1,8 +1,7 @@
 """Unit tests for hooks/stop-persist.py
 
-Tests the Stop hook's state persistence behavior:
-- Marker-based idempotent updates
-- Activity summary extraction
+Tests the Stop hook's context health advisory behavior:
+- Phase transition detection
 - Graceful handling when no session state exists
 """
 from __future__ import annotations
@@ -33,64 +32,6 @@ def stop_persist():
 
 
 # ══════════════════════════════════════════════════════
-# Activity Summary
-# ══════════════════════════════════════════════════════
-
-class TestExtractActivitySummary:
-    """Tests for _extract_activity_summary function."""
-
-    def test_no_tool_calls(self, stop_persist):
-        summary = stop_persist._extract_activity_summary({})
-        assert "No tool calls" in summary
-
-    def test_counts_tools(self, stop_persist):
-        input_data = {
-            "tool_calls": [
-                {"tool_name": "Edit", "tool_input": {"file_path": "/a/b.py"}},
-                {"tool_name": "Edit", "tool_input": {"file_path": "/a/c.py"}},
-                {"tool_name": "Read", "tool_input": {}},
-            ]
-        }
-        summary = stop_persist._extract_activity_summary(input_data)
-        assert "Edit(2)" in summary
-        assert "Read(1)" in summary
-
-    def test_tracks_modified_files(self, stop_persist):
-        input_data = {
-            "tool_calls": [
-                {"tool_name": "Write", "tool_input": {"file_path": "/a/test.py"}},
-            ]
-        }
-        summary = stop_persist._extract_activity_summary(input_data)
-        assert "test.py" in summary
-
-
-# ══════════════════════════════════════════════════════
-# Marker-Based Updates
-# ══════════════════════════════════════════════════════
-
-class TestMarkerUpdates:
-    """Tests for _update_with_markers function (legacy .md mode)."""
-
-    def test_appends_when_no_markers(self, stop_persist):
-        content = "# ECW Session State\n- **Risk Level**: P1\n"
-        result = stop_persist._update_with_markers("fake.md", content, "- **Last Updated**: now")
-        assert "ECW:STOP:START" in result
-        assert "Risk Level" in result  # Original content preserved
-
-    def test_replaces_existing_markers(self, stop_persist):
-        content = (
-            "# ECW Session State\n"
-            "<!-- ECW:STOP:START -->\n- **Last Updated**: old\n<!-- ECW:STOP:END -->\n"
-            "## Ledger\n"
-        )
-        result = stop_persist._update_with_markers("fake.md", content, "- **Last Updated**: new")
-        assert "old" not in result
-        assert "new" in result
-        assert "Ledger" in result  # Content after marker preserved
-
-
-# ══════════════════════════════════════════════════════
 # Main Function
 # ══════════════════════════════════════════════════════
 
@@ -105,26 +46,6 @@ class TestStopPersistMain:
                 stop_persist.main()
                 output = json.loads(mock_print.call_args[0][0])
                 assert output["result"] == "continue"
-
-    def test_updates_existing_state(self, stop_persist, tmp_path):
-        """With session-state.md → updates with markers."""
-        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
-        state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text("# ECW Session State\n- **Risk Level**: P0\n")
-
-        input_data = {
-            "cwd": str(tmp_path),
-            "tool_calls": [{"tool_name": "Read", "tool_input": {}}],
-        }
-        with patch("json.load", return_value=input_data):
-            with patch("builtins.print"):
-                stop_persist.main()
-
-        updated = state_file.read_text()
-        assert "ECW:STOP:START" in updated
-        assert "Last Updated" in updated
-        assert "Risk Level" in updated  # Original preserved
 
     def test_skips_ended_session(self, stop_persist, tmp_path):
         """Session with Status: ended → no update."""
@@ -172,9 +93,8 @@ class TestStopPersistMain:
         )
 
 
-
 # ══════════════════════════════════════════════════════
-# _extract_current_phase (v0.7+)
+# _extract_current_phase
 # ══════════════════════════════════════════════════════
 
 class TestExtractCurrentPhase:
@@ -189,29 +109,7 @@ class TestExtractCurrentPhase:
 
 
 # ══════════════════════════════════════════════════════
-# _build_stop_section (v0.7+)
-# ══════════════════════════════════════════════════════
-
-class TestBuildStopSection:
-    """Tests for _build_stop_section timestamp + activity formatting."""
-
-    def test_contains_last_updated(self, stop_persist):
-        input_data = {"tool_calls": [{"tool_name": "Read", "tool_input": {}}]}
-        section = stop_persist._build_stop_section(input_data)
-        assert "Last Updated" in section
-        assert "Activity" in section
-
-    def test_contains_tool_summary(self, stop_persist):
-        input_data = {"tool_calls": [
-            {"tool_name": "Edit", "tool_input": {"file_path": "/a/b.py"}},
-            {"tool_name": "Edit", "tool_input": {"file_path": "/a/c.py"}},
-        ]}
-        section = stop_persist._build_stop_section(input_data)
-        assert "Edit(2)" in section
-
-
-# ══════════════════════════════════════════════════════
-# _update_context_advisory (v0.7+)
+# _update_context_advisory
 # ══════════════════════════════════════════════════════
 
 class TestUpdateContextAdvisory:
