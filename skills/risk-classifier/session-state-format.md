@@ -95,8 +95,6 @@ Each skill sets the `MODE` marker section on entry to declare the current workin
 | `implementation` | impl-orchestration, tdd, systematic-debugging | Write code; keep atomic commits; run tests after each change |
 | `verification` | impl-verify, biz-impact-analysis | Review completed work; severity-grade findings; do not modify code |
 
-**Mode switch**: When entering a skill, update the MODE marker with YAML: `working_mode: {mode}`
-
 ## Session Advisory — Context Management
 
 After Plan completion (writing-plans finishes), evaluate whether to continue or start a new session:

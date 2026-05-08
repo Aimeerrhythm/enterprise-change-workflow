@@ -26,33 +26,22 @@ def _load_ecw_yml():
 
 
 class TestRiskClassifierAutoContinue:
-    """Verify risk-classifier has downstream handoff instructions after user confirms."""
+    """Verify risk-classifier references session-state.md but has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("risk-classifier")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff(self):
-        """Phase 2 must have a Downstream Handoff block."""
-        assert "downstream handoff" in self.lower, \
-            "risk-classifier must have Downstream Handoff block"
+    def test_no_downstream_handoff(self):
+        """Skills must NOT contain Downstream Handoff — hook owns state transitions."""
+        assert "downstream handoff" not in self.lower, \
+            "risk-classifier must NOT have Downstream Handoff block (Issue #62)"
 
-    def test_prohibits_confirmation_text(self):
-        """Phase 2 Downstream Handoff must reference session-state.md for routing."""
-        assert re.search(r'session.?state', self.lower), \
-            "risk-classifier must reference session-state.md in Downstream Handoff"
-
-    def test_has_auto_continue_field(self):
-        """Downstream Handoff in Phase 2 must reference session-state.md (which holds Auto-Continue)."""
+    def test_references_session_state(self):
+        """risk-classifier creates session-state.md, so must reference it."""
         assert re.search(r'session.?state', self.lower), \
             "risk-classifier must reference session-state.md"
-
-    def test_phase2_handoff_to_writing_plans(self):
-        """Phase 2 Downstream Handoff must route to ecw:writing-plans."""
-        assert re.search(r'phase\s*2.{0,300}writing.?plans', self.lower) or \
-               re.search(r'writing.?plans.{0,300}phase\s*2', self.lower), \
-            "Phase 2 Downstream Handoff must reference ecw:writing-plans"
 
 
 class TestAutoConfirmConfig:
@@ -76,152 +65,101 @@ class TestAutoConfirmConfig:
 
 
 class TestDomainCollabAutoContinue:
-    """Verify domain-collab has downstream handoff after Round 3."""
+    """Verify domain-collab has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("domain-collab")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "domain-collab/SKILL.md missing Downstream Handoff block"
-        )
-
-    def test_immediately_invokes_phase2(self):
-        assert re.search(r'immediately.{0,80}phase\s*2', self.lower), (
-            "domain-collab must immediately invoke Phase 2 for P0/P1"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "domain-collab/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
 
 
 class TestRequirementsElicitationAutoContinue:
-    """Verify requirements-elicitation has downstream handoff after summary confirmation."""
+    """Verify requirements-elicitation has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("requirements-elicitation")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "requirements-elicitation/SKILL.md missing Downstream Handoff block"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "requirements-elicitation/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
-
-    def test_invokes_phase2_or_writing_plans(self):
-        assert re.search(
-            r'phase\s*2', self.lower
-        ) and re.search(
-            r'writing.?plans', self.lower
-        ), "requirements-elicitation Downstream Handoff must reference Phase 2 and writing-plans"
 
 
 class TestSpecChallengeAutoContinue:
-    """Verify spec-challenge has downstream handoff to implementation."""
+    """Verify spec-challenge has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("spec-challenge")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "spec-challenge/SKILL.md missing Downstream Handoff block"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "spec-challenge/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
-
-    def test_routes_to_tdd_or_impl_orchestration(self):
-        has_route = bool(
-            re.search(r'ecw:tdd', self.lower)
-            and re.search(r'impl-orchestration', self.lower)
-        )
-        assert has_route, "spec-challenge Downstream Handoff must reference ecw:tdd and impl-orchestration"
 
 
 class TestTddDownstreamHandoff:
-    """Verify tdd has downstream handoff to impl-verify."""
+    """Verify tdd has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("tdd")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff(self):
-        assert "downstream handoff" in self.lower, (
-            "tdd/SKILL.md missing 'Downstream Handoff' section"
-        )
-
-    def test_has_handoff_block_with_impl_verify(self):
-        assert re.search(r'downstream handoff.{0,300}impl.?verify', self.lower), (
-            "tdd/SKILL.md Downstream Handoff must reference impl-verify"
-        )
-
-    def test_invokes_impl_verify(self):
-        assert re.search(r'impl.?verify', self.lower), (
-            "tdd must invoke impl-verify after all tasks GREEN"
+    def test_no_downstream_handoff(self):
+        assert "downstream handoff" not in self.lower, (
+            "tdd/SKILL.md must NOT have 'Downstream Handoff' section (Issue #62)"
         )
 
 
 class TestWritingPlansAutoContinue:
-    """Verify writing-plans auto-routes implementation without unnecessary AskUserQuestion."""
+    """Verify writing-plans has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("writing-plans")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "writing-plans/SKILL.md missing Downstream Handoff block"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "writing-plans/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
-
-    def test_no_unnecessary_ask(self):
-        start = self.content.find("## Downstream Handoff")
-        end = self.content.find("## Common Rationalizations")
-        if start != -1 and end != -1:
-            section = self.content[start:end].lower()
-            assert "offer execution choice via askuserquestion" not in section, (
-                "writing-plans Downstream Handoff should not offer execution choice "
-                "via AskUserQuestion — strategy is auto-decided"
-            )
 
 
 class TestImplVerifyAutoContinue:
-    """Verify impl-verify has downstream handoff to biz-impact-analysis in SKILL.md."""
+    """Verify impl-verify has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("impl-verify")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "impl-verify/SKILL.md missing Downstream Handoff block"
-        )
-
-    def test_p0_p1_routes_to_biz_impact(self):
-        assert re.search(r'p0.{0,200}biz.?impact|biz.?impact.{0,200}p0', self.lower), (
-            "impl-verify Downstream Handoff must route P0/P1 to ecw:biz-impact-analysis"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "impl-verify/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
 
 
 class TestBizImpactAutoContinue:
-    """Verify biz-impact-analysis has downstream handoff to Phase 3."""
+    """Verify biz-impact-analysis has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("biz-impact-analysis")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "biz-impact-analysis/SKILL.md missing Downstream Handoff block"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "biz-impact-analysis/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
-
-    def test_routes_to_phase3(self):
-        assert re.search(
-            r'phase\s*3', self.lower
-        ) or re.search(
-            r'risk.?classifier.{0,60}phase', self.lower
-        ), "biz-impact-analysis Downstream Handoff must reference Phase 3 calibration"
 
 
 class TestSpecChallengeHookBehavior:
@@ -389,75 +327,45 @@ class TestRemainingRouteUnit:
 
 
 class TestSystematicDebuggingAutoContinue:
-    """systematic-debugging must have a Downstream Handoff block routing to impl-verify."""
+    """systematic-debugging must NOT have a Downstream Handoff block (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
         self.content = _read_skill("systematic-debugging")
         self.lower = self.content.lower()
 
-    def test_has_downstream_handoff_block(self):
-        assert "downstream handoff" in self.lower, (
-            "systematic-debugging/SKILL.md missing Downstream Handoff block — "
-            "bug fix workflow will truncate and never reach impl-verify"
-        )
-
-    def test_routes_to_impl_verify(self):
-        assert "impl-verify" in self.lower or "ecw:impl-verify" in self.lower, (
-            "systematic-debugging Downstream Handoff must route to ecw:impl-verify"
+    def test_no_downstream_handoff_block(self):
+        assert "downstream handoff" not in self.lower, (
+            "systematic-debugging/SKILL.md must NOT have Downstream Handoff block (Issue #62)"
         )
 
 
-class TestDownstreamHandoffStatusMarker:
-    """Downstream Handoff in all active skills must require STATUS marker when updating Next.
+class TestStateOwnershipInversion:
+    """Issue #62: Skills must NOT reference state fields or marker formats.
 
-    Background: auto-continue hook reads session-state.md via read_marker_section('STATUS').
-    If the model updates Next outside the STATUS block, the hook silently fails and
-    the auto-continue chain breaks. Each skill's Downstream Handoff must explicitly
-    require the update to be inside ECW:STATUS:START/END.
+    Hook owns all state management. Skills only produce artifacts.
     """
 
-    SKILLS_TO_CHECK = [
-        "tdd",
+    ALL_WORKFLOW_SKILLS = [
+        "risk-classifier",
         "writing-plans",
-        "domain-collab",
-        "requirements-elicitation",
+        "spec-challenge",
+        "tdd",
+        "impl-orchestration",
         "impl-verify",
         "biz-impact-analysis",
+        "domain-collab",
+        "requirements-elicitation",
+        "systematic-debugging",
     ]
 
-    @pytest.mark.parametrize("skill_name", SKILLS_TO_CHECK)
-    def test_downstream_handoff_requires_status_marker(self, skill_name):
-        content = _read_skill(skill_name)
-        lower = content.lower()
-
-        # Find the section-level "## Downstream Handoff" header (not inline references)
-        handoff_start = -1
-        for m in re.finditer(r'##\s+downstream handoff', lower):
-            handoff_start = m.start()
-            break
-
-        # Fall back to blockquote-style "> **Downstream Handoff**"
-        if handoff_start == -1:
-            m = re.search(r'>\s+\*\*downstream handoff\*\*', lower)
-            if m:
-                handoff_start = m.start()
-
-        assert handoff_start != -1, f"{skill_name}/SKILL.md missing Downstream Handoff block"
-
-        handoff_section = lower[handoff_start:handoff_start + 2000]
-        has_marker_ref = any(phrase in handoff_section for phrase in [
-            "ecw:status:start",
-            "status:start",
-            "marker block",
-            "within the",
-            "status marker",
-        ])
-        assert has_marker_ref, (
-            f"{skill_name}/SKILL.md Downstream Handoff says 'update Next field' "
-            f"but does not require the update to be inside the ECW:STATUS:START/END "
-            f"marker block — auto-continue hook will silently fail if model writes "
-            f"Next outside the marker"
+    @pytest.mark.parametrize("skill_name", ALL_WORKFLOW_SKILLS)
+    def test_no_downstream_handoff(self, skill_name):
+        """No SKILL.md should contain Downstream Handoff section."""
+        content = _read_skill(skill_name).lower()
+        assert "downstream handoff" not in content, (
+            f"{skill_name}/SKILL.md still contains 'Downstream Handoff' — "
+            f"Issue #62 requires hook-owned state transitions"
         )
 
 

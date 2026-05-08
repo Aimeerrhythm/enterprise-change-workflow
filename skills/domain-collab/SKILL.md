@@ -18,8 +18,6 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 **Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: analysis` / `<!-- ECW:MODE:END -->`.
-
 ## Trigger
 
 - **Manual**: `/domain-collab <requirement or change description>`
@@ -204,28 +202,11 @@ If all domain Agents return `impact_level: none`:
 
 ---
 
-## Downstream Handoff: risk-classifier Phase 2
+## Phase 2 Handoff Context
 
-Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. If unavailable (standalone invocation), default to P0.
-
-**P0/P1**: After collaboration analysis report is output, immediately execute risk-classifier Phase 2 (precise classification). Phase 2 will re-assess risk level based on this skill's collaboration analysis report (per-domain `affected_components`, `cross_domain_risks`, Coordinator cross-validation findings). Proceed to `ecw:writing-plans` after Phase 2 completes.
-
-**P2**: Skip Phase 2 (Phase 1 lightweight check already covered), proceed directly to `ecw:writing-plans`.
-
-**Do not skip Phase 2 for P0/P1 and go directly to writing-plans** — collaboration analysis may discover cross-domain dependencies not foreseen in Phase 1, requiring level upgrade.
-
-Handoff flow (see `skills/risk-classifier/workflow-routes.yml` for complete routing):
-```
-P0/P1: ecw:domain-collab report → risk-classifier Phase 2 → ecw:writing-plans → ...
-P2:    ecw:domain-collab report → ecw:writing-plans → Implementation → ecw:impl-verify
-```
+After Round 3 completes, the collaboration analysis report is output and persisted. The auto-continue hook handles routing to the next skill based on risk level.
 
 **Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
-
-> **Downstream Handoff**: After Round 3 completes and report is output, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md and update `current_phase` to `domain-collab-complete` within the same STATUS marker block, then invoke the next skill:
-> - **P0/P1**: Invoke risk-classifier Phase 2.
-> - **P2**: Invoke `ecw:writing-plans`.
-> - If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
 
 ---
 

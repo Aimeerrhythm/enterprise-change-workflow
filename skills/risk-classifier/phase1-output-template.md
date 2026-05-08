@@ -28,5 +28,3 @@ Options:
   3. "Analysis only" — Complete impact analysis without entering implementation
   4. "Emergency fix" — Use fast track, skip full workflow
 ```
-
-> **Downstream Handoff**: When user selects "Proceed", invoke the next downstream skill (e.g., `ecw:domain-collab` or `ecw:requirements-elicitation`). The auto-continue hook handles subsequent skill transitions.

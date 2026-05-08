@@ -13,11 +13,9 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 **Announce at start:** "Using ecw:writing-plans to create the implementation plan."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: planning` / `<!-- ECW:MODE:END -->`.
-
 ## Plan Mode — Do Not Use
 
-**Do NOT call `EnterPlanMode` or `ExitPlanMode`.** This skill writes plans directly to `.claude/plans/` via the Write tool. Claude Code's built-in plan mode is a separate mechanism not used by ECW. After writing the plan file, use **AskUserQuestion** to confirm with the user (see Downstream Handoff).
+**Do NOT call `EnterPlanMode` or `ExitPlanMode`.** This skill writes plans directly to `.claude/plans/` via the Write tool. Claude Code's built-in plan mode is a separate mechanism not used by ECW. After writing the plan file, use **AskUserQuestion** to confirm with the user.
 
 ## Risk-Aware Detail Level
 
@@ -95,7 +93,6 @@ After receiving the subagent's summary:
 
 1. Update `session-state.md` with Plan summary and implementation strategy
 2. Display summary to user for confirmation
-3. Execute **Downstream Handoff** (spec-challenge routing, TDD reminder, implementation strategy routing — see below)
 
 ### Model
 
@@ -153,30 +150,6 @@ Read `./prompts/plan-quality-checks.md` for no-placeholder rules, design complet
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
 | `session-state.md` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
-
-## Downstream Handoff
-
-After saving the plan, determine and persist implementation strategy, then route to next step:
-
-**Update session-state.md:** Count tasks in the plan. Per risk-classifier "Implementation Strategy Selection" rules (Tasks ≤ 3 + files ≤ 5 = direct; Tasks 4-8 P0/P1 or Tasks > 8 = subagent-driven), determine strategy and update `.claude/ecw/session-data/{workflow-id}/session-state.md` `实现策略` field. If spec-challenge will follow (P0; P1 cross-domain), spec-challenge may refine this — write the initial value now.
-
-**1. Spec Challenge needed?** (P0; P1 cross-domain only)
-→ "Plan saved. Next: `ecw:spec-challenge` for adversarial review before implementation."
-→ Invoke `ecw:spec-challenge`. Skip steps 2-4 below; execution choice is handled by spec-challenge's Post-Review section after review completes.
-
-**2. TDD phase?** (P0-P2 when `tdd.enabled: true`, and spec-challenge NOT needed)
-→ Remind that implementation should follow `ecw:tdd`.
-
-**3. Auto-route implementation:** (when spec-challenge NOT needed)
-
-The implementation strategy was already determined and written to session-state.md (see "Update session-state.md" above). Apply the strategy automatically:
-
-| Strategy | Action |
-|----------|--------|
-| `subagent-driven` | Invoke `ecw:tdd` first (if `tdd.enabled: true`), then `ecw:impl-orchestration`. If `tdd.enabled: false`, invoke `ecw:impl-orchestration` directly. |
-| `direct` | Invoke `ecw:tdd` to begin the first Plan Task's RED phase. |
-
-> **Downstream Handoff**: The strategy is deterministically computed from Plan dimensions (Task count, file count, domain count) per risk-classifier rules. Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md and update `current_phase` to `plan-complete` within the same STATUS marker block, then invoke the next skill. If `auto_continue` field is missing or `false` in session-state.md, use AskUserQuestion for user choice (backward compatibility).
 
 ## Supplementary Files
 

@@ -19,8 +19,6 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."
 
-**Mode switch**: Update the MODE marker in session-state.md (if session-state.md exists): `<!-- ECW:MODE:START -->` / `working_mode: analysis` / `<!-- ECW:MODE:END -->`.
-
 ## When to Use
 
 - User proposes a new feature or requirement
@@ -175,14 +173,7 @@ After synthesis analysis completes and user has made decisions on findings, prod
 
 **Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (Phase 2, writing-plans) without depending on conversation history.
 
-Wait for user confirmation. After confirmation:
-- **P0/P1**: First execute ecw:risk-classifier Phase 2 (precise classification), then invoke `ecw:writing-plans`
-- **Fallback**: If Phase 2 not needed, invoke `ecw:writing-plans` directly
-
-> **Downstream Handoff**: After user confirms the requirement summary, update `next` field (YAML key) **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md and update `current_phase` to `requirements-complete` within the same STATUS marker block, then invoke the next skill:
-> - **P0/P1**: Invoke risk-classifier Phase 2, then `ecw:writing-plans`.
-> - **P2**: Invoke `ecw:writing-plans`.
-> - If `auto_continue` field is missing or `false` in session-state.md, wait for user direction (backward compatibility).
+Wait for user confirmation. After confirmation, the auto-continue hook routes to the next skill based on risk level.
 
 ## Error Handling
 

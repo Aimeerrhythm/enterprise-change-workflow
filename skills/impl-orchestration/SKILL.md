@@ -13,8 +13,6 @@ Execute plan by dispatching subagents per task in dependency-aware parallel laye
 
 **Announce at start:** "Using ecw:impl-orchestration to execute the plan with parallel layer dispatch."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: implementation` / `<!-- ECW:MODE:END -->`.
-
 ## When to Use
 
 Use when:
@@ -307,15 +305,7 @@ Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-disp
 
 **Do NOT dispatch a final code reviewer.** ECW uses `ecw:impl-verify` (4-Round multi-dimensional verification) which is more comprehensive.
 
-**Downstream Handoff — route to impl-verify:**
-
-1. Update `current_phase` to `impl-complete` within the `<!-- ECW:STATUS:START/END -->` marker block in session-state.md
-2. Call `TaskList` to check for pending tasks
-3. If a pending `ecw:impl-verify` task exists (created by risk-classifier with blockedBy dependency on implementation tasks):
-   - Mark it `in_progress` via TaskUpdate
-   - Invoke `ecw:impl-verify` using the Skill tool
-4. If no pending impl-verify task exists, invoke `ecw:impl-verify` directly via Skill tool
-5. impl-verify handles: requirements alignment, domain rule compliance, plan consistency, engineering standards
+After all tasks complete, invoke `ecw:impl-verify`. If a pending `ecw:impl-verify` task exists in TaskList, mark it `in_progress` first.
 
 ## Task Merging
 

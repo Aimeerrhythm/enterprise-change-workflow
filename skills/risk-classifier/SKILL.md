@@ -17,8 +17,6 @@ Classify risk level (P0~P3) for any code change, **driving the depth of downstre
 
 **Announce at start:** "Using ecw:risk-classifier to classify change risk level."
 
-**Mode switch**: Update the MODE marker in session-state.md with YAML: `<!-- ECW:MODE:START -->` / `working_mode: analysis` / `<!-- ECW:MODE:END -->`.
-
 ## TDD Phase Notes
 
 **TDD:RED** in routing tables means writing failing tests before implementation code. Invoke `ecw:tdd` which differentiates by risk level (P0: mandatory + verification logs, P1: mandatory, P2: simplified, P3: recommended). When ecw.yml `tdd.enabled: false`, all mandatory downgrades to recommended. Skip confirmation details: see `ecw:tdd` Skip Confirmation Protocol.
@@ -89,7 +87,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 
 **Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
 
-**REQUIRED — marker structure (non-negotiable):** The file MUST use `<!-- ECW:STATUS:START -->` / `<!-- ECW:STATUS:END -->` to wrap all status fields (`risk_level`, `auto_continue`, `routing`, `next`, etc.) in YAML format. Plain Markdown headings or bullet lists outside these markers are **not valid** — the auto-continue hook and session-recovery hooks use `parse_status()` which only reads YAML inside the marker-delimited STATUS section. Writing without markers (or with Markdown bold format instead of YAML) causes silent hook failure and breaks the entire downstream skill chain.
+**REQUIRED — marker structure (non-negotiable):** The file MUST wrap all status fields in YAML format using the standard ECW marker convention. Plain Markdown headings or bullet lists are **not valid** — hooks use `parse_status()` which only reads YAML inside the marker-delimited section. Read `./session-state-format.md` for exact format.
 
 Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
 
@@ -184,8 +182,6 @@ Read `./prompts/phase2-subagent-steps.md` for the subagent's reasoning steps (co
 ### Phase 2 Output Format
 
 **Before generating Phase 2 report**, Read `./phase2-output-template.md` for the exact output structure.
-
-> **Downstream Handoff**: After outputting Phase 2 report and writing checkpoint, update session-state.md `next` field (YAML key, inside the `<!-- ECW:STATUS:START/END -->` marker block) and update `current_phase` to `phase1-complete` within the same STATUS marker block, then invoke the next skill in the routing chain (typically `ecw:writing-plans`).
 
 ---
 

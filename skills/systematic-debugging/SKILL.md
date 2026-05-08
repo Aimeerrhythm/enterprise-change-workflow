@@ -13,8 +13,6 @@ Random fixes waste time and create new bugs. Quick patches mask underlying issue
 
 **Announce at start:** "Using ecw:systematic-debugging for root cause investigation."
 
-**Mode switch**: Update the MODE marker in session-state.md: `<!-- ECW:MODE:START -->` / `working_mode: implementation` / `<!-- ECW:MODE:END -->`.
-
 ## The Iron Law
 
 ```
@@ -99,9 +97,3 @@ Create failing test, implement single fix, verify, escalate on repeated failure,
 | `./prompts/investigation-steps.md` | Phase 1 detailed steps: 6-step root cause investigation + checkpoint format |
 | `./prompts/analysis-and-fix.md` | Phase 2–4 detailed steps: pattern analysis, hypothesis testing, implementation |
 | `./prompts/anti-patterns.md` | Red flags and common rationalizations to watch for |
-
-## Downstream Handoff
-
-After Phase 4 implementation completes (bug fixed, tests passing):
-
-> **Downstream Handoff**: Update `Next` field **within the `<!-- ECW:STATUS:START/END -->` marker block** in session-state.md to `ecw:impl-verify` and update `current_phase` to `impl-complete` within the same STATUS marker block, then invoke `ecw:impl-verify` for post-fix verification. If `auto_continue` field is missing or `false` in session-state.md, wait for user confirmation (backward compatibility).
