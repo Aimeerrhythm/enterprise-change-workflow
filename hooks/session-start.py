@@ -15,11 +15,10 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
 
 # Import shared utilities (same directory)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from marker_utils import find_session_state, CheckpointStore, parse_status, parse_yaml_section  # noqa: E402
+from marker_utils import find_session_state, CheckpointStore, parse_status, parse_yaml_section, parse_instincts  # noqa: E402
 from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
@@ -153,50 +152,12 @@ INSTINCT_CONFIDENCE_THRESHOLD = 0.7
 
 
 def _read_instincts(cwd):
-    """Read instincts.md and return entries with confidence > threshold.
+    """Read instincts with confidence > threshold.
 
-    Returns a list of dicts with keys: pattern, action, confidence, source.
+    Delegates to marker_utils.parse_instincts() (Issue #62 Part 4).
+    Returns a list of dicts with keys: pattern, action, confidence, source, skill.
     """
-    candidates = [
-        os.path.join(cwd, ".claude", "ecw", "state", "instincts.md"),
-    ]
-    for path in candidates:
-        if not os.path.exists(path):
-            continue
-        try:
-            with open(path, encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-        except Exception:
-            continue
-
-        instincts = []
-        # Split by INSTINCT markers
-        blocks = content.split("<!-- INSTINCT -->")
-        for block in blocks[1:]:  # skip header before first marker
-            entry = {}
-            for line in block.splitlines():
-                line = line.strip()
-                if line.startswith("- **Pattern**:"):
-                    entry["pattern"] = line.split(":", 1)[1].strip()
-                elif line.startswith("- **Action**:"):
-                    entry["action"] = line.split(":", 1)[1].strip()
-                elif line.startswith("- **Confidence**:"):
-                    try:
-                        entry["confidence"] = float(
-                            line.split(":", 1)[1].strip()
-                        )
-                    except ValueError:
-                        entry["confidence"] = 0.0
-                elif line.startswith("- **Source**:"):
-                    entry["source"] = line.split(":", 1)[1].strip()
-            if (
-                entry.get("pattern")
-                and entry.get("action")
-                and entry.get("confidence", 0) >= INSTINCT_CONFIDENCE_THRESHOLD
-            ):
-                instincts.append(entry)
-        return instincts
-    return []
+    return parse_instincts(cwd, min_confidence=INSTINCT_CONFIDENCE_THRESHOLD)
 
 
 def _check_version_mismatch(cwd):

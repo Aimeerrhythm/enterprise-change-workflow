@@ -303,6 +303,85 @@ def update_session_state_section(cwd, name, new_inner):
         return False
 
 
+def parse_instincts(cwd, skill_name=None, min_confidence=0.0):
+    """Parse instincts.md and return entries, optionally filtered by skill and confidence.
+
+    Unified implementation for both auto-continue (per-skill injection) and
+    session-start (global high-confidence injection). Issue #62 Part 4.
+
+    Args:
+        cwd: Project working directory.
+        skill_name: If provided (e.g. "ecw:tdd"), only return instincts from
+            that skill's section. If None, return all instincts across sections.
+        min_confidence: Minimum confidence threshold (0.0-1.0). Entries below
+            this are excluded. session-start uses 0.7; auto-continue uses 0.0.
+
+    Returns:
+        List of dicts with keys: pattern, action, confidence, source, skill.
+        Empty list if file not found or no matching entries.
+    """
+    instincts_path = os.path.join(cwd, ".claude", "ecw", "state", "instincts.md")
+    if not os.path.exists(instincts_path):
+        return []
+    try:
+        with open(instincts_path, encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+    except Exception:
+        return []
+
+    if not content.strip():
+        return []
+
+    skill_key = None
+    if skill_name:
+        skill_key = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
+
+    results = []
+
+    # Parse multi-section format: ## skill-key\n<!-- INSTINCT -->\n...
+    sections = re.split(r'\n##\s+', content)
+    for section in sections:
+        lines = section.strip().splitlines()
+        if not lines:
+            continue
+        section_skill = lines[0].strip().lower()
+
+        # Filter by skill if requested
+        if skill_key and section_skill != skill_key.lower():
+            continue
+
+        # Skip "no instincts yet" sections
+        section_body = "\n".join(lines[1:])
+        if "no instincts yet" in section_body.lower():
+            continue
+
+        # Extract individual instinct entries using <!-- INSTINCT --> markers
+        blocks = section_body.split("<!-- INSTINCT -->")
+        for block in blocks[1:]:
+            entry = {"skill": section_skill}
+            for line in block.splitlines():
+                line = line.strip()
+                if line.startswith("- **Pattern**:"):
+                    entry["pattern"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Action**:"):
+                    entry["action"] = line.split(":", 1)[1].strip()
+                elif line.startswith("- **Confidence**:"):
+                    try:
+                        entry["confidence"] = float(line.split(":", 1)[1].strip())
+                    except ValueError:
+                        entry["confidence"] = 0.0
+                elif line.startswith("- **Source**:"):
+                    entry["source"] = line.split(":", 1)[1].strip()
+
+            if not entry.get("pattern") or not entry.get("action"):
+                continue
+            if entry.get("confidence", 0.0) < min_confidence:
+                continue
+            results.append(entry)
+
+    return results
+
+
 class CheckpointStore:
     """Unified read/write/exists/list API for ECW session-data checkpoint files.
 

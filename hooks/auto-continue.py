@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from marker_utils import (  # noqa: E402
     append_timeline_entry,
     find_session_state,
+    parse_instincts,
     parse_status,
     update_mode,
     update_status_fields,
@@ -250,53 +251,16 @@ def _next_skill_from_routing(routing, current_skill):
 
 
 def _get_skill_instincts(cwd: str, skill_name: str) -> str:
-    """Read instincts for a specific skill from instincts.md.
+    """Read instincts for a specific skill and format for injection.
 
-    instincts.md format (new multi-section, backward-compatible):
-      ## risk-classifier
-      <!-- INSTINCT -->
-      - **Pattern**: ...
-      ## writing-plans
-      <!-- INSTINCT -->
-      - **Pattern**: ...
-
+    Delegates to marker_utils.parse_instincts() for parsing (Issue #62 Part 4).
     Returns formatted instincts string for injection, or "" when none found.
-    Issue #47 Phase D: per-skill instincts injected at PreToolUse time.
     """
-    instincts_path = os.path.join(cwd, ".claude", "ecw", "state", "instincts.md")
-    if not os.path.exists(instincts_path):
+    entries = parse_instincts(cwd, skill_name=skill_name)
+    if not entries:
         return ""
-    try:
-        with open(instincts_path, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-    except Exception:
-        return ""
-
     skill_key = skill_name.replace("ecw:", "") if skill_name.startswith("ecw:") else skill_name
-    # Find the section for this skill: ## skill-key ... (up to next ## or end)
-    pattern = rf"(?:^|\n)##\s+{re.escape(skill_key)}\s*\n(.*?)(?=\n##\s|\Z)"
-    m = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-    if not m:
-        return ""
-    section = m.group(1).strip()
-    if not section or "no instincts yet" in section.lower():
-        return ""
-    # Extract individual instinct entries using <!-- INSTINCT --> markers
-    blocks = section.split("<!-- INSTINCT -->")
-    instincts = []
-    for block in blocks[1:]:
-        entry = {}
-        for line in block.splitlines():
-            line = line.strip()
-            if line.startswith("- **Pattern**:"):
-                entry["pattern"] = line.split(":", 1)[1].strip()
-            elif line.startswith("- **Action**:"):
-                entry["action"] = line.split(":", 1)[1].strip()
-        if entry.get("pattern") and entry.get("action"):
-            instincts.append(f"- {entry['pattern']} → {entry['action']}")
-
-    if not instincts:
-        return ""
+    instincts = [f"- {e['pattern']} → {e['action']}" for e in entries]
     return (
         f"[ECW INSTINCTS for {skill_key}] Historical calibration data — "
         f"adjust your decisions based on these learned patterns:\n"
