@@ -1033,9 +1033,12 @@ def check_data_contracts(result: LintResult):
                     f"with path_pattern '{entry['path_pattern']}' not found in SKILL.md or prompts/"
                 )
 
+        # Keys produced outside the skill system (by commands, child sessions, or hooks)
+        EXTERNAL_PRODUCERS = {"session-state", "workspace-yml", "analysis-report",
+                               "knowledge-reads-log"}
         for entry in spec.get("reads", []) or []:
             key = entry["key"]
-            if key == "session-state":
+            if key in EXTERNAL_PRODUCERS:
                 continue
             if key not in all_writers:
                 result.error(
