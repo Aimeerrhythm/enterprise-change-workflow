@@ -228,7 +228,7 @@ class TestDispatcherRouting:
                     assert exc.value.code == 0
 
     def test_profile_filters_subhooks(self, dispatcher, tmp_path):
-        """P3 profile (minimal) should still run verify-completion and config-protect."""
+        """P3 profile (minimal) should still run verify-completion."""
         input_data = {
             "tool_name": "TaskUpdate",
             "tool_input": {"status": "completed"},
@@ -244,7 +244,7 @@ class TestDispatcherRouting:
                         with pytest.raises(SystemExit) as exc:
                             dispatcher.main()
                         assert exc.value.code == 0
-                        # verify-completion and config-protect run at minimal
+                        # verify-completion runs at minimal
                         assert mock_mod.check.call_count >= 1
 
     def test_profile_injected_into_config(self, dispatcher, tmp_path):

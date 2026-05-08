@@ -74,7 +74,6 @@ def _is_biz_impact_skill(input_data):
 SUB_HOOKS = [
     ("verify-completion", ["minimal", "standard", "strict"],
      lambda d: _is_task_complete(d) or _is_biz_impact_skill(d)),
-    ("config-protect",    ["minimal", "standard", "strict"], _is_edit_or_write),
     ("gateguard-fact-force", ["standard", "strict"],         _is_edit_or_write),
     ("secret-scan",       ["standard", "strict"],            _is_edit_or_write),
     ("bash-preflight",    ["standard", "strict"],            _is_bash),

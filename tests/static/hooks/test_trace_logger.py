@@ -108,12 +108,12 @@ class TestFieldCompleteness:
         """Complex kwargs (lists, dicts) are serialized correctly."""
         trace_logger.log_trace(
             str(trace_dir), "dispatcher", "PreToolUse",
-            sub_hooks_fired=["config-protect", "secret-scan"],
+            sub_hooks_fired=["gateguard-fact-force", "secret-scan"],
             fields_updated={"Current Phase": "plan"}
         )
         line = _trace_path(trace_dir).read_text().strip()
         record = json.loads(line)
-        assert record["sub_hooks_fired"] == ["config-protect", "secret-scan"]
+        assert record["sub_hooks_fired"] == ["gateguard-fact-force", "secret-scan"]
         assert record["fields_updated"] == {"Current Phase": "plan"}
 
 
