@@ -1,7 +1,7 @@
 # Enterprise Change Workflow (ECW)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.5-blue.svg)
 [![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-5A67D8)](https://claude.ai/claude-code)
 
 [English](README.md)

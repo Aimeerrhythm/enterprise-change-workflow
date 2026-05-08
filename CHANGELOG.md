@@ -4,6 +4,14 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.3.5] - 2026-05-08
+
+### 修复
+
+- **ecw-init**：`component_types` 默认值修正——`BizService` 改为 `interface {name}`（biz/ 存放 service 接口定义），补充 `BizServiceImpl` 类型；Dubbo 项目拆分 `FacadeInterface`（interface 定义/interfaces/）和 `FacadeImpl`（@DubboService/service/impl/），修复原 `Facade` 配置 grep 永远无法命中的问题
+- **ecw-init**：移除 Go 项目 `component_types` 默认值（ECW 仅支持 Java）
+- **ecw-init**：`DO` 默认路径从 `**/domain/` 精确到 `**/domain/model/`
+
 ## [1.3.4] - 2026-05-07
 
 ### 修复
@@ -866,6 +874,8 @@ ECW (Enterprise Change Workflow) Claude Code 插件首次发布。
 - **模板系统** — 配置模板（ecw.yml、domain-registry、risk-classification、path-mappings、calibration-log）和知识文件模板（公共 §1-§5、域级 index/rules/model）
 - **CLAUDE.md 集成** — 插件级指引，包含工作流图、Skill 触发条件、完成验证规则
 
+[1.3.5]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.5
+[1.3.4]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.4
 [1.3.3]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.3
 [1.3.2]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.2
 [1.3.1]: https://github.com/Aimeerrhythm/enterprise-change-workflow/releases/tag/v1.3.1
