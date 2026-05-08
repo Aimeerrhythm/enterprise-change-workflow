@@ -151,3 +151,18 @@ Before submitting changes:
 - [ ] CLAUDE.md updated if new Skills, Artifacts, or Required Files were added
 - [ ] `templates/ecw.yml` updated if new configuration keys were introduced
 - [ ] Cross-references between Skills validated (linter checks this)
+
+### Issue 写作规范（必须遵守）
+
+- [ ] Issue 使用对应模板（bug.md / arch.md），所有必填 section 已填写
+- [ ] Bug 修复类：验收条件覆盖了所有受影响路径（不只是当次复现路径）
+- [ ] Bug 修复类：受影响文件列表通过 `grep` 验证完整性
+- [ ] 架构变更类：影响面分析包含全局搜索结果，所有命中文件已在同一 PR 中同步修改
+- [ ] 架构变更类：耦合消除验证表已填写（改造后同类变更需改几处？）
+- [ ] 架构变更类：回归防线已明确（自动化机制阻止未来遗漏）
+
+### 架构变更额外检查
+
+- [ ] 耦合消除验证：改造后同类变更只需改 1 处（若 >1 处，说明方案需修正）
+- [ ] 回归防线存在：有自动化机制（hook/CI/lint）在变更不完整时报错
+- [ ] 结构性消除的历史 Issue 已列出，PR 合并后可逐一验证
