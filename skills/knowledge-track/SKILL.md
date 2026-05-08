@@ -26,7 +26,11 @@ This file is auto-populated by the `knowledge-read-logger` hook on every Read
 call to knowledge files. Each line is a JSON object:
 ```json
 {"ts": "2026-05-04T10:15:23", "file": ".claude/knowledge/payment/business-rules.md"}
+{"ts": "2026-05-04T10:16:05", "file": ".claude/knowledge/payment/business-rules.md", "offset": 100, "limit": 50}
 ```
+
+The `offset` and `limit` fields are optional — they appear only when a partial read
+was performed (non-zero offset or explicit limit). Absent means the full file was read.
 
 It covers **all sessions** that shared the same workflow-id (Session 1 + Session 2), so
 cross-session reads are not lost even when the workflow was split across multiple sessions.
