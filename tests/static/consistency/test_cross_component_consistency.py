@@ -197,54 +197,6 @@ class TestG5RoutingAliasesVsRoutes:
 # Historical bug: a52aab6 — marker enforcement, 61b413a — marker syntax
 # ═══════════════════════════════════════════
 
-class TestG9MarkerFormatConsistency:
-    """All SKILL.md files must use the exact marker format that marker_utils.py expects."""
-
-    EXPECTED_MARKERS = {
-        "STATUS": ("<!-- ECW:STATUS:START -->", "<!-- ECW:STATUS:END -->"),
-        "MODE": ("<!-- ECW:MODE:START -->", "<!-- ECW:MODE:END -->"),
-        "LEDGER": ("<!-- ECW:LEDGER:START -->", "<!-- ECW:LEDGER:END -->"),
-        "STOP": ("<!-- ECW:STOP:START -->", "<!-- ECW:STOP:END -->"),
-    }
-
-    def test_marker_format_in_skills(self):
-        violations = []
-        marker_re = re.compile(r'<!--\s*ECW:(\w+):(START|END)\s*-->')
-
-        for skill_dir in sorted(SKILLS_DIR.iterdir()):
-            if not skill_dir.is_dir():
-                continue
-            content = _read_skill_content(skill_dir.name)
-            if not content:
-                continue
-
-            for m in marker_re.finditer(content):
-                name, tag = m.group(1), m.group(2)
-                actual = m.group(0)
-                if name in self.EXPECTED_MARKERS:
-                    expected = self.EXPECTED_MARKERS[name][0 if tag == "START" else 1]
-                    if actual != expected:
-                        violations.append(
-                            f"skills/{skill_dir.name}: '{actual}' != '{expected}'"
-                        )
-
-        assert not violations, (
-            "Marker format inconsistencies:\n" + "\n".join(violations)
-        )
-
-    def test_session_state_format_uses_correct_markers(self):
-        fmt_path = SKILLS_DIR / "risk-classifier" / "session-state-format.md"
-        if not fmt_path.exists():
-            pytest.skip("session-state-format.md not found")
-        content = fmt_path.read_text(encoding="utf-8")
-
-        for name, (start, end) in self.EXPECTED_MARKERS.items():
-            if name == "STOP":
-                continue
-            assert start in content, f"Missing marker '{start}'"
-            assert end in content, f"Missing marker '{end}'"
-
-
 # ═══════════════════════════════════════════
 # G11: parse_status (YAML) vs session-state-format.md
 # Historical bug: auto-continue regex didn't match changed field format (Issue #40: migrated to YAML)

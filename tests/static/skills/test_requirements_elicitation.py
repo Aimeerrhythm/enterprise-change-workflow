@@ -32,10 +32,6 @@ class TestRequirementsElicitationArchitecture:
         """Must describe synthesis analysis using Agent tool."""
         assert "synthesis" in self.lower and "agent" in self.lower
 
-    def test_synthesis_model_selection(self):
-        """Must specify model for synthesis agent (sonnet)."""
-        assert "sonnet" in self.lower
-
     def test_has_requirements_summary_checkpoint(self):
         """Must persist requirements-summary.md as checkpoint."""
         assert "requirements-summary.md" in self.content

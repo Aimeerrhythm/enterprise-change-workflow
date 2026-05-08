@@ -45,42 +45,6 @@ class TestBizImpactAutoBackfill:
         assert "path-mappings" in self.lower or "path_mappings" in self.lower
 
 
-class TestBizImpactLedgerPosition:
-    """Regression guard: Ledger entry must be inserted inside the LEDGER marker block (Issue #36).
-
-    Root cause: AI appended raw text to EOF, landing after <!-- ECW:LEDGER:END -->,
-    making the entry invisible to hook parsers. SKILL.md must explicitly constrain
-    the insertion point.
-    """
-
-    @pytest.fixture(autouse=True)
-    def load_skill(self):
-        self.content = (ROOT / "skills" / "biz-impact-analysis" / "SKILL.md").read_text()
-        self.lower = self.content.lower()
-
-    def test_ledger_instruction_references_end_marker(self):
-        """Must mention ECW:LEDGER:END so AI inserts before the closing tag, not after."""
-        assert "ecw:ledger:end" in self.lower or "ledger:end" in self.lower, (
-            "SKILL.md Ledger section must reference '<!-- ECW:LEDGER:END -->' "
-            "to prevent raw-append outside the marker block (Issue #36)."
-        )
-
-    def test_ledger_instruction_says_before(self):
-        """Must use 'before' to describe insertion point relative to the END marker."""
-        ledger_section = self.content[self.content.lower().find("subagent ledger"):]
-        assert "before" in ledger_section.lower(), (
-            "Ledger write instruction must say 'before <!-- ECW:LEDGER:END -->', "
-            "not just 'append to file' (Issue #36)."
-        )
-
-    def test_ledger_recommends_append_ledger_entry(self):
-        """Must recommend append_ledger_entry from marker_utils as the correct write method."""
-        assert "append_ledger_entry" in self.content, (
-            "SKILL.md must recommend append_ledger_entry from marker_utils.py "
-            "to ensure correct marker-aware insertion (Issue #36)."
-        )
-
-
 class TestBizImpactReportPersisted:
     """Regression guard: biz-impact-report.md must be written to session-data (Issue #37).
 

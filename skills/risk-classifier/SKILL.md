@@ -11,7 +11,7 @@ description: >
 
 Classify risk level (P0~P3) for any code change, **driving the depth of downstream workflow**. Executed in three phases: Phase 1 (requirement description stage, quick pre-assessment), Phase 2 (after plan completion, precise classification), Phase 3 (after implementation, calibrate prediction accuracy based on biz-impact-analysis feedback).
 
-**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `phase2-assessment.md` follow this language. `session-state.md` field keys stay English (machine-parsed).
+**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `phase2-assessment.md` follow this language. `session-state.json` field keys stay English (machine-parsed).
 
 **Core Principle:** The process for changing a log statement should not be as heavy as changing inventory deduction logic.
 
@@ -81,21 +81,19 @@ Read `./phase1-output-template.md` for output format and user confirmation flow.
 
 ### State Persistence
 
-After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.md`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
+After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
 
-**Conflict detection (must do before writing):** Check if `.claude/ecw/session-data/{workflow-id}/session-state.md` already exists. If it does, regenerate the 4-digit suffix and re-check — repeat until a non-conflicting ID is found (max 3 attempts). This prevents triggering a second Write permission prompt when recovering from a failed first attempt.
+**Conflict detection (must do before writing):** Check if `.claude/ecw/session-data/{workflow-id}/session-state.json` already exists. If it does, regenerate the 4-digit suffix and re-check — repeat until a non-conflicting ID is found (max 3 attempts). This prevents triggering a second Write permission prompt when recovering from a failed first attempt.
 
-**Before writing**, Read `./session-state-format.md` for the exact template, marker conventions, working modes, session data path conventions, and context advisory.
+**Before writing**, Read `./session-state-format.md` for the exact JSON schema, field reference, and context advisory.
 
-**REQUIRED — marker structure (non-negotiable):** The file MUST wrap all status fields in YAML format using the standard ECW marker convention. Plain Markdown headings or bullet lists are **not valid** — hooks use `parse_status()` which only reads YAML inside the marker-delimited section. Read `./session-state-format.md` for exact format.
-
-Record Subagent Ledger timestamps: note time before dispatch (`Started`, HH:mm) and compute elapsed time after return (`Duration`). Purposes: restore context in new sessions, user state viewing, monitoring scripts.
+**REQUIRED — JSON format (non-negotiable):** The file MUST be valid JSON with the fields defined in `./session-state-format.md`. Hooks use `json.load()` to read it — any other format will silently break auto-routing.
 
 ### Route Task Creation
 
 After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
 
-**Creation method**: Use TaskCreate tool, set blockedBy dependency chain. **After all Tasks are created, update `session-state.md`'s `post_implementation_tasks` field with actual Task IDs** (e.g., `impl-verify(#3) → biz-impact-analysis(#4)`):
+**Creation method**: Use TaskCreate tool, set blockedBy dependency chain:
 
 1. TaskCreate: **"ecw:impl-verify — Implementation correctness verification"** (pending)
 2. TaskCreate: **"ecw:biz-impact-analysis — Business impact analysis"** (P0/P1 only, blockedBy: impl-verify)
@@ -239,7 +237,7 @@ In addition to automatic triggering, the following manual scenarios are supporte
 |----------|---------|
 | Phase 2 subagent returns empty or malformed YAML | Record `FAILED` in Subagent Ledger → retry once with explicit "return YAML only" instruction → still fails: output `[DEGRADED: Phase 2 unavailable, proceeding with Phase 1 level]` and skip Phase 2 |
 | Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension. Phase 2 subagent: pass available paths only |
-| `session-state.md` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
+| `session-state.json` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
 | `phase2-assessment.md` / `calibration-log.md` / `calibration-history.md` / `instincts.md` write failure | Retry once → still fails: output content in conversation and continue workflow |
 
 ## Supplementary Files

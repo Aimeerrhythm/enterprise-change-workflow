@@ -16,16 +16,12 @@ skills:
   risk-classifier:
     writes:
       - key: session-state
-        path_pattern: "session-state.md"
+        path_pattern: "session-state"
         required_fields:
           - risk_level
           - domains
-          - mode
           - routing
           - current_phase
-          - workflow_id
-          - post_implementation_tasks
-          - implementation_strategy
           - auto_continue
           - next
       - key: phase2-assessment
@@ -74,7 +70,7 @@ skills:
         path_pattern: "knowledge-summary.md"
     reads:
       - key: session-state
-        fields: [risk_level, domains, mode]
+        fields: [risk_level, domains]
     subagent_dispatches:
       - phase: round1
         model: opus
@@ -141,7 +137,7 @@ skills:
         condition: "always — batch-updates LEDGER marker after each dispatch layer"
     reads:
       - key: session-state
-        fields: [risk_level, implementation_strategy]
+        fields: [risk_level]
       - key: plan-file
     subagent_dispatches:
       - phase: implementation

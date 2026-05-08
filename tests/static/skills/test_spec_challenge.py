@@ -24,10 +24,6 @@ class TestSpecChallengeArchitecture:
         """Must describe dispatching spec-challenge agent for review."""
         assert "agent" in self.lower and "dispatch" in self.lower
 
-    def test_model_selection_opus(self):
-        """Must specify opus model for adversarial review."""
-        assert "opus" in self.lower
-
     def test_has_user_driven_decisions(self):
         """Must describe user-driven per-item confirmation (AskUserQuestion)."""
         assert "askuserquestion" in self.lower

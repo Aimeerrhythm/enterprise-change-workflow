@@ -27,6 +27,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/domain-registry.md`) to get domain definitions
 2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_common`
+3. Risk level and domain list are injected from session-state by the auto-continue hook
 
 > **Knowledge file robustness**: If `domain-registry.md` does not exist, halt and notify user: "Domain registry not found. Run `/ecw-init` to initialize." If `cross-domain-rules.md` does not exist, log `[Warning: cross-domain-rules.md not found, Round 3 cross-validation will be degraded]` and continue — Round 3 §3c will skip rule validation for missing files.
 
@@ -70,16 +71,6 @@ Dispatch one Agent per matched domain (using Agent tool, `subagent_type: general
    - Log to Ledger: `[FAILED: domain-collab R1 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: mark that domain as `[incomplete: {domain}, format error]` and continue with remaining domains
-6. **Ledger update**: Append one entry per domain Agent to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
-```yaml
-- phase: domain-collab R1
-  agent: "{domain name}"
-  type: general
-  model: opus
-  scale: medium
-  started: "{HH:mm}"
-  duration: "{duration}"
-```. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); domain analysis R1 is typically medium. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 180s. If a domain Agent has not returned within this time, terminate it and mark that domain as `[timeout, analysis unavailable]`.
 
@@ -105,19 +96,8 @@ After Round 1 independent analysis completes, Coordinator distributes each domai
 2. Use Agent tool to dispatch all domain Agents in parallel (multiple Agent tool calls in a single message, `subagent_type: "ecw:domain-negotiator"`)
 3. Collect all Agent YAML results
 4. **Return value validation**: For each domain agent, verify the YAML contains required fields (`domain`, `negotiation_result.revised_impact_level`). If a domain agent returns invalid format:
-   - Log to Ledger: `[FAILED: domain-collab R2 {domain}, reason: invalid return format]`
    - Retry once with the same model
    - If retry also fails: use Round 1 result unchanged for that domain, mark as `[incomplete: {domain} R2, format error]`
-5. **Ledger update**: Append one entry per domain Agent to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
-```yaml
-- phase: domain-collab R2
-  agent: "{domain name}"
-  type: general
-  model: opus
-  scale: small
-  started: "{HH:mm}"
-  duration: "{duration}"
-```. Domain negotiation R2 is typically small. Note time before dispatch and compute duration after return.
 
 **Timeout per Agent**: 120s (Round 2 is lighter than Round 1). If a domain Agent times out, use its Round 1 result unchanged.
 

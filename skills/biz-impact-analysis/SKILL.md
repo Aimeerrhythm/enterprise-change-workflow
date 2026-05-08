@@ -111,28 +111,6 @@ After biz-impact-analysis report is output:
 
 If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
 
-## Subagent Ledger Update
-
-After Agent returns, append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section.
-
-**IMPORTANT — insert inside the marker block**: Use the Edit tool to insert the new row **before** `<!-- ECW:LEDGER:END -->`, not after it. Do **not** append raw text to the end of the file. Raw appends land outside the marker block and are invisible to the hook parser.
-
-Preferred: call `append_ledger_entry` from `hooks/marker_utils.py`, which handles marker placement correctly. If writing manually via Edit, locate the `<!-- ECW:LEDGER:END -->` line and insert the new entry immediately before it.
-
-```yaml
-- phase: biz-impact-analysis
-  agent: analyst
-  type: "ecw:biz-impact-analysis"
-  model: opus
-  scale: large
-  started: "{HH:mm}"
-  duration: "{duration}"
-```
-
-Note time before dispatch and compute duration after Agent return.
-
-Scale reference: small (<20K tokens), medium (20-80K), large (>80K). biz-impact-analysis agent is typically large (needs to read multiple knowledge files + code scanning).
-
 **Timeout**: 300s (agent reads multiple knowledge files and scans code). If Agent has not returned, terminate and offer retry (see Error Handling).
 
 ## Error Handling

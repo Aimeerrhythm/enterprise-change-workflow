@@ -74,18 +74,8 @@ After spec-challenge agent returns:
    - Log to Ledger: `[FAILED: spec-challenge, reason: malformed report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete review]` header, proceed with whatever findings are available
-2. **Ledger update**: Append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
-```yaml
-- phase: spec-challenge
-  agent: reviewer
-  type: "ecw:spec-challenge"
-  model: opus
-  scale: large
-  started: "{HH:mm}"
-  duration: "{duration}"
-```. Scale reference: small (<20K tokens), medium (20-80K), large (>80K); spec-challenge agent is typically large. Note time before dispatch and compute duration after return.
-3. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
-4. **Present verbatim** the full review report to user. No responses, no judgments.
+2. **Persist report**: Write the full review report to `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md`. This MUST happen **before** any Plan modifications — the report is an independent artifact that records the original findings regardless of how the author responds.
+3. **Present verbatim** the full review report to user. No responses, no judgments.
 
 ### Step 2: Per-Item Fatal Flaw Confirmation
 

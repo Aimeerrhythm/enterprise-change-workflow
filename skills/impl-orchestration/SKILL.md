@@ -252,11 +252,6 @@ Read `./prompts/code-quality-review-template.md` for the P0 code quality review 
 ### Phase 5: Complete Layer
 
 - Mark all layer tasks complete via TaskUpdate
-- **[MANDATORY] Update Subagent Ledger** in `session-state.md` — batch all layer tasks in a single Edit:
-  - Data source: `task-result.json` (read in Phase 2 Step 1). If file was missing, use git log–inferred data and mark with `[inferred]` in the notes column
-  - P0: record implementer + spec-reviewer + code-quality per task
-  - P1: record implementer + spec-reviewer per task
-  - Include worktree branch name in notes column for traceability
 - Record layer timing: `Layer {N}: {task_count} tasks, {elapsed}s (parallel), merge {merge_time}s`
 - Proceed to next layer
 

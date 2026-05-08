@@ -116,17 +116,6 @@ This incremental append ensures Q&A history survives context compaction during l
 
 After all Q&A rounds complete, use the Agent tool to launch **one agent**. Read `./prompts/synthesis-prompt.md` for the full prompt template and return value validation rules.
 
-**Ledger update**: After Agent returns, append one entry to `.claude/ecw/session-data/{workflow-id}/session-state.md` LEDGER section:
-```yaml
-- phase: requirements-elicitation
-  agent: synthesis-analysis
-  type: general
-  model: sonnet
-  scale: medium
-  started: "{HH:mm}"
-  duration: "{duration}"
-```. Note time before dispatch and compute duration after return.
-
 **Timeout**: 180s. If synthesis Agent has not returned, terminate and present Q&A findings directly to user (see Error Handling).
 
 ### Step 5: Present Findings and Produce Summary

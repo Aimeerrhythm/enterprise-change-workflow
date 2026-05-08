@@ -27,17 +27,13 @@ class TestSessionStateNextField:
         self.content = SESSION_STATE_FORMAT.read_text(encoding="utf-8")
 
     def test_has_next_field(self):
-        assert "next:" in self.content, (
-            "session-state-format.md missing 'next:' YAML field"
+        assert '"next"' in self.content or "next:" in self.content, (
+            "session-state-format.md missing 'next' field definition"
         )
 
-    def test_next_field_between_status_markers(self):
-        start = self.content.find("ECW:STATUS:START")
-        end = self.content.find("ECW:STATUS:END")
-        assert start != -1 and end != -1, "STATUS markers not found"
-        status_section = self.content[start:end]
-        assert "next:" in status_section, (
-            "'next:' field must be inside ECW:STATUS:START/END markers"
+    def test_next_field_in_template(self):
+        assert '"next"' in self.content or '"next":' in self.content, (
+            "'next' field must be in the JSON template"
         )
 
 
