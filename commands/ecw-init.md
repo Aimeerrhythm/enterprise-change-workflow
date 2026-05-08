@@ -480,17 +480,22 @@ For each component type provide:
 
 Common defaults per language:
 
-Java/Spring:
-  BizService  | class {name}     | src/main/java/**/biz/
-  Manager     | class {name}     | src/main/java/**/manager/
-  Controller  | class {name}     | src/main/java/**/interfaces/
-  DO          | class {name}     | src/main/java/**/domain/
-  Mapper      | interface {name} | src/main/java/**/mapper/
+Java/Spring (Dubbo 项目):
+  BizService      | interface {name} | src/main/java/**/biz/
+  BizServiceImpl  | class {name}     | src/main/java/**/biz/impl/
+  Manager         | class {name}     | src/main/java/**/manager/
+  FacadeInterface | interface {name} | src/main/java/**/interfaces/
+  FacadeImpl      | @DubboService    | src/main/java/**/service/impl/
+  DO              | class {name}     | src/main/java/**/domain/model/
+  Mapper          | interface {name} | src/main/java/**/mapper/
 
-Go:
-  Handler     | func.*{name}     | internal/handler/
-  Repository  | type {name} struct | internal/repo/
-  Service     | type {name} struct | internal/service/
+Java/Spring MVC 项目:
+  BizService  | interface {name} | src/main/java/**/biz/
+  BizServiceImpl | class {name}  | src/main/java/**/biz/impl/
+  Manager     | class {name}     | src/main/java/**/manager/
+  Controller  | class {name}     | src/main/java/**/controller/
+  DO          | class {name}     | src/main/java/**/domain/model/
+  Mapper      | interface {name} | src/main/java/**/mapper/
 
 Enter "use defaults" to use the standard component set for your language:
 ```
