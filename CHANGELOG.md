@@ -4,6 +4,23 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.2] - 2026-05-09
+
+### 新增
+
+- **scripts/merge-settings-local.py**：幂等合并 ECW 权限与 hook 注册到项目 `.claude/settings.local.json`，不覆盖非 ECW 条目
+- **templates/settings.local.ecw.json**：ECW 运行时 hook 注册模板
+
+### 改进
+
+- **ecw-init Step 6f**：写入项目本地 `.claude/settings.local.json`（权限 + hook 注册），由 `merge-settings-local.py` 幂等执行
+- **ecw-upgrade Check H**：升级为同时检测权限与 hook 注册完整性，支持自动修复缺失条目
+- **ecw-validate-config 6d**：新增项目本地 hook 注册完整性校验步骤
+
+### 修复
+
+- **tests/static/anchor_keywords.yaml**：移除 `risk-classifier` 的 `Fast Track` 锚词（该概念已在重构中删除）
+
 ## [1.5.1] - 2026-05-09
 
 ### 修复
