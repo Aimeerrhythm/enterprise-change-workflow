@@ -36,7 +36,7 @@ THEN investigate that specific component
 
 **Step 5: Domain Knowledge Cross-Reference**
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. Scale cross-reference depth by risk:
+Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level. Scale cross-reference depth by risk:
 
 **P0/P1 — Full cross-domain tracing:**
 
@@ -53,7 +53,7 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. S
 2. Read domain's `business-rules.md`
 3. Query `shared-resources.md` (§3) only — check shared resource contention
 
-**If session-state.md doesn't exist** (e.g., debugging outside ECW flow), skip step 5 or use simplified check.
+**If session-state.json doesn't exist** (e.g., debugging outside ECW flow), skip step 5 or use simplified check.
 
 **Step 6: Trace Data Flow**
 

@@ -39,7 +39,7 @@ class TestStopPersistMain:
     """Tests for the main() function."""
 
     def test_no_state_file_returns_continue(self, stop_persist, tmp_path):
-        """No session-state.md → just return continue."""
+        """No session-state.json → just return continue."""
         input_data = {"cwd": str(tmp_path)}
         with patch("json.load", return_value=input_data):
             with patch("builtins.print") as mock_print:
@@ -48,14 +48,15 @@ class TestStopPersistMain:
                 assert output["result"] == "continue"
 
     def test_skips_ended_session(self, stop_persist, tmp_path):
-        """Session with Status: ended → no update."""
+        """Session with session_status: ended → no update."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        original = "# ECW\n- **Status**: ended\n"
+        state_file = state_dir / "session-state.json"
+        import json as _json
+        original = _json.dumps({"risk_level": "P1", "session_status": "ended"})
         state_file.write_text(original)
 
-        input_data = {"cwd": str(tmp_path), "tool_calls": []}
+        input_data = {"cwd": str(tmp_path), "tool_calls": [{"type": "tool_use"}]}
         with patch("json.load", return_value=input_data):
             with patch("builtins.print"):
                 stop_persist.main()
@@ -71,16 +72,15 @@ class TestStopPersistMain:
                 assert output["result"] == "continue"
 
     def test_skips_update_when_no_tool_calls(self, stop_persist, tmp_path):
-        """Pure text responses (no tool calls) must not update session-state.md.
+        """Pure text responses (no tool calls) must not update session-state.json.
 
-        Updating Last Updated on every assistant turn creates noise that masks
-        real phase transitions and makes it impossible to distinguish active work
-        from idle model output (Issue #21).
+        Updating on every assistant turn creates noise that masks real phase transitions.
         """
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-ab12"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        original = "# ECW Session State\n- **Risk Level**: P1\n"
+        state_file = state_dir / "session-state.json"
+        import json as _json
+        original = _json.dumps({"risk_level": "P1"})
         state_file.write_text(original)
 
         input_data = {"cwd": str(tmp_path), "tool_calls": []}
@@ -89,7 +89,7 @@ class TestStopPersistMain:
                 stop_persist.main()
 
         assert state_file.read_text() == original, (
-            "stop-persist must not modify session-state.md when tool_calls is empty"
+            "stop-persist must not modify session-state.json when tool_calls is empty"
         )
 
 

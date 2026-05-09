@@ -8,7 +8,7 @@
 # Convention:
 #   key:          logical name (stable across path changes)
 #   path_pattern: substring that MUST appear in the skill's SKILL.md
-#   fields:       session-state.md YAML key names the skill reads
+#   fields:       session-state.json YAML key names the skill reads
 #   condition:    when this read/write applies (for routing-aware checks)
 
 skills:
@@ -113,7 +113,7 @@ skills:
   impl-orchestration:
     writes:
       - key: session-state
-        path_pattern: "session-state.md"
+        path_pattern: "session-state.json"
         fields: [Subagent Ledger]
         condition: "always — batch-updates LEDGER marker after each dispatch layer"
     reads:

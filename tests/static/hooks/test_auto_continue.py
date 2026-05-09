@@ -26,7 +26,7 @@ def _load_ecw_yml():
 
 
 class TestRiskClassifierAutoContinue:
-    """Verify risk-classifier references session-state.md but has NO Downstream Handoff (Issue #62)."""
+    """Verify risk-classifier references session-state.json but has NO Downstream Handoff (Issue #62)."""
 
     @pytest.fixture(autouse=True)
     def load_skill(self):
@@ -39,9 +39,9 @@ class TestRiskClassifierAutoContinue:
             "risk-classifier must NOT have Downstream Handoff block (Issue #62)"
 
     def test_references_session_state(self):
-        """risk-classifier creates session-state.md, so must reference it."""
+        """risk-classifier creates session-state.json, so must reference it."""
         assert re.search(r'session.?state', self.lower), \
-            "risk-classifier must reference session-state.md"
+            "risk-classifier must reference session-state.json"
 
 
 class TestDomainCollabAutoContinue:
@@ -346,7 +346,7 @@ class TestStateOwnershipInversion:
 
 class TestAdvanceSessionState:
     """auto-continue hook must atomically update Current Phase and Working Mode
-    in session-state.md when a skill completes (Issue #21).
+    in session-state.json when a skill completes (Issue #21).
 
     Validates _advance_session_state writes both STATUS and MODE in a single
     read-modify-write, so the fields stay consistent regardless of interruptions.
@@ -412,7 +412,7 @@ class TestAdvanceSessionState:
     def test_missing_file_does_not_raise(self, tmp_path):
         """A non-existent path must be silently swallowed — hook must never block."""
         self.hook._advance_session_state(
-            str(tmp_path / "nonexistent" / "session-state.md"),
+            str(tmp_path / "nonexistent" / "session-state.json"),
             "ecw:tdd",
         )  # must not raise
 

@@ -163,15 +163,13 @@ class TestSessionStartMain:
         """Session with auto_continue: false → no recovery hint."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "auto_continue: false\n"
-            "current_phase: biz-impact-complete\n"
-            "routing: []\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        import json as _json
+        (state_dir / "session-state.json").write_text(_json.dumps({
+            "risk_level": "P1",
+            "auto_continue": False,
+            "current_phase": "biz-impact-complete",
+            "routing": [],
+        }))
 
         input_data = {"cwd": str(tmp_path)}
         with patch("json.load", return_value=input_data):
@@ -183,14 +181,13 @@ class TestSessionStartMain:
 
     def test_checkpoint_files_included(self, session_start, tmp_path):
         """Checkpoint files listed in additionalContext."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
+        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n- **Risk Level**: P0\n"
-        )
-        sd_dir = tmp_path / ".claude" / "ecw" / "session-data"
-        sd_dir.mkdir(parents=True)
-        (sd_dir / "requirements-summary.md").write_text("# Requirements Summary")
+        import json as _json
+        (state_dir / "session-state.json").write_text(_json.dumps(
+            {"risk_level": "P0", "auto_continue": True, "routing": []}
+        ))
+        (state_dir / "requirements-summary.md").write_text("# Requirements Summary")
 
         input_data = {"cwd": str(tmp_path)}
         with patch("json.load", return_value=input_data):
@@ -198,7 +195,7 @@ class TestSessionStartMain:
                 session_start.main()
                 output = json.loads(mock_print.call_args[0][0])
                 ctx = output["additionalContext"]
-                assert "requirements-summary.md" in ctx
+                assert "requirements-summary" in ctx
 
     def test_empty_cwd_returns_continue(self, session_start):
         """Empty cwd → result: continue."""

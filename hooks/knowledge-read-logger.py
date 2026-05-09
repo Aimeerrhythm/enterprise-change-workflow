@@ -95,7 +95,7 @@ def main() -> None:
         print(json.dumps({"result": "continue"}))
         return
 
-    # Find active session-state.md and derive the session-data dir
+    # Find active session-state.json and derive the session-data dir
     try:
         from marker_utils import find_session_state
         state_path = find_session_state(cwd)

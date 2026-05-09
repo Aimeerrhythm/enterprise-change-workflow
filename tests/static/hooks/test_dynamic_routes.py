@@ -171,18 +171,17 @@ class TestBehaviorPreservation:
     def test_advance_session_state_still_works(self, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260508-test"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.md"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "auto_continue: true\n"
-            "routing: [writing-plans, impl-verify]\n"
-            "current_phase: plan-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        import json as _json
+        state_file = state_dir / "session-state.json"
+        state_file.write_text(_json.dumps({
+            "risk_level": "P1",
+            "auto_continue": True,
+            "routing": ["writing-plans", "impl-verify"],
+            "current_phase": "plan-complete",
+        }))
         self.mod._advance_session_state(str(state_file), "ecw:impl-verify")
-        content = state_file.read_text()
-        assert "verify-loaded" in content
+        data = _json.loads(state_file.read_text())
+        assert data["current_phase"] == "verify-loaded"
 
 
 class TestComputeRoutingTail:

@@ -101,7 +101,7 @@ After {N} rounds of verification (fixed {X} must-fix issues), implementation cor
 
 Verification passed. Task can be marked as complete.
 
-**Next step** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
+**Next step** (read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.json`; if file does not exist or lacks risk level field, use AskUserQuestion to ask user for current risk level):
 - P0/P1 change → **Immediately** use Skill tool to invoke `ecw:biz-impact-analysis` to analyze business impact of code changes.
 - P2 change → **Suggested** to run `ecw:biz-impact-analysis` (not mandatory; user may decide to skip).
 - P3 / pure formatting change → No biz-impact-analysis needed.

@@ -200,7 +200,7 @@ def check_artifact_paths(result: LintResult):
     claude_content = CLAUDE_MD.read_text(encoding="utf-8")
 
     # Extract artifact paths from CLAUDE.md "ECW Artifact Files" table
-    # Format: | `.claude/ecw/session-data/{workflow-id}/session-state.md` | ... |
+    # Format: | `.claude/ecw/session-data/{workflow-id}/session-state.json` | ... |
     artifact_pattern = re.compile(r"\|\s*`([^`]+)`\s*\|")
     claude_artifacts = set()
     in_artifact_section = False
@@ -323,7 +323,7 @@ def check_anchor_keywords(result: LintResult):
 
 
 # ══════════════════════════════════════════════════════
-# CHECK 6: session-state.md Field Contract
+# CHECK 6: session-state.json Field Contract
 # ══════════════════════════════════════════════════════
 
 def check_session_state_contract(result: LintResult):
@@ -380,7 +380,7 @@ def check_session_state_contract(result: LintResult):
             if field not in producer_fields:
                 result.error(
                     f"[session-state] skills/{skill_name} reads field '{field}' "
-                    f"from session-state.md but risk-classifier does not produce it"
+                    f"from session-state.json but risk-classifier does not produce it"
                 )
 
 

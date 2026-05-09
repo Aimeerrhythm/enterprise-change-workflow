@@ -22,7 +22,7 @@ from ecw_config import read_ecw_config as _read_full_ecw_config  # noqa: E402
 from ecw_config import read_plugin_version as _read_plugin_version  # noqa: E402
 
 
-# Maximum lines to include from session-state.md
+# Maximum lines to include from session-state.json
 MAX_STATE_LINES = 60
 # Maximum checkpoint files to summarize
 MAX_CHECKPOINTS = 5
@@ -240,14 +240,14 @@ def main():
                 "# [ECW] Recovery hint\n\n"
                 f"An active ECW workflow was detected. Next skill to invoke: `{next_skill}`. "
                 "Check TaskList for pending work. If no tasks exist, re-create "
-                "them based on the `Post-Implementation Tasks` field in session-state.md."
+                "them based on the `Post-Implementation Tasks` field in session-state.json."
             )
         else:
             sections.append(
                 "# [ECW] Recovery hint\n\n"
                 "An active ECW workflow was detected from a previous session. "
                 "Check TaskList for pending work. If no tasks exist, re-create "
-                "them based on the `Post-Implementation Tasks` field in session-state.md."
+                "them based on the `Post-Implementation Tasks` field in session-state.json."
             )
 
     # 5. Modified files from previous session

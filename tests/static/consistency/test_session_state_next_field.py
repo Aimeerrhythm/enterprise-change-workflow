@@ -164,19 +164,14 @@ class TestAutoContinueMarkerDependency:
         spec.loader.exec_module(mod)
         return mod
 
-    def test_noop_on_missing_status_block(self, auto_continue, tmp_path, monkeypatch):
-        """Hook must return continue (not inject systemMessage) when STATUS block absent."""
+    def test_noop_on_missing_state_file(self, auto_continue, tmp_path, monkeypatch):
+        """Hook must return continue (not inject systemMessage) when session-state.json absent."""
         import json, io
 
+        # Only a .md file exists — find_session_state only looks for .json, so no state found
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "# ECW Session State\n"
-            "<!-- MODE: analysis -->\n"
-            "## Metadata\n"
-            "- Risk Level: P1\n"
-            "- Next: ecw:requirements-elicitation\n"
-        )
+        (state_dir / "session-state.md").write_text("stale format — should be ignored")
 
         payload = json.dumps({
             "tool_name": "Skill",

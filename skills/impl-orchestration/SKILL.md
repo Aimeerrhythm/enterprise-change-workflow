@@ -18,7 +18,7 @@ Execute plan by dispatching subagents per task in dependency-aware parallel laye
 Use when:
 - You have an implementation plan (from `ecw:writing-plans`)
 - Tasks are mostly independent
-- `session-state.md` `实现策略` = `subagent-driven`, OR Task count x risk level matches subagent-driven criteria per risk-classifier
+- `session-state.json` `实现策略` = `subagent-driven`, OR Task count x risk level matches subagent-driven criteria per risk-classifier
 
 Don't use when:
 - No plan exists (write one first)
@@ -27,7 +27,7 @@ Don't use when:
 
 ## Risk-Aware Review Depth
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level. If unavailable (standalone invocation), default to P0 (full review depth).
+Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level. If unavailable (standalone invocation), default to P0 (full review depth).
 
 | Risk Level | Per-task Spec Review | Per-task Code Quality Review | Post-impl |
 |-----------|---------------------|----------------------------|-----------|
@@ -69,7 +69,7 @@ Before dispatching the first Task, run a build/test pre-flight to catch pre-exis
    - Attempt one auto-fix pass (read error output, fix obvious issues like missing imports or syntax errors)
    - Re-run the failed check
    - If still failing: notify user with the error summary via AskUserQuestion — "Pre-flight check failed: {summary}. Continue anyway or fix first?" — then proceed based on user choice
-4. **Record result** in session-state.md: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
+4. **Record result** in session-state.json: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
 5. On success or user-approved continue: proceed to Dependency Graph Construction
 
 ## Dependency Graph Construction
