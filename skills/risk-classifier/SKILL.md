@@ -57,9 +57,7 @@ Read `./workflow-routes.yml` for the complete routing matrix, including:
 
 ### Implementation Strategy Selection
 
-**Implementation strategy is determined after ecw:writing-plans completes, before entering implementation.** Based on three dimensions from the Plan file: (1) Task count, (2) total unique files involved across all Tasks, (3) number of domains whose code is modified. Scan all Tasks in the Plan to count files: aggregate `file_path` references in each Task, deduplicate, and count unique files. Count domains by mapping file paths through `ecw-path-mappings.md`.
-
-See `./workflow-routes.yml` `impl_strategy` section for the full decision matrix.
+**Determined after ecw:writing-plans completes, before entering implementation.** Scan all Tasks in the Plan: aggregate `file_path` references, deduplicate for unique file count. Count domains by mapping file paths through `ecw-path-mappings.md`. See `./workflow-routes.yml` `impl_strategy` for the full decision matrix.
 
 **Relationship with impl-verify**:
 - `ecw:impl-orchestration` has built-in per-task spec review + code quality review (P0), providing **immediate feedback** during implementation to prevent error cascading
@@ -84,13 +82,9 @@ Use the "Assessment Output and Confirmation Flow" section in `./prompts/risk-ass
 
 ### State Persistence
 
-After user confirmation of the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
+After user confirmation of the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`.
 
-**Conflict detection (must do before writing):** Check if `.claude/ecw/session-data/{workflow-id}/session-state.json` already exists. If it does, regenerate the 4-digit suffix and re-check — repeat until a non-conflicting ID is found (max 3 attempts). This prevents triggering a second Write permission prompt when recovering from a failed first attempt.
-
-**Before writing**, Read `./session-state-format.md` for the exact JSON schema, field reference, and context advisory.
-
-**REQUIRED — JSON format (non-negotiable):** The file MUST be valid JSON with the fields defined in `./session-state-format.md`. Hooks use `json.load()` to read it — any other format will silently break auto-routing.
+Read `./session-state-format.md` for the exact JSON schema, field reference, workflow ID generation, conflict detection, and context advisory.
 
 **Routing field:** Write only `routing[0]` (the first downstream skill). The auto-continue hook reconstructs the full chain from `routing[0] + tail(risk_level)` after this skill completes.
 

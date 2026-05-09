@@ -2,7 +2,7 @@
 
 | Mistake | Consequence | Correction |
 |---------|------------|------------|
-| Risk assessment proceeded without waiting for user confirmation | User cannot adjust level | Must wait for user confirmation before invoking downstream skills |
+| Continued downstream after user disputed the auto-classified level | Downstream work built on wrong risk level | Auto-flow announces level and proceeds — if user disputes, stop, rerun risk assessment, then re-proceed |
 | P0 change skipped ecw:spec-challenge | Plan blind spots unexposed | Roll back, run ecw:spec-challenge |
 | Downgrade applied without user confirmation | Workflow simplified without human approval | Downgrade is suggested; requires human confirmation |
 | Only checked keywords, skipped §3 | Missed shared resource impact | Risk assessment must check §3 |
