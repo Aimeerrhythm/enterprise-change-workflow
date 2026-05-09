@@ -53,9 +53,6 @@ For each path in the `paths` section, check whether the referenced file/director
 - `path_mappings`
 - `knowledge_root`
 - `knowledge_common`
-- `calibration_log` (optional — may not exist yet; not an error)
-- `calibration_history` (optional — created by ecw-init/ecw-upgrade; not an error if absent on fresh install before first use)
-- `instincts` (optional — same as calibration_history)
 
 ---
 
@@ -135,10 +132,6 @@ For the following files (marked as "copy as-is" in ecw-init), compare the projec
   - Extract all skill names appearing in both template and project files (e.g., `impl-verify`, `biz-impact-analysis`, `spec-challenge`, `requirements-elicitation`, `writing-plans`)
   - If project file uses terminology no longer present in template (e.g., `code-review` replaced by `impl-verify`), flag as "stale terminology"
 - Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders — scan for all `{...}` tokens in table rows (same scope as Step 5a)
-
-**`calibration-log.md`:**
-- Skip if file does not exist (this file is created by Phase 3 calibration, not by init; absence is normal before first P0/P1 task completes)
-- If file exists: Only check if file header format matches the template (this file is primarily append-only data — no content comparison)
 
 ### 5b-2: domain-registry Field Completeness
 

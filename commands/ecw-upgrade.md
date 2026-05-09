@@ -47,7 +47,7 @@ Read each project config file and compare against the current plugin template. F
 **Check:** Read project `.claude/ecw/ecw.yml` and plugin `templates/ecw.yml`. Compare:
 
 1. **Missing sections** — If template has a top-level key (e.g., `tdd:`, `paths:`, `auto_flow:`) that project file lacks, inject the section from template with default values.
-2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.calibration_history`, `paths.instincts`) that project file lacks, add them with template defaults.
+2. **Missing fields within sections** — If template has fields inside a section (e.g., `paths.knowledge_root`, `tdd.enabled`) that project file lacks, add them with template defaults.
 3. **Unknown fields** (info only) — If project file has top-level keys NOT in the template, report them but do NOT remove. User may have intentional custom extensions.
 4. **Preserve user values** — Never overwrite fields that exist in both template and project; only add missing ones.
 
@@ -103,21 +103,10 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 **Check:** Verify that runtime state files and knowledge-ops files created by ecw-init exist.
 
 ```bash
-ls .claude/ecw/state/calibration-history.md .claude/ecw/state/instincts.md \
-   .claude/ecw/knowledge-ops/doc-tracker.md 2>/dev/null
+ls .claude/ecw/knowledge-ops/doc-tracker.md 2>/dev/null
 ```
 
 For each missing file:
-- `.claude/ecw/state/calibration-history.md` → **needs-fix**: `mkdir -p .claude/ecw/state` then write file with content:
-  ```
-  <!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-  <!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
-  ```
-- `.claude/ecw/state/instincts.md` → **needs-fix**: Write file with content:
-  ```
-  <!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-  <!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
-  ```
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
 
 ### Check J: Write Permissions in settings.local.json

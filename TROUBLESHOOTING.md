@@ -72,7 +72,7 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Fix**:
 1. The error message shows which file contains the broken reference and which path is missing
 2. Common causes:
-   - Typo in the path (e.g., `.claude/ecw/sesion-state.md` instead of `session-state.md`)
+   - Typo in the path (e.g., `.claude/ecw/sesion-state.json` instead of `session-state.json`)
    - Referenced file was moved or deleted but references were not updated
    - Template placeholder was not replaced (e.g., `{domain-id}` still in path)
 3. Fix the reference in the source file, or create the missing file
@@ -106,7 +106,6 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Fix**:
 1. **Keyword coverage**: Review `.claude/ecw/change-risk-classification.md` — add missing domain-specific keywords
 2. **Shared resources**: Review `.claude/knowledge/common/shared-resources.md` — missing entries cause under-classification
-3. **Phase 3 calibration**: After completing a task, Phase 3 compares prediction vs actual impact and suggests rule adjustments. Apply these suggestions to improve future classifications
 
 ### domain-collab routes incorrectly
 
@@ -115,14 +114,13 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Fix**:
 1. Check `domain-registry.md` — domain boundaries must be clear and non-overlapping
 2. Check the routing keyword table in your project `CLAUDE.md` — ambiguous keywords can trigger wrong domains
-3. Phase 2 corrects Phase 1 mistakes — if Phase 1 misroutes, Phase 2 should upgrade/downgrade
 
-### session-state.md is corrupted
+### session-state.json is corrupted
 
-**Symptom**: Session state file has garbled content or conflicting sections.
+**Symptom**: Session state file has garbled content or invalid JSON.
 
 **Fix**:
-1. Delete `session-state.md` from the active session-data subdirectory (`.claude/ecw/session-data/{workflow-id}/`) — it will be regenerated when the next workflow starts
+1. Delete `session-state.json` from the active session-data subdirectory (`.claude/ecw/session-data/{workflow-id}/`) — it will be regenerated when the next workflow starts
 2. If session-data checkpoint files exist (under `.claude/ecw/session-data/`), they can be used to resume
 3. This typically happens when a session was interrupted during a write operation
 
@@ -146,4 +144,3 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 1. This is expected for P0 critical changes — the depth is the value
 2. Use `/compact` at logical breakpoints (between Skills) to keep context manageable
 3. For P2/P3 changes, the workflow is much shorter — ensure risk classification is accurate
-4. If a change was over-classified, Phase 2 can downgrade it

@@ -17,7 +17,6 @@
 ### 风险分级时（ecw:risk-classifier）
 
 - **Phase 1（快速预判）**：查 §3（共享资源）+ §2（MQ，仅关键词匹配）
-- **Phase 2（精确定级）**：查全部 §1-§5
 
 ### 多域协作分析时（ecw:domain-collab）
 

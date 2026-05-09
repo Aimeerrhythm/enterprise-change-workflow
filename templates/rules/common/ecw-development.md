@@ -19,8 +19,7 @@ Rules Claude must follow when modifying ECW plugin itself (skills, agents, hooks
 ## Routing and Transitions
 
 - `[must-follow]` Full routing chain is defined only in risk-classifier — downstream skills reference via `ecw:skill-name`, never restate full routes
-- `[must-follow]` Skills with Auto-Continue blocks must include backward-compatibility guard (check `Auto-Continue` field in session-state.md)
-- `[must-follow]` Update session-state.md `Next` field before invoking the downstream skill
+- `[must-follow]` State transitions (Current Phase, Next skill) are owned by hooks, not skills — skills must not write to `session-state.json` except at entry point creation
 
 ## Agent Templates
 

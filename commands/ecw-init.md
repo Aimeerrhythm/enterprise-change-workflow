@@ -259,22 +259,6 @@ After writing the file, verify completeness — same gap check as Scaffold Step 
 mkdir -p .claude/ecw/state
 ```
 
-Create two empty runtime state files referenced by `ecw.yml` `paths` config. These files are written by Phase 3 calibration automatically — init only creates the empty file so Phase 1 does not hit "file not found".
-
-Write `.claude/ecw/state/calibration-history.md` (skip if already exists):
-
-```markdown
-<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-<!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
-```
-
-Write `.claude/ecw/state/instincts.md` (skip if already exists):
-
-```markdown
-<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-<!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
-```
-
 ## Attach Step 5: Skip Knowledge Directory Creation
 
 **Do not create, modify, or overwrite any existing documentation files.** This is the core difference from Scaffold mode. User's existing knowledge files are preserved as-is.
@@ -546,22 +530,6 @@ After writing the file, verify completeness — scan ALL Java source directories
 mkdir -p .claude/ecw/state
 ```
 
-Create two empty runtime state files referenced by `ecw.yml` `paths` config. These files are written by Phase 3 calibration automatically — init only creates the empty file so Phase 1 does not hit "file not found".
-
-Write `.claude/ecw/state/calibration-history.md`:
-
-```markdown
-<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-<!-- Phase 1 快速检索索引，积累校准记录后自动生成。 -->
-```
-
-Write `.claude/ecw/state/instincts.md`:
-
-```markdown
-<!-- 本文件由 ECW Phase 3 校准流程自动写入，请勿手动编辑。 -->
-<!-- 积累足够校准记录后，系统自动提取高置信度启发规则注入此文件。 -->
-```
-
 ## Scaffold Step 4: Create Knowledge Directory Skeleton
 
 ### 4a: Common Knowledge
@@ -711,7 +679,7 @@ For each registered domain, verify its knowledge directory and entry document ex
 For each mapping row, verify the source directory exists on disk. Mark missing directories as `⚠ warn`.
 
 **Check 4 — ecw.yml path references:**
-Verify all `paths.*` entries in ecw.yml point to files/directories that exist (calibration-log and instincts are optional). Mark missing required files as `✗ fail`.
+Verify all `paths.*` entries in ecw.yml point to files/directories that exist. Mark missing required files as `✗ fail`.
 
 Output the validation results as part of the Step 7 summary (see "Validation Results" section in template below). If all checks pass, show a ✓ green summary. If there are fails or warns, list them with fix instructions.
 
@@ -735,8 +703,6 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 | `domain-registry.md` | Created |
 | `change-risk-classification.md` | Created |
 | `ecw-path-mappings.md` | Created |
-| `.claude/ecw/state/calibration-history.md` | Created |
-| `.claude/ecw/state/instincts.md` | Created |
 
 #### Knowledge Files — Common (.claude/knowledge/common/)
 | File | Status |
