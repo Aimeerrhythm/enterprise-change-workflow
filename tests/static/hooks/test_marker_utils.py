@@ -61,7 +61,6 @@ class TestParseStatus:
             "risk_level": "P1",
             "routing": ["writing-plans", "impl-verify"],
             "current_phase": "plan-complete",
-            "auto_continue": True,
         }))
         result = marker_utils.parse_status(str(state_file))
         assert result["risk_level"] == "P1"
@@ -88,7 +87,6 @@ class TestUpdateStatusFieldsJson:
         state_file.write_text(json.dumps({
             "risk_level": "P2",
             "current_phase": "plan-complete",
-            "auto_continue": True,
         }))
         marker_utils.update_status_fields(str(state_file), {"current_phase": "tdd-loaded"})
         data = json.loads(state_file.read_text())
@@ -106,20 +104,18 @@ class TestValidateStatus:
             "risk_level": "P1",
             "routing": ["a", "b"],
             "current_phase": "test",
-            "auto_continue": True,
         }
         assert marker_utils.validate_status(fields) == []
 
     def test_missing_required(self, marker_utils):
         errors = marker_utils.validate_status({})
-        assert len(errors) == 4
+        assert len(errors) == 3
 
     def test_invalid_risk_level(self, marker_utils):
         fields = {
             "risk_level": "P5",
             "routing": [],
             "current_phase": "x",
-            "auto_continue": True,
         }
         errors = marker_utils.validate_status(fields)
         assert any("P5" in e for e in errors)

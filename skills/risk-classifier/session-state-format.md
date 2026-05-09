@@ -10,7 +10,6 @@ Write this JSON file to `.claude/ecw/session-data/{workflow-id}/session-state.js
   "current_phase": "risk-assessment-complete",
   "routing": ["skill-1", "TDD:RED", "Implementation(GREEN)", "impl-verify"],
   "next": "{next skill to invoke}",
-  "auto_continue": true,
   "baseline_commit": "TBD"
 }
 ```
@@ -23,7 +22,6 @@ Write this JSON file to `.claude/ecw/session-data/{workflow-id}/session-state.js
 | `current_phase` | string | yes | Current workflow phase (protocol values such as `risk-assessment-complete`, `plan-loaded`) |
 | `routing` | string[] | yes | Ordered list of skills/steps in the workflow chain |
 | `next` | string | yes | Next skill to invoke |
-| `auto_continue` | boolean | yes | Whether auto-routing is active |
 | `baseline_commit` | string | no | Git commit hash at workflow start (set to "TBD" initially, filled by post-edit-check hook) |
 
 ## Format Rules

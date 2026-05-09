@@ -23,7 +23,7 @@ For full rationale, see `docs/design-principles.md`.
 | `routing` | `list[str]` | Full routing chain (rebuilt by hook for requirements) |
 | `next` | `str` | Next ECW skill to invoke |
 | `current_phase` | `str` | Current phase marker (e.g., `risk-assessment-loaded`) |
-| `auto_continue` | `bool` | Whether auto-continue is active |
+
 
 ## Routing Chain Construction
 

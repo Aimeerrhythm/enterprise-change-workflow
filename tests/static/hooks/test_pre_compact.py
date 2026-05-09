@@ -147,15 +147,13 @@ class TestExtractHelpers:
         f = tmp_path / "state.json"
         f.write_text(json.dumps({
             "risk_level": "P0", "current_phase": "implementation",
-            "routing": [], "auto_continue": True,
         }))
         assert pre_compact_module._extract_risk_level(str(f)) == "P0"
 
     def test_extract_risk_level_p3(self, pre_compact_module, tmp_path):
         f = tmp_path / "state.json"
         f.write_text(json.dumps({
-            "risk_level": "P3", "routing": [], "auto_continue": True,
-            "current_phase": "impl-complete",
+            "risk_level": "P3", "routing": [], "current_phase": "impl-complete",
         }))
         assert pre_compact_module._extract_risk_level(str(f)) == "P3"
 
@@ -168,7 +166,7 @@ class TestExtractHelpers:
         f = tmp_path / "state.json"
         f.write_text(json.dumps({
             "current_phase": "requirements-elicitation", "routing": [],
-            "auto_continue": True, "risk_level": "P1",
+            "risk_level": "P1",
         }))
         assert pre_compact_module._extract_current_phase(str(f)) == "requirements-elicitation"
 
@@ -193,7 +191,6 @@ class TestBuildRecoveryMessage:
             "risk_level": "P0",
             "current_phase": "implementation",
             "routing": [],
-            "auto_continue": True,
         }))
 
         checkpoint_files = [
@@ -242,7 +239,6 @@ class TestBuildRecoveryMessage:
             "<!-- ECW:STATUS:START -->\n"
             "risk_level: P1\n"
             "routing: []\n"
-            "auto_continue: true\n"
             "current_phase: impl-complete\n"
             "<!-- ECW:STATUS:END -->"
         )
@@ -260,7 +256,6 @@ class TestBuildRecoveryMessage:
             "<!-- ECW:STATUS:START -->\n"
             "risk_level: P2\n"
             "routing: []\n"
-            "auto_continue: true\n"
             "current_phase: impl-complete\n"
             "<!-- ECW:STATUS:END -->"
         )

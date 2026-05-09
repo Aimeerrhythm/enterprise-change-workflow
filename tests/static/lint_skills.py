@@ -359,7 +359,7 @@ def check_session_state_contract(result: LintResult):
     consumer_fields: dict[str, set[str]] = defaultdict(set)
     # Match YAML keys referenced in session-state context
     yaml_field_pattern = re.compile(
-        r'`(risk_level|domains|mode|routing|current_phase|implementation_strategy|post_implementation_tasks|auto_continue|next)`'
+        r'`(risk_level|domains|mode|routing|current_phase|implementation_strategy|post_implementation_tasks|next)`'
     )
 
     for skill_dir in get_skill_dirs():

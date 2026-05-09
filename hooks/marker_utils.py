@@ -10,7 +10,6 @@ Session state schema (all fields optional except risk_level):
         "current_phase": str,
         "routing": [str, ...],
         "next": str,
-        "auto_continue": bool,
         "baseline_commit": str
     }
 """
@@ -77,7 +76,7 @@ def validate_status(fields):
     """Validate STATUS fields against schema. Returns error list (empty = valid)."""
     errors = []
 
-    for f in ("risk_level", "routing", "current_phase", "auto_continue"):
+    for f in ("risk_level", "routing", "current_phase"):
         if f not in fields:
             errors.append(f"missing required field: {f}")
 
@@ -87,9 +86,6 @@ def validate_status(fields):
 
     if "routing" in fields and not isinstance(fields["routing"], list):
         errors.append("routing must be a list")
-
-    if "auto_continue" in fields and not isinstance(fields["auto_continue"], bool):
-        errors.append("auto_continue must be boolean")
 
     if "domains" in fields and not isinstance(fields["domains"], list):
         errors.append("domains must be a list")

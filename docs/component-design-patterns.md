@@ -63,7 +63,6 @@ User request → LLM decides to call Skill
 ```markdown
 <!-- ECW:STATUS:START -->
 risk_level: P0
-auto_continue: true
 routing: [writing-plans, spec-challenge, impl-verify]
 <!-- ECW:STATUS:END -->
 ```

@@ -164,7 +164,6 @@ class TestSpecChallengeHookBehavior:
         state_file = state_dir / "session-state.json"
         state_file.write_text(json.dumps({
             "risk_level": "P0",
-            "auto_continue": True,
             "routing": ["ecw:writing-plans", "ecw:spec-challenge", "ecw:tdd"],
             "next": "ecw:tdd",
             "current_phase": phase,
@@ -368,7 +367,6 @@ class TestAdvanceSessionState:
         state_file.write_text(json.dumps({
             "current_phase": phase,
             "risk_level": "P1",
-            "auto_continue": True,
             "next": "ecw:requirements-elicitation",
         }))
         return state_file
@@ -394,12 +392,11 @@ class TestAdvanceSessionState:
         assert fields["current_phase"] == "requirements-loaded"
 
     def test_preserves_unrelated_fields(self, tmp_path):
-        """Risk Level, Auto-Continue, and Next must not be modified."""
+        """Risk Level and Next must not be modified."""
         state_file = self._make_state(tmp_path)
         self.hook._advance_session_state(str(state_file), "ecw:impl-verify")
         fields = self._parse_state(state_file)
         assert fields["risk_level"] == "P1"
-        assert fields["auto_continue"] is True
         assert fields["next"] == "ecw:requirements-elicitation"
 
     def test_unknown_skill_is_noop(self, tmp_path):
@@ -447,7 +444,6 @@ class TestAdvanceSessionState:
         state_file = state_dir / "session-state.json"
         state_file.write_text(json.dumps({
             "risk_level": "P1",
-            "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
             "next": "ecw:writing-plans",
             "current_phase": "risk-assessment-complete",
@@ -565,7 +561,6 @@ class TestPreToolUseHandler:
             routing_list = routing
         state_file.write_text(json.dumps({
             "risk_level": "P0",
-            "auto_continue": True,
             "routing": routing_list,
             "next": next_val,
             "current_phase": phase,
@@ -680,7 +675,6 @@ class TestKnowledgeTrackInjection:
             routing_list = routing
         state_file.write_text(json.dumps({
             "risk_level": risk_level,
-            "auto_continue": True,
             "routing": routing_list,
             "next": "ecw:biz-impact-analysis",
             "current_phase": "verify-complete",
@@ -780,7 +774,6 @@ class TestOffChainDeviation:
         original_phase = "biz-impact-loaded"
         state_file.write_text(json.dumps({
             "risk_level": "P0",
-            "auto_continue": True,
             "routing": ["ecw:impl-verify", "ecw:biz-impact-analysis"],
             "next": "ecw:biz-impact-analysis",
             "current_phase": original_phase,
@@ -825,7 +818,6 @@ class TestTailComputation:
         state_file = state_dir / "session-state.json"
         state_file.write_text(json.dumps({
             "risk_level": risk_level,
-            "auto_continue": True,
             "routing": routing if isinstance(routing, list) else [routing],
             "next": routing[0] if isinstance(routing, list) else routing,
             "current_phase": "risk-assessment-complete",
@@ -945,7 +937,6 @@ class TestTailComputation:
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.json"
         state_file.write_text(json.dumps({
-            "auto_continue": True,
             "routing": ["ecw:requirements-elicitation"],
             "next": "ecw:requirements-elicitation",
             "current_phase": "risk-assessment-complete",

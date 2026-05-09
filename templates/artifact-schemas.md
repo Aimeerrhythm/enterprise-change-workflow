@@ -38,7 +38,6 @@ All artifact headings, table headers, and field labels MUST be output in the lan
   "routing": ["ecw:skill-name", "TDD:RED", "..."],
   "current_phase": "risk-assessment-complete",
   "next": "ecw:next-skill",
-  "auto_continue": true,
   "workflow_id": "YYYYMMDD-xxxx",
   "baseline_commit": "TBD",
   "implementation_strategy": "direct|subagent-driven"

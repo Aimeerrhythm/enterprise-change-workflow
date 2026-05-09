@@ -262,8 +262,7 @@ sequenceDiagram
     "ecw:knowledge-track"
   ],
   "current_phase": "plan-loaded",
-  "next": "ecw:spec-challenge",
-  "auto_continue": true
+  "next": "ecw:spec-challenge"
 }
 ```
 

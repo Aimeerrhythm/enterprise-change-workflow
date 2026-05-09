@@ -347,7 +347,7 @@ class TestPostEditHooksJson:
 # Baseline Commit Injection
 # ══════════════════════════════════════════════════════
 
-SESSION_STATE_TBD = '{"risk_level": "P1", "baseline_commit": "TBD", "auto_continue": true}'
+SESSION_STATE_TBD = '{"risk_level": "P1", "baseline_commit": "TBD"}'
 
 SESSION_STATE_ALREADY_SET = '{"baseline_commit": "existinghash123"}'
 
@@ -469,7 +469,7 @@ class TestBaselineCommitInjection:
         """JSON baseline_commit: TBD is correctly replaced."""
         (tmp_path / ".git").mkdir()
         state_file = tmp_path / "session-state.json"
-        state_file.write_text('{"risk_level": "P1", "baseline_commit": "TBD", "auto_continue": true}')
+        state_file.write_text('{"risk_level": "P1", "baseline_commit": "TBD"}')
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = "cafebabe1234567890ab\n"
@@ -511,7 +511,7 @@ class TestSessionStateYamlValidation:
 
     def test_valid_json_no_warning(self, post_edit, tmp_path):
         """Valid JSON produces no warning."""
-        valid_content = '{"risk_level": "P0", "auto_continue": true, "routing": [], "current_phase": "risk-assessment-complete"}'
+        valid_content = '{"risk_level": "P0", "routing": [], "current_phase": "risk-assessment-complete"}'
         input_data = {
             "tool_name": "Write",
             "tool_input": {
@@ -526,7 +526,7 @@ class TestSessionStateYamlValidation:
 
     def test_invalid_json_status_produces_warning(self, post_edit, ecw_project):
         """Invalid JSON in session-state.json triggers JSON Error warning."""
-        invalid_content = '{"risk_level": "P0", "auto_continue": [unclosed'
+        invalid_content = '{"risk_level": "P0", "unclosed_array": [unclosed'
         input_data = {
             "tool_name": "Write",
             "tool_input": {
@@ -556,7 +556,7 @@ class TestSessionStateYamlValidation:
     def test_edit_reads_actual_file_for_validation(self, post_edit, ecw_project):
         """Edit on session-state.json reads the actual file for JSON validation."""
         state_file = ecw_project / "session-state.json"
-        state_file.write_text('{"risk_level": "P0", "auto_continue": [unclosed')
+        state_file.write_text('{"risk_level": "P0", "unclosed_array": [unclosed')
         input_data = {
             "tool_name": "Edit",
             "tool_input": {
@@ -572,7 +572,7 @@ class TestSessionStateYamlValidation:
     def test_edit_valid_file_no_warning(self, post_edit, tmp_path):
         """Edit on session-state.json with valid JSON on disk produces no warning."""
         state_file = tmp_path / "session-state.json"
-        state_file.write_text('{"risk_level": "P0", "auto_continue": true}')
+        state_file.write_text('{"risk_level": "P0"}')
         input_data = {
             "tool_name": "Edit",
             "tool_input": {

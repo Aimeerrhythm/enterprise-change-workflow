@@ -23,7 +23,6 @@ Random fixes waste time and create new bugs. Quick patches mask underlying issue
 
 Write `.claude/ecw/session-data/{workflow-id}/session-state.json` with:
 - `change_type: "bug"`
-- `auto_continue: true`
 - `routing: ["ecw:systematic-debugging", "TDD:RED", "Fix(GREEN)", "ecw:impl-verify"]`
 - `next: "ecw:tdd"`
 - `current_phase: "systematic-debugging"`

@@ -22,7 +22,6 @@ skills:
           - domains
           - routing
           - current_phase
-          - auto_continue
           - next
     reads: []
     subagent_dispatches: []

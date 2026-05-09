@@ -223,7 +223,6 @@ class TestG11FieldPatternsVsTemplate:
         state_file = tmp_path / "session-state.json"
         state_file.write_text(_json.dumps({
             "risk_level": "P1",
-            "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
             "next": "ecw:writing-plans",
             "current_phase": "risk-assessment-complete",
@@ -231,14 +230,13 @@ class TestG11FieldPatternsVsTemplate:
         fields = mu.parse_status(str(state_file))
         assert fields is not None, "parse_status must succeed on valid JSON state file"
         assert fields.get("risk_level") == "P1"
-        assert fields.get("auto_continue") is True
         assert isinstance(fields.get("routing"), list)
         assert "ecw:writing-plans" in fields.get("routing", [])
         assert fields.get("next") == "ecw:writing-plans"
 
     def test_field_names_exist_in_template(self):
         """YAML field names used by parse_status must appear in the session-state template."""
-        required_yaml_keys = ["risk_level", "auto_continue", "routing", "next", "current_phase"]
+        required_yaml_keys = ["risk_level", "routing", "next", "current_phase"]
         missing = []
         for key in required_yaml_keys:
             if key not in self.fmt_content:

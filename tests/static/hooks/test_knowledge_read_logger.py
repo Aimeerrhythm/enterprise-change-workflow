@@ -50,7 +50,7 @@ def project(tmp_path):
     session_dir = ecw_dir / "session-data" / "20260505-test"
     session_dir.mkdir(parents=True)
     (session_dir / "session-state.json").write_text(
-        json.dumps({"risk_level": "P1", "auto_continue": True, "routing": []}),
+        json.dumps({"risk_level": "P1", "routing": []}),
         encoding="utf-8",
     )
     knowledge_dir = tmp_path / ".claude" / "knowledge" / "common"

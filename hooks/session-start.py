@@ -58,8 +58,10 @@ def _extract_state_fields(state_data):
         fields["routing"] = " → ".join(routing) if isinstance(routing, list) else str(routing)
     if fields_raw.get("current_phase"):
         fields["current_phase"] = fields_raw["current_phase"]
-    if fields_raw.get("auto_continue") is not None:
-        if fields_raw["auto_continue"] is False:
+    routing = fields_raw.get("routing")
+    phase = fields_raw.get("current_phase", "")
+    if routing is not None:
+        if isinstance(routing, list) and len(routing) == 0 and "complete" in phase:
             fields["status"] = "ended"
         else:
             fields["status"] = "active"

@@ -59,7 +59,6 @@ class TestPreCompactNextField:
             "current_phase": "plan-complete",
             "next": "ecw:writing-plans",
             "routing": [],
-            "auto_continue": True,
         }))
         msg = pre_compact._build_recovery_message(
             str(state_path), [], str(tmp_path)
@@ -77,7 +76,6 @@ class TestPreCompactNextField:
             "risk_level": "P1",
             "current_phase": "plan-complete",
             "routing": [],
-            "auto_continue": True,
         }))
         msg = pre_compact._build_recovery_message(
             str(state_path), [], str(tmp_path)
@@ -103,7 +101,6 @@ class TestSessionStartNextField:
         state_dict = {
             "risk_level": "P1",
             "next": "ecw:impl-verify",
-            "auto_continue": True,
             "routing": [],
             "current_phase": "plan-complete",
         }
@@ -193,14 +190,13 @@ class TestAutoContinueMarkerDependency:
         )
 
     def test_injects_routing_on_valid_status_block(self, auto_continue, tmp_path, monkeypatch):
-        """Hook must inject systemMessage when session-state.json present and auto_continue: true."""
+        """Hook must inject systemMessage when session-state.json is present with routing."""
         import json, io
 
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.json").write_text(json.dumps({
             "risk_level": "P1",
-            "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:requirements-elicitation", "ecw:writing-plans"],
             "next": "ecw:requirements-elicitation",
             "current_phase": "risk-assessment-complete",
@@ -221,7 +217,7 @@ class TestAutoContinueMarkerDependency:
         auto_continue.main()
         output = json.loads("".join(captured))
         assert "systemMessage" in output, (
-            "Hook must inject systemMessage when session-state.json present and auto_continue: true"
+            "Hook must inject systemMessage when session-state.json is present with routing"
         )
         assert "ecw:requirements-elicitation" in output["systemMessage"], (
             "systemMessage must reference the next skill in the routing chain"

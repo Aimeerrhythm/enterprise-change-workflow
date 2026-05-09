@@ -80,8 +80,7 @@ def _handle_pre_tool_use(state_path, skill_name, cwd=""):
         routing = fields_dict.get("routing") or []
 
         # ── Routing deviation detection (before field updates) ─────────────
-        auto_continue = fields_dict.get("auto_continue")
-        if auto_continue is True and routing:
+        if routing:
             expected_next = fields_dict.get("next") or None
             deviation = _check_routing_deviation(routing, skill_name, expected_next)
             if deviation:
@@ -198,11 +197,6 @@ def main():
     if errors:
         print(f"[auto-continue] STATUS validation warnings: {errors}", file=sys.stderr)
 
-    auto_continue = fields_dict.get("auto_continue")
-    if auto_continue is not True:
-        print(json.dumps({"result": "continue"}))
-        return
-
     routing = fields_dict.get("routing") or []
     risk_level = fields_dict.get("risk_level") or ""
     next_skill = fields_dict.get("next") or ""
@@ -234,7 +228,7 @@ def main():
 
     remaining_str = " → ".join(remaining) if remaining else ""
 
-    parts = [f"[ECW AUTO-CONTINUE] Workflow auto-continue is active (risk: {risk_level})."]
+    parts = [f"[ECW AUTO-CONTINUE] Workflow routing active (risk: {risk_level})."]
     if remaining_str:
         parts.append(f"Remaining route after {skill_name}: {remaining_str}.")
     if next_skill and next_skill != skill_name:

@@ -70,7 +70,6 @@ class TestGetProfile:
         (state_dir / "session-state.json").write_text(
             json.dumps({
                 "risk_level": "P0",
-                "auto_continue": True,
                 "routing": [],
                 "current_phase": "risk-assessment-complete",
             })

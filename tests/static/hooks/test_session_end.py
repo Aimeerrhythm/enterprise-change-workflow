@@ -39,7 +39,6 @@ def session_end():
 _STATE_JSON = json.dumps({
     "risk_level": "P1",
     "current_phase": "phase2-complete",
-    "auto_continue": True,
 })
 
 

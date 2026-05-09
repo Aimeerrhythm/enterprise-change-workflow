@@ -175,7 +175,6 @@ class TestBehaviorPreservation:
         state_file = state_dir / "session-state.json"
         state_file.write_text(_json.dumps({
             "risk_level": "P1",
-            "auto_continue": True,
             "routing": ["writing-plans", "impl-verify"],
             "current_phase": "plan-complete",
         }))

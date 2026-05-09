@@ -146,7 +146,6 @@ class TestSessionStartMain:
         (state_dir / "session-state.json").write_text(json.dumps({
             "risk_level": "P1",
             "current_phase": "risk-assessment-complete",
-            "auto_continue": True,
             "routing": ["ecw:writing-plans"],
         }))
 
@@ -160,24 +159,20 @@ class TestSessionStartMain:
                 assert "P1" in output["additionalContext"]
 
     def test_ended_session_no_recovery(self, session_start, tmp_path):
-        """Session with auto_continue: false → no recovery hint."""
-        state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
-        state_dir.mkdir(parents=True)
-        import json as _json
-        (state_dir / "session-state.json").write_text(_json.dumps({
+        """Session with empty routing and complete phase → no recovery hint."""
+        input_data = {"cwd": str(tmp_path)}
+        ended_state = {
             "risk_level": "P1",
-            "auto_continue": False,
             "current_phase": "biz-impact-complete",
             "routing": [],
-        }))
-
-        input_data = {"cwd": str(tmp_path)}
+        }
         with patch("json.load", return_value=input_data):
-            with patch("builtins.print") as mock_print:
-                session_start.main()
-                output = json.loads(mock_print.call_args[0][0])
-                ctx = output.get("additionalContext", "")
-                assert "Recovery hint" not in ctx
+            with patch.object(session_start, "_read_session_state", return_value=(ended_state, "/fake/path")):
+                with patch("builtins.print") as mock_print:
+                    session_start.main()
+                    output = json.loads(mock_print.call_args[0][0])
+                    ctx = output.get("additionalContext", "")
+                    assert "Recovery hint" not in ctx
 
     def test_checkpoint_files_included(self, session_start, tmp_path):
         """Checkpoint files listed in additionalContext."""
@@ -185,7 +180,7 @@ class TestSessionStartMain:
         state_dir.mkdir(parents=True)
         import json as _json
         (state_dir / "session-state.json").write_text(_json.dumps(
-            {"risk_level": "P0", "auto_continue": True, "routing": []}
+            {"risk_level": "P0", "routing": []}
         ))
         (state_dir / "requirements-summary.md").write_text("# Requirements Summary")
 
