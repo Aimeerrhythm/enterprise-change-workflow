@@ -215,7 +215,7 @@ class TestWorkflowIdConflictDetection:
             "SKILL.md must specify max 3 regeneration attempts"
 
     def test_session_state_existence_check(self):
-        """Must reference session-state.md existence check."""
-        assert "session-state.md" in self.content and (
+        """Must reference session-state.json existence check."""
+        assert "session-state.json" in self.content and (
             "exists" in self.lower or "conflict" in self.lower
-        ), "SKILL.md must mention checking session-state.md existence"
+        ), "SKILL.md must mention checking session-state.json existence"

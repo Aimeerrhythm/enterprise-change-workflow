@@ -71,7 +71,6 @@ class TestSkillModelReferences:
         "domain-collab",
         "writing-plans",
         "biz-impact-analysis",
-        "risk-classifier",
         "impl-verify",
         "tdd",
     ]

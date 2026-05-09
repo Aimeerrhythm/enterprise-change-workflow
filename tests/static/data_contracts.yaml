@@ -24,15 +24,8 @@ skills:
           - current_phase
           - auto_continue
           - next
-      - key: phase2-assessment
-        path_pattern: "phase2-assessment.md"
-        condition: "P0/P1"
     reads: []
-    subagent_dispatches:
-      - phase: phase2
-        model: sonnet
-        count: 1
-        condition: "P0/P1"
+    subagent_dispatches: []
     ask_user_question: true
     task_creates:
       - impl-verify
@@ -83,8 +76,6 @@ skills:
         condition: "P0/P1 single-domain"
       - key: domain-collab-report
         condition: "cross-domain"
-      - key: phase2-assessment
-        condition: "P0/P1"
       - key: knowledge-summary
         condition: "cross-domain (if exists)"
     subagent_dispatches:
@@ -179,6 +170,9 @@ skills:
 
   systematic-debugging:
     writes:
+      - key: session-state
+        path_pattern: "session-state"
+        condition: "entry point invocation (creates workflow session with fixed bug chain)"
       - key: debug-evidence
         path_pattern: "debug-evidence.md"
     reads:

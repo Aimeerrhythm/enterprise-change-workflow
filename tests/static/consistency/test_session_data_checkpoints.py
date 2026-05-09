@@ -41,15 +41,6 @@ class TestSessionDataCheckpoints:
             "'requirements-summary.md' under session-data/ as a checkpoint artifact"
         )
 
-    def test_risk_classifier_phase2_has_checkpoint(self):
-        """risk-classifier SKILL.md must instruct writing
-        session-data/.../phase2-assessment.md after Phase 2 assessment."""
-        content = _read_skill("risk-classifier")
-        assert "session-data/" in content and "phase2-assessment.md" in content, (
-            "risk-classifier SKILL.md must contain a directive to write "
-            "'phase2-assessment.md' under session-data/ as a checkpoint artifact"
-        )
-
     def test_impl_verify_always_writes_findings(self):
         """impl-verify SKILL.md must:
         1. NOT have '>5 must-fix' as a precondition for writing findings
@@ -120,8 +111,4 @@ class TestClaudeMdArtifactTable:
         assert "session-data/" in content and "requirements-summary" in content, (
             "CLAUDE.md artifact table must document "
             "'requirements-summary' checkpoint under session-data/"
-        )
-        assert "session-data/" in content and "phase2-assessment" in content, (
-            "CLAUDE.md artifact table must document "
-            "'phase2-assessment' checkpoint under session-data/"
         )
