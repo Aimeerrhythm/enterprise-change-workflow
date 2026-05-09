@@ -7,7 +7,7 @@
 # Fields:
 #   level: P0 | P1 | P2 | P3 | any
 #   mode: single-domain | cross-domain | any
-#   type: requirement | bug | fast-track
+#   type: requirement | bug
 #   chain: ordered list of workflow steps (skills + phase markers)
 #   must_include: skills that MUST appear in the routing chain (derived from chain, used by tests)
 #   must_exclude: skills that MUST NOT appear in the routing chain
@@ -132,21 +132,6 @@ routes:
     must_include: [systematic-debugging, impl-verify]
     must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
 
-  # ── Fast Track Changes ──
-  # Production incident emergency fix. Retain Phase 1, skip full workflow.
-
-  - level: any
-    mode: any
-    type: fast-track
-    chain:
-      - "Phase 1 quick confirmation"
-      - "lean plan"
-      - "Implementation + mvn test"
-      - impl-verify
-      - biz-impact-analysis
-    notes: "Skip requirement elicitation, spec-challenge, TDD. biz-impact-analysis tagged [Fast Track]."
-    must_include: [impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation, spec-challenge, domain-collab]
 
 # ── Implementation Strategy Selection ──
 # Determines direct implementation vs ecw:impl-orchestration.
@@ -200,7 +185,7 @@ impl_strategy:
 skill_metadata:
   risk-classifier:
     mode: analysis
-    phase_name: phase1
+    phase_name: risk-assessment
   requirements-elicitation:
     mode: analysis
     phase_name: requirements
@@ -237,10 +222,10 @@ off_chain_skills:
   - workspace
 
 # ── Cross-Domain Determination ──
-cross_domain_rule: "During Phase 1 Step 1, check project CLAUDE.md domain routing table. 2+ domain matches = cross-domain."
+cross_domain_rule: "During initial risk assessment Step 1, check project CLAUDE.md domain routing table. 2+ domain matches = cross-domain."
 
 # ── Post-Implementation Task Creation ──
-# Created by risk-classifier after Phase 1 user confirmation.
+# Created by risk-classifier after initial risk assessment user confirmation.
 post_impl_tasks:
   P0: [impl-verify, biz-impact-analysis]
   P1: [impl-verify, biz-impact-analysis]

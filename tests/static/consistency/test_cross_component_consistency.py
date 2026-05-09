@@ -226,7 +226,7 @@ class TestG11FieldPatternsVsTemplate:
             "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
             "next": "ecw:writing-plans",
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
         }))
         fields = mu.parse_status(str(state_file))
         assert fields is not None, "parse_status must succeed on valid JSON state file"

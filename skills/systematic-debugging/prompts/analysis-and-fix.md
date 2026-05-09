@@ -42,7 +42,7 @@
 4. **If Fix Doesn't Work**
    - STOP
    - Count: How many fixes have you tried?
-   - If < 3: Return to Phase 1, re-analyze with new information
+   - If < 3: Return to the initial investigation, re-analyze with new information
    - **If >= 3: STOP and question the architecture (step 5 below)**
 
 5. **If 3+ Fixes Failed: Question Architecture**

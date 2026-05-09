@@ -10,7 +10,7 @@ ECW 根据 risk-classifier 输出的风险等级（P0~P3）驱动不同深度的
 
 ```mermaid
 flowchart TD
-    REQ[用户输入需求] --> RC[risk-classifier Phase 1]
+    REQ[用户输入需求] --> RC[risk-classifier initial risk assessment]
     RC --> |P0/P1 单域| RE[requirements-elicitation]
     RC --> |P0/P1 跨域| DC[domain-collab]
     RC --> |P2| WP2[writing-plans]
@@ -59,7 +59,7 @@ flowchart TD
 flowchart TD
     START([用户输入需求]) --> PHASE1
 
-    subgraph PHASE1 [① risk-classifier Phase 1]
+    subgraph PHASE1 [① risk-classifier initial risk assessment]
         P1A[关键词匹配 → 初判 P0] --> P1B[创建 session-state.json]
         P1B --> P1C[写入 Auto-Continue 路由链]
         P1C --> P1D[创建 post-impl Tasks:<br/>Task#3 impl-verify<br/>Task#4 biz-impact-analysis]
@@ -183,7 +183,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    START([用户输入跨域需求]) --> PHASE1[① risk-classifier Phase 1<br/>判定: P0 跨域]
+    START([用户输入跨域需求]) --> PHASE1[① risk-classifier initial risk assessment<br/>判定: P0 跨域]
     PHASE1 --> DC
 
     subgraph DC [② domain-collab — 替代 requirements-elicitation]
@@ -354,7 +354,7 @@ P0 流程中有 **4 个关键人工介入点**，流程不会全自动跑完：
 
 ```mermaid
 flowchart LR
-    D1[Phase 1 确认<br/>P0 等级] --> D2[需求澄清<br/>多轮交互]
+    D1[初始风险评估确认<br/>P0 等级] --> D2[需求澄清<br/>多轮交互]
     D2 --> D3[spec-challenge<br/>逐项决策]
     D3 --> D4[impl-verify<br/>修复确认]
 
@@ -366,7 +366,7 @@ flowchart LR
 
 | # | 决策点 | 用户操作 | 影响 |
 |---|--------|---------|------|
-| 1 | Phase 1 等级确认 | 确认/调整 P0 等级 | 决定整条路由链深度 |
+| 1 | 初始风险评估确认 | 确认/调整 P0 等级 | 决定整条路由链深度 |
 | 2 | 需求澄清交互 | 回答 9 维提问 | 需求完整度直接影响 Plan 质量 |
 | 3 | spec-challenge 决策 | 对每个 Fatal: 同意/反对/讨论 | Plan 修改范围 |
 | 4 | impl-verify 修复 | 确认 must-fix 修复方案 | 验证收敛速度 |
@@ -390,7 +390,7 @@ flowchart TD
         RM[repo-map.md]
     end
 
-    PHASE1_OUT[Phase 1] --> SS
+    PHASE1_OUT[初始风险评估] --> SS
     REQ_OUT[requirements-elicitation] --> RS
     SPEC_OUT[spec-challenge] --> SCR
     DC_OUT[domain-collab] --> KS

@@ -1,12 +1,12 @@
 {
   "name": "debug_investigation_result",
-  "description": "Chain-eval tool for systematic-debugging Phase 1 investigation checkpoint. Captures structured root cause investigation output for cross-step assertion.",
+  "description": "Chain-eval tool for systematic-debugging initial investigation checkpoint. Captures structured root cause investigation output for cross-step assertion.",
   "input_schema": {
     "type": "object",
     "properties": {
       "bug_classification": {
         "type": "string",
-        "description": "Preliminary bug category based on Phase 1 investigation",
+        "description": "Preliminary bug category based on the initial investigation",
         "enum": [
           "data-issue",
           "logic-error",
@@ -32,7 +32,7 @@
       },
       "investigation_complete": {
         "type": "boolean",
-        "description": "Whether Phase 1 investigation has reached a testable hypothesis"
+        "description": "Whether the initial investigation has reached a testable hypothesis"
       },
       "next_phase": {
         "type": "string",

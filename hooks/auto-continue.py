@@ -242,7 +242,7 @@ def main():
     parts.append(
         "After completing this skill, invoke the next skill immediately. "
         "Do not ask for confirmation or output transition text — "
-        "the user already approved the full routing chain during Phase 1."
+        "the user already approved the full routing chain during the initial risk assessment."
     )
 
     log_trace(cwd, "auto-continue", "PostToolUse",

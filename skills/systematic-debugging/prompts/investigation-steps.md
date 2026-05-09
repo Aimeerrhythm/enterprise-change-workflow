@@ -1,4 +1,4 @@
-# Phase 1: Root Cause Investigation — Detailed Steps
+# Initial Root Cause Investigation — Detailed Steps
 
 **BEFORE attempting ANY fix:**
 
@@ -63,9 +63,9 @@ When error is deep in call stack:
 - Keep tracing up until you find the source
 - Fix at source, not at symptom
 
-**Phase 1 Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/{workflow-id}/debug-evidence.md`:
+**Initial Investigation Checkpoint**: After completing all 6 steps, write evidence summary to `.claude/ecw/session-data/{workflow-id}/debug-evidence.md`:
 ```markdown
-# Debug Evidence (Phase 1)
+# Debug Evidence (Initial Investigation)
 ## Error: {error message summary}
 ## Reproduction: {steps or "not reproducible"}
 ## Recent Changes: {relevant git diff summary}
@@ -73,4 +73,4 @@ When error is deep in call stack:
 ## Data Flow Trace: {source of bad value, or "N/A"}
 ## Working Hypothesis: {initial hypothesis for Phase 2}
 ```
-This ensures Phase 1 evidence survives context compaction during long debugging sessions.
+This ensures initial investigation evidence survives context compaction during long debugging sessions.

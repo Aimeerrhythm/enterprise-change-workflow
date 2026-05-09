@@ -1,6 +1,6 @@
 {
   "name": "classify_result",
-  "description": "Report the risk classification result in structured format. Call this tool to record your Phase 1 assessment.",
+  "description": "Report the risk classification result in structured format. Call this tool to record your initial risk assessment.",
   "input_schema": {
     "type": "object",
     "properties": {

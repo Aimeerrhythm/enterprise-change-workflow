@@ -9,7 +9,7 @@
 # removed — hooks now own state management; Skills must NOT contain these.
 
 risk-classifier:
-  - "Phase 1"
+  - "Initial risk assessment"
   - "AskUserQuestion"
   - "session-state.json"
   - "P0"

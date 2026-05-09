@@ -43,7 +43,7 @@ ECW 强制执行**风险匹配的工作流**，在动手写代码之前先评估
 flowchart TD
     IN([用户：变更 / 需求 / Bug]) --> RC
 
-    RC["🔍 risk-classifier\n(Phase 1 — 快速预判)"]
+    RC["🔍 risk-classifier\n(初始风险评估 — 快速预判)"]
 
     RC -->|单域 P0/P1| RE[requirements-elicitation]
     RC -->|跨域 2+ 域| DC["domain-collab\n(并行 agent 分析)"]
@@ -80,7 +80,7 @@ flowchart TD
     style DONE fill:#C6F6D5,stroke:#68D391,color:#22543D
 ```
 
-risk-classifier 执行 Phase 1（关键词快速预判）确定风险等级，驱动不同深度的变更管理流程。
+risk-classifier 执行初始风险评估（关键词快速预判）确定风险等级，驱动不同深度的变更管理流程。
 
 ---
 
@@ -127,7 +127,7 @@ flowchart LR
 
     subgraph 工作区流程
         PF["Pre-flight\nECW 就绪检查"] --> P1
-        P1["Phase 1\n业务拆分\n（不读代码）"] --> P2
+        P1["初始拆分\n业务拆分\n（不读代码）"] --> P2
         P2["Phase 2\n各服务代码分析\n（子 session 并行）"] --> P3
         P3["Phase 3\n契约对齐\n+ 冲突解决"] --> P4
         P4["Phase 4\n各服务实施\n(Layer 1 → Layer 2)"] --> P5
@@ -140,7 +140,7 @@ flowchart LR
     style P4 fill:#C6F6D5,stroke:#68D391,color:#22543D
 ```
 
-**核心设计：** Phase 1 完全不读代码，业务拆分在代码分析之前完成，避免过早优化。契约冲突在实现开始前必须由用户决策。
+**核心设计：** 初始拆分完全不读代码，业务拆分在代码分析之前完成，避免过早优化。契约冲突在实现开始前必须由用户决策。
 
 ```bash
 /ecw:workspace create service-a ../service-b
@@ -362,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` 报断裂引用** — 修改的文件引用了不存在的 `.claude/` 路径，检查是否有拼写错误或文件已被移动/删除。
 
-**Phase 1 定级明显不准** — 两个常见原因：(1) 项目 `CLAUDE.md` 或知识文件中的领域关键词覆盖不完整；(2) `shared-resources.md` 缺少共享资源条目。可先用扫描脚本重新提取共享依赖，再重新运行 risk-classifier Phase 1。
+**初始风险评估定级明显不准** — 两个常见原因：(1) 项目 `CLAUDE.md` 或知识文件中的领域关键词覆盖不完整；(2) `shared-resources.md` 缺少共享资源条目。可先用扫描脚本重新提取共享依赖，再重新运行 risk-classifier initial risk assessment。
 
 → [完整排障指南](TROUBLESHOOTING.md)
 

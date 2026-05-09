@@ -15,8 +15,8 @@
       value: |
         const parsed = JSON.parse(output);
         const result = parsed.input || parsed;
-        return result.change_type === 'requirement' || result.change_type === 'fast-track';
-      metric: change_type_requirement_or_fast_track
+        return result.change_type === 'requirement';
+      metric: change_type_requirement
     - type: javascript
       value: |
         const parsed = JSON.parse(output);

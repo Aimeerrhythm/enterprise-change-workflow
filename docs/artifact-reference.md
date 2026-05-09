@@ -16,7 +16,7 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 
 | File | Write Timing | Purpose |
 |------|-------------|---------|
-| `.claude/ecw/session-data/{workflow-id}/session-state.json` | After risk-classifier Phase 1 output (or systematic-debugging entry) | ECW workflow state: risk_level, routing chain, next skill, current phase |
+| `.claude/ecw/session-data/{workflow-id}/session-state.json` | After risk-classifier initial risk assessment output (or systematic-debugging entry) | ECW workflow state: risk_level, routing chain, next skill, current phase |
 | `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md` | After domain-collab Round 3 completes | Full multi-domain collaboration analysis report |
 | `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
 | `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
@@ -30,8 +30,8 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 | `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |
 | `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
 | `.claude/ecw/workspace.yml` | After workspace create | Workspace config: services, branches, build settings (workspace root only) |
-| `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run Phase 1 + updated Phase 3 | Cross-service business decomposition → finalized with contracts + execution order |
-| `{service}/.claude/ecw/workspace-analysis-task.md` | After workspace run Phase 1 | Per-service analysis task: original requirement (verbatim) + coordinator's hypothesis |
+| `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run initial decomposition + updated Phase 3 | Cross-service business decomposition → finalized with contracts + execution order |
+| `{service}/.claude/ecw/workspace-analysis-task.md` | After workspace run initial decomposition | Per-service analysis task: original requirement (verbatim) + coordinator's hypothesis |
 | `{service}/.claude/ecw/analysis-report.md` | After workspace run Phase 2 (child session) | Per-service technical plan: entry points, interaction pattern, concerns |
 | `{service}/.claude/ecw/confirmed-contract.md` | After workspace run Phase 3 | Final aligned contracts for this service; triggers Phase 4 implementation |
 | `{service}/status.json` | After workspace run Phase 4 (child session) | Child session completion marker, read by coordinator |

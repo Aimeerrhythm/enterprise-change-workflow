@@ -71,8 +71,8 @@ If a service doesn't complete within 120 minutes:
 |------|----------|-----------|--------|
 | workspace.yml | `{ws}/.claude/ecw/workspace.yml` | create command | workspace creation |
 | CLAUDE.md | `{ws}/CLAUDE.md` | create command | workspace creation |
-| cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Phase 1 + updated Phase 3 |
-| workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` | coordinator | Phase 1 end |
+| cross-service-plan.md | `{ws}/.claude/ecw/session-data/{wf-id}/cross-service-plan.md` | coordinator | Initial decomposition + updated Phase 3 |
+| workspace-analysis-task.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` | coordinator | Initial decomposition end |
 | start-{svc}.sh | `{ws}/.claude/ecw/start-{svc}.sh` | coordinator | Phase 2 start |
 | analysis-report.md | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/analysis-report.md` | child session | Phase 2 end |
 | session-state.json (child) | `{ws}/{svc}/.claude/ecw/session-data/{wf-id}/session-state.json` | child session | Phase 4 start (risk-classifier), updated throughout ECW flow |

@@ -166,19 +166,7 @@ traces:
         - {skill: impl-verify, key: impl-verify-findings}
       ask_user_skills: [systematic-debugging, tdd]
 
-  # ── Fast Track ──
 
-  - name: "Fast track emergency fix"
-    input: {risk_level: any, domain_scope: any, change_type: fast-track}
-    expected:
-      skill_chain:
-        - risk-classifier
-        - impl-verify
-        - biz-impact-analysis
-      checkpoint_writes:
-        - {skill: risk-classifier, key: session-state}
-        - {skill: impl-verify, key: impl-verify-findings}
-      ask_user_skills: [risk-classifier]
 
   # ── Implementation Strategy: subagent-driven (impl-orchestration replaces tdd) ──
   # Triggered when Plan has tasks 4-8 + P0/P1, or tasks > 8, or files >= 6.

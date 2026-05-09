@@ -67,7 +67,7 @@ For `create`, `status`, `push`, `destroy` details, see `./lifecycle-commands.md`
 ### Phase-Gate Architecture
 
 ```
-Pre-flight → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Pre-flight → Initial decomposition → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
     │            │          │          │          │          │          │
     ▼            ▼          ▼          ▼          ▼          ▼          ▼
 [user OK]  [biz-plan]  [analysis]  [contract]  [status]  [verified]  [pushed]
@@ -76,7 +76,7 @@ Pre-flight → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase
 | Phase | Gate Artifact | Written by | Location |
 |-------|--------------|------------|----------|
 | Pre-flight | User confirms readiness | — | interactive |
-| Phase 1 | `cross-service-plan.md` (business layer only) | Coordinator | `session-data/{wf-id}/` |
+| Initial decomposition | `cross-service-plan.md` (business layer only) | Coordinator | `session-data/{wf-id}/` |
 | Phase 2 | `analysis-report.md` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
 | Phase 3 | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/session-data/{wf-id}/` |
 | Phase 4 | `status.json` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
@@ -105,17 +105,17 @@ Gate-out: User confirms
 
 ---
 
-### Phase 1: Business Decomposition (Coordinator only, NO code analysis)
+### Initial Decomposition: Business Decomposition (Coordinator only, NO code analysis)
 
-**Information constraint**: Phase 1 uses ONLY `workspace.yml.requirement` text and the user's stated business context. No code reading of any kind is permitted — no Read, Bash, Glob, Grep, or Explore tools. If code-level detail is needed to answer a question, that question is an Open Question for Phase 2, not something to resolve here.
+**Information constraint**: the initial decomposition uses ONLY `workspace.yml.requirement` text and the user's stated business context. No code reading of any kind is permitted — no Read, Bash, Glob, Grep, or Explore tools. If code-level detail is needed to answer a question, that question is an Open Question for Phase 2, not something to resolve here.
 
-**Output standard**: cross-service-plan.md and workspace-analysis-task.md must contain ONLY business-level content — service roles, interaction types, open questions. Any class name, method name, field name, or SQL in Phase 1 output is a violation.
+**Output standard**: cross-service-plan.md and workspace-analysis-task.md must contain ONLY business-level content — service roles, interaction types, open questions. Any class name, method name, field name, or SQL in initial decomposition output is a violation.
 
 ```
 Gate-in: Pre-flight confirmed
 Process:
   1. Read workspace.yml → original requirement + service list
-     (This is the ONLY information source for Phase 1)
+     (This is the ONLY information source for the initial decomposition)
 
   2. Decompose requirement from pure business perspective:
      - What is each service responsible for in this change?
@@ -142,14 +142,14 @@ Process:
      Encoding: native UTF-8, no escape sequences
 
   6. Update `session-state.json`:
-     - Phase 1 row → ✅ 完成
+     - Initial decomposition row → ✅ 完成
      - Subagent Ledger: record Explore agents as complete
      (This step is mandatory — gate-out verifies it)
 
 Gate-out: ALL of the following must be true:
   - cross-service-plan.md exists at session-data/{wf-id}/
   - workspace-analysis-task.md exists for all services
-  - `session-state.json` reflects Phase 1 completion
+  - `session-state.json` reflects initial decomposition completion
 ```
 
 **workspace-analysis-task.md template:** See `./workspace-analysis-task-template.md` (Read on demand when writing workspace-analysis-task.md for each service).
@@ -160,7 +160,7 @@ Gate-out: ALL of the following must be true:
 
 ```
 Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if `session-state.json` does not reflect Phase 1 completion → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect initial decomposition completion → update it now before proceeding
 Process:
   1. Generate per-service start scripts and open one terminal tab per service
      via terminal adapter (see ./terminal-adapters.md § Service Scripts)
@@ -321,8 +321,8 @@ Gate-out: Workflow complete
 
 **Session-state Phase naming note** (Issue 8):
 coordinator-managed workflow state must use the SKILL.md Phase numbers (1-6).
-Do not invent custom phase names. If coordinator compresses Phase 1-3 into fewer steps,
-annotate the Artifact column to explain (e.g. "Phase 1+2+3 compressed — code-free business decomp only").
+Do not invent custom phase names. If coordinator compresses initial decomposition–Phase 3 into fewer steps,
+annotate the Artifact column to explain (e.g. "Initial decomposition + Phase 2 + Phase 3 compressed — code-free business decomp only").
 
 ---
 

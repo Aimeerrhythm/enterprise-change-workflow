@@ -7,7 +7,7 @@ Write this JSON file to `.claude/ecw/session-data/{workflow-id}/session-state.js
 ```json
 {
   "risk_level": "P{X}",
-  "current_phase": "phase1-complete",
+  "current_phase": "risk-assessment-complete",
   "routing": ["skill-1", "TDD:RED", "Implementation(GREEN)", "impl-verify"],
   "next": "{next skill to invoke}",
   "auto_continue": true,
@@ -20,7 +20,7 @@ Write this JSON file to `.claude/ecw/session-data/{workflow-id}/session-state.js
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `risk_level` | string | yes | P0, P1, P2, or P3 |
-| `current_phase` | string | yes | Current workflow phase (e.g., "phase1-complete", "plan-loaded") |
+| `current_phase` | string | yes | Current workflow phase (protocol values such as `risk-assessment-complete`, `plan-loaded`) |
 | `routing` | string[] | yes | Ordered list of skills/steps in the workflow chain |
 | `next` | string | yes | Next skill to invoke |
 | `auto_continue` | boolean | yes | Whether auto-routing is active |

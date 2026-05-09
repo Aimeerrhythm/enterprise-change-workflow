@@ -33,7 +33,7 @@ ECW Status: {ECW-ready / ECW-partial / ECW-absent}
   No knowledge files available. Scan source code directly.
 
 ## Other Services Context
-{for each other service: their role and business responsibility from Phase 1}
+{for each other service: their role and business responsibility from the initial decomposition step}
 
 ## Open Questions (flagged by Coordinator — needs code analysis to resolve)
 {any ambiguities that Phase 2 must investigate, e.g. unclear interaction type, unknown entry points}

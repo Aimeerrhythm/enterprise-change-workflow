@@ -76,8 +76,6 @@ def _condition_active(condition: str, level: str, domain_scope: str, change_type
         return False
     if "not bug" in c and change_type == "bug":
         return False
-    if "not fast-track" in c and change_type == "fast-track":
-        return False
     if "requirement" in c and "not" not in c and change_type != "requirement":
         return False
     return True

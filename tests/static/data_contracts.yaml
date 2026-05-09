@@ -106,7 +106,7 @@ skills:
       - key: session-state
         fields: [risk_level]
       - key: plan-file
-        condition: "requirement (not bug/fast-track)"
+        condition: "requirement (not bug)"
     subagent_dispatches: []
     ask_user_question: true
 

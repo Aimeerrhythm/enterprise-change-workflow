@@ -361,7 +361,7 @@ class TestAdvanceSessionState:
         spec.loader.exec_module(mod)
         self.hook = mod
 
-    def _make_state(self, tmp_path, phase="phase1-complete", mode="analysis"):
+    def _make_state(self, tmp_path, phase="risk-assessment-complete", mode="analysis"):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260429-ab12"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.json"
@@ -381,14 +381,14 @@ class TestAdvanceSessionState:
         return mu.parse_status(str(state_file))
 
     def test_updates_phase_after_skill_completes(self, tmp_path):
-        """Current Phase must advance to phase1-loaded after risk-classifier instructions load."""
-        state_file = self._make_state(tmp_path, phase="phase1-complete")
+        """Current Phase must advance to risk-assessment-loaded after risk-classifier instructions load."""
+        state_file = self._make_state(tmp_path, phase="risk-assessment-complete")
         self.hook._advance_session_state(str(state_file), "ecw:risk-classifier")
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "phase1-loaded"
+        assert fields["current_phase"] == "risk-assessment-loaded"
 
     def test_updates_phase_after_requirements_elicitation(self, tmp_path):
-        state_file = self._make_state(tmp_path, phase="phase1-complete")
+        state_file = self._make_state(tmp_path, phase="risk-assessment-complete")
         self.hook._advance_session_state(str(state_file), "ecw:requirements-elicitation")
         fields = self._parse_state(state_file)
         assert fields["current_phase"] == "requirements-loaded"
@@ -404,7 +404,7 @@ class TestAdvanceSessionState:
 
     def test_unknown_skill_is_noop(self, tmp_path):
         """Skills not in the mapping table must not modify the file."""
-        state_file = self._make_state(tmp_path, phase="phase1-complete", mode="analysis")
+        state_file = self._make_state(tmp_path, phase="risk-assessment-complete", mode="analysis")
         original = state_file.read_text()
         self.hook._advance_session_state(str(state_file), "ecw:unknown-skill")
         assert state_file.read_text() == original
@@ -450,7 +450,7 @@ class TestAdvanceSessionState:
             "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
             "next": "ecw:writing-plans",
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
         }))
 
         payload = json.dumps({
@@ -468,7 +468,7 @@ class TestAdvanceSessionState:
         self.hook.main()
 
         fields = self._parse_state(state_file)
-        assert fields["current_phase"] == "phase1-loaded"
+        assert fields["current_phase"] == "risk-assessment-loaded"
         output = json.loads("".join(captured))
         assert "systemMessage" in output
 
@@ -828,7 +828,7 @@ class TestTailComputation:
             "auto_continue": True,
             "routing": routing if isinstance(routing, list) else [routing],
             "next": routing[0] if isinstance(routing, list) else routing,
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
         }))
         return state_file
 
@@ -948,7 +948,7 @@ class TestTailComputation:
             "auto_continue": True,
             "routing": ["ecw:requirements-elicitation"],
             "next": "ecw:requirements-elicitation",
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
         }))
         self._run_post_tool_use(tmp_path, monkeypatch)
         fields = self._parse_state(state_file)

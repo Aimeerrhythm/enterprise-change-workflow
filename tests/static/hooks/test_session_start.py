@@ -46,7 +46,7 @@ class TestReadSessionState:
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260417-1606"
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.json").write_text(
-            json.dumps({"risk_level": "P1", "current_phase": "phase1-complete"})
+            json.dumps({"risk_level": "P1", "current_phase": "risk-assessment-complete"})
         )
 
         content, path = session_start._read_session_state(str(tmp_path))
@@ -145,7 +145,7 @@ class TestSessionStartMain:
         state_dir.mkdir(parents=True)
         (state_dir / "session-state.json").write_text(json.dumps({
             "risk_level": "P1",
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
             "auto_continue": True,
             "routing": ["ecw:writing-plans"],
         }))

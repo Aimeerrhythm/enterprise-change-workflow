@@ -15,13 +15,13 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 
 | Artifact | Writer | Readers | Purpose |
 |----------|--------|---------|---------|
-| `session-state.json` | risk-classifier Phase 1; systematic-debugging (bug entry) | All downstream skills (read-only) | Workflow state, risk level, routing, next skill |
+| `session-state.json` | risk-classifier initial risk assessment; systematic-debugging (bug entry) | All downstream skills (read-only) | Workflow state, risk level, routing, next skill |
 | `domain-collab-report.md` | domain-collab Round 3 | writing-plans, impl-verify | Multi-domain analysis with components, conflicts, dependencies |
 | `knowledge-summary.md` | domain-collab | writing-plans, impl-verify | Extracted knowledge file entries relevant to current change |
 | `requirements-summary.md` | requirements-elicitation | writing-plans, impl-verify | Full requirement spec with scope, data changes, edge cases |
 | `impl-verify-findings.md` | impl-verify | impl-verify (convergence tracking) | Per-round findings with severity, code locations, deviations |
 | `spec-challenge-report.md` | spec-challenge agent | User confirmation flow, plan author | Fatal flaws, improvement suggestions, user decisions |
-| `cross-service-plan.md` | workspace coordinator Phase 1 | workspace coordinator Phase 3 | Business decomposition: per-service roles, interaction patterns, open questions |
+| `cross-service-plan.md` | workspace coordinator initial decomposition | workspace coordinator Phase 3 | Business decomposition: per-service roles, interaction patterns, open questions |
 | `confirmed-contract.md` | workspace coordinator Phase 3 | child sessions Phase 4 | Finalized cross-service contracts: field names/types, topic names, interface signatures, execution order |
 | `status.json` | child sessions Phase 4 | workspace coordinator Phase 4 polling | Per-service implementation completion marker with commits and files changed |
 
@@ -34,9 +34,9 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 ```json
 {
   "risk_level": "P0|P1|P2|P3",
-  "change_type": "requirement|bug|fast-track",
+  "change_type": "requirement|bug",
   "routing": ["ecw:skill-name", "TDD:RED", "..."],
-  "current_phase": "phase1-complete",
+  "current_phase": "risk-assessment-complete",
   "next": "ecw:next-skill",
   "auto_continue": true,
   "workflow_id": "YYYYMMDD-xxxx",
@@ -238,7 +238,7 @@ After {N} rounds (fixed {X} must-fix issues):
 
 ## cross-service-plan.md
 
-Written by workspace coordinator at Phase 1 end (business-layer only, no code detail).
+Written by workspace coordinator at initial decomposition end (business-layer only, no code detail).
 Updated at Phase 3 end with final contracts.
 
 ### Required Sections

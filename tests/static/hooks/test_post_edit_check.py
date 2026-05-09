@@ -511,7 +511,7 @@ class TestSessionStateYamlValidation:
 
     def test_valid_json_no_warning(self, post_edit, tmp_path):
         """Valid JSON produces no warning."""
-        valid_content = '{"risk_level": "P0", "auto_continue": true, "routing": [], "current_phase": "phase1-complete"}'
+        valid_content = '{"risk_level": "P0", "auto_continue": true, "routing": [], "current_phase": "risk-assessment-complete"}'
         input_data = {
             "tool_name": "Write",
             "tool_input": {

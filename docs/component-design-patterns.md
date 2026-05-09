@@ -99,7 +99,7 @@ append_timeline_entry(content, phase) → content  # auto-backfills previous dur
 ### Historical Failures
 
 - Issue #36: LLM wrote Ledger after `<!-- ECW:LEDGER:END -->` → all hook parsers missed it
-- Issue #33: LLM wrote `phase1-complete` vs Hook wrote `phase1-loaded` → same-field dual-write conflict
+- Issue #33: LLM wrote the old risk-classifier completion marker vs Hook wrote the loaded marker → same-field dual-write conflict
 - Issue #40: Markdown→YAML migration required syncing 10+ SKILL.md format descriptions
 
 **Root fix**: State Ownership Inversion — Skill never writes state, single writer only.

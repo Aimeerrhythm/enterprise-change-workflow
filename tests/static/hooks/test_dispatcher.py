@@ -72,7 +72,7 @@ class TestGetProfile:
                 "risk_level": "P0",
                 "auto_continue": True,
                 "routing": [],
-                "current_phase": "phase1-complete",
+                "current_phase": "risk-assessment-complete",
             })
         )
 

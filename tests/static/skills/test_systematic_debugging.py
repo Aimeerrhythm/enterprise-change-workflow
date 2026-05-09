@@ -32,11 +32,11 @@ class TestSystematicDebuggingArchitecture:
         """Must describe domain knowledge cross-reference using path-mappings."""
         assert "path-mappings" in self.lower or "ecw-path-mappings" in self.lower
 
-    def test_has_phase1_checkpoint(self):
-        """Must persist Phase 1 evidence — checkpoint format in investigation-steps.md."""
+    def test_has_initial_investigation_checkpoint(self):
+        """Must persist initial investigation evidence — checkpoint format in investigation-steps.md."""
         assert re.search(r'checkpoint', self.lower) and re.search(
             r'investigation.?steps\.md|evidence', self.lower
-        ), "Must reference Phase 1 checkpoint (directly or via investigation-steps.md)"
+        ), "Must reference the initial investigation checkpoint (directly or via investigation-steps.md)"
 
     def test_has_scientific_method(self):
         """Phase 3 must describe hypothesis testing (scientific method)."""

@@ -94,7 +94,7 @@ def _build_session_state_from_rc(tool_result_json: str) -> str:
 - **Domains**: {domains_str}
 - **Mode**: {result.get('mode', 'single-domain')}
 - **Routing**: {routing_str}
-- **Current Phase**: phase1-complete
+- **Current Phase**: risk-assessment-complete
 - **Created**: 2026-05-04
 - **Workflow ID**: 20260504-eval
 - **Baseline Commit**: eval-mock

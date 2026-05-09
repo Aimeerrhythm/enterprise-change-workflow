@@ -32,12 +32,12 @@ Classify risk level (P0~P3) for any **requirement or feature change**, driving t
 **When NOT to use:**
 - Pure code reading/analysis/questions ("What does this class do?")
 - User explicitly says "use PX" (manually specified level, skip auto-classification)
-- Phase 1 already completed in current session and level not contested
+- Initial risk assessment already completed in current session and level not contested
 - **Bug fixes** — use `ecw:systematic-debugging` as the entry point instead
 
 ## Skill Interaction
 
-**This skill is the entry point for all requirement-type tasks.** After Phase 1, the auto-continue hook rebuilds the complete routing chain from `routing[0] + tail(risk_level)`. LLM writes only `risk_level` and `routing[0]`; the hook computes the remaining chain.
+**This skill is the entry point for all requirement-type tasks.** After the initial risk assessment, the auto-continue hook rebuilds the complete routing chain from `routing[0] + tail(risk_level)`. LLM writes only `risk_level` and `routing[0]`; the hook computes the remaining chain.
 
 `routing[0]` values:
 - `ecw:requirements-elicitation` — single-domain requirement
@@ -68,7 +68,7 @@ See `./workflow-routes.yml` `impl_strategy` section for the full decision matrix
 
 ---
 
-## Phase 1: Quick Pre-Assessment
+## Initial Risk Assessment
 
 ### Trigger Timing
 
@@ -78,13 +78,13 @@ After user describes requirement, **before the first downstream skill triggers**
 
 Read `./prompts/risk-assessment-guide.md` for risk assessment steps (keyword extraction, shared resource check, composite assessment).
 
-### Phase 1 Output Format
+### Assessment Output Format
 
 Use the "Assessment Output and Confirmation Flow" section in `./prompts/risk-assessment-guide.md`.
 
 ### State Persistence
 
-After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
+After user confirmation of the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`. Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` where `YYYYMMDD` comes from the `currentDate` system-reminder (reliable local date) and `xxxx` is a 4-digit random hex suffix (e.g., `20260429-a3f1`). Do NOT use Claude's internal time perception for the date or time component — it drifts from local timezone. Create the directory on first write.
 
 **Conflict detection (must do before writing):** Check if `.claude/ecw/session-data/{workflow-id}/session-state.json` already exists. If it does, regenerate the 4-digit suffix and re-check — repeat until a non-conflicting ID is found (max 3 attempts). This prevents triggering a second Write permission prompt when recovering from a failed first attempt.
 
@@ -96,7 +96,7 @@ After Phase 1 user confirmation, write ECW state to `.claude/ecw/session-data/{w
 
 ### Route Task Creation
 
-After Phase 1 user confirmation, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
+After user confirmation of the initial risk assessment, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
 
 **Creation method**: Use TaskCreate tool, set blockedBy dependency chain:
 
@@ -116,11 +116,11 @@ After Phase 1 user confirmation, create pending Tasks for **post-implementation*
 
 ### Execution Logic
 
-Key points: Retain Phase 1 to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`).
+Key points: retain the initial risk assessment to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`).
 
 ### Fast Track Output
 
-Fast Track uses the same Phase 1 assessment output, then appends:
+Fast Track uses the same risk assessment output, then appends:
 
 ```markdown
 ### Mode: Fast Track
@@ -142,9 +142,9 @@ In addition to automatic triggering, the following manual scenarios are supporte
 
 | Command | Purpose |
 |---------|---------|
-| `/risk-classify` | Manually trigger Phase 1 for current requirement |
+| `/risk-classify` | Manually trigger risk assessment for current requirement |
 | `/risk-classify P0` | Manually force-assign level, skip auto-classification |
-| `/risk-classify --recheck` | Re-execute Phase 1 (use when scope expansion discovered mid-implementation) |
+| `/risk-classify --recheck` | Re-run risk assessment (use when scope expansion discovered mid-implementation) |
 | `/risk-classify --hotfix` | Enter Fast Track, use simplified fix workflow |
 
 ---
@@ -155,7 +155,7 @@ In addition to automatic triggering, the following manual scenarios are supporte
 
 | Scenario | Handling |
 |----------|---------|
-| Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Phase 1: skip corresponding check dimension |
+| Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Skip the corresponding assessment dimension |
 | `session-state.json` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
 
 ## Supplementary Files

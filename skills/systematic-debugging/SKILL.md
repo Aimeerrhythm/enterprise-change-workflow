@@ -38,7 +38,7 @@ Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` (same convention as risk-classif
 NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 ```
 
-If you haven't completed Phase 1, you cannot propose fixes.
+If you haven't completed the initial investigation, you cannot propose fixes.
 
 ## When to Use
 
@@ -64,7 +64,7 @@ Use for ANY technical issue:
 
 You MUST complete each phase before proceeding to the next.
 
-### Phase 1: Root Cause Investigation
+### Initial Investigation: Root Cause Investigation
 
 Detailed steps (read error messages, reproduce, check changes, gather evidence, domain cross-reference, trace data flow, write checkpoint):
 
@@ -113,6 +113,6 @@ Create failing test, implement single fix, verify, escalate on repeated failure,
 
 | File | Content |
 |------|---------|
-| `./prompts/investigation-steps.md` | Phase 1 detailed steps: 6-step root cause investigation + checkpoint format |
+| `./prompts/investigation-steps.md` | Initial investigation steps: 6-step root cause investigation + checkpoint format |
 | `./prompts/analysis-and-fix.md` | Phase 2–4 detailed steps: pattern analysis, hypothesis testing, implementation |
 | `./prompts/anti-patterns.md` | Red flags and common rationalizations to watch for |

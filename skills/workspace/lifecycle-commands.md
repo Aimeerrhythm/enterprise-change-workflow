@@ -17,7 +17,7 @@ Step 1: Parse service list + requirement
   - Extract requirement description from user's input — this is REQUIRED.
     (e.g. "订单取消后需要释放wms的库存" from the user's message)
   - If requirement cannot be extracted from the input → AskUserQuestion to get it
-    before proceeding. An empty requirement blocks Phase 1 and makes the workspace useless.
+    before proceeding. An empty requirement blocks the initial decomposition step and makes the workspace useless.
   - Save requirement for writing to workspace.yml in Step 8
 
 Step 2: Service discovery

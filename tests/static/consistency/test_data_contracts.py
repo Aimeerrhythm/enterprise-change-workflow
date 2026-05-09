@@ -243,8 +243,6 @@ def _condition_applies(condition: str, level: str, mode: str, change_type: str) 
         return False
     if "not bug" in c and change_type == "bug":
         return False
-    if "not fast-track" in c and change_type == "fast-track":
-        return False
     if "requirement" in c and "not" not in c and change_type != "requirement":
         return False
     return True
@@ -280,11 +278,6 @@ class TestRoutingDependencies:
             if "systematic-debugging" in must_include:
                 chain.append("systematic-debugging")
             chain.append("tdd")
-            if "impl-verify" in must_include:
-                chain.append("impl-verify")
-            if "biz-impact-analysis" in must_include:
-                chain.append("biz-impact-analysis")
-        elif change_type == "fast-track":
             if "impl-verify" in must_include:
                 chain.append("impl-verify")
             if "biz-impact-analysis" in must_include:

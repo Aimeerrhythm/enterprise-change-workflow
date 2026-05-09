@@ -203,7 +203,7 @@ class TestAutoContinueMarkerDependency:
             "auto_continue": True,
             "routing": ["ecw:risk-classifier", "ecw:requirements-elicitation", "ecw:writing-plans"],
             "next": "ecw:requirements-elicitation",
-            "current_phase": "phase1-complete",
+            "current_phase": "risk-assessment-complete",
         }))
 
         payload = json.dumps({

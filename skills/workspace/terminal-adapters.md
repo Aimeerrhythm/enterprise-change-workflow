@@ -95,6 +95,6 @@ tmux split-window -h "cd {service_path} && claude '...' --name {service}-worker 
 Print commands for user to run in new terminal windows (language follows output_language):
 
 ```
-Service sessions (open once after Phase 1 — handles both analysis and implementation):
+Service sessions (open once after the initial decomposition step — handles both analysis and implementation):
   cd {workspace}/{service} && claude "Read .claude/ecw/session-data/{wf-id}/workspace-analysis-task.md and follow all instructions." --name {service}-analyst --permission-mode bypassPermissions
 ```

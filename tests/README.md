@@ -80,7 +80,7 @@ API 直调方式：将 SKILL.md 作为 system prompt 注入，用户输入作为
 {
   "risk_level": "P0",          // enum: P0|P1|P2|P3
   "mode": "single-domain",     // enum: single-domain|cross-domain
-  "change_type": "requirement", // enum: requirement|bug|fast-track
+  "change_type": "requirement", // enum: requirement|bug
   "routing": ["requirements-elicitation", "writing-plans", "spec-challenge", ...]
 }
 ```

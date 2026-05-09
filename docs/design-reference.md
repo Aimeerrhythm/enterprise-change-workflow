@@ -19,10 +19,10 @@ For full rationale, see `docs/design-principles.md`.
 | Field | Type | Description |
 |-------|------|-------------|
 | `risk_level` | `P0`–`P3` | Risk classification |
-| `change_type` | `requirement`\|`bug`\|`fast-track` | Change category |
+| `change_type` | `requirement`\|`bug` | Change category |
 | `routing` | `list[str]` | Full routing chain (rebuilt by hook for requirements) |
 | `next` | `str` | Next ECW skill to invoke |
-| `current_phase` | `str` | Current phase marker (e.g., `phase1-loaded`) |
+| `current_phase` | `str` | Current phase marker (e.g., `risk-assessment-loaded`) |
 | `auto_continue` | `bool` | Whether auto-continue is active |
 
 ## Routing Chain Construction

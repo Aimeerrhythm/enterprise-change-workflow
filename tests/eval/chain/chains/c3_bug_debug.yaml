@@ -53,7 +53,7 @@ steps:
     eval_instruction: |
       You are in an eval environment without file system access. Based on the bug
       description and the session_state context (containing risk classification),
-      simulate Phase 1 root cause investigation for the described bug.
+      simulate the initial root cause investigation for the described bug.
       Identify the most likely bug category and state a falsifiable root cause hypothesis.
       Call the debug_investigation_result tool with your structured investigation checkpoint.
       Do NOT call Write, Read, Edit, AskUserQuestion, or Agent tools.
@@ -64,7 +64,7 @@ steps:
     input: |
       Bug 报告：下单后库存未扣减，导致超卖。高并发场景下稳定复现，串行时未复现。
 
-      请基于会话状态中的风险分类结论，对该 Bug 进行 Phase 1 根因调查，
+      请基于会话状态中的风险分类结论，对该 Bug 进行 初始根因调查，
       并调用 debug_investigation_result 工具报告你的调查结论。
 
 # ── Cross-Step Assertions ────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ assertions:
     check: {field: "systematic-debugging.bug_classification", op: "!=", value: "unknown"}
 
   - name: sd_investigation_complete
-    # SD should complete Phase 1 investigation given the detailed bug report
+    # SD should complete initial investigation given the detailed bug report
     check: {field: "systematic-debugging.investigation_complete", op: "==", value: "True"}
 
   - name: sd_next_phase_defined

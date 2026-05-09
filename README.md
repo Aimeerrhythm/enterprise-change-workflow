@@ -43,7 +43,7 @@ Every change is classified P0–P3. The risk level determines workflow depth —
 flowchart TD
     IN([User: change / requirement / bug]) --> RC
 
-    RC["🔍 risk-classifier\n(Phase 1 — quick prediction)"]
+    RC["🔍 risk-classifier\n(initial risk assessment — quick prediction)"]
 
     RC -->|Single-domain P0/P1| RE[requirements-elicitation]
     RC -->|Cross-domain 2+| DC["domain-collab\n(parallel agent analysis)"]
@@ -80,7 +80,7 @@ flowchart TD
     style DONE fill:#C6F6D5,stroke:#68D391,color:#22543D
 ```
 
-risk-classifier runs Phase 1 (quick keyword prediction) to determine risk level and route the change to the appropriate workflow depth.
+risk-classifier runs the initial risk assessment (quick keyword prediction) to determine risk level and route the change to the appropriate workflow depth.
 
 ---
 
@@ -127,7 +127,7 @@ flowchart LR
 
     subgraph Phases
         PF["Pre-flight\nECW readiness check"] --> P1
-        P1["Phase 1\nBusiness decomposition\n(no code reading)"] --> P2
+        P1["Initial decomposition\nBusiness decomposition\n(no code reading)"] --> P2
         P2["Phase 2\nPer-service code analysis\n(child sessions, parallel)"] --> P3
         P3["Phase 3\nContract alignment\n+ conflict resolution"] --> P4
         P4["Phase 4\nPer-service implementation\n(Layer 1 → Layer 2)"] --> P5
@@ -140,7 +140,7 @@ flowchart LR
     style P4 fill:#C6F6D5,stroke:#68D391,color:#22543D
 ```
 
-**Key design:** Phase 1 does business decomposition with zero code reading — preventing premature optimization. Contract conflicts always surface to the user before implementation begins.
+**Key design:** The initial decomposition does business decomposition with zero code reading — preventing premature optimization. Contract conflicts always surface to the user before implementation begins.
 
 ```bash
 /ecw:workspace create service-a ../service-b
@@ -362,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` reports broken reference** — A file you modified references a `.claude/` path that doesn't exist. Check for typos or moved files.
 
-**Phase 1 risk level is inaccurate** — Two common causes: (1) domain keyword coverage in your project `CLAUDE.md` or knowledge files is incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract shared dependencies, then re-run risk-classifier Phase 1.
+**initial risk assessment result is inaccurate** — Two common causes: (1) domain keyword coverage in your project `CLAUDE.md` or knowledge files is incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract shared dependencies, then re-run risk-classifier initial risk assessment.
 
 → [Full troubleshooting guide](TROUBLESHOOTING.md)
 

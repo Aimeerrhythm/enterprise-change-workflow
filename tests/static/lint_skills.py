@@ -391,7 +391,7 @@ def check_session_state_contract(result: LintResult):
 def check_ask_user_question(result: LintResult):
     """Critical skills must contain AskUserQuestion invocation."""
     required_skills = [
-        "risk-classifier",  # Phase 1 confirmation
+        "risk-classifier",  # initial risk assessment confirmation
         "tdd",              # Skip confirmation
     ]
 

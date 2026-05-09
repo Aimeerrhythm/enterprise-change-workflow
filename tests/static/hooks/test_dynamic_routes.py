@@ -150,7 +150,7 @@ class TestBehaviorPreservation:
         self.mod = _load_auto_continue()
 
     def test_risk_classifier_phase(self):
-        assert self.mod._SKILL_COMPLETED_PHASE["ecw:risk-classifier"] == "phase1-loaded"
+        assert self.mod._SKILL_COMPLETED_PHASE["ecw:risk-classifier"] == "risk-assessment-loaded"
 
     def test_writing_plans_phase(self):
         assert self.mod._SKILL_COMPLETED_PHASE["ecw:writing-plans"] == "plan-loaded"

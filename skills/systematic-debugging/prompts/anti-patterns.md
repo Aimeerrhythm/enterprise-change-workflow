@@ -13,7 +13,7 @@ If you catch yourself thinking:
 - **"One more fix attempt" (when already tried 2+)**
 - **Each fix reveals new problem in different place**
 
-**ALL of these mean: STOP. Return to Phase 1.**
+**ALL of these mean: STOP. Return to the initial investigation.**
 
 ## Common Rationalizations
 
