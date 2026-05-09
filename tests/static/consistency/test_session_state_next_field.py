@@ -52,43 +52,37 @@ class TestPreCompactNextField:
     def test_extracts_next_skill(self, pre_compact, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260420-1200"
         state_dir.mkdir(parents=True)
-        state_path = state_dir / "session-state.md"
-        state_path.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "current_phase: phase2-complete\n"
-            "next: ecw:writing-plans\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        state_path = state_dir / "session-state.json"
+        import json as _json
+        state_path.write_text(_json.dumps({
+            "risk_level": "P1",
+            "current_phase": "plan-complete",
+            "next": "ecw:writing-plans",
+            "routing": [],
+            "auto_continue": True,
+        }))
         msg = pre_compact._build_recovery_message(
             str(state_path), [], str(tmp_path)
         )
         assert "ecw:writing-plans" in msg, (
             "Recovery message must include the Next skill name"
         )
-        assert re.search(r'invoke.*ecw:writing-plans.*immediately', msg, re.IGNORECASE) or \
-               re.search(r'immediately.*invoke.*ecw:writing-plans', msg, re.IGNORECASE) or \
-               "ecw:writing-plans" in msg, \
-            "Recovery should direct immediate invocation of Next skill"
 
     def test_falls_back_without_next(self, pre_compact, tmp_path):
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260420-1200"
         state_dir.mkdir(parents=True)
-        state_path = state_dir / "session-state.md"
-        state_path.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "current_phase: phase2-complete\n"
-            "routing: []\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        state_path = state_dir / "session-state.json"
+        import json as _json
+        state_path.write_text(_json.dumps({
+            "risk_level": "P1",
+            "current_phase": "plan-complete",
+            "routing": [],
+            "auto_continue": True,
+        }))
         msg = pre_compact._build_recovery_message(
             str(state_path), [], str(tmp_path)
         )
-        assert "phase2-complete" in msg, (
+        assert "plan-complete" in msg, (
             "Without Next field, recovery must fall back to phase-based guidance"
         )
 
@@ -106,18 +100,16 @@ class TestSessionStartNextField:
         return mod
 
     def test_next_skill_in_state_fields(self, session_start):
-        content = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "next: ecw:impl-verify\n"
-            "auto_continue: true\n"
-            "routing: []\n"
-            "current_phase: plan-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        fields = session_start._extract_state_fields(content)
+        state_dict = {
+            "risk_level": "P1",
+            "next": "ecw:impl-verify",
+            "auto_continue": True,
+            "routing": [],
+            "current_phase": "plan-complete",
+        }
+        fields = session_start._extract_state_fields(state_dict)
         assert "next_skill" in fields, (
-            "_extract_state_fields must extract 'next_skill' from YAML `next` field"
+            "_extract_state_fields must extract 'next_skill' from the 'next' field"
         )
         assert fields["next_skill"] == "ecw:impl-verify"
 
@@ -206,20 +198,18 @@ class TestAutoContinueMarkerDependency:
         )
 
     def test_injects_routing_on_valid_status_block(self, auto_continue, tmp_path, monkeypatch):
-        """Hook must inject systemMessage when STATUS block is present and auto_continue: true."""
+        """Hook must inject systemMessage when session-state.json present and auto_continue: true."""
         import json, io
 
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260428-1000"
         state_dir.mkdir(parents=True)
-        (state_dir / "session-state.md").write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "auto_continue: true\n"
-            "routing: [ecw:risk-classifier, ecw:requirements-elicitation, ecw:writing-plans]\n"
-            "next: ecw:requirements-elicitation\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        (state_dir / "session-state.json").write_text(json.dumps({
+            "risk_level": "P1",
+            "auto_continue": True,
+            "routing": ["ecw:risk-classifier", "ecw:requirements-elicitation", "ecw:writing-plans"],
+            "next": "ecw:requirements-elicitation",
+            "current_phase": "phase1-complete",
+        }))
 
         payload = json.dumps({
             "tool_name": "Skill",
@@ -236,7 +226,7 @@ class TestAutoContinueMarkerDependency:
         auto_continue.main()
         output = json.loads("".join(captured))
         assert "systemMessage" in output, (
-            "Hook must inject systemMessage when STATUS block present and Auto-Continue: yes"
+            "Hook must inject systemMessage when session-state.json present and auto_continue: true"
         )
         assert "ecw:requirements-elicitation" in output["systemMessage"], (
             "systemMessage must reference the next skill in the routing chain"

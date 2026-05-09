@@ -109,13 +109,20 @@ class TestSpecChallengeSessionContinuity:
         self.lower = self.content.lower()
 
     def test_auto_continue_to_implementation(self):
-        """Must auto-continue to implementation via Downstream Handoff."""
-        has_auto_continue = bool(
-            re.search(r'downstream handoff', self.lower)
-            and re.search(r'auto.?continue|invoke.{0,60}(ecw:tdd|impl)', self.lower)
+        """spec-challenge must describe post-review handling without Downstream Handoff.
+
+        Issue #62: hook owns all state transitions. Downstream Handoff was removed from
+        all skills. spec-challenge gets special hook treatment (no systemMessage injection)
+        to allow mandatory Fatal Flaw AskUserQuestion confirmation.
+        """
+        # Must NOT have Downstream Handoff (Issue #62 — hook owns state)
+        assert "downstream handoff" not in self.lower, (
+            "spec-challenge must NOT have Downstream Handoff block (Issue #62)"
         )
-        assert has_auto_continue, \
-            "Must have Downstream Handoff describing auto-continue to implementation"
+        # Must describe post-review handling (Fatal Flaw flow or Response Summary)
+        assert re.search(r'fatal.?flaw|response.?summary|post.?review', self.lower), (
+            "spec-challenge must describe post-review handling (Fatal Flaw or Response Summary)"
+        )
 
     def test_no_session_split_ask(self):
         """Must NOT use AskUserQuestion for session split decision."""

@@ -213,24 +213,23 @@ class TestG11FieldPatternsVsTemplate:
             pytest.skip("session-state-format.md not found")
         self.fmt_content = fmt_path.read_text(encoding="utf-8")
 
-    def test_parse_status_extracts_required_fields(self):
-        """parse_status must correctly extract all routing-critical fields from YAML STATUS."""
-        import importlib.util as _ilu
+    def test_parse_status_extracts_required_fields(self, tmp_path):
+        """parse_status must correctly extract all routing-critical fields from JSON state."""
+        import importlib.util as _ilu, json as _json
         spec = _ilu.spec_from_file_location("marker_utils", ROOT / "hooks" / "marker_utils.py")
         mu = _ilu.module_from_spec(spec)
         spec.loader.exec_module(mu)
 
-        synthetic_status = (
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "auto_continue: true\n"
-            "routing: [ecw:risk-classifier, ecw:writing-plans]\n"
-            "next: ecw:writing-plans\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        fields = mu.parse_status(synthetic_status)
-        assert fields is not None, "parse_status must succeed on valid YAML STATUS"
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(_json.dumps({
+            "risk_level": "P1",
+            "auto_continue": True,
+            "routing": ["ecw:risk-classifier", "ecw:writing-plans"],
+            "next": "ecw:writing-plans",
+            "current_phase": "phase1-complete",
+        }))
+        fields = mu.parse_status(str(state_file))
+        assert fields is not None, "parse_status must succeed on valid JSON state file"
         assert fields.get("risk_level") == "P1"
         assert fields.get("auto_continue") is True
         assert isinstance(fields.get("routing"), list)
