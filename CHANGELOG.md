@@ -4,6 +4,15 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.1] - 2026-05-09
+
+### 修复
+
+- **gateguard-fact-force.py**：移除 `investigated-files.txt` 会话状态追踪，每次编辑受保护文件均触发调查提示
+- **post-edit-check.py**：移除 `modified-files.txt` 文件积累逻辑，精简为纯反模式检测 + 受保护路径警告
+- **templates/path-mappings.md**：新增代码路径→域映射模板（由 `/ecw-init` 生成初始版本）
+- **修复 5 个静态测试失败**：systematic-debugging Phase 1 标签、workspace Phase 1/Phase 6 引用、no-code-reading 约束 Phase 1 标注、risk-classifier max 3 次冲突重试说明
+
 ## [1.5.0] - 2026-05-09
 
 ### 架构简化
