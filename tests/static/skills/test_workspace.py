@@ -105,8 +105,8 @@ class TestPhaseGateArchitecture:
     def test_gate_out_mentioned(self, skill_lower):
         assert "gate-out" in skill_lower
 
-    def test_phase1_cross_service_plan_artifact(self, skill_md):
-        """Phase 1 must write cross-service-plan.md."""
+    def test_initial_decomposition_cross_service_plan_artifact(self, skill_md):
+        """Initial decomposition must write cross-service-plan.md."""
         assert "cross-service-plan.md" in skill_md
 
     def test_phase2_analysis_report_artifact(self, skill_md):
@@ -126,9 +126,9 @@ class TestPhaseGateArchitecture:
         assert re.search(r'(must exist|verify.{0,30}exist|exists.{0,30}before|stop.{0,30}missing)', skill_lower)
 
     def test_session_state_updated_each_phase(self, skill_lower):
-        """Each phase must update session-state.md."""
-        assert "session-state.md" in skill_lower
-        assert re.search(r'update session.?state', skill_lower)
+        """Each phase must update session-state.json."""
+        assert "session-state.json" in skill_lower
+        assert re.search(r'update.{0,3}session.?state', skill_lower)
 
 
 # ---------------------------------------------------------------------------
@@ -136,26 +136,26 @@ class TestPhaseGateArchitecture:
 # ---------------------------------------------------------------------------
 
 class TestPhase1Constraints:
-    """Phase 1 must enforce code-free information constraint."""
+    """Initial decomposition must enforce code-free information constraint."""
 
-    def test_no_code_reading_in_phase1(self, skill_lower):
-        """Phase 1 must prohibit code reading tools."""
+    def test_no_code_reading_in_initial_decomposition(self, skill_lower):
+        """Initial decomposition must prohibit code reading tools."""
         assert re.search(r'phase 1.{0,300}no.{0,30}(read|bash|glob|grep|explore)', skill_lower) or \
                re.search(r'(no read|no bash|no glob|no grep|no explore).{0,300}phase 1', skill_lower) or \
                re.search(r'code.?free.{0,200}phase 1', skill_lower) or \
                re.search(r'phase 1.{0,200}code.?free', skill_lower)
 
-    def test_workspace_yml_only_source_in_phase1(self, skill_lower):
-        """Phase 1 information source must be workspace.yml only."""
+    def test_workspace_yml_only_source_in_initial_decomposition(self, skill_lower):
+        """Initial decomposition information source must be workspace.yml only."""
         assert re.search(r'workspace\.yml.{0,100}only|only.{0,30}workspace\.yml|only.{0,30}information source', skill_lower)
 
-    def test_no_class_method_in_phase1_output(self, skill_lower):
-        """Phase 1 output must not contain class/method names."""
+    def test_no_class_method_in_initial_decomposition_output(self, skill_lower):
+        """Initial decomposition output must not contain class/method names."""
         assert re.search(r'class name|method name|field name|sql.{0,30}(violation|phase 1)', skill_lower) or \
                re.search(r'phase 1.{0,200}(violation|class|method)', skill_lower)
 
     def test_unclear_interaction_pattern_flag(self, skill_lower):
-        """Phase 1 must allow marking interaction type as 'unclear' for Phase 2."""
+        """Initial decomposition must allow marking interaction type as 'unclear' for Phase 2."""
         assert "unclear" in skill_lower
 
 
@@ -279,16 +279,16 @@ class TestCoordinationProtocol:
         assert "coordination-protocol.md" in skill_lower
 
     def test_child_session_state_in_artifact_locations(self, coordination_md):
-        """coordination-protocol.md Artifact Locations must list child session-state.md.
+        """coordination-protocol.md Artifact Locations must list child session-state.json.
 
-        Child sessions write session-state.md at the workspace wf-id path so the
+        Child sessions write session-state.json at the workspace wf-id path so the
         coordinator can observe per-service ECW flow progress at a known location.
         """
         lower = coordination_md.lower()
-        assert "session-state.md" in lower, \
-            "child session-state.md missing from coordination-protocol.md Artifact Locations"
-        assert re.search(r'session-state\.md.{0,80}child|child.{0,80}session-state\.md', lower), \
-            "child session-state.md not clearly attributed to child session in artifact table"
+        assert "session-state.json" in lower, \
+            "child session-state.json missing from coordination-protocol.md Artifact Locations"
+        assert re.search(r'session-state\.json.{0,80}child|child.{0,80}session-state\.json', lower), \
+            "child session-state.json not clearly attributed to child session in artifact table"
 
 
 # ---------------------------------------------------------------------------
@@ -401,8 +401,8 @@ class TestTerminalAdapters:
 class TestAntiPatterns:
     """anti-patterns.md and SKILL.md must encode critical never-rules."""
 
-    def test_no_code_reading_in_phase1_anti_pattern(self, anti_patterns_md):
-        """Anti-patterns must prohibit code reading in Phase 1."""
+    def test_no_code_reading_in_initial_decomposition_anti_pattern(self, anti_patterns_md):
+        """Anti-patterns must prohibit code reading during initial decomposition."""
         lower = anti_patterns_md.lower()
         assert re.search(r'(never|no).{0,60}(read|bash|glob|grep|explore).{0,60}phase 1', lower) or \
                re.search(r'phase 1.{0,100}(never|code.?reading|no read)', lower)
@@ -618,16 +618,16 @@ class TestAnalysisTaskTemplate:
         ), "wf-id override instruction missing from Phase 4 of workspace-analysis-task-template.md"
 
     def test_child_session_state_path_uses_workspace_wf_id(self, analysis_task_template_md):
-        """Child session must write session-state.md under the workspace wf-id path."""
+        """Child session must write session-state.json under the workspace wf-id path."""
         assert re.search(
-            r'\.claude/ecw/session-data/\{wf-id\}/session-state\.md',
+            r'\.claude/ecw/session-data/\{wf-id\}/session-state\.json',
             analysis_task_template_md,
-        ), "child session-state.md path with {wf-id} not found in template Phase 4"
+        ), "child session-state.json path with {wf-id} not found in template Phase 4"
 
     def test_no_coordinator_session_state_update(self, analysis_task_template_md):
-        """Child session must NOT update coordinator's session-state.md."""
+        """Child session must NOT update coordinator's session-state.json."""
         lower = analysis_task_template_md.lower()
         assert re.search(
             r'(do not|not).{0,30}(coordinator.{0,30}session.?state|update.{0,30}coordinator)',
             lower,
-        ), "template must explicitly forbid child session from updating coordinator's session-state.md"
+        ), "template must explicitly forbid child session from updating coordinator's session-state.json"
