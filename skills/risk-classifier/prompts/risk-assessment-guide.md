@@ -1,4 +1,4 @@
-# Phase 1 Reasoning Steps
+# Risk Assessment Steps
 
 ## Step 1: Keyword Extraction & Domain Identification
 
@@ -28,3 +28,22 @@ Cross-Domain = matched domain count >= 2 ? "cross-domain" : "single-domain"
 ```
 
 If information insufficient (no domain docs, ambiguous scope), **default to P1**. Look up routing in `workflow-routes.yml`.
+
+
+## Assessment Output and Confirmation Flow
+
+First output a brief assessment (no more than 5 lines):
+
+```markdown
+## Change Risk Pre-Assessment
+
+**P{X}** | {single-domain/cross-domain} ({domain list}) | {multi-domain collab/B/none} | {one-line rationale}
+
+Downstream routing: {full routing chain, e.g., ecw:domain-collab(multi-domain) → Phase 2 → ecw:writing-plans → TDD:RED → Implementation(GREEN) → ecw:biz-impact-analysis → Phase 3}
+```
+
+Then output:
+```
+[Auto-Flow] Risk: P{X} | {single-domain/cross-domain} ({domain list}) | Route: {routing chain}. Auto-proceeding...
+```
+Then invoke the next downstream skill. The user can interrupt at any time if they disagree with the classification.

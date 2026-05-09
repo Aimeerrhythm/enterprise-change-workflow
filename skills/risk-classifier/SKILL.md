@@ -76,11 +76,11 @@ After user describes requirement, **before the first downstream skill triggers**
 
 ### Execution Steps
 
-Read `./prompts/phase1-steps.md` for Phase 1 reasoning steps (keyword extraction, shared resource check, composite assessment).
+Read `./prompts/risk-assessment-guide.md` for risk assessment steps (keyword extraction, shared resource check, composite assessment).
 
 ### Phase 1 Output Format
 
-Read `./phase1-output-template.md` for output format and user confirmation flow.
+Use the "Assessment Output and Confirmation Flow" section in `./prompts/risk-assessment-guide.md`.
 
 ### State Persistence
 
@@ -120,7 +120,19 @@ Key points: Retain Phase 1 to record level → 1-round simplified confirmation �
 
 ### Fast Track Output
 
-Read `./fast-track-output-template.md` for fast track output format.
+Fast Track uses the same Phase 1 assessment output, then appends:
+
+```markdown
+### Mode: Fast Track
+
+> Entered emergency fix mode. Skipping full requirement elicitation, spec-challenge, and TDD.
+> Will run ecw:biz-impact-analysis post-fix.
+
+### Quick Confirmation (3 questions)
+1. What is the issue symptom and impact scope?
+2. Fix approach (what to change, how to change)?
+3. Is there a temporary mitigation already deployed?
+```
 
 ---
 
@@ -149,8 +161,6 @@ In addition to automatic triggering, the following manual scenarios are supporte
 ## Supplementary Files
 
 - `workflow-routes.yml` — Routing matrix (single source of truth) + implementation strategy + post-impl tasks
-- `prompts/phase1-steps.md` — Phase 1 reasoning steps
+- `prompts/risk-assessment-guide.md` — Risk assessment steps + output and confirmation flow
 - `prompts/common-mistakes.md` — Anti-patterns checklist
-- `phase1-output-template.md` — Phase 1 output format and confirmation flow
-- `fast-track-output-template.md` — Fast track output format
 - `session-state-format.md` — Session state file template, marker conventions, working mode definitions, context advisory

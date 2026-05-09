@@ -34,13 +34,13 @@ class TestLoadSkillPrompt:
         Template .md files in the skill root should NOT be auto-included.
         """
         from tests.eval.chain.skill_loader import load_skill_prompt
-        # risk-classifier has many .md templates in root (phase1-output-template.md etc)
+        # risk-classifier has supplementary files outside prompts/
         # With no extra_files, they should not be included
         content = load_skill_prompt("risk-classifier")
         skill_md = (SKILLS_DIR / "risk-classifier" / "SKILL.md").read_text()
         # Content should be SKILL.md + prompts only
-        # phase1-output-template.md should NOT be included automatically
-        phase1_template = (SKILLS_DIR / "risk-classifier" / "phase1-output-template.md").read_text()
+        # session-state-format.md should NOT be included automatically
+        phase1_template = (SKILLS_DIR / "risk-classifier" / "session-state-format.md").read_text()
         # First line of template is distinctive — check it's not duplicated beyond SKILL.md
         first_line = phase1_template.strip().split("\n")[0]
         # The line might appear in SKILL.md itself (reference), but the full template content
