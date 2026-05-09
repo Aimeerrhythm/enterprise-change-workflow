@@ -101,14 +101,19 @@ class TestCompactSuggestions:
 # ══════════════════════════════════════════════════════
 
 class TestClaudeMdArtifactTable:
-    """Verify that CLAUDE.md documents the new session-data checkpoint artifacts."""
+    """Verify that artifact-reference.md documents session-data checkpoint artifacts."""
 
     def test_claude_md_documents_session_data(self):
-        """CLAUDE.md must list session-data checkpoint files in its artifact table."""
-        assert CLAUDE_MD.exists(), "CLAUDE.md must exist at project root"
-        content = CLAUDE_MD.read_text(encoding="utf-8")
+        """artifact-reference.md must document session-data checkpoint files.
+
+        CLAUDE.md already points to artifact-reference.md as the file reference.
+        The artifact table belongs there, not in CLAUDE.md itself.
+        """
+        artifact_ref = ROOT / "docs" / "artifact-reference.md"
+        assert artifact_ref.exists(), "docs/artifact-reference.md must exist"
+        content = artifact_ref.read_text(encoding="utf-8")
 
         assert "session-data/" in content and "requirements-summary" in content, (
-            "CLAUDE.md artifact table must document "
+            "docs/artifact-reference.md must document "
             "'requirements-summary' checkpoint under session-data/"
         )

@@ -14,5 +14,3 @@ ECW is a Claude Code plugin — design all changes as reusable infrastructure: s
 Before implementing, read `docs/design-principles.md` (full). Then read relevant sections of `docs/component-design-patterns.md` (see its index table).
 
 Run `make all` before committing. File reference: `docs/artifact-reference.md`. Compliance checklist: `CONTRIBUTING.md`.
-
-Checkpoint artifacts land in `session-data/` under `.claude/ecw/session-data/{workflow-id}/`: `requirements-summary.md`, `domain-collab-report.md`, `impl-verify-findings.md`, etc. See `docs/artifact-reference.md` for the full table.
