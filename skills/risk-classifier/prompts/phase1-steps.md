@@ -22,6 +22,4 @@ Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domai
 
 Full three-dimensional factors in ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses first two dimensions only.
 
-**Calibration history**: Check `.claude/ecw/state/calibration-history.md` — scan last 10 entries for keyword overlap, adjust ±1 level max if systematic deviation found. Log adjustment: `[Phase 1 adjusted P{x} → P{y} based on calibration history]`. If file missing or empty, skip silently.
-
 If information insufficient, **default to P2**. Look up routing in `workflow-routes.yml`.

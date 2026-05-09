@@ -11,10 +11,9 @@ import pytest
 
 SCHEMA_FILE = Path(__file__).resolve().parent.parent.parent.parent / "templates" / "artifact-schemas.md"
 KNOWN_ARTIFACTS = [
-    "session-state.md",
+    "session-state.json",
     "domain-collab-report.md",
     "knowledge-summary.md",
-    "phase2-assessment.md",
     "requirements-summary.md",
     "impl-verify-findings.md",
     "spec-challenge-report.md",

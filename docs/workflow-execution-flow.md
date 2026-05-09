@@ -17,10 +17,8 @@ flowchart TD
     RC --> |P3| IMPL3[直接实现]
     RC --> |Bug| SD[systematic-debugging]
 
-    RE --> PH2A[Phase 2 精确评估]
-    DC --> PH2B[Phase 2 精确评估]
-    PH2A --> WP[writing-plans]
-    PH2B --> WP
+    RE --> WP[writing-plans]
+    DC --> WP
 
     WP --> |P0 必须 / P1 跨域| SC[spec-challenge]
     WP --> |P1 单域 / P2| TDD
@@ -29,9 +27,8 @@ flowchart TD
     GREEN --> IV[impl-verify]
     IV --> |P0/P1| BIA[biz-impact-analysis]
     BIA --> KT[knowledge-track]
-    KT --> CAL[Phase 3 Calibration]
+    KT --> DONE[✅ 完成]
     IV --> |P2| DONE2[✅ 完成]
-    CAL --> DONE[✅ 完成]
 
     WP2 --> TDD2[TDD: RED] --> GREEN2[Implementation] --> IV2[impl-verify] --> DONE2
 
@@ -47,14 +44,12 @@ flowchart TD
 | 阶段 | P0 | P1 | P2 | P3 |
 |------|----|----|----|----|
 | 需求分析 | requirements-elicitation / domain-collab | 同 P0 | 跳过 | 跳过 |
-| Phase 2 精确评估 | ✅ | ✅ | 跳过 | 跳过 |
 | writing-plans | 完整 + 验证 + 回滚 | 完整 + 验证 | 简化 | 跳过 |
 | spec-challenge | **必须** | 仅跨域 | 跳过 | 跳过 |
 | TDD | 强制 + 验证日志 | 强制 | 简化模式 | 跳过 |
 | impl-orchestration | Task≥4 强制 | Task≥4 强制 | 跳过 | 跳过 |
 | impl-verify | 4 轮全量 | 4 轮全量 | 简化 | 跳过 |
 | biz-impact-analysis | ✅ | ✅ | 跳过 | 跳过 |
-| Phase 3 校准 | ✅ | ✅ | 跳过 | 跳过 |
 
 ---
 
@@ -65,9 +60,9 @@ flowchart TD
     START([用户输入需求]) --> PHASE1
 
     subgraph PHASE1 [① risk-classifier Phase 1]
-        P1A[关键词匹配 → 初判 P0] --> P1B[创建 session-state.md]
+        P1A[关键词匹配 → 初判 P0] --> P1B[创建 session-state.json]
         P1B --> P1C[写入 Auto-Continue 路由链]
-        P1C --> P1D[创建 post-impl Tasks:<br/>Task#3 impl-verify<br/>Task#4 biz-impact-analysis<br/>Task#5 Phase 3 Calibration]
+        P1C --> P1D[创建 post-impl Tasks:<br/>Task#3 impl-verify<br/>Task#4 biz-impact-analysis]
         P1D --> P1E{👤 用户确认<br/>P0 等级是否准确?}
     end
 
@@ -80,19 +75,7 @@ flowchart TD
         R3 --> R4[输出 requirements-summary.md]
     end
 
-    R4 --> PHASE2
-
-    subgraph PHASE2 [③ risk-classifier Phase 2]
-        P2A[dispatch Sonnet 查询依赖图] --> P2B[结合代码分析]
-        P2B --> P2C[精确等级判定]
-        P2C --> P2D{升降级?}
-        P2D --> |降级| P2E[调整路由链]
-        P2D --> |维持 P0| P2F[输出 phase2-assessment.md]
-        P2E --> P2F
-        P2F --> P2G{👤 用户确认<br/>等级 + 结论}
-    end
-
-    P2G --> |确认| WP
+    R4 --> WP
 
     subgraph WP [④ writing-plans]
         W1[P0 细度: 完整任务分解<br/>+ 验证步骤 + 回滚说明]
@@ -179,19 +162,10 @@ flowchart TD
         K1 --> K2[输出 doc-tracker.md]
     end
 
-    K2 --> CAL
-
-    subgraph CAL [⑪ Phase 3 Calibration]
-        C1[对比 Phase 1/2 预测 vs 实际] --> C2[输出 calibration-log.md]
-        C2 --> C3[输出 calibration-history.md]
-        C3 --> C4[输出 instincts.md<br/>置信度 > 0.7]
-    end
-
-    CAL --> FINISH([✅ P0 流程完成])
+    K2 --> FINISH([✅ P0 流程完成])
 
     style PHASE1 fill:#ffeaa7
     style REQE fill:#dfe6e9
-    style PHASE2 fill:#ffeaa7
     style WP fill:#74b9ff
     style SPEC fill:#e17055,color:#fff
     style TDDP fill:#a29bfe
@@ -199,7 +173,6 @@ flowchart TD
     style VERIFY fill:#00b894,color:#fff
     style BIA fill:#fdcb6e
     style KT fill:#dfe6e9
-    style CAL fill:#b2bec3
 ```
 
 ---
@@ -220,8 +193,7 @@ flowchart TD
         DC4 --> DC5[输出 domain-collab-report.md<br/>+ knowledge-summary.md]
     end
 
-    DC5 --> PHASE2[③ Phase 2 精确评估]
-    PHASE2 --> NEXT[④~⑪ 后续流程同单域 P0]
+    DC5 --> NEXT[③~⑩ 后续流程同单域 P0（writing-plans 起）]
 
     style DC fill:#fd79a8,color:#fff
 ```
@@ -261,39 +233,38 @@ sequenceDiagram
 sequenceDiagram
     participant SK as Skill 执行
     participant HK as auto-continue Hook
-    participant SS as session-state.md
+    participant SS as session-state.json
     participant NX as 下一个 Skill
 
     SK->>HK: PostToolUse 触发
-    HK->>SS: 原子更新 Current Phase → "已完成"
-    HK->>SS: 更新 Working Mode
-    HK->>SS: 记录 Subagent Ledger (时间戳+耗时)
-    HK->>SS: 读取 Auto-Continue 路由链
+    HK->>SS: 原子更新 current_phase → "已完成"
+    HK->>SS: 读取 routing 链，重建 tail（risk-classifier 完成后）
     HK->>HK: 查找下一个未完成 step
     HK->>NX: 注入 systemMessage<br/>"接下来执行 ecw:xxx"
     NX->>HK: PreToolUse 触发
-    HK->>SS: 更新 Current Phase → "进行中"
+    HK->>SS: 更新 current_phase → "进行中"
     NX->>NX: Skill 开始执行
 ```
 
-### session-state.md 关键字段
+### session-state.json 关键字段
 
-```yaml
-# Auto-Continue 路由链示例 (P0 单域)
-Auto-Continue:
-  - requirements-elicitation    # ✅ 已完成
-  - Phase 2                     # ✅ 已完成
-  - writing-plans               # 🔄 进行中
-  - spec-challenge              # ⏳ 待执行
-  - TDD:RED                     # ⏳ 待执行
-  - Implementation:GREEN        # ⏳ 待执行
-  - impl-verify                 # ⏳ 待执行
-  - biz-impact-analysis         # ⏳ 待执行
-  - Phase 3 Calibration         # ⏳ 待执行
-
-Current Phase: writing-plans (进行中)
-Working Mode: plan-generation
-Next: spec-challenge
+```json
+{
+  "risk_level": "P0",
+  "routing": [
+    "ecw:requirements-elicitation",
+    "ecw:writing-plans",
+    "ecw:spec-challenge",
+    "TDD:RED",
+    "Implementation(GREEN)",
+    "ecw:impl-verify",
+    "ecw:biz-impact-analysis",
+    "ecw:knowledge-track"
+  ],
+  "current_phase": "plan-loaded",
+  "next": "ecw:spec-challenge",
+  "auto_continue": true
+}
 ```
 
 ---
@@ -379,29 +350,26 @@ flowchart TD
 
 ## 7. 用户决策点
 
-P0 流程中有 **5 个关键人工介入点**，流程不会全自动跑完：
+P0 流程中有 **4 个关键人工介入点**，流程不会全自动跑完：
 
 ```mermaid
 flowchart LR
     D1[Phase 1 确认<br/>P0 等级] --> D2[需求澄清<br/>多轮交互]
-    D2 --> D3[Phase 2 确认<br/>精确等级]
-    D3 --> D4[spec-challenge<br/>逐项决策]
-    D4 --> D5[impl-verify<br/>修复确认]
+    D2 --> D3[spec-challenge<br/>逐项决策]
+    D3 --> D4[impl-verify<br/>修复确认]
 
     style D1 fill:#fdcb6e
     style D2 fill:#fdcb6e
-    style D3 fill:#fdcb6e
-    style D4 fill:#e17055,color:#fff
-    style D5 fill:#00b894,color:#fff
+    style D3 fill:#e17055,color:#fff
+    style D4 fill:#00b894,color:#fff
 ```
 
 | # | 决策点 | 用户操作 | 影响 |
 |---|--------|---------|------|
 | 1 | Phase 1 等级确认 | 确认/调整 P0 等级 | 决定整条路由链深度 |
 | 2 | 需求澄清交互 | 回答 9 维提问 | 需求完整度直接影响 Plan 质量 |
-| 3 | Phase 2 等级确认 | 确认/接受升降级 | 可能改变后续路由 (如降为 P1 跳过部分步骤) |
-| 4 | spec-challenge 决策 | 对每个 Fatal: 同意/反对/讨论 | Plan 修改范围 |
-| 5 | impl-verify 修复 | 确认 must-fix 修复方案 | 验证收敛速度 |
+| 3 | spec-challenge 决策 | 对每个 Fatal: 同意/反对/讨论 | Plan 修改范围 |
+| 4 | impl-verify 修复 | 确认 must-fix 修复方案 | 验证收敛速度 |
 
 ---
 
@@ -410,18 +378,11 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph ARTIFACTS [session-data/workflow-id/]
-        SS[session-state.md<br/>中枢状态]
+        SS[session-state.json<br/>路由状态]
         RS[requirements-summary.md]
-        P2A[phase2-assessment.md]
         SCR[spec-challenge-report.md]
         KS[knowledge-summary.md]
         IVF[impl-verify-findings.md]
-    end
-
-    subgraph STATE [state/]
-        CL[calibration-log.md]
-        CH[calibration-history.md]
-        INS[instincts.md]
     end
 
     subgraph KNOWLEDGE [knowledge-ops/]
@@ -431,17 +392,12 @@ flowchart TD
 
     PHASE1_OUT[Phase 1] --> SS
     REQ_OUT[requirements-elicitation] --> RS
-    PHASE2_OUT[Phase 2] --> P2A
     SPEC_OUT[spec-challenge] --> SCR
     DC_OUT[domain-collab] --> KS
     IV_OUT[impl-verify] --> IVF
-    CAL_OUT[Phase 3] --> CL
-    CAL_OUT --> CH
-    CAL_OUT --> INS
     KT_OUT[knowledge-track] --> DT
 
     style SS fill:#e74c3c,color:#fff
     style ARTIFACTS fill:#ffeaa7
-    style STATE fill:#dfe6e9
     style KNOWLEDGE fill:#b2bec3
 ```

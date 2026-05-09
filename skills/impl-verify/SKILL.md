@@ -167,7 +167,7 @@ Read `./prompts/common-rationalizations.md` for severity definitions, the must-f
 
 ## Risk Level Behavior Differences
 
-Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.md`. If unavailable (standalone invocation), default to P0 (all rounds mandatory).
+Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.json`. If unavailable (standalone invocation), default to P0 (all rounds mandatory).
 
 | Risk | Execution Scope | Details |
 |------|----------------|---------|

@@ -53,7 +53,7 @@ Bug fixes skip writing-plans. The input is the root cause analysis from `ecw:sys
 
 ## Risk-Aware Enforcement
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for current risk level. If unavailable (standalone invocation), default to P0 (mandatory + verification log).
+Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for current risk level. If unavailable (standalone invocation), default to P0 (mandatory + verification log).
 
 | Risk Level | TDD Mode | Details |
 |-----------|----------|---------|
@@ -87,12 +87,11 @@ When risk level is P2, apply these concrete constraints:
 
 ## Subagent-Driven Fast Route
 
-When **Implementation Strategy** in `session-state.md` is `subagent-driven` (i.e., `ecw:impl-orchestration` will be used), **this skill is a pass-through**. TDD cycles execute inside each implementer subagent, not in the coordinator.
+When **Implementation Strategy** in `session-state.json` is `subagent-driven` (i.e., `ecw:impl-orchestration` will be used), **this skill is a pass-through**. TDD cycles execute inside each implementer subagent, not in the coordinator.
 
-**Action — do these two things only, then stop:**
+**Action — do this only, then stop:**
 
-1. Update `session-state.md` MODE marker to `implementation`
-2. Invoke `ecw:impl-orchestration` via Skill tool
+1. Invoke `ecw:impl-orchestration` via Skill tool
 
 TDD protocol (Iron Law, risk-aware enforcement, cycle rules) is embedded into each implementer's prompt by `ecw:impl-orchestration`. Do NOT execute any TDD cycle in the coordinator when strategy is subagent-driven.
 
@@ -128,7 +127,7 @@ Read `./prompts/test-quality-guide.md` for:
 | Scenario | Handling |
 |----------|---------|
 | Plan file missing or unreadable | For requirement changes: halt and notify user — TDD cannot proceed without a Plan. For bug fixes: proceed using systematic-debugging output as input |
-| `session-state.md` unavailable (risk level unknown) | Default to P0 (mandatory + verification log) and proceed |
+| `session-state.json` unavailable (risk level unknown) | Default to P0 (mandatory + verification log) and proceed |
 | Subagent delegation failure (≥ 6 files mode) | Record failure → retry once → still fails: fall back to direct TDD execution in coordinator context |
 | Test command fails with environment error (not test failure) | Report environment issue to user — do not count as TDD cycle failure. Fix environment first, then resume |
 

@@ -19,7 +19,7 @@ Assume the engineer is skilled but knows almost nothing about the project's tool
 
 ## Risk-Aware Detail Level
 
-Read `.claude/ecw/session-data/{workflow-id}/session-state.md` for risk level and affected domains. If unavailable (standalone invocation), default to P0 (full detail mode).
+Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level and affected domains. If unavailable (standalone invocation), default to P0 (full detail mode).
 
 | Risk Level | Plan Detail | Task Granularity |
 |-----------|-------------|-----------------|
@@ -60,14 +60,13 @@ When **both** conditions are false (single domain AND knowledge files < 3), use 
 
 Coordinator constructs the subagent prompt with the following inputs — **does not read knowledge file contents itself**:
 
-1. **Requirement summary path**: `session-state.md` or `domain-collab-report.md` (subagent reads the file)
-2. **Phase 2 assessment path**: `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md`
+1. **Requirement summary path**: `requirements-summary.md` or `domain-collab-report.md` (subagent reads the file)
 3. **Knowledge file path list**:
    - `.claude/ecw/ecw-path-mappings.md`
    - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)
    - `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` (if exists)
 4. **Plan output target path**: `.claude/plans/{feature}.md`
-5. **Risk level + Plan detail requirements**: From `session-state.md` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
+5. **Risk level + Plan detail requirements**: From `session-state.json` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
 
 ### Subagent Responsibilities
 
@@ -91,7 +90,7 @@ The subagent executes the full Plan generation pipeline in its own context:
 
 After receiving the subagent's summary:
 
-1. Update `session-state.md` with Plan summary and implementation strategy
+1. Update `session-state.json` with Plan summary and implementation strategy (via `update_status_fields`)
 2. Display summary to user for confirmation
 
 ### Model
@@ -149,7 +148,7 @@ Read `./prompts/plan-quality-checks.md` for no-placeholder rules, design complet
 | Subagent timeout (dynamic limit exceeded) | Record `TIMEOUT` in Subagent Ledger → **fall back to Direct mode immediately** (no retry — empirically, retry under same conditions times out again, wasting another full timeout window). Coordinator generates plan itself in Direct mode |
 | Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
-| `session-state.md` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
+| `session-state.json` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
 
 ## Supplementary Files
 

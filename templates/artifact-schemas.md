@@ -9,17 +9,16 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 - `zh-CN`: 所有标题、表头、字段标签用中文输出
 - `en`: Use English as-is from templates
 
-**Exception**: `session-state.md` marker comments (`<!-- ECW:STATUS:START -->` etc.) and YAML field keys (`risk_level`, `domains`, `mode`, etc.) stay in English — they are machine-parsed by hooks.
+**Exception**: `session-state.json` field keys (`risk_level`, `domains`, `routing`, etc.) stay in English — they are machine-parsed by hooks.
 
 ## Overview
 
 | Artifact | Writer | Readers | Purpose |
 |----------|--------|---------|---------|
-| `session-state.md` | risk-classifier Phase 1; all skills update MODE/LEDGER | All downstream skills | Workflow state, risk level, routing, subagent ledger |
-| `domain-collab-report.md` | domain-collab Round 3 | risk-classifier Phase 2, writing-plans, impl-verify | Multi-domain analysis with components, conflicts, dependencies |
-| `knowledge-summary.md` | domain-collab | risk-classifier Phase 2, writing-plans, impl-verify | Extracted knowledge file entries relevant to current change |
-| `phase2-assessment.md` | risk-classifier Phase 2 | writing-plans, downstream skills | Precise risk classification with 3D factors and impact details |
-| `requirements-summary.md` | requirements-elicitation | risk-classifier Phase 2, writing-plans, impl-verify | Full requirement spec with scope, data changes, edge cases |
+| `session-state.json` | risk-classifier Phase 1; systematic-debugging (bug entry) | All downstream skills (read-only) | Workflow state, risk level, routing, next skill |
+| `domain-collab-report.md` | domain-collab Round 3 | writing-plans, impl-verify | Multi-domain analysis with components, conflicts, dependencies |
+| `knowledge-summary.md` | domain-collab | writing-plans, impl-verify | Extracted knowledge file entries relevant to current change |
+| `requirements-summary.md` | requirements-elicitation | writing-plans, impl-verify | Full requirement spec with scope, data changes, edge cases |
 | `impl-verify-findings.md` | impl-verify | impl-verify (convergence tracking) | Per-round findings with severity, code locations, deviations |
 | `spec-challenge-report.md` | spec-challenge agent | User confirmation flow, plan author | Fatal flaws, improvement suggestions, user decisions |
 | `cross-service-plan.md` | workspace coordinator Phase 1 | workspace coordinator Phase 3 | Business decomposition: per-service roles, interaction patterns, open questions |
@@ -28,44 +27,31 @@ All artifact headings, table headers, and field labels MUST be output in the lan
 
 ---
 
-## session-state.md
+## session-state.json
 
-### Required Sections
+### Required Fields
 
-```markdown
-# ECW Session State
-
-<!-- ECW:STATUS:START -->
-risk_level: P{X}
-domains: [{domain list}]
-mode: {single-domain or cross-domain}
-routing: [{ordered skill list}]
-current_phase: phase1-complete
-created: "{YYYY-MM-DD}"
-workflow_id: "{YYYYMMDD-xxxx}"
-baseline_commit: TBD
-implementation_strategy: TBD
-post_implementation_tasks: TBD
-auto_continue: true
-next: {next skill to invoke}
-<!-- ECW:STATUS:END -->
-
-<!-- ECW:MODE:START -->
-working_mode: analysis
-<!-- ECW:MODE:END -->
-
-<!-- ECW:LEDGER:START -->
-<!-- ECW:LEDGER:END -->
+```json
+{
+  "risk_level": "P0|P1|P2|P3",
+  "change_type": "requirement|bug|fast-track",
+  "routing": ["ecw:skill-name", "TDD:RED", "..."],
+  "current_phase": "phase1-complete",
+  "next": "ecw:next-skill",
+  "auto_continue": true,
+  "workflow_id": "YYYYMMDD-xxxx",
+  "baseline_commit": "TBD",
+  "implementation_strategy": "direct|subagent-driven"
+}
 ```
 
 ### Conventions
 
-- Use `<!-- ECW:{NAME}:START/END -->` markers to delimit updatable sections
-- Update only between matching markers — never overwrite the entire file
-- All marker sections use **YAML** format; `routing` and `domains` are YAML lists; `auto_continue` is YAML boolean
-- Working modes: `analysis` | `planning` | `implementation` | `verification`
-- Ledger is a YAML list of dicts; scale: small (<20K tokens), medium (20-80K), large (>80K)
-- See `skills/risk-classifier/session-state-format.md` for full template and LEDGER entry format
+- Written by `ecw:risk-classifier` (requirements) or `ecw:systematic-debugging` (bug fixes)
+- `routing` field: written as `[routing[0]]` by LLM; auto-continue hook appends tail(risk_level) on PostToolUse
+- `implementation_strategy` field: set by `ecw:writing-plans` after plan completion
+- State transitions owned by hooks — skills read state but must not write it (except initial creation and `implementation_strategy` update)
+- See `skills/risk-classifier/session-state-format.md` for full schema and field reference
 
 ---
 
@@ -127,38 +113,6 @@ working_mode: analysis
 
 ## Related Business Rules Summary
 {Per domain: state machines and validation rules from business-rules.md}
-```
-
----
-
-## phase2-assessment.md
-
-### Required Sections
-
-```markdown
-## Change Risk Precise Assessment (Phase 2)
-
-### Risk Level: P{X} (Phase 1 pre-assessment: P{Y}, {upgraded/downgraded/unchanged})
-
-### Classification Factors
-| Factor | Level | Rationale |
-|--------|-------|-----------|
-| Impact Scope | P{X} | {shared resources/cross-domain calls/MQ Topics} |
-| Change Type | P{X} | {state machine/signature/SQL etc.} |
-| Business Sensitivity | P{X} | {inventory/tasks/orders etc.} |
-
-### Impact Scope Details
-- **Shared resources:** {list}
-- **Cross-domain calls:** {list}
-- **MQ Topics:** {list}
-- **End-to-end paths:** {path ID + affected steps}
-- **External systems:** {list}
-
-### Level Change
-{upgrade/downgrade/unchanged + workflow adjustment}
-
-### Downstream Workflow (Updated)
-{remaining steps based on final level}
 ```
 
 ---

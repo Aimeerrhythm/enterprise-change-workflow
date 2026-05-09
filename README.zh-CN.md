@@ -50,9 +50,8 @@ flowchart TD
     RC -->|P2 / P3| WP
     RC -->|Bug| SD[systematic-debugging]
 
-    RE --> P2[Phase 2 — 精确定级]
-    DC --> P2
-    P2 --> WP
+    RE --> WP
+    DC --> WP
 
     SD --> IMPL
 
@@ -62,9 +61,9 @@ flowchart TD
 
     IMPL[Implementation] --> IV
     IV["impl-verify\n(多轮收敛)"] --> BIA
-    BIA["biz-impact-analysis"] -->|P0/P1| CAL[Phase 3 校准]
+    BIA["biz-impact-analysis"] --> KT
+    KT["knowledge-track"] --> DONE
     BIA -->|P2/P3| DONE
-    CAL --> DONE
 
     DONE([✓ 完成验证])
 
@@ -79,11 +78,9 @@ flowchart TD
     style SD  fill:#FED7D7,stroke:#FC8181,color:#742A2A
     style IN  fill:#C6F6D5,stroke:#68D391,color:#22543D
     style DONE fill:#C6F6D5,stroke:#68D391,color:#22543D
-    style P2  fill:#F7FAFC,stroke:#A0AEC0,color:#4A5568
-    style CAL fill:#F7FAFC,stroke:#A0AEC0,color:#4A5568
 ```
 
-风险分级器贯穿全程三个阶段：**Phase 1**（关键词快速预判）→ **Phase 2**（需求分析完成后精确定级）→ **Phase 3**（实现完成后反馈校准，改进未来预测准确度）。
+risk-classifier 执行 Phase 1（关键词快速预判）确定风险等级，驱动不同深度的变更管理流程。
 
 ---
 
@@ -329,7 +326,6 @@ enterprise-change-workflow/
 │   └── ...
 ├── templates/                   # 配置和知识文件模板
 ├── scripts/java/                # Java/Spring 扫描脚本（3 个）
-├── scripts/calibration-collector.py  # 多维校准数据采集器
 ├── docs/                        # 设计参考文档
 │   ├── design-principles.md     # 架构原则，六个试金石
 │   ├── component-design-patterns.md # 组件设计模式、Token 预算、模型选择
@@ -366,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` 报断裂引用** — 修改的文件引用了不存在的 `.claude/` 路径，检查是否有拼写错误或文件已被移动/删除。
 
-**Phase 1 定级明显不准** — 两个常见原因：(1) `change-risk-classification.md` 关键词映射不完整；(2) `shared-resources.md` 缺少共享资源条目。用扫描脚本重新提取，再用 Phase 3 校准建议系统性改进。
+**Phase 1 定级明显不准** — 两个常见原因：(1) `change-risk-classification.md` 关键词映射不完整；(2) `shared-resources.md` 缺少共享资源条目。用扫描脚本重新提取后重新运行 risk-classifier Phase 1。
 
 → [完整排障指南](TROUBLESHOOTING.md)
 

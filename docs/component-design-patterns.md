@@ -4,11 +4,10 @@ Read relevant sections only (not the full document):
 
 | What you're doing | Read |
 |-------------------|------|
-| Adding/modifying a Skill | §1 Hook Lifecycle, §3 Declarative Routing, §9 Skill Constraints |
-| Modifying Hook logic | §1 Hook Lifecycle, §2 Markers, §7 Error Handling |
-| Modifying state management | §2 Markers, §4 Read-Only Injection, §6 Checkpoint Store |
-| Modifying calibration/Instincts | §5 Instincts |
-| Managing documentation | §8 Document Loading Implementation |
+| Adding/modifying a Skill | §1 Hook Lifecycle, §3 Declarative Routing, §8 Skill Constraints |
+| Modifying Hook logic | §1 Hook Lifecycle, §2 Markers, §6 Error Handling |
+| Modifying state management | §2 Markers, §4 Read-Only Injection, §5 Checkpoint Store |
+| Managing documentation | §7 Document Loading Implementation |
 
 ---
 
@@ -25,7 +24,6 @@ User request → LLM decides to call Skill
      │ 1. Write in-progress state        │
      │ 2. Compute next skill             │
      │ 3. Inject read-only context       │
-     │ 4. Inject instincts (if any)      │
      └──────────────────────────────────┘
             ↓
      Skill executes (LLM reads SKILL.md + performs business logic)
@@ -174,45 +172,11 @@ The Skill reads this and knows the current context, but receives no "please writ
 |-------|-----------|
 | Prefix `[ECW STATE — read-only]` | Explicitly tells LLM this is read-only info, not executable instructions |
 | Compact format (one line) | Minimize token cost — injected on every Skill call |
-| Merged with instincts | Same systemMessage contains state + historical calibration, reducing injection count |
 | No injection when stateless | First risk-classifier call in new session has no session-state → nothing injected |
 
 ---
 
-## 5. Instincts (Learned Rules) Design
-
-Phase 3 Calibration produces heuristic rules stored in `instincts.md`, injected via PreToolUse to corresponding Skills.
-
-### Architecture Position
-
-```
-Phase 3 output → instincts.md → parse_instincts() → PreToolUse injection → influences Skill decisions
-```
-
-### Design Constraints
-
-| Constraint | Reason |
-|-----------|--------|
-| Partitioned by skill section | Different Skills' calibration data should not interfere |
-| session-start injects only high confidence (≥ 0.7) | Low-confidence instincts may mislead |
-| auto-continue injects all (no confidence filter) | Per-skill injection already provides precise routing |
-| Unified parser `parse_instincts()` | Avoids two implementations drifting (Issue #62 fix) |
-
-### Format
-
-```markdown
-## risk-classifier
-
-<!-- INSTINCT -->
-- **Pattern**: State machine changes get underestimated
-- **Action**: +1 level when state transition keywords present
-- **Confidence**: 0.85
-- **Source**: 20260501-a3f1 calibration
-```
-
----
-
-## 6. Checkpoint Store Design
+## 5. Checkpoint Store Design
 
 `CheckpointStore` class provides unified CRUD for session-data checkpoint files.
 
@@ -224,7 +188,7 @@ ECW has 15+ checkpoint file types. Each Hook/Skill needs to: find current workfl
 
 ```python
 store = CheckpointStore.from_latest_workflow(cwd)  # find latest workflow
-store.write("phase2-assessment", content)           # create dirs + write
+store.write("requirements-summary", content)        # create dirs + write
 content = store.read("knowledge-summary")           # None if missing
 store.exists("impl-verify-findings")                # bool
 store.list()                                        # ["session-state", ...]
@@ -238,7 +202,7 @@ store.list()                                        # ["session-state", ...]
 
 ---
 
-## 7. Error Handling Strategy
+## 6. Error Handling Strategy
 
 Core principle: **Hook failures never block the workflow.**
 
@@ -263,7 +227,7 @@ Use `log_trace()` to record anomalies for post-hoc diagnosis. Never use `assert`
 
 ---
 
-## 8. Document Loading Implementation
+## 7. Document Loading Implementation
 
 > Principle definition: `design-principles.md` §7. This section covers admission criteria and review mechanisms.
 
@@ -304,7 +268,7 @@ Every 5 versions (or monthly):
 
 ---
 
-## 9. Skill Engineering Constraints
+## 8. Skill Engineering Constraints
 
 Constraints for Skill authors: token budgets, model selection, and subagent boundaries.
 
@@ -324,7 +288,7 @@ Over-budget root causes are usually SKILL.md containing content it shouldn't (ro
 
 | Model | Use case |
 |-------|----------|
-| opus | Deep reasoning: adversarial review, cross-domain analysis, Phase 2 precise grading |
+| opus | Deep reasoning: adversarial review, cross-domain analysis, planning |
 | sonnet | Implementation execution: implementer, TDD cycle, spec-reviewer |
 | haiku | Lightweight mechanical tasks (currently unused) |
 

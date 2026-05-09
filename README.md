@@ -50,9 +50,8 @@ flowchart TD
     RC -->|P2 / P3| WP
     RC -->|Bug| SD[systematic-debugging]
 
-    RE --> P2[Phase 2 — Precise Grading]
-    DC --> P2
-    P2 --> WP
+    RE --> WP
+    DC --> WP
 
     SD --> IMPL
 
@@ -62,9 +61,9 @@ flowchart TD
 
     IMPL[Implementation] --> IV
     IV["impl-verify\n(multi-round convergence)"] --> BIA
-    BIA["biz-impact-analysis"] -->|P0/P1| CAL[Phase 3 Calibration]
+    BIA["biz-impact-analysis"] --> KT
+    KT["knowledge-track"] --> DONE
     BIA -->|P2/P3| DONE
-    CAL --> DONE
 
     DONE([✓ Verified Complete])
 
@@ -79,11 +78,9 @@ flowchart TD
     style SD  fill:#FED7D7,stroke:#FC8181,color:#742A2A
     style IN  fill:#C6F6D5,stroke:#68D391,color:#22543D
     style DONE fill:#C6F6D5,stroke:#68D391,color:#22543D
-    style P2  fill:#F7FAFC,stroke:#A0AEC0,color:#4A5568
-    style CAL fill:#F7FAFC,stroke:#A0AEC0,color:#4A5568
 ```
 
-The three-phase risk classifier runs throughout: **Phase 1** (quick keyword prediction) → **Phase 2** (precise grading after full analysis) → **Phase 3** (post-implementation calibration to improve future predictions).
+risk-classifier runs Phase 1 (quick keyword prediction) to determine risk level and route the change to the appropriate workflow depth.
 
 ---
 
@@ -329,7 +326,6 @@ enterprise-change-workflow/
 │   └── ...
 ├── templates/                   # Config and knowledge file templates
 ├── scripts/java/                # Java/Spring project scanners (3 scripts)
-├── scripts/calibration-collector.py  # Multi-dimensional calibration data collector
 ├── docs/                        # Design reference
 │   ├── design-principles.md     # Architecture principles, six litmus tests
 │   ├── component-design-patterns.md # Component patterns, token budgets, model selection
@@ -366,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` reports broken reference** — A file you modified references a `.claude/` path that doesn't exist. Check for typos or moved files.
 
-**Phase 1 risk level is inaccurate** — Two common causes: (1) keyword mappings in `change-risk-classification.md` are incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract, then re-run Phase 3 calibration.
+**Phase 1 risk level is inaccurate** — Two common causes: (1) keyword mappings in `change-risk-classification.md` are incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract, then re-run risk-classifier Phase 1.
 
 → [Full troubleshooting guide](TROUBLESHOOTING.md)
 
