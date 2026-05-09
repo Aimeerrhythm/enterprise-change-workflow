@@ -240,8 +240,7 @@ def main():
     if next_skill and next_skill != skill_name:
         parts.append(f"Current Next target: {next_skill}.")
     parts.append(
-        "After completing this skill, update session-state.md Next field "
-        "and invoke the next skill immediately. "
+        "After completing this skill, invoke the next skill immediately. "
         "Do not ask for confirmation or output transition text — "
         "the user already approved the full routing chain during Phase 1."
     )

@@ -347,21 +347,9 @@ class TestPostEditHooksJson:
 # Baseline Commit Injection
 # ══════════════════════════════════════════════════════
 
-SESSION_STATE_TBD = """\
-# ECW Session State
+SESSION_STATE_TBD = '{"risk_level": "P1", "baseline_commit": "TBD", "auto_continue": true}'
 
-<!-- ECW:STATUS:START -->
-- **Risk Level**: P1
-- **Baseline Commit**: TBD
-- **Auto-Continue**: yes
-<!-- ECW:STATUS:END -->
-"""
-
-SESSION_STATE_ALREADY_SET = """\
-<!-- ECW:STATUS:START -->
-- **Baseline Commit**: existinghash123
-<!-- ECW:STATUS:END -->
-"""
+SESSION_STATE_ALREADY_SET = '{"baseline_commit": "existinghash123"}'
 
 
 class TestFindGitRoot:
@@ -370,7 +358,7 @@ class TestFindGitRoot:
     def test_finds_root_at_same_level(self, post_edit, tmp_path):
         """.git at same dir as file → returns that dir."""
         (tmp_path / ".git").mkdir()
-        result = post_edit._find_git_root(str(tmp_path / "session-state.md"))
+        result = post_edit._find_git_root(str(tmp_path / "session-state.json"))
         assert result == str(tmp_path)
 
     def test_finds_root_in_parent(self, post_edit, tmp_path):
@@ -378,12 +366,12 @@ class TestFindGitRoot:
         (tmp_path / ".git").mkdir()
         nested = tmp_path / "session-data" / "20260504-abcd"
         nested.mkdir(parents=True)
-        result = post_edit._find_git_root(str(nested / "session-state.md"))
+        result = post_edit._find_git_root(str(nested / "session-state.json"))
         assert result == str(tmp_path)
 
     def test_returns_none_when_no_git(self, post_edit, tmp_path):
         """No .git anywhere → returns None."""
-        result = post_edit._find_git_root(str(tmp_path / "session-state.md"))
+        result = post_edit._find_git_root(str(tmp_path / "session-state.json"))
         assert result is None
 
 
@@ -391,7 +379,7 @@ class TestBaselineCommitInjection:
 
     def test_tbd_replaced_with_head_hash(self, post_edit, tmp_path):
         (tmp_path / ".git").mkdir()
-        state_file = tmp_path / "session-state.md"
+        state_file = tmp_path / "session-state.json"
         state_file.write_text(SESSION_STATE_TBD)
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 0
@@ -403,14 +391,12 @@ class TestBaselineCommitInjection:
 
     def test_uses_git_root_from_filepath_not_cwd(self, post_edit, tmp_path):
         """git rev-parse runs in the git root found via filepath, not via cwd."""
-        # tmp_path is the user project git root
         (tmp_path / ".git").mkdir()
         nested = tmp_path / ".claude" / "ecw" / "session-data" / "20260504-abcd"
         nested.mkdir(parents=True)
-        state_file = nested / "session-state.md"
+        state_file = nested / "session-state.json"
         state_file.write_text(SESSION_STATE_TBD)
 
-        # cwd points to a completely different directory (simulates plugin install dir)
         fake_plugin_dir = tmp_path / "plugin-dir"
         fake_plugin_dir.mkdir()
 
@@ -420,13 +406,12 @@ class TestBaselineCommitInjection:
             post_edit._inject_baseline_commit(str(state_file), str(fake_plugin_dir))
             called_cwd = mock_run.call_args[1]["cwd"]
 
-        # Must use the git root derived from filepath, not fake_plugin_dir
         assert called_cwd == str(tmp_path)
         assert "abc1234567890" in state_file.read_text()
 
     def test_no_git_root_leaves_file_unchanged(self, post_edit, tmp_path):
         """No .git found anywhere → TBD stays, subprocess never called."""
-        state_file = tmp_path / "session-state.md"
+        state_file = tmp_path / "session-state.json"
         state_file.write_text(SESSION_STATE_TBD)
         with patch("subprocess.run") as mock_run:
             post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
@@ -435,7 +420,7 @@ class TestBaselineCommitInjection:
 
     def test_already_set_hash_not_overwritten(self, post_edit, tmp_path):
         (tmp_path / ".git").mkdir()
-        state_file = tmp_path / "session-state.md"
+        state_file = tmp_path / "session-state.json"
         state_file.write_text(SESSION_STATE_ALREADY_SET)
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 0
@@ -453,22 +438,23 @@ class TestBaselineCommitInjection:
 
     def test_git_failure_leaves_file_unchanged(self, post_edit, tmp_path):
         (tmp_path / ".git").mkdir()
-        state_file = tmp_path / "session-state.md"
+        state_file = tmp_path / "session-state.json"
         state_file.write_text(SESSION_STATE_TBD)
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 128
             post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
         assert "TBD" in state_file.read_text()
 
-    def test_no_status_marker_skipped(self, post_edit, tmp_path):
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text("- **Baseline Commit**: TBD\n(no ECW marker)")
+    def test_no_tbd_field_skipped(self, post_edit, tmp_path):
+        """JSON without baseline_commit: TBD → subprocess never called."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text('{"risk_level": "P1", "baseline_commit": "existinghash"}')
         with patch("subprocess.run") as mock_run:
             post_edit._inject_baseline_commit(str(state_file), str(tmp_path))
         assert mock_run.call_count == 0
 
     def test_only_fires_on_write_not_edit(self, post_edit, tmp_path):
-        state_file = tmp_path / "session-state.md"
+        state_file = tmp_path / "session-state.json"
         state_file.write_text(SESSION_STATE_TBD)
         input_data = {
             "tool_name": "Edit",
@@ -480,17 +466,10 @@ class TestBaselineCommitInjection:
         mock_inject.assert_not_called()
 
     def test_yaml_format_tbd_replaced(self, post_edit, tmp_path):
-        """YAML format 'baseline_commit: TBD' is correctly replaced (issue #53)."""
+        """JSON baseline_commit: TBD is correctly replaced."""
         (tmp_path / ".git").mkdir()
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(
-            "# ECW Session State\n\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P1\n"
-            "baseline_commit: TBD\n"
-            "auto_continue: true\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text('{"risk_level": "P1", "baseline_commit": "TBD", "auto_continue": true}')
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = "cafebabe1234567890ab\n"
@@ -500,14 +479,10 @@ class TestBaselineCommitInjection:
         assert "TBD" not in result
 
     def test_yaml_format_already_set_not_overwritten(self, post_edit, tmp_path):
-        """YAML format with existing hash is not overwritten (issue #53)."""
+        """JSON with existing hash is not overwritten."""
         (tmp_path / ".git").mkdir()
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "baseline_commit: existinghash999\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text('{"baseline_commit": "existinghash999"}')
         with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = "newcommithash\n"
@@ -534,112 +509,79 @@ class TestSessionStateYamlValidation:
         spec.loader.exec_module(mod)
         return mod
 
-    def test_valid_yaml_no_warning(self, post_edit, tmp_path):
-        """Valid YAML in STATUS section produces no YAML warning."""
-        valid_content = (
-            "# ECW Session State\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:writing-plans]\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+    def test_valid_json_no_warning(self, post_edit, tmp_path):
+        """Valid JSON produces no warning."""
+        valid_content = '{"risk_level": "P0", "auto_continue": true, "routing": [], "current_phase": "phase1-complete"}'
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(tmp_path / "session-state.md"),
+                "file_path": str(tmp_path / "session-state.json"),
                 "content": valid_content,
             },
             "cwd": str(tmp_path),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
-        assert "YAML Error" not in message
+        assert "JSON Error" not in message
 
-    def test_invalid_yaml_status_produces_warning(self, post_edit, ecw_project):
-        """Invalid YAML in STATUS section triggers YAML Error warning."""
-        invalid_content = (
-            "# ECW Session State\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: [unclosed\n"
-            "routing:\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+    def test_invalid_json_status_produces_warning(self, post_edit, ecw_project):
+        """Invalid JSON in session-state.json triggers JSON Error warning."""
+        invalid_content = '{"risk_level": "P0", "auto_continue": [unclosed'
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(ecw_project / "session-state.md"),
+                "file_path": str(ecw_project / "session-state.json"),
                 "content": invalid_content,
             },
             "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
         assert action == "continue"
-        assert "YAML Error" in message
-        assert "STATUS" in message
+        assert "JSON Error" in message
 
     def test_non_session_state_file_not_checked(self, post_edit, tmp_path):
-        """YAML validation only applies to session-state.md, not other files."""
-        invalid_content = "bad: yaml:\n  - [\n"
+        """JSON validation only applies to session-state.json, not other files."""
+        invalid_content = '{"bad": [unclosed}'
         input_data = {
             "tool_name": "Write",
             "tool_input": {
-                "file_path": str(tmp_path / "other.md"),
+                "file_path": str(tmp_path / "other.json"),
                 "content": invalid_content,
             },
             "cwd": str(tmp_path),
         }
         action, message = post_edit.check(input_data)
-        assert "YAML Error" not in message
+        assert "JSON Error" not in message
 
     def test_edit_reads_actual_file_for_validation(self, post_edit, ecw_project):
-        """Edit on session-state.md reads the actual file (not new_string) for YAML validation."""
-        state_file = ecw_project / "session-state.md"
-        # File on disk has invalid YAML in STATUS section
-        state_file.write_text(
-            "# ECW Session State\n"
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: [unclosed\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
-        # new_string contains only a small edit fragment — no complete marker section
+        """Edit on session-state.json reads the actual file for JSON validation."""
+        state_file = ecw_project / "session-state.json"
+        state_file.write_text('{"risk_level": "P0", "auto_continue": [unclosed')
         input_data = {
             "tool_name": "Edit",
             "tool_input": {
                 "file_path": str(state_file),
-                "old_string": "risk_level: P0",
-                "new_string": "risk_level: P1",
+                "old_string": '"P0"',
+                "new_string": '"P1"',
             },
             "cwd": str(ecw_project),
         }
         action, message = post_edit.check(input_data)
-        # Must catch the invalid YAML by reading the actual file
-        assert "YAML Error" in message
-        assert "STATUS" in message
+        assert "JSON Error" in message
 
     def test_edit_valid_file_no_warning(self, post_edit, tmp_path):
-        """Edit on session-state.md with valid YAML on disk produces no warning."""
-        state_file = tmp_path / "session-state.md"
-        state_file.write_text(
-            "<!-- ECW:STATUS:START -->\n"
-            "risk_level: P0\n"
-            "auto_continue: true\n"
-            "routing: [ecw:writing-plans]\n"
-            "current_phase: phase1-complete\n"
-            "<!-- ECW:STATUS:END -->\n"
-        )
+        """Edit on session-state.json with valid JSON on disk produces no warning."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text('{"risk_level": "P0", "auto_continue": true}')
         input_data = {
             "tool_name": "Edit",
             "tool_input": {
                 "file_path": str(state_file),
-                "old_string": "risk_level: P0",
-                "new_string": "risk_level: P1",
+                "old_string": '"P0"',
+                "new_string": '"P1"',
             },
             "cwd": str(tmp_path),
         }
         action, message = post_edit.check(input_data)
-        assert "YAML Error" not in message
+        assert "JSON Error" not in message
 

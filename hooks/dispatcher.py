@@ -87,7 +87,7 @@ def get_profile(cwd):
 
     Priority:
     1. ECW_RISK_LEVEL environment variable (e.g. "P0", "P1")
-    2. risk_level field in .claude/ecw/state/session-state.md
+    2. risk_level field in session-state.json
     3. Default: "standard"
     """
     # 1. Environment variable

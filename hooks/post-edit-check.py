@@ -100,12 +100,12 @@ def _find_git_root(path):
 
 
 def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for signature compat
-    """If session-state.md was just written with Baseline Commit: TBD, replace with actual HEAD hash.
+    """If session-state.json was just written with baseline_commit: TBD, replace with actual HEAD hash.
 
     Resolves the git root from filepath (not from cwd, which points to the plugin install dir).
     No-op if file doesn't match, git fails, or hash already present.
     """
-    if not filepath.endswith("session-state.md"):
+    if not filepath.endswith("session-state.json"):
         return
     try:
         with open(filepath, encoding="utf-8", errors="ignore") as f:
@@ -113,9 +113,9 @@ def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for sig
     except Exception:
         return
 
-    if "<!-- ECW:STATUS:START -->" not in content:
+    if '"baseline_commit"' not in content and "'baseline_commit'" not in content:
         return
-    if not re.search(r'(?:\*\*Baseline Commit\*\*|baseline_commit):\s*TBD\b', content):
+    if not re.search(r'"baseline_commit"\s*:\s*"TBD"', content):
         return
 
     git_root = _find_git_root(filepath)
@@ -139,8 +139,8 @@ def _inject_baseline_commit(filepath, cwd):  # noqa: ARG001 — cwd kept for sig
         return
 
     updated = re.sub(
-        r'((?:\*\*Baseline Commit\*\*|baseline_commit):\s*)TBD\b',
-        rf'\g<1>{commit_hash}',
+        r'("baseline_commit"\s*:\s*)"TBD"',
+        rf'\g<1>"{commit_hash}"',
         content,
     )
     try:
@@ -177,63 +177,29 @@ def _accumulate_modified_file(cwd, filepath):
 
 
 def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
-    """Validate session state file format after edit.
+    """Validate session-state.json format after edit.
 
-    For JSON files: validates JSON syntax.
-    For legacy .md files: validates STATUS marker section as YAML.
     Returns a list of error strings (empty = all valid).
     """
-    if not filepath:
+    if not filepath or not filepath.endswith(".json"):
         return []
 
-    # JSON files: validate JSON parse
-    if filepath.endswith(".json"):
-        if tool_name == "Write":
-            content = tool_input.get("content", "")
-        else:
-            try:
-                with open(filepath, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-            except Exception:
-                return []
-        if not content:
-            return []
-        try:
-            import json as _json
-            _json.loads(content)
-        except Exception as e:
-            return [f"session-state.json: invalid JSON — {e}"]
-        return []
-
-    # Legacy .md: validate YAML in STATUS markers
-    if not _YAML_AVAILABLE:
-        return []
     if tool_name == "Write":
         content = tool_input.get("content", "")
-    elif tool_name == "Edit":
+    else:
         try:
             with open(filepath, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
         except Exception:
             return []
-    else:
-        return []
-
     if not content:
         return []
-
-    import re as _re
-    warnings = []
-    pattern = _re.compile(
-        r"<!-- ECW:STATUS:START -->\n(.*?)\n<!-- ECW:STATUS:END -->", _re.DOTALL
-    )
-    m = pattern.search(content)
-    if m:
-        try:
-            _yaml.safe_load(m.group(1))
-        except Exception as e:
-            warnings.append(f"STATUS section: {e}")
-    return warnings
+    try:
+        import json as _json
+        _json.loads(content)
+    except Exception as e:
+        return [f"session-state.json: invalid JSON — {e}"]
+    return []
 
 
 def _scan_anti_patterns(content, filepath):
@@ -285,18 +251,18 @@ def check(input_data, config=None):
     # 1. Accumulate modified file
     _accumulate_modified_file(cwd, rel_path)
 
-    # 1b. Auto-fill Baseline Commit placeholder in new session-state.md files
+    # 1b. Auto-fill baseline_commit placeholder in new session-state.json files
     if tool_name == "Write":
         _inject_baseline_commit(filepath, cwd)
 
-    # 1c. YAML validity check for session-state.md marker sections
-    if filepath.endswith("session-state.md") and _YAML_AVAILABLE:
-        yaml_warnings = _validate_session_state_yaml(tool_input, tool_name, filepath)
-        if yaml_warnings:
+    # 1c. JSON validity check for session-state.json
+    if filepath.endswith("session-state.json"):
+        json_warnings = _validate_session_state_yaml(tool_input, tool_name, filepath)
+        if json_warnings:
             log_trace(cwd, "post-edit-check", "PostToolUse",
-                      file=rel_path, warnings=["yaml_invalid"])
-            msg = "**[ECW YAML Error]** session-state.md 的 marker 区块包含无效 YAML，请立即修正：\n\n"
-            msg += "\n".join(f"- {w}" for w in yaml_warnings)
+                      file=rel_path, warnings=["json_invalid"])
+            msg = "**[ECW JSON Error]** session-state.json 包含无效 JSON，请立即修正：\n\n"
+            msg += "\n".join(f"- {w}" for w in json_warnings)
             return ("continue", msg)
 
     # 2. Scan for anti-patterns (only for scannable file types)

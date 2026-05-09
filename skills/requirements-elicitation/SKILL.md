@@ -28,7 +28,7 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Invocation modes:**
 - **Standalone**: `/ecw:requirements-elicitation` — execute full 9-dimension questioning directly. No risk-classifier prerequisite needed.
-- **Auto-routed**: `ecw:risk-classifier` invokes this skill for P0/P1 single-domain requirements (risk level and domain info available via session-state.md).
+- **Auto-routed**: `ecw:risk-classifier` invokes this skill for P0/P1 single-domain requirements (risk level and domain info available via session-state.json).
 
 **When NOT to use:**
 - User gives a precise, fully-specified technical task ("fix the null pointer on line 42")
@@ -37,10 +37,10 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 ## Skill Handoff
 
-**After user confirms the requirement summary, execute the following handoff steps:**
+**After user confirms the requirement summary, invoke `ecw:writing-plans`** — the auto-continue hook injects the remaining routing chain automatically.
 
-1. **If session-state.md exists (workflow mode)**: Execute **ecw:risk-classifier Phase 2** (precise classification), then invoke `ecw:writing-plans`.
-2. **If session-state.md absent (standalone mode)**: Directly invoke `ecw:writing-plans` with the requirement summary. writing-plans will default to P0 full detail mode.
+- Workflow mode (session-state.json exists): hook already has the full routing chain; just invoke `ecw:writing-plans`.
+- Standalone mode (no session-state.json): invoke `ecw:writing-plans` directly; writing-plans defaults to P0 full detail mode.
 
 ## Core Flow
 

@@ -2,7 +2,7 @@
 """ECW SessionEnd hook — clean up on session exit.
 
 When a session ends:
-1. Mark session-state.md status as "ended" with timestamp
+1. Mark session-state.json status as "ended" with timestamp
 2. Clean up stale state files (modified-files.txt)
 
 This hook runs once when the Claude session terminates.

@@ -2,7 +2,7 @@
 """ECW SessionStart hook — auto-inject workflow context for warm restart.
 
 On each new session, detects and injects:
-1. session-state.md — active workflow state (risk level, routing, phase)
+1. session-state.json — active workflow state (risk level, routing, phase)
 2. session-data/ checkpoints — latest checkpoint files summary
 3. ecw.yml key config — project name, language, risk level
 4. Pending task recovery hint

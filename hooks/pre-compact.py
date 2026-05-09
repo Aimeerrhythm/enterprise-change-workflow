@@ -2,12 +2,9 @@
 """ECW PreCompact hook — enhanced compaction boundary marker + recovery guidance.
 
 When context compaction occurs:
-1. Append a timestamped compaction marker to session-state.md (non-destructive)
+1. Append a compaction marker to session-state.json (compact_markers field)
 2. Scan session-data/ for checkpoint files and list them in recovery instructions
 3. Inject a precise systemMessage telling Claude which files to re-read
-
-Marker format appended to session-state.md:
-  <!-- ECW:COMPACT:{timestamp} -->
 """
 
 import json
@@ -126,7 +123,7 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
     else:
         parts.append(
             "\n1. List `.claude/ecw/session-data/` subdirs, "
-            "read `session-state.md` from the most recent one"
+            "read `session-state.json` from the most recent one"
         )
 
     parts.append("\n2. Run **TaskList** — find pending/in-progress tasks")
@@ -146,11 +143,11 @@ def _build_recovery_message(state_path, checkpoint_files, cwd):
     elif phase:
         parts.append(
             f"\n**NEXT ACTION:** Phase before compaction was `{phase}`. "
-            "Read session-state.md, determine exact next step, execute it now."
+            "Read session-state.json, determine exact next step, execute it now."
         )
     else:
         parts.append(
-            "\n**NEXT ACTION:** Read session-state.md, determine the current "
+            "\n**NEXT ACTION:** Read session-state.json, determine the current "
             "phase and next step from Routing, execute it now."
         )
 
