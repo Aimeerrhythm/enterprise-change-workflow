@@ -183,3 +183,79 @@ class TestBehaviorPreservation:
         self.mod._advance_session_state(str(state_file), "ecw:impl-verify")
         content = state_file.read_text()
         assert "verify-loaded" in content
+
+
+class TestComputeRoutingTail:
+    """compute_routing_tail derives routing tails dynamically from workflow-routes.yml.
+
+    Critical: P2 cross-domain tail must include writing-plans (the hardcoded
+    _RISK_TAILS["P2"] omitted it, causing a silent routing gap for cross-domain P2).
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_fn(self):
+        import importlib.util as _ilu
+        spec = _ilu.spec_from_file_location("routes_utils", HOOKS_DIR / "routes_utils.py")
+        mod = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.fn = mod.compute_routing_tail
+
+    def test_p0_single_domain_tail(self):
+        """P0 single-domain tail: writing-plans → spec-challenge → TDD:RED → ... → knowledge-track."""
+        tail = self.fn("P0", "ecw:requirements-elicitation")
+        assert "ecw:writing-plans" in tail
+        assert "ecw:spec-challenge" in tail
+        assert "ecw:impl-verify" in tail
+        assert "ecw:biz-impact-analysis" in tail
+        assert "ecw:knowledge-track" in tail
+
+    def test_p1_single_domain_no_spec_challenge(self):
+        """P1 single-domain tail must NOT include spec-challenge."""
+        tail = self.fn("P1", "ecw:requirements-elicitation")
+        assert "ecw:writing-plans" in tail
+        assert "ecw:spec-challenge" not in tail
+        assert "ecw:impl-verify" in tail
+
+    def test_p2_single_domain_tail(self):
+        """P2 single-domain: routing[0]=writing-plans, tail is TDD:RED → impl-verify."""
+        tail = self.fn("P2", "ecw:writing-plans")
+        assert "TDD:RED" in tail
+        assert "ecw:impl-verify" in tail
+        assert "ecw:writing-plans" not in tail
+        assert "ecw:biz-impact-analysis" not in tail
+
+    def test_p2_cross_domain_tail_includes_writing_plans(self):
+        """P2 cross-domain: routing[0]=domain-collab, tail MUST include writing-plans.
+
+        This is the core bug fixed by switching from hardcoded _RISK_TAILS to dynamic
+        routes.yml lookup: _RISK_TAILS["P2"] = [TDD:RED,...] was cross-domain-blind.
+        """
+        tail = self.fn("P2", "ecw:domain-collab")
+        assert "ecw:writing-plans" in tail, (
+            "P2 cross-domain tail must include writing-plans "
+            "(chain: domain-collab → writing-plans → TDD:RED → impl-verify)"
+        )
+        assert "TDD:RED" in tail
+        assert "ecw:impl-verify" in tail
+        assert "ecw:biz-impact-analysis" not in tail
+
+    def test_p3_empty_tail(self):
+        """P3 single-domain: empty tail."""
+        tail = self.fn("P3", "ecw:requirements-elicitation")
+        assert tail == []
+
+    def test_p3_cross_domain_empty_tail(self):
+        """P3 cross-domain: routing[0]=domain-collab, tail is empty (only skill)."""
+        tail = self.fn("P3", "ecw:domain-collab")
+        assert tail == []
+
+    def test_unknown_level_returns_empty(self):
+        """Unknown risk_level must return [] safely."""
+        assert self.fn("PX", "ecw:requirements-elicitation") == []
+
+    def test_tdd_alias_preserved_in_tail(self):
+        """TDD:RED and Implementation(GREEN) must be preserved as-is (not ecw:-prefixed)."""
+        tail = self.fn("P2", "ecw:writing-plans")
+        assert "TDD:RED" in tail
+        assert "Implementation(GREEN)" in tail
+        assert "ecw:TDD:RED" not in tail

@@ -67,6 +67,47 @@ ROUTING_STEP_TO_SKILL = _mappings["step_to_skill"]
 OFF_CHAIN_ALLOWED = _mappings["off_chain"]
 
 
+def compute_routing_tail(risk_level, routing_0, routes_path=None):
+    """Derive routing tail for a requirement from workflow-routes.yml.
+
+    Given risk_level and routing[0], finds the matching requirement route and
+    returns chain[1:] with ecw: prefix on skill names (aliases like TDD:RED kept as-is).
+
+    Handles P2 cross-domain correctly: when routing_0=ecw:domain-collab,
+    writing-plans is included in the tail (unlike P2 single-domain).
+    """
+    path = routes_path or _ROUTES_FILE
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except Exception:
+        return []
+
+    skill_keys = set(data.get("skill_metadata", {}).keys())
+    routes = data.get("routes", [])
+
+    r0_short = (routing_0 or "").replace("ecw:", "")
+    domain_mode = "cross-domain" if r0_short == "domain-collab" else "single-domain"
+
+    for route in routes:
+        if route.get("type") != "requirement":
+            continue
+        level = route.get("level", "any")
+        mode = route.get("mode", "any")
+        if level not in (risk_level, "any"):
+            continue
+        if mode not in (domain_mode, "any"):
+            continue
+
+        chain = route.get("chain") or []
+        return [
+            f"ecw:{step}" if step in skill_keys else step
+            for step in chain[1:]
+        ]
+
+    return []
+
+
 def routing_step_to_skill(step):
     """Convert a single Routing chain step to an ECW skill name.
 

@@ -17,19 +17,15 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 
 | File | Write Timing | Purpose |
 |------|-------------|---------|
-| `.claude/ecw/session-data/{workflow-id}/session-state.md` | After risk-classifier Phase 1 output | ECW workflow state record + Subagent Ledger, for new session recovery |
+| `.claude/ecw/session-data/{workflow-id}/session-state.json` | After risk-classifier Phase 1 output (or systematic-debugging entry) | ECW workflow state: risk_level, routing chain, next skill, current phase |
 | `.claude/ecw/session-data/{workflow-id}/domain-collab-report.md` | After domain-collab Round 3 completes | Full multi-domain collaboration analysis report |
 | `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` | After domain-collab Round 3 completes | Knowledge file summary, reused across skills |
 | `.claude/ecw/session-data/{workflow-id}/spec-challenge-report.md` | After spec-challenge agent returns | Adversarial review report |
 | `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` | After requirements-elicitation completes | Requirement summary checkpoint for downstream cold-start |
-| `.claude/ecw/session-data/{workflow-id}/phase2-assessment.md` | After risk-classifier Phase 2 completes | Phase 2 structured conclusion for downstream cold-start |
 | `.claude/ecw/session-data/{workflow-id}/impl-verify-findings.md` | Appended immediately when each Round subagent returns | All rounds' findings in one file; updated incrementally, with round headers |
-| `.claude/ecw/session-data/{workflow-id}/biz-impact-report.md` | After biz-impact-analysis agent returns | Full business impact analysis report; required for Phase 3 calibration |
+| `.claude/ecw/session-data/{workflow-id}/biz-impact-report.md` | After biz-impact-analysis agent returns | Full business impact analysis report |
 | `{worktree-root}/.claude/ecw/task-result.json` | Immediately before worktree implementer reports back | Implementer-written result file; coordinator reads from worktree path BEFORE git merge as authoritative Ledger source |
 | `.claude/ecw/session-data/{workflow-id}/task-{N}-aggregation-warning.md` | When task-result.json is absent after worktree merge | Explicit gap marker written by coordinator; records that Ledger entry was inferred from git log |
-| `.claude/ecw/calibration-log.md` | After Phase 3 calibration | Full-dimension comparison log (detailed tables for human review and pattern analysis) |
-| `.claude/ecw/state/calibration-history.md` | After Phase 3 calibration | Concise structured index for Phase 1 automated quick-lookup |
-| `.claude/ecw/state/instincts.md` | After Phase 3 calibration | Learned heuristic rules, injected by SessionStart when confidence > 0.7 |
 | `.claude/ecw/knowledge-ops/doc-tracker.md` | After each knowledge-track run | Doc utilization tracking records (hit/miss/redundant/misleading) |
 | `.claude/ecw/knowledge-ops/pending-entries.md` | After knowledge-track detects qualifying code-derived events | Candidate knowledge entries awaiting user review; Status: pending→accepted/rejected/written |
 | `.claude/ecw/knowledge-ops/repo-map.md` | After knowledge-repomap / ecw-init | Auto-generated code structure index |

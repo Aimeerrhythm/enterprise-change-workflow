@@ -976,3 +976,24 @@ class TestTailComputation:
             "Without risk_level, routing must remain unchanged"
         )
 
+    def test_p2_cross_domain_includes_writing_plans(self, tmp_path, monkeypatch):
+        """P2 cross-domain: domain-collab as routing[0] must include writing-plans in tail.
+
+        Bug: _RISK_TAILS["P2"] was ["TDD:RED",...] which omits writing-plans.
+        Fix: tail derived from routes.yml chain[1:] → correctly includes writing-plans
+        when routing[0]=domain-collab (cross-domain P2 chain is
+        domain-collab → writing-plans → TDD:RED → impl-verify).
+        """
+        self._make_state(tmp_path, ["ecw:domain-collab"], "P2")
+        self._run_post_tool_use(tmp_path, monkeypatch)
+        fields = self._parse_state(
+            tmp_path / ".claude" / "ecw" / "session-data" / "20260509-tail" / "session-state.json"
+        )
+        routing = fields["routing"]
+        assert routing[0] == "ecw:domain-collab"
+        assert "ecw:writing-plans" in routing, (
+            "P2 cross-domain tail must include writing-plans "
+            "(domain-collab → writing-plans → TDD:RED → impl-verify)"
+        )
+        assert "ecw:impl-verify" in routing
+        assert "ecw:biz-impact-analysis" not in routing, "P2 must not include biz-impact"

@@ -36,29 +36,17 @@ from routes_utils import (  # noqa: E402
     routing_step_to_skill as _routing_step_to_skill,
     check_routing_deviation as _check_routing_deviation,
     next_skill_from_routing as _next_skill_from_routing,
+    compute_routing_tail as _compute_routing_tail,
 )
 from trace_logger import log_trace  # noqa: E402
 
-# Tail definitions for routing chain reconstruction after risk-classifier.
-# Hook builds: routing = [routing[0]] + _RISK_TAILS[risk_level]
-_RISK_TAILS = {
-    "P0": [
-        "ecw:writing-plans", "ecw:spec-challenge",
-        "TDD:RED", "Implementation(GREEN)",
-        "ecw:impl-verify", "ecw:biz-impact-analysis", "ecw:knowledge-track",
-    ],
-    "P1": [
-        "ecw:writing-plans",
-        "TDD:RED", "Implementation(GREEN)",
-        "ecw:impl-verify", "ecw:biz-impact-analysis", "ecw:knowledge-track",
-    ],
-    "P2": ["TDD:RED", "Implementation(GREEN)", "ecw:impl-verify"],
-    "P3": [],
-}
-
 
 def _rebuild_routing_chain(state_path, fields_dict):
-    """After risk-classifier completes, rebuild full routing chain from routing[0] + tail."""
+    """After risk-classifier completes, rebuild full routing chain from routing[0] + tail.
+
+    Tail is derived dynamically from workflow-routes.yml (single source of truth),
+    which also correctly handles P2 cross-domain (domain-collab + writing-plans + ...).
+    """
     try:
         routing = fields_dict.get("routing") or []
         risk_level = (fields_dict.get("risk_level") or "").strip()
@@ -70,7 +58,7 @@ def _rebuild_routing_chain(state_path, fields_dict):
             return
 
         first_skill = routing[0]
-        tail = _RISK_TAILS.get(risk_level, [])
+        tail = _compute_routing_tail(risk_level, first_skill)
         update_status_fields(state_path, {"routing": [first_skill] + tail})
     except Exception:
         pass  # Never block workflow
