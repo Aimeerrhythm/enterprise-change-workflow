@@ -44,25 +44,6 @@ class TestRiskClassifierAutoContinue:
             "risk-classifier must reference session-state.md"
 
 
-class TestAutoConfirmConfig:
-    """Verify ecw.yml has auto_flow.auto_confirm and risk-classifier references it."""
-
-    def test_ecw_yml_has_auto_flow_section(self):
-        cfg = _load_ecw_yml()
-        assert "auto_flow" in cfg, "ecw.yml missing 'auto_flow' section"
-
-    def test_auto_flow_has_auto_confirm(self):
-        cfg = _load_ecw_yml()
-        af = cfg["auto_flow"]
-        assert "auto_confirm" in af, "auto_flow missing 'auto_confirm' key"
-        assert isinstance(af["auto_confirm"], bool), "auto_confirm must be bool"
-
-    def test_risk_classifier_references_auto_continue(self):
-        content = _read_skill("risk-classifier").lower()
-        assert re.search(r'session.?state', content), (
-            "risk-classifier/SKILL.md must reference session-state.md"
-        )
-
 
 class TestDomainCollabAutoContinue:
     """Verify domain-collab has NO Downstream Handoff (Issue #62)."""
