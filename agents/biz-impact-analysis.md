@@ -21,12 +21,12 @@ Your analysis relies on the following files (read as needed — do not load all 
 
 | File | Purpose |
 |------|---------|
-| `cross-domain-rules.md` under ecw.yml `paths.knowledge_common` | Index file — understand overall structure |
-| `cross-domain-calls.md` under ecw.yml `paths.knowledge_common` | §1 Cross-domain direct call matrix |
-| `mq-topology.md` under ecw.yml `paths.knowledge_common` | §2 MQ topology |
-| `shared-resources.md` under ecw.yml `paths.knowledge_common` | §3 Shared resource table |
-| `external-systems.md` under ecw.yml `paths.knowledge_common` | §4 External system integrations |
-| `e2e-paths.md` under ecw.yml `paths.knowledge_common` | §5 End-to-end critical paths |
+| `cross-domain-rules.md` under ecw.yml `paths.knowledge_shared` | Index file — understand overall structure |
+| `cross-domain-calls.md` under ecw.yml `paths.knowledge_shared` | §1 Cross-domain direct call matrix |
+| `mq-topology.md` under ecw.yml `paths.knowledge_shared` | §2 MQ topology |
+| `shared-resources.md` under ecw.yml `paths.knowledge_shared` | §3 Shared resource table |
+| `external-systems.md` under ecw.yml `paths.knowledge_shared` | §4 External system integrations |
+| `e2e-paths.md` under ecw.yml `paths.knowledge_shared` | §5 End-to-end critical paths |
 
 ## Knowledge File Loading Rules
 

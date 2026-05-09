@@ -23,7 +23,7 @@ component_types:
 paths:
   domain_registry: ".claude/ecw/domain-registry.md"
   knowledge_root: ".claude/knowledge/"
-  knowledge_common: ".claude/knowledge/common/"
+  knowledge_shared: ".claude/knowledge/common/"
   risk_factors: ".claude/ecw/change-risk-classification.md"
   plans: ".claude/plans/"
   session_data: ".claude/ecw/session-data/"

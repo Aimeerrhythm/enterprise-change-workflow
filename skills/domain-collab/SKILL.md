@@ -26,7 +26,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 ## Prerequisites
 
 1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/domain-registry.md`) to get domain definitions
-2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_common`
+2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_shared`
 3. Risk level and domain list are injected from session-state by the auto-continue hook
 
 > **Knowledge file robustness**: If `domain-registry.md` does not exist, halt and notify user: "Domain registry not found. Run `/ecw-init` to initialize." If `cross-domain-rules.md` does not exist, log `[Warning: cross-domain-rules.md not found, Round 3 cross-validation will be degraded]` and continue — Round 3 §3c will skip rule validation for missing files.

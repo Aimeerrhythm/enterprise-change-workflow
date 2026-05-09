@@ -37,7 +37,7 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete analysis]` header, and warn user that manual impact review may be needed
 5. **Auto-backfill knowledge base** — If the agent's report contains "Unregistered Cross-Domain Calls", execute the knowledge backfill procedure (see [Knowledge Auto-Backfill](#knowledge-auto-backfill) below)
-6. **Present analysis report** — Write the full report to `session-data/{workflow-id}/biz-impact-report.md` (use `CheckpointStore.write("biz-impact-report", content)` or write directly to that path; read the workflow-id from the STATUS block in session-state.md). Then output the agent's formatted report directly; append backfill summary if any calls were added
+6. **Present analysis report** — Write the full report to `session-data/{workflow-id}/biz-impact-report.md` (use `CheckpointStore.write("biz-impact-report", content)` or write directly to that path; read the workflow-id from the STATUS block in session-state.json). Then output the agent's formatted report directly; append backfill summary if any calls were added
 
 ## Agent Dispatch
 
@@ -51,7 +51,7 @@ When the agent's report flags "Unregistered Cross-Domain Calls", automatically b
 
 1. **Extract unregistered calls** — Parse the agent's report for all entries under "Unregistered Cross-Domain Calls" (or equivalent section). Each entry typically contains: caller domain, callee domain, call method (RPC/HTTP/MQ), caller class/method, callee class/method.
 
-2. **Read existing matrix** — Read `.claude/knowledge/common/cross-domain-calls.md` (path from ecw.yml `paths.knowledge_common`).
+2. **Read existing matrix** — Read `.claude/knowledge/common/cross-domain-calls.md` (path from ecw.yml `paths.knowledge_shared`).
    - If the file does not exist, skip backfill and output `[Warning: cross-domain-calls.md not found, skipping auto-backfill. Please create the file and backfill manually.]`
 
 3. **Deduplicate** — For each unregistered call, check if an equivalent entry already exists in the matrix (match on caller domain + callee domain + call method + caller class). Skip entries that already exist.
@@ -122,7 +122,7 @@ Read `./prompts/common-rationalizations.md` for anti-patterns to avoid.
 
 ## Notes
 
-- Analysis results depend on dependency graph data quality under ecw.yml `paths.knowledge_common`
+- Analysis results depend on dependency graph data quality under ecw.yml `paths.knowledge_shared`
 - The "Analysis Coverage" section in the report indicates which dimensions may have gaps
 - "Unregistered cross-domain calls" flagged in the report are auto-backfilled to `cross-domain-calls.md` (conservative: append-only, no modification/deletion)
 - "Suspected stale entries" flagged in the report still need manual confirmation before cleanup

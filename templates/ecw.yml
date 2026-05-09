@@ -113,7 +113,7 @@ paths:
   domain_registry: ".claude/ecw/domain-registry.md"            # 域注册表
   path_mappings: ".claude/ecw/ecw-path-mappings.md"            # 代码路径→域映射
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
-  knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识
+  knowledge_shared: ".claude/knowledge/common/"                # 跨域共享知识
 
 # 知识库维护配置
 # 控制 knowledge-audit、knowledge-track、knowledge-repomap 的行为。

@@ -51,7 +51,7 @@ For each path in the `paths` section, check whether the referenced file/director
 - `domain_registry`
 - `path_mappings`
 - `knowledge_root`
-- `knowledge_common`
+- `knowledge_shared`
 
 ---
 
@@ -141,7 +141,7 @@ Check if knowledge root directory exists. If not, flag:
 
 ### 6b: Common Knowledge
 
-Check if `knowledge_common` directory exists. If it exists, check standard files:
+Check if `knowledge_shared` directory exists. If it exists, check standard files:
 - `cross-domain-rules.md`
 - `cross-domain-calls.md`
 - `mq-topology.md`

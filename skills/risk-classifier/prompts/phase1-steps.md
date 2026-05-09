@@ -12,7 +12,7 @@ Extract from user's requirement description:
 For each matched domain, read its `business-rules.md` under `.claude/knowledge/{domain}/`. If missing, log `[Warning: {domain} business-rules.md not found]` and continue.
 
 Assess impact based on:
-- **Shared resources**: Read `shared-resources.md` under ecw.yml `paths.knowledge_common`. Count how many domains depend on the changed component → more dependents = higher risk
+- **Shared resources**: Read `shared-resources.md` under ecw.yml `paths.knowledge_shared`. Count how many domains depend on the changed component → more dependents = higher risk
 - **Change type risk**:
   - State machine logic / public method deletion or rename / MQ message format (breaking) → P0
   - Method signature change with cross-domain callers / data write ops / new external MQ topic / core entity field change → P1

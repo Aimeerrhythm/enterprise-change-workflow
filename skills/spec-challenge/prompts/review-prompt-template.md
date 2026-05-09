@@ -21,7 +21,7 @@ Please read the file yourself to get the full content.
 
 Read `.claude/ecw/ecw.yml` to get project.name, read ecw.yml `paths.domain_registry` to get domain list.
 Project knowledge documents are in the directory specified by ecw.yml `paths.knowledge_root`.
-Cross-domain call relationships are recorded in `cross-domain-rules.md` under ecw.yml `paths.knowledge_common`.
+Cross-domain call relationships are recorded in `cross-domain-rules.md` under ecw.yml `paths.knowledge_shared`.
 
 Domains involved in the plan: {affected_domains}
 Read relevant knowledge files for the above domains as needed to verify plan accuracy. Do not read all knowledge files at once.
