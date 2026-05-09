@@ -20,7 +20,6 @@ routes:
     type: requirement
     chain:
       - requirements-elicitation
-      - "Phase 2"
       - writing-plans
       - spec-challenge
       - "TDD:RED"
@@ -28,7 +27,6 @@ routes:
       - impl-verify
       - biz-impact-analysis
       - knowledge-track
-      - "Phase 3"
     must_include: [requirements-elicitation, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
     must_exclude: [domain-collab]
 
@@ -37,14 +35,12 @@ routes:
     type: requirement
     chain:
       - requirements-elicitation
-      - "Phase 2"
       - writing-plans
       - "TDD:RED"
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
       - knowledge-track
-      - "Phase 3"
     must_include: [requirements-elicitation, writing-plans, impl-verify, biz-impact-analysis]
     must_exclude: [domain-collab, spec-challenge]
 
@@ -75,7 +71,6 @@ routes:
     type: requirement
     chain:
       - domain-collab
-      - "Phase 2"
       - writing-plans
       - spec-challenge
       - "TDD:RED"
@@ -83,7 +78,6 @@ routes:
       - impl-verify
       - biz-impact-analysis
       - knowledge-track
-      - "Phase 3"
     must_include: [domain-collab, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
     must_exclude: [requirements-elicitation]
 
@@ -92,17 +86,14 @@ routes:
     type: requirement
     chain:
       - domain-collab
-      - "Phase 2"
       - writing-plans
-      - spec-challenge
       - "TDD:RED"
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
       - knowledge-track
-      - "Phase 3"
-    must_include: [domain-collab, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation]
+    must_include: [domain-collab, writing-plans, impl-verify, biz-impact-analysis]
+    must_exclude: [requirements-elicitation, spec-challenge]
 
   - level: P2
     mode: cross-domain
@@ -127,48 +118,10 @@ routes:
     must_exclude: [requirements-elicitation, writing-plans, spec-challenge]
 
   # ── Bug Fix Changes ──
-  # All levels skip requirements-elicitation. Risk level determines post-fix requirements.
+  # Entry point: ecw:systematic-debugging (no risk-classifier needed).
+  # biz-impact-analysis and knowledge-track available for manual invocation.
 
-  - level: P0
-    mode: any
-    type: bug
-    chain:
-      - systematic-debugging
-      - "TDD:RED"
-      - "Fix(GREEN)"
-      - impl-verify
-      - biz-impact-analysis
-      - knowledge-track
-      - "Phase 3"
-    must_include: [systematic-debugging, impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
-
-  - level: P1
-    mode: any
-    type: bug
-    chain:
-      - systematic-debugging
-      - "TDD:RED"
-      - "Fix(GREEN)"
-      - impl-verify
-      - biz-impact-analysis
-      - knowledge-track
-      - "Phase 3"
-    must_include: [systematic-debugging, impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
-
-  - level: P2
-    mode: any
-    type: bug
-    chain:
-      - systematic-debugging
-      - "TDD:RED"
-      - "Fix(GREEN)"
-      - impl-verify
-    must_include: [systematic-debugging, impl-verify]
-    must_exclude: [requirements-elicitation, domain-collab, writing-plans, spec-challenge]
-
-  - level: P3
+  - level: any
     mode: any
     type: bug
     chain:
@@ -248,7 +201,6 @@ skill_metadata:
   risk-classifier:
     mode: analysis
     phase_name: phase1
-    routing_aliases: ["Phase 3"]
   requirements-elicitation:
     mode: analysis
     phase_name: requirements
@@ -288,8 +240,9 @@ off_chain_skills:
 cross_domain_rule: "During Phase 1 Step 1, check project CLAUDE.md domain routing table. 2+ domain matches = cross-domain."
 
 # ── Post-Implementation Task Creation ──
+# Created by risk-classifier after Phase 1 user confirmation.
 post_impl_tasks:
-  P0: [impl-verify, biz-impact-analysis, "Phase 3 Calibration"]
-  P1: [impl-verify, biz-impact-analysis, "Phase 3 Calibration"]
+  P0: [impl-verify, biz-impact-analysis]
+  P1: [impl-verify, biz-impact-analysis]
   P2: [impl-verify]
   P3: []
