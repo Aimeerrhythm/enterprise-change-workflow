@@ -59,4 +59,10 @@ Then output:
 ```
 [Auto-Flow] Risk: P{X} | {single-domain/cross-domain} ({domain list}) | Route: {routing chain}. Auto-proceeding...
 ```
+
+Then write session-state to `.claude/ecw/session-data/{workflow-id}/session-state.json`:
+- `{workflow-id}`: date from `currentDate` system-reminder (YYYYMMDD) + `-` + 4 random hex chars (e.g. `20260509-a3f1`). Check for conflict first; regenerate suffix up to 3 times if file exists.
+- Read `./session-state-format.md` for the exact JSON schema.
+- Write `routing[0]` only — the auto-continue hook reconstructs the full chain.
+
 Then invoke the next downstream skill. The user can interrupt at any time if they disagree with the classification.
