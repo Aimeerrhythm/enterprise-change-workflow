@@ -25,7 +25,6 @@ Read `.claude/ecw/session-data/{workflow-id}/knowledge-reads.jsonl`.
 This file is auto-populated by the `knowledge-read-logger` hook on every Read
 call to knowledge files. Each line is a JSON object:
 ```json
-{"ts": "2026-05-04T10:15:23", "file": ".claude/knowledge/payment/business-rules.md"}
 {"ts": "2026-05-04T10:16:05", "file": ".claude/knowledge/payment/business-rules.md", "offset": 100, "limit": 50}
 ```
 
