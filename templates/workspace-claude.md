@@ -42,7 +42,6 @@ This triggers the 6-Phase coordinator: requirement decomposition → per-service
 Each subdirectory is a full git repository (worktree). You can `cd` into any service and work with it directly:
 
 ```bash
-cd ofc/   # Work on fulfillment service
-cd wms/   # Work on warehouse service
-cd sci/   # Work on supply chain service
+cd {SERVICE_ID_1}/   # Work on service 1
+cd {SERVICE_ID_2}/   # Work on service 2
 ```

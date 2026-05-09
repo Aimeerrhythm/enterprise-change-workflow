@@ -25,16 +25,6 @@ rules/
 - `[must-follow]` — Violations produce **must-fix** findings in impl-verify Round 4
 - `[recommended]` — Violations produce **suggestion** findings
 
-## Configuration
-
-In `ecw.yml`:
-
-```yaml
-rules:
-  enabled: true                    # Set false to skip rules enforcement
-  path: .claude/ecw/rules/         # Directory containing rules files
-```
-
 ## Adding Custom Rules
 
 1. Create a new `.md` file under the appropriate subdirectory
