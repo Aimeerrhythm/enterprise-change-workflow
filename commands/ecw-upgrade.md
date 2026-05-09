@@ -91,50 +91,14 @@ For each missing file:
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
 - `.claude/ecw/README.md` / `.claude/ecw/knowledge-ops/README.md` → **needs-fix**: create directory guidance files if absent.
 
-### Check H: Project-local ECW Runtime Registration (`.claude/settings.local.json`)
+### Check H: Write Permissions in settings.local.json
 
-**Check:** Read `.claude/settings.local.json`. Verify the file contains both required ECW write permissions and project-local ECW hook registrations.
-
-Required `permissions.allow` entries:
+**Check:** Read `.claude/settings.local.json`. Verify `permissions.allow` array contains all three ECW write entries:
 - `Write(.claude/ecw/**)`
 - `Write(.claude/knowledge/**)`
 - `Write(.claude/plans/**)`
 
-Required ECW hook registrations:
-- `SessionStart` → `session-start.py`
-- `Stop` → `stop-persist.py`
-- `PreToolUse` → `dispatcher.py`
-- `PostToolUse` → `post-edit-check.py`
-- `PreCompact` → `pre-compact.py`
-- `SessionEnd` → `session-end.py`
-
-Standard ECW hook registrations that should also be repaired if absent:
-- `PreToolUse` → `auto-continue.py`, `eval-gate.py`
-- `PostToolUse` → `auto-continue.py`, `knowledge-read-logger.py`
-
-Any missing entry → **needs-fix**: Merge missing permissions and ECW hook commands into `.claude/settings.local.json` (create the file / sections if needed, never overwrite unrelated existing entries).
-
-Important:
-- This is the standard migration target for existing projects.
-- Do **not** modify global `~/.claude/settings.json`.
-- Do **not** remove unrelated project-local hooks.
-
-**Auto-fix implementation details:**
-
-When this check needs fixing, prefer running `python3 {plugin_dir}/scripts/merge-settings-local.py {project_root}`. The script applies the following required merge rules:
-
-1. If project `.claude/settings.local.json` does not exist, create it from `templates/settings.local.ecw.json`.
-2. If the file exists but contains invalid JSON, stop auto-fix for this check and report the exact parse error for manual repair.
-3. Merge `permissions.allow` by set union; preserve original order of existing entries and append only missing ECW entries.
-4. Merge `hooks` by event name:
-   - Preserve all existing non-ECW hook entries
-   - For each ECW event in the template, compare hook commands by exact `command` string
-   - If an event exists, append only missing ECW hook command entries under that event
-   - If an event does not exist, copy the entire ECW event block from the template
-5. Never delete, reorder, or rewrite unrelated hook entries.
-6. Write the merged JSON back with stable indentation.
-
-This merge behavior is mandatory for `/ecw-upgrade` and should be treated as idempotent: running upgrade multiple times must not duplicate ECW hook entries.
+Any missing entry → **needs-fix**: Merge into `permissions.allow` (create the file / array if it doesn't exist, never overwrite existing entries).
 
 ---
 

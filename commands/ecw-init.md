@@ -621,29 +621,9 @@ Then update `.claude/knowledge/shared/external-systems.md`:
 1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
 2. **Generate Repo Map**: Run `bash {plugin_dir}/scripts/java/generate-repo-map.sh {project_root} .claude/ecw/ecw.yml` to auto-generate the code structure index.
 
-### 6f: Project-local Claude hooks (`.claude/settings.local.json`)
+### 6f: Inline configuration validation
 
-ECW runtime hooks must be registered at the **project scope**, not the user's global `~/.claude/settings.json`. This keeps ECW active only in projects that ran `/ecw-init` and avoids conflicts with unrelated global hooks.
-
-Read the project's `.claude/settings.local.json` if it exists. Then ensure **both** of the following are present, merging without overwriting unrelated user settings:
-
-1. `permissions.allow` contains these entries:
-
-```json
-[
-  "Write(.claude/ecw/**)",
-  "Write(.claude/knowledge/**)",
-  "Write(.claude/plans/**)"
-]
-```
-
-2. `hooks` contains the ECW runtime registrations from `templates/settings.local.ecw.json`. If the file already has `hooks`, append only missing ECW commands; never delete or replace non-ECW hooks.
-
-Prefer using `python3 {plugin_dir}/scripts/merge-settings-local.py {project_root}` to perform this merge. The script reads `templates/settings.local.ecw.json`, creates `.claude/settings.local.json` if missing, and merges ECW permissions/hooks idempotently without removing unrelated project-local settings.
-
-### 6g: Inline configuration validation
-
-After all files are generated, perform key validation checks inline (a subset of `/ecw-validate-config` — covers immediate init gaps but not template sync or domain-registry field completeness) and include results in the output summary. This inline validation must include the presence of the project-local ECW hook registrations in `.claude/settings.local.json`. Do not ask the user to run a separate command.
+After all files are generated, perform key validation checks inline (a subset of `/ecw-validate-config` — covers immediate init gaps but not template sync or domain-registry field completeness) and include results in the output summary. Do not ask the user to run a separate command.
 
 **Check 1 — Domain knowledge directories:**
 For each registered domain, verify its knowledge directory and entry document exist. Mark missing items as `✗ fail`.
