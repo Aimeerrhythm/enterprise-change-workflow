@@ -10,10 +10,8 @@
 
 risk-classifier:
   - "Phase 1"
-  - "Phase 2"
-  - "Phase 3"
   - "AskUserQuestion"
-  - "session-state.md"
+  - "session-state.json"
   - "P0"
   - "P1"
   - "P2"
