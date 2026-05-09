@@ -158,6 +158,35 @@ For each domain in the domain registry, check its knowledge directory:
 - Does `00-index.md` (or configured entry document) exist?
 - Are there `.md` files with actual content?
 
+### 6d: Project-local ECW Hooks
+
+Read project `.claude/settings.local.json`.
+
+Validate that the project-local settings file contains ECW runtime hook registrations for these event points:
+
+- `SessionStart` → `session-start.py`
+- `Stop` → `stop-persist.py`
+- `PreToolUse` → `dispatcher.py`
+- `PostToolUse` → `post-edit-check.py`
+- `PreCompact` → `pre-compact.py`
+- `SessionEnd` → `session-end.py`
+
+Also verify `permissions.allow` contains these three entries:
+- `Write(.claude/ecw/**)`
+- `Write(.claude/knowledge/**)`
+- `Write(.claude/plans/**)`
+
+Validation rules:
+- `.claude/settings.local.json` missing → **fail**
+- invalid JSON → **fail**
+- missing required ECW hook command under any required event → **fail**
+- missing required write permission → **warn**
+
+Important:
+- Only validate **project-local** `.claude/settings.local.json`.
+- Do **not** inspect or depend on global `~/.claude/settings.json`.
+- Ignore unrelated non-ECW hooks.
+
 ---
 
 ## Step 7: Output Report
@@ -176,6 +205,7 @@ Output structured validation report:
 | path-mappings.md | {pass/warn/fail} |
 | Template structure sync | {pass/warn/fail} |
 | Knowledge file structure | {pass/warn/fail} |
+| Project-local hooks | {pass/warn/fail} |
 
 ### Issue List
 
