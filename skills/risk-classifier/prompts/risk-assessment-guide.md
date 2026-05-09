@@ -30,6 +30,19 @@ Cross-Domain = matched domain count >= 2 ? "cross-domain" : "single-domain"
 If information insufficient (no domain docs, ambiguous scope), **default to P1**. Look up routing in `workflow-routes.yml`.
 
 
+## Assessment Output Fields
+
+The assessment produces exactly 4 fields:
+
+| Field | Values | Description |
+|-------|--------|-------------|
+| `risk_level` | P0 / P1 / P2 / P3 | Result of composite assessment |
+| `domain_scope` | single-domain / cross-domain | Based on matched domain count |
+| `entry_skill` | ecw:requirements-elicitation / ecw:domain-collab / ecw:writing-plans / (none for P3) | First downstream skill |
+| `rationale` | one-line string | Key reason for level assignment |
+
+These 4 fields drive `routing[0]` (= `entry_skill`) and populate the confirmation output below.
+
 ## Assessment Output and Confirmation Flow
 
 First output a brief assessment (no more than 5 lines):
