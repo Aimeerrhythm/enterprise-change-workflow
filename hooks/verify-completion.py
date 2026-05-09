@@ -262,12 +262,8 @@ def check_java_tests(cwd, modified):
     if not os.path.exists(os.path.join(cwd, "pom.xml")):
         return [], []
 
-    cfg = _read_ecw_config(cwd)
-    verification = cfg.get("verification", {})
-    if not verification.get("run_tests", True):
-        return [], []
-
-    timeout = verification.get("test_timeout", 180)
+    # Always run tests with 10-minute timeout
+    timeout = 600
 
     try:
         r = subprocess.run(

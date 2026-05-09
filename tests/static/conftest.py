@@ -50,7 +50,6 @@ def tmp_project(tmp_path):
     ecw_yml = ecw_dir / "ecw.yml"
     ecw_yml.write_text(
         "project:\n  name: test\n  language: java\n"
-        "verification:\n  run_tests: true\n  test_timeout: 60\n"
         "tdd:\n  enabled: true\n  check_test_files: false\n"
         "paths:\n  knowledge_root: .claude/knowledge/\n"
         "  path_mappings: .claude/ecw/routing/path-mappings.md\n"

@@ -83,9 +83,8 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 
 **Fix**:
 1. Fix the compilation or test errors — the hook runs `mvn compile -q -T 1C` and `mvn test -q -T 1C`
-2. If tests are slow, set `verification.run_tests: false` in `.claude/ecw/ecw.yml` to skip test checks
-3. If `mvn` is not in PATH, the check is automatically skipped (no error)
-4. Timeout defaults: compile = 120s, test = 300s (configurable via `verification.test_timeout` in ecw.yml)
+2. If `mvn` is not in PATH, the check is automatically skipped (no error)
+3. Timeout: compile = 120s, test = 600s (10 minutes)
 
 ### Hook error crashes silently
 

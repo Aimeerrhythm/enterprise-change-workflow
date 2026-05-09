@@ -60,11 +60,10 @@ Before dispatching the first Task, run a build/test pre-flight to catch pre-exis
 
 **Steps:**
 
-1. Read ecw.yml to determine project type and verification settings:
-   - Java (`pom.xml` exists): run `mvn compile -q -T 1C`
-   - If `verification.run_tests` is true: also run `mvn test -q -T 1C`
+1. Read ecw.yml to determine project type:
+   - Java (`pom.xml` exists): run `mvn compile -q -T 1C` and `mvn test -q -T 1C`
    - Other project types: skip (no universal pre-flight command)
-2. **Timeout**: 120s for compile, `verification.test_timeout` (default 300s) for tests
+2. **Timeout**: 120s for compile, 600s (10 minutes) for tests
 3. **On failure**:
    - Attempt one auto-fix pass (read error output, fix obvious issues like missing imports or syntax errors)
    - Re-run the failed check

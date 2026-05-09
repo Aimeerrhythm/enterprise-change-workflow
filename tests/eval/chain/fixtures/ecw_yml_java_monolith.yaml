@@ -9,9 +9,6 @@ tdd:
   check_test_files: false
   base_test_class: "BaseServiceTest"
 
-verification:
-  run_tests: true
-
 component_types:
   - service
   - repository

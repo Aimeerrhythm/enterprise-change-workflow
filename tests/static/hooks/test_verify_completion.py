@@ -311,19 +311,6 @@ class TestCheckJavaTests:
         issues, warnings = hook_module.check_java_tests("/fake", ["readme.md"])
         assert issues == []
 
-    def test_run_tests_false_skipped(self, hook_module, tmp_project):
-        """verification.run_tests=false → skip."""
-        # Override ecw.yml to disable tests
-        ecw_yml = tmp_project / ".claude" / "ecw" / "ecw.yml"
-        ecw_yml.write_text(
-            "verification:\n  run_tests: false\n"
-        )
-        (tmp_project / "pom.xml").write_text("<project/>")
-        issues, warnings = hook_module.check_java_tests(
-            str(tmp_project), ["src/Main.java"]
-        )
-        assert issues == []
-
     def test_test_failure_produces_issue(self, hook_module, tmp_project):
         """mvn test failure → issue."""
         (tmp_project / "pom.xml").write_text("<project/>")
@@ -361,7 +348,6 @@ class TestReadEcwConfig:
         """Valid ecw.yml returns correct dict."""
         cfg = hook_module._read_ecw_config(str(tmp_project))
         assert cfg["project"]["name"] == "test"
-        assert cfg["verification"]["run_tests"] is True
 
     def test_file_not_found_returns_empty(self, hook_module, tmp_path):
         """Missing ecw.yml returns empty dict."""

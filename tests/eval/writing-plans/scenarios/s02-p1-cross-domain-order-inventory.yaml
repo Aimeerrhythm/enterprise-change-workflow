@@ -41,8 +41,6 @@
         enabled: true
         check_test_files: false
         base_test_class: "BaseServiceTest"
-      verification:
-        run_tests: true
     domain_registry: |
       ## order
       - 知识目录: .claude/knowledge/order/

@@ -287,7 +287,7 @@ ECW uses a unified dispatcher pattern. `hooks.json` registers 6 event points:
 **Hard blocks (failure prevents completion):**
 2. Stale reference — deleted files still referenced elsewhere
 3. Java compilation — auto-runs `mvn compile` when `.java` files are modified
-4. Java tests — auto-runs `mvn test` (controlled by `ecw.yml` `verification.run_tests`)
+4. Java tests — auto-runs `mvn test` when `.java` files are modified (timeout: 10 minutes)
 
 </details>
 

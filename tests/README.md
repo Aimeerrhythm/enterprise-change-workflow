@@ -188,7 +188,7 @@ python3 tests/static/lint_skills.py --quiet  # 仅输出错误
 | TestCheckBrokenReferences | 6 | 引用存在/不存在、非 text 文件跳过 |
 | TestCheckStaleReferences | 5 | 删除文件有引用/无引用、skip_dirs |
 | TestCheckJavaCompilation | 6 | 无 java/无 pom/成功/失败/超时/mvn 不存在 |
-| TestCheckJavaTests | 4 | run_tests=false/失败/成功 |
+| TestCheckJavaTests | 3 | 失败/成功/mvn 不存在 |
 | TestReadEcwConfig | 4 | 正常/不存在/yaml=None/parse error |
 | TestLoadPathMappings | 5 | 正常表格/表头跳过/strip/不存在 |
 | TestCheckKnowledgeDocFreshness | 6 | 代码变更+知识未变/已变/启发式匹配 |
