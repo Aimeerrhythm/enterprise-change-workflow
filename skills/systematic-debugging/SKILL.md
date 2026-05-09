@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. Domain-knowledge-driven root cause analysis.
+description: Entry point for bug fixes. Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. Domain-knowledge-driven root cause analysis.
 ---
 
 # Systematic Debugging
@@ -11,7 +11,26 @@ Random fixes waste time and create new bugs. Quick patches mask underlying issue
 
 **Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
 
+**This skill is the direct entry point for all bug fixes** — no need to run `ecw:risk-classifier` first.
+
 **Announce at start:** "Using ecw:systematic-debugging for root cause investigation."
+
+## Workflow Integration
+
+**When invoked as the bug fix entry point**, create session-state immediately after announcing start:
+
+**Before writing**, Read `ecw:risk-classifier`'s `./session-state-format.md` for the JSON schema.
+
+Write `.claude/ecw/session-data/{workflow-id}/session-state.json` with:
+- `change_type: "bug"`
+- `auto_continue: true`
+- `routing: ["ecw:systematic-debugging", "TDD:RED", "Fix(GREEN)", "ecw:impl-verify"]`
+- `next: "ecw:tdd"`
+- `current_phase: "systematic-debugging"`
+
+Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` (same convention as risk-classifier; use `currentDate` system-reminder for the date).
+
+> `biz-impact-analysis` and `knowledge-track` are not in the default bug chain — invoke them manually if the fix has broader impact.
 
 ## The Iron Law
 
