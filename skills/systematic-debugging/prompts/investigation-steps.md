@@ -40,16 +40,16 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level.
 
 **P0/P1 — Full cross-domain tracing:**
 
-1. From `.claude/ecw/ecw-path-mappings.md`, locate the bug's domain
+1. From `.claude/ecw/routing/path-mappings.md`, locate the bug's domain
 2. Read domain's `business-rules.md` — check state machines, validation rules, concurrency controls
 3. Query `cross-domain-calls.md` (§1) — trace upstream callers and downstream callees
 4. Query `mq-topology.md` (§2) — check if affected code publishes/consumes messages; trace message flow
 5. Query `shared-resources.md` (§3) — check if bug involves a shared service/component; list all consumers
 
-> **Knowledge file robustness**: Verify each file exists before reading. For any missing file, log `[Warning: {file} not found, skipping this cross-reference dimension]` and continue with available files. If `ecw-path-mappings.md` is missing, use directory-based heuristic to infer domain (e.g., `src/main/java/{domain}/` path pattern).
+> **Knowledge file robustness**: Verify each file exists before reading. For any missing file, log `[Warning: {file} not found, skipping this cross-reference dimension]` and continue with available files. If `path-mappings.md` is missing, use directory-based heuristic to infer domain (e.g., `src/main/java/{domain}/` path pattern).
 
 **P2/P3 — Simplified check:**
-1. Locate domain from `ecw-path-mappings.md`
+1. Locate domain from `path-mappings.md`
 2. Read domain's `business-rules.md`
 3. Query `shared-resources.md` (§3) only — check shared resource contention
 

@@ -92,14 +92,19 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 
 ### Check I: State & Knowledge-Ops Files
 
-**Check:** Verify that runtime state files and knowledge-ops files created by ecw-init exist.
+**Check:** Verify that ECW runtime/state files and knowledge-ops files created by ecw-init exist, and that the structured subdirectories are present.
 
 ```bash
+ls .claude/ecw/routing/domain-registry.md 2>/dev/null
+ls .claude/ecw/routing/path-mappings.md 2>/dev/null
 ls .claude/ecw/knowledge-ops/doc-tracker.md 2>/dev/null
 ```
 
 For each missing file:
+- `.claude/ecw/routing/domain-registry.md` → **needs-fix**: `mkdir -p .claude/ecw/routing` then copy from plugin `templates/domain-registry.md`.
+- `.claude/ecw/routing/path-mappings.md` → **needs-fix**: `mkdir -p .claude/ecw/routing` then copy from plugin `templates/path-mappings.md`.
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
+- `.claude/ecw/README.md` / `.claude/ecw/knowledge-ops/README.md` → **needs-fix**: create directory guidance files if absent.
 
 ### Check J: Write Permissions in settings.local.json
 

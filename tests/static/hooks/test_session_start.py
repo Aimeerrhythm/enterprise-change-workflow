@@ -227,28 +227,6 @@ class TestReadEcwConfig:
 
 
 # ══════════════════════════════════════════════════════
-# _check_modified_files (v0.7+)
-# ══════════════════════════════════════════════════════
-
-class TestCheckModifiedFiles:
-    """Tests for _check_modified_files reading modified-files.txt."""
-
-    def test_reads_file_list(self, session_start, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        (state_dir / "modified-files.txt").write_text(
-            "src/OrderService.java\nsrc/PaymentService.java\n"
-        )
-        result = session_start._check_modified_files(str(tmp_path))
-        assert len(result) == 2
-        assert "src/OrderService.java" in result
-
-    def test_returns_empty_when_no_file(self, session_start, tmp_path):
-        result = session_start._check_modified_files(str(tmp_path))
-        assert result == []
-
-
-# ══════════════════════════════════════════════════════
 # _summarize_checkpoint (v0.7+)
 # ══════════════════════════════════════════════════════
 

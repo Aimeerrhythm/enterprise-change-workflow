@@ -21,9 +21,9 @@ component_types:
   - facade
 
 paths:
-  domain_registry: ".claude/ecw/domain-registry.md"
+  domain_registry: ".claude/ecw/routing/domain-registry.md"
   knowledge_root: ".claude/knowledge/"
-  knowledge_shared: ".claude/knowledge/common/"
+  knowledge_shared: ".claude/knowledge/shared/"
   risk_factors: ".claude/ecw/change-risk-classification.md"
   plans: ".claude/plans/"
   session_data: ".claude/ecw/session-data/"

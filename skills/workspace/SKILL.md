@@ -105,7 +105,7 @@ Gate-out: User confirms
 
 ---
 
-### Initial Decomposition: Business Decomposition (Coordinator only, NO code analysis)
+### Phase 1: Initial Decomposition — no Read, Bash, Glob, Grep, or Explore (business decomp only)
 
 **Information constraint**: the initial decomposition uses ONLY `workspace.yml.requirement` text and the user's stated business context. No code reading of any kind is permitted — no Read, Bash, Glob, Grep, or Explore tools. If code-level detail is needed to answer a question, that question is an Open Question for Phase 2, not something to resolve here.
 

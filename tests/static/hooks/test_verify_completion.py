@@ -475,7 +475,7 @@ class TestEcwConfiguredGuard:
         domain_dir.mkdir(parents=True)
         (domain_dir / "business-rules.md").write_text("# Rules\n")
 
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file = tmp_project / ".claude" / "ecw" / "path-mappings.md"
         mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
 
         input_data = {
@@ -498,7 +498,7 @@ class TestEcwConfiguredGuard:
         domain_dir.mkdir(parents=True)
         (domain_dir / "business-rules.md").write_text("# Rules\n")
 
-        mappings_file = tmp_project / ".claude" / "ecw" / "ecw-path-mappings.md"
+        mappings_file = tmp_project / ".claude" / "ecw" / "path-mappings.md"
         mappings_file.write_text("| path | domain |\n| --- | --- |\n| order-biz/ | order |\n")
 
         input_data = {

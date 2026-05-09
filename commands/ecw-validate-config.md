@@ -57,7 +57,7 @@ For each path in the `paths` section, check whether the referenced file/director
 
 ## Step 3: Check domain-registry.md
 
-Read the domain registry file (path from ecw.yml or default `.claude/ecw/domain-registry.md`).
+Read the domain registry file (path from ecw.yml or default `.claude/ecw/routing/domain-registry.md`).
 
 ### 3a: Empty Check
 
@@ -80,9 +80,9 @@ Check:
 
 ---
 
-## Step 4: Check ecw-path-mappings.md
+## Step 4: Check routing/path-mappings.md
 
-Read the path mappings file (path from ecw.yml or default `.claude/ecw/ecw-path-mappings.md`).
+Read the path mappings file (path from ecw.yml or default `.claude/ecw/routing/path-mappings.md`). This is routing metadata, not business knowledge.
 
 ### 4a: Empty Check
 
@@ -173,7 +173,7 @@ Output structured validation report:
 |-----------|--------|
 | ecw.yml | {pass/warn/fail} |
 | domain-registry.md | {pass/warn/fail} |
-| ecw-path-mappings.md | {pass/warn/fail} |
+| path-mappings.md | {pass/warn/fail} |
 | Template structure sync | {pass/warn/fail} |
 | Knowledge file structure | {pass/warn/fail} |
 

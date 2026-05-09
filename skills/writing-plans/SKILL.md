@@ -36,11 +36,11 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level 
 
 Before writing the plan:
 
-1. Read `.claude/ecw/ecw-path-mappings.md` to understand code path → domain mappings
+1. Read `.claude/ecw/routing/path-mappings.md` to understand code path → domain mappings
 2. For each affected domain, read its `business-rules.md` to understand constraints (state machines, validation rules, concurrency controls)
 3. If `knowledge-summary.md` exists (from domain-collab), read it for cross-domain dependency context
 
-> **Knowledge file robustness**: Verify each file exists before reading. If `ecw-path-mappings.md` is missing, skip domain context injection and note `[Warning: path mappings not found, plan lacks domain-aware file grouping]` in plan header. If a domain's `business-rules.md` is missing, note `[Warning: {domain} business-rules.md not found, domain constraints may be incomplete]` in the affected Tasks. Continue plan generation with available data.
+> **Knowledge file robustness**: Verify each file exists before reading. If `path-mappings.md` is missing, skip domain context injection and note `[Warning: path mappings not found, plan lacks domain-aware file grouping]` in plan header. If a domain's `business-rules.md` is missing, note `[Warning: {domain} business-rules.md not found, domain constraints may be incomplete]` in the affected Tasks. Continue plan generation with available data.
 
 Ensure design decisions respect domain rules. A plan that violates a state machine constraint or concurrency rule will fail at impl-verify.
 
@@ -62,7 +62,7 @@ Coordinator constructs the subagent prompt with the following inputs — **does 
 
 1. **Requirement summary path**: `requirements-summary.md` or `domain-collab-report.md` (subagent reads the file)
 3. **Knowledge file path list**:
-   - `.claude/ecw/ecw-path-mappings.md`
+   - `.claude/ecw/routing/path-mappings.md`
    - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)
    - `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` (if exists)
 4. **Plan output target path**: `.claude/plans/{feature}.md`
@@ -146,7 +146,7 @@ Read `./prompts/plan-quality-checks.md` for no-placeholder rules, design complet
 |----------|---------|
 | Subagent dispatch fails or returns incomplete plan | Record `FAILED` in Subagent Ledger → retry once → still fails: fall back to Direct mode (coordinator generates plan itself) |
 | Subagent timeout (dynamic limit exceeded) | Record `TIMEOUT` in Subagent Ledger → **fall back to Direct mode immediately** (no retry — empirically, retry under same conditions times out again, wasting another full timeout window). Coordinator generates plan itself in Direct mode |
-| Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
+| Knowledge file missing (`path-mappings.md`, `business-rules.md`, `knowledge-summary.md`) | Log `[Warning: {file} not found, plan may lack domain constraints]` → continue plan generation with available data. Missing path-mappings: skip domain context injection. Missing business-rules: note in plan header as risk |
 | Plan file write failure | Retry once → still fails: output full plan content in conversation. User can manually save to `.claude/plans/` |
 | `session-state.json` unavailable (risk level unknown) | Default to P0 (full detail mode) and proceed |
 

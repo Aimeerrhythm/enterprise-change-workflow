@@ -76,9 +76,9 @@ Maps RocketMQ topic relationships: who publishes, who consumes, what business ac
 
 The `ecw-init` command runs each scanner and writes output to:
 
-- Cross-domain calls -> `.claude/knowledge/common/cross-domain-calls.md`
-- Shared resources -> `.claude/knowledge/common/shared-resources.md`
-- MQ topology -> `.claude/knowledge/common/mq-topology.md`
+- Cross-domain calls -> `.claude/knowledge/shared/cross-domain-calls.md`
+- Shared resources -> `.claude/knowledge/shared/shared-resources.md`
+- MQ topology -> `.claude/knowledge/shared/mq-topology.md`
 
 These files are then referenced by the domain knowledge index and used during impact analysis.
 

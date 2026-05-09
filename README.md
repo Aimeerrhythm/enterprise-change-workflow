@@ -285,7 +285,6 @@ ECW uses a unified dispatcher pattern. `hooks.json` registers 6 event points:
 | `bash-preflight` | standard, strict | Dangerous command pre-check (--no-verify, push --force, rm -rf) |
 
 **Hard blocks (failure prevents completion):**
-1. Broken reference — modified files reference non-existent `.claude/` paths
 2. Stale reference — deleted files still referenced elsewhere
 3. Java compilation — auto-runs `mvn compile` when `.java` files are modified
 4. Java tests — auto-runs `mvn test` (controlled by `ecw.yml` `verification.run_tests`)

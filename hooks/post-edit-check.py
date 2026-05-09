@@ -2,9 +2,8 @@
 """ECW PostToolUse quality gate — immediate feedback after Edit/Write operations.
 
 Runs after each Edit or Write tool call to:
-1. Accumulate modified file list to .claude/ecw/state/modified-files.txt
-2. Detect common anti-patterns in the changed content
-3. Warn about protected path modifications
+1. Detect common anti-patterns in the changed content
+2. Warn about protected path modifications
 
 Anti-pattern detection is lightweight (regex-based) to keep latency minimal.
 Findings are surfaced as systemMessage warnings, never blocking.
@@ -83,8 +82,6 @@ SCANNABLE_EXTENSIONS = {
     ".md", ".txt", ".sql", ".sh", ".bash",
 }
 
-# State file for accumulating modified files
-MODIFIED_FILES_STATE = ".claude/ecw/state/modified-files.txt"
 
 
 def _find_git_root(path):
@@ -155,25 +152,6 @@ def _get_file_extension(filepath):
     _, ext = os.path.splitext(filepath)
     return ext.lower()
 
-
-def _accumulate_modified_file(cwd, filepath):
-    """Append filepath to the modified-files state file (deduped)."""
-    state_path = os.path.join(cwd, MODIFIED_FILES_STATE)
-    state_dir = os.path.dirname(state_path)
-
-    try:
-        os.makedirs(state_dir, exist_ok=True)
-
-        existing = set()
-        if os.path.exists(state_path):
-            with open(state_path, encoding="utf-8") as f:
-                existing = {line.strip() for line in f if line.strip()}
-
-        if filepath not in existing:
-            with open(state_path, "a", encoding="utf-8") as f:
-                f.write(filepath + "\n")
-    except Exception:
-        pass  # State tracking is best-effort
 
 
 def _validate_session_state_yaml(tool_input, tool_name, filepath=""):
@@ -248,10 +226,7 @@ def check(input_data, config=None):
     else:
         rel_path = filepath
 
-    # 1. Accumulate modified file
-    _accumulate_modified_file(cwd, rel_path)
-
-    # 1b. Auto-fill baseline_commit placeholder in new session-state.json files
+    # 1. Auto-fill baseline_commit placeholder in new session-state.json files
     if tool_name == "Write":
         _inject_baseline_commit(filepath, cwd)
 

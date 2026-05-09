@@ -6,11 +6,17 @@ Lookup table for all ECW project files. Use when you need to know where a file l
 
 Run `/ecw-init` after installation for project initialization, or manually create:
 
+Recommended ECW layout:
+- `.claude/ecw/routing/` — routing metadata
+- `.claude/ecw/knowledge-ops/` — repo map and doc tracking
+- `.claude/ecw/state/` — runtime state
+
+
 | File | Purpose |
 |------|---------|
 | `.claude/ecw/ecw.yml` | Project config (name, language, component types, scan patterns, paths) |
-| `.claude/ecw/domain-registry.md` | Domain registry (domain definitions, knowledge directories, code directories) |
-| `.claude/ecw/ecw-path-mappings.md` | Code path→domain mapping (used by biz-impact-analysis) |
+| `.claude/ecw/routing/domain-registry.md` | Domain registry (routing metadata: domain definitions, knowledge directories, code directories) |
+| `.claude/ecw/routing/path-mappings.md` | Code path→domain mapping (routing metadata used by biz-impact-analysis) |
 
 ## ECW Artifact Files (auto-generated)
 
@@ -40,9 +46,9 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 
 | File | Purpose |
 |------|---------|
-| `.claude/knowledge/common/cross-domain-rules.md` | Cross-domain call rules and global constraints |
-| `.claude/knowledge/common/cross-domain-calls.md` | Cross-domain direct call matrix |
-| `.claude/knowledge/common/mq-topology.md` | MQ Topic publish/consume relationships |
-| `.claude/knowledge/common/shared-resources.md` | Cross-domain shared resource table |
-| `.claude/knowledge/common/external-systems.md` | External system integrations |
-| `.claude/knowledge/common/e2e-paths.md` | End-to-end critical paths |
+| `.claude/knowledge/shared/cross-domain-rules.md` | Cross-domain call rules and global constraints |
+| `.claude/knowledge/shared/cross-domain-calls.md` | Cross-domain direct call matrix |
+| `.claude/knowledge/shared/mq-topology.md` | MQ Topic publish/consume relationships |
+| `.claude/knowledge/shared/shared-resources.md` | Cross-domain shared resource table |
+| `.claude/knowledge/shared/external-systems.md` | External system integrations |
+| `.claude/knowledge/shared/e2e-paths.md` | End-to-end critical paths |

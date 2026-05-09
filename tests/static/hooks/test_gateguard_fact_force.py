@@ -3,9 +3,8 @@
 Validates:
 1. Whitelist mode: only guarded extensions are blocked
 2. No config or empty gateguard_extensions = no blocking
-3. Second edit passes (file already recorded)
+3. Repeated edits still block (stateless)
 4. Exempt paths and .claude/ directory
-5. State file management
 """
 import importlib.util
 import os
@@ -90,23 +89,14 @@ class TestNoConfigNoBlocking:
         assert action == "continue"
 
 
-class TestSecondEditPasses:
-    def test_recorded_file_passes(self, gateguard, tmp_path):
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        (state_dir / "investigated-files.txt").write_text("src/Service.java\n")
-
-        action, _ = gateguard.check(_make_input(tmp_path, "Service.java"), JAVA_CONFIG)
-        assert action == "continue"
-
-    def test_block_then_pass(self, gateguard, tmp_path):
+class TestRepeatedEditBehavior:
+    def test_repeated_edit_still_blocks(self, gateguard, tmp_path):
         inp = _make_input(tmp_path, "Service.java")
         action1, _ = gateguard.check(inp, JAVA_CONFIG)
         assert action1 == "block"
 
-        action2, msg2 = gateguard.check(inp, JAVA_CONFIG)
-        assert action2 == "continue"
-        assert msg2 == ""
+        action2, _ = gateguard.check(inp, JAVA_CONFIG)
+        assert action2 == "block"
 
 
 class TestExemptions:
@@ -160,24 +150,6 @@ class TestEdgeCases:
         }
         action, _ = gateguard.check(inp, JAVA_CONFIG)
         assert action == "continue"
-
-
-class TestStateFileManagement:
-    def test_block_creates_state_file(self, gateguard, tmp_path):
-        gateguard.check(_make_input(tmp_path, "Module.java"), JAVA_CONFIG)
-        state_file = tmp_path / ".claude" / "ecw" / "state" / "investigated-files.txt"
-        assert state_file.exists()
-        assert "Module.java" in state_file.read_text()
-
-    def test_multiple_blocks_append(self, gateguard, tmp_path):
-        for name in ["A.java", "B.java", "C.java"]:
-            gateguard.check(_make_input(tmp_path, name), JAVA_CONFIG)
-
-        state_file = tmp_path / ".claude" / "ecw" / "state" / "investigated-files.txt"
-        content = state_file.read_text()
-        assert "src/A.java" in content
-        assert "src/B.java" in content
-        assert "src/C.java" in content
 
 
 class TestScriptExists:

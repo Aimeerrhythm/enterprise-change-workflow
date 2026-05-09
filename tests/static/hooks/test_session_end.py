@@ -77,26 +77,6 @@ class TestMarkSessionEnded:
 class TestCleanupStateFiles:
     """Tests for _cleanup_state_files function."""
 
-    def test_removes_modified_files_txt(self, session_end, tmp_path):
-        """Removes modified-files.txt on session end."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        mf = state_dir / "modified-files.txt"
-        mf.write_text("src/main.py\nsrc/util.py\n")
-
-        session_end._cleanup_state_files(str(tmp_path))
-        assert not mf.exists()
-
-    def test_removes_tool_call_counter(self, session_end, tmp_path):
-        """Removes tool-call-count.txt so next session starts from zero."""
-        state_dir = tmp_path / ".claude" / "ecw" / "state"
-        state_dir.mkdir(parents=True)
-        counter = state_dir / "tool-call-count.txt"
-        counter.write_text("87")
-
-        session_end._cleanup_state_files(str(tmp_path))
-        assert not counter.exists()
-
     def test_no_error_when_no_state_dir(self, session_end, tmp_path):
         """No error when state directory doesn't exist."""
         session_end._cleanup_state_files(str(tmp_path))  # Should not raise
@@ -118,15 +98,11 @@ class TestSessionEndMain:
                 assert output["result"] == "continue"
 
     def test_marks_state_and_cleans_up(self, session_end, tmp_path):
-        """Full flow: marks ended in JSON + cleans up modified-files.txt."""
+        """Full flow: marks ended in JSON and cleans transient state."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-wf"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.json"
         state_file.write_text(_STATE_JSON)
-        mf = tmp_path / ".claude" / "ecw" / "state" / "modified-files.txt"
-        mf.parent.mkdir(parents=True, exist_ok=True)
-        mf.write_text("foo.py\n")
-
         # ecw.yml required for main() to proceed
         ecw_dir = tmp_path / ".claude" / "ecw"
         (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
@@ -139,7 +115,6 @@ class TestSessionEndMain:
                 assert output["result"] == "continue"
 
         assert "ended" in json.loads(state_file.read_text()).get("session_status", "")
-        assert not mf.exists()
 
     def test_empty_cwd_returns_continue(self, session_end):
         input_data = {"cwd": ""}

@@ -232,9 +232,9 @@ Key difference from Scaffold: `Knowledge Root` uses user-confirmed **actual path
 - Otherwise → Use the first `.md` file in the directory (alphabetical order)
 - If directory is empty → Use `00-index.md (to be created)`
 
-### 4c: Generate `ecw-path-mappings.md`
+### 4c: Generate `path-mappings.md`
 
-Read `templates/ecw-path-mappings.md` template. Auto-discover project directory structure:
+Read `templates/path-mappings.md` template. Auto-discover project directory structure:
 
 For Java projects:
 ```bash
@@ -508,9 +508,9 @@ Read `templates/domain-registry.md`. Generate one block per domain:
 
 Preserve template header/footer, "Adding New Domains" block, keyword matching rules, cross-domain data source sections.
 
-### 3c: Generate `ecw-path-mappings.md`
+### 3c: Generate `path-mappings.md`
 
-Read `templates/ecw-path-mappings.md`. Scan project directory structure, generate mapping table.
+Read `templates/path-mappings.md`. Scan project directory structure, generate mapping table.
 
 After writing the file, verify completeness — scan ALL Java source directories already discovered in this step's generation scan (not just `biz/`), and check that each one with `.java` files has a corresponding mapping row. Add any missing rows or flag as `（待确认域）`. Output the gap count in the summary.
 
@@ -525,10 +525,10 @@ mkdir -p .claude/ecw/state
 ### 4a: Common Knowledge
 
 ```bash
-mkdir -p .claude/knowledge/common
+mkdir -p .claude/knowledge/shared
 ```
 
-Read and copy the 6 templates under `templates/knowledge/common/`:
+Read and copy the 6 templates under `templates/knowledge/shared/`:
 1. `cross-domain-rules.md`
 2. `cross-domain-calls.md`
 3. `e2e-paths.md`
@@ -570,10 +570,10 @@ Run all Java scan scripts automatically — no user prompt needed. Determine `{p
 ### 6a: Cross-domain calls scan → `cross-domain-calls.md`
 
 ```bash
-bash {plugin_dir}/scripts/java/scan-cross-domain-calls.sh {project_root} .claude/ecw/ecw-path-mappings.md 2>/dev/null
+bash {plugin_dir}/scripts/java/scan-cross-domain-calls.sh {project_root} .claude/ecw/routing/path-mappings.md 2>/dev/null
 ```
 
-Capture output (the markdown table rows). Then update `.claude/knowledge/common/cross-domain-calls.md`:
+Capture output (the markdown table rows). Then update `.claude/knowledge/shared/cross-domain-calls.md`:
 - Replace `{{SCAN_DATE}}` with today's date, `{{TOTAL_COUNT}}` with number of result rows.
 - Replace the placeholder `{{caller_domain}}` example row in the "调用明细" table with the actual scan rows.
 - If the scan returns zero rows (single-domain project with no cross-domain calls): replace the placeholder row with `| (暂无跨域调用) | — | — | — | — | — | — |`
@@ -581,10 +581,10 @@ Capture output (the markdown table rows). Then update `.claude/knowledge/common/
 ### 6b: Shared resources scan → `shared-resources.md`
 
 ```bash
-bash {plugin_dir}/scripts/java/scan-shared-resources.sh {project_root} .claude/ecw/ecw-path-mappings.md 2>/dev/null
+bash {plugin_dir}/scripts/java/scan-shared-resources.sh {project_root} .claude/ecw/routing/path-mappings.md 2>/dev/null
 ```
 
-Capture output. Then update `.claude/knowledge/common/shared-resources.md`:
+Capture output. Then update `.claude/knowledge/shared/shared-resources.md`:
 - Replace the placeholder `{{resource_name}}` rows in both tables with actual scan results.
 - Classify scanned resources into the "极高风险/高风险/中风险" sections based on consumer domain count.
 - If no shared resources found: replace placeholder rows with `| (暂无) | — | — | — | — |`
@@ -595,7 +595,7 @@ Capture output. Then update `.claude/knowledge/common/shared-resources.md`:
 bash {plugin_dir}/scripts/java/scan-mq-topology.sh {project_root} 2>/dev/null
 ```
 
-Capture output. Then update `.claude/knowledge/common/mq-topology.md`:
+Capture output. Then update `.claude/knowledge/shared/mq-topology.md`:
 - Classify each scanned row into "内部 Topic / 外部入站 Topic / 外部出站 Topic" based on whether both publisher and consumer are in this project.
 - Replace the placeholder `{{topic}}` row in the appropriate table with actual scan results.
 - If no MQ topics found: replace placeholder rows with `| (暂无) | — | — | — | — | — | — |`
@@ -610,7 +610,7 @@ grep -rn "@DubboReference" {project_root} --include="*.java" -l 2>/dev/null | he
 grep -rn "@DubboService" {project_root} --include="*.java" 2>/dev/null | head -20
 ```
 
-Then update `.claude/knowledge/common/external-systems.md`:
+Then update `.claude/knowledge/shared/external-systems.md`:
 - For each `@DubboReference` found: extract the interface name and owning file. Add a row to "按系统分类的集成详情" under the appropriate external system section. If the system is unknown, group under a placeholder system name like "待确认外部系统".
 - For each `@DubboService` found: extract the facade interface and domain. Add to "对外暴露的服务" table.
 - Update the "汇总" count table with actual counts (`RPC 引用（出站）` and `RPC 服务（对外暴露）`).
@@ -652,12 +652,13 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 #### Configuration Files (.claude/ecw/)
 | File | Status |
 |------|--------|
-| `ecw.yml` | Created |
-| `domain-registry.md` | Created |
+| `.claude/ecw/ecw.yml` | Created |
+| `.claude/ecw/routing/domain-registry.md` | Created |
 | `change-risk-classification.md` | Removed — risk assessment now uses domain docs |
-| `ecw-path-mappings.md` | Created |
+| `.claude/ecw/routing/path-mappings.md` | Created |
+| `.claude/ecw/README.md` | Created |
 
-#### Knowledge Files — Common (.claude/knowledge/common/)
+#### Knowledge Files — Common (.claude/knowledge/shared/)
 | File | Status |
 |------|--------|
 | `cross-domain-rules.md` | Created |
@@ -677,6 +678,7 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 |------|--------|
 | `.claude/ecw/knowledge-ops/doc-tracker.md` | Created |
 | `.claude/ecw/knowledge-ops/repo-map.md` | Created (Java projects only) |
+| `.claude/ecw/knowledge-ops/README.md` | Created |
 
 #### CLAUDE.md Integration
 | Action | Status |
@@ -685,11 +687,13 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 
 ### Next Steps
 
-1. **Review `ecw.yml`**: Customize `scan_patterns` and `component_types` if scanners missed project conventions.
-2. **Review `ecw-path-mappings.md`**: Verify directory-to-domain mappings, especially infra/shared layers.
-3. **Review scanner-filled common knowledge**: Confirm external systems, MQ topology, and shared resources are correct.
+1. **Review `.claude/ecw/ecw.yml`**: Customize `scan_patterns` and `component_types` if scanners missed project conventions.
+2. **Review `.claude/ecw/routing/path-mappings.md`**: Verify directory-to-domain mappings, especially infra/shared layers.
+3. **Review `.claude/ecw/routing/domain-registry.md`**: Confirm domain definitions, knowledge roots, and code directories are accurate.
+4. **Review scanner-filled common knowledge**: Confirm external systems, MQ topology, and shared resources are correct.
 5. **Enrich domain knowledge files**: Add project-specific business rules and data model details.
-6. **Refine CLAUDE.md keywords**: Add missing domain-specific terms.
+6. **Refine `CLAUDE.md` keywords**: Add missing domain-specific terms.
+7. **Understand ECW subdirectories**: `routing/` stores routing metadata, `knowledge-ops/` stores repo/doc governance artifacts, `state/` stores runtime files.
 
 ```
 

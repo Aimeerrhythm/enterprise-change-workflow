@@ -74,7 +74,7 @@ Use the "Assessment Output and Confirmation Flow" section in `./prompts/risk-ass
 
 After user confirmation of the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`.
 
-Read `./session-state-format.md` for the exact JSON schema, field reference, workflow ID generation, conflict detection, and context advisory.
+Read `./session-state-format.md` for the exact JSON schema, field reference, workflow ID generation, conflict detection, and context advisory. On conflict: regenerate workflow ID up to max 3 attempts before prompting user.
 
 **Routing field:** Write only `routing[0]` (the first downstream skill). The auto-continue hook reconstructs the full chain from `routing[0] + tail(risk_level)` after this skill completes.
 

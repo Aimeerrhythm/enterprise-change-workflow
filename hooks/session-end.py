@@ -3,7 +3,7 @@
 
 When a session ends:
 1. Mark session-state.json status as "ended" with timestamp
-2. Clean up stale state files (modified-files.txt)
+2. Clean up stale transient state files
 
 This hook runs once when the Claude session terminates.
 """
@@ -32,9 +32,6 @@ def _cleanup_state_files(cwd):
     """Remove transient state files that don't need to persist across sessions."""
     state_dir = os.path.join(cwd, ".claude", "ecw", "state")
     transient_files = [
-        "modified-files.txt",
-        "tool-call-count.txt",
-        "investigated-files.txt",
     ]
     for fname in transient_files:
         try:

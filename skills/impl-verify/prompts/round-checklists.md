@@ -40,7 +40,7 @@ Reasoning instructions for impl-verify subagents. Each Round subagent receives t
 
 **Operations**:
 
-1. Locate the domain of changed code via `ecw-path-mappings.md`
+1. Locate the domain of changed code via `path-mappings.md`
 2. Read that domain's `business-rules.md` and `data-model.md`. **Only read sections relevant to diff changes**: state machine section (if diff involves state changes), validation rules section (if diff involves validation logic), concurrency section (if diff involves lock operations), idempotency section (if diff involves MQ consumers). If unsure which sections are relevant, read the full file.
 3. Compare item by item:
 

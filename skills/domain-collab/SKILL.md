@@ -25,7 +25,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 ## Prerequisites
 
-1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/domain-registry.md`) to get domain definitions
+1. Read the file specified by ecw.yml `paths.domain_registry` (default `.claude/ecw/routing/domain-registry.md`) to get domain definitions
 2. Confirm `cross-domain-rules.md` exists under ecw.yml `paths.knowledge_shared`
 3. Risk level and domain list are injected from session-state by the auto-continue hook
 

@@ -27,10 +27,10 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 2. **Coordinator Preprocessing** — Execute before Agent dispatch:
    1. Run `git diff --stat {diff_range}` to get change statistics
    2. Run `git diff --name-only {diff_range}` to get file list
-   3. Read `ecw-path-mappings.md`, map file list to domains
+   3. Read `path-mappings.md`, map file list to domains
    4. Fill above results into Agent prompt, replacing full diff
 
-> **Knowledge file robustness**: If `ecw-path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
+> **Knowledge file robustness**: If `path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
 3. **Dispatch biz-impact-analysis agent** (`model: opus`, default from `models.defaults.analysis`; configurable via ecw.yml — business impact analysis is the final safety net; missed impact goes straight to production incidents) — Pass in preprocessed results, await impact analysis report
 4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
    - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
@@ -51,7 +51,7 @@ When the agent's report flags "Unregistered Cross-Domain Calls", automatically b
 
 1. **Extract unregistered calls** — Parse the agent's report for all entries under "Unregistered Cross-Domain Calls" (or equivalent section). Each entry typically contains: caller domain, callee domain, call method (RPC/HTTP/MQ), caller class/method, callee class/method.
 
-2. **Read existing matrix** — Read `.claude/knowledge/common/cross-domain-calls.md` (path from ecw.yml `paths.knowledge_shared`).
+2. **Read existing matrix** — Read `.claude/knowledge/shared/cross-domain-calls.md` (path from ecw.yml `paths.knowledge_shared`).
    - If the file does not exist, skip backfill and output `[Warning: cross-domain-calls.md not found, skipping auto-backfill. Please create the file and backfill manually.]`
 
 3. **Deduplicate** — For each unregistered call, check if an equivalent entry already exists in the matrix (match on caller domain + callee domain + call method + caller class). Skip entries that already exist.
@@ -112,7 +112,7 @@ If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysi
 | Scenario | Handling |
 |----------|---------|
 | Biz-impact-analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: notify user `[DEGRADED: business impact analysis unavailable]` and suggest manual assessment |
-| `ecw-path-mappings.md` missing | Agent cannot map files to domains → output `[Warning: path mappings not found, domain identification degraded]` and proceed with file-path-based heuristic grouping |
+| `path-mappings.md` missing | Agent cannot map files to domains → output `[Warning: path mappings not found, domain identification degraded]` and proceed with file-path-based heuristic grouping |
 | Knowledge files missing (cross-domain-calls.md, mq-topology.md, etc.) | Agent logs `[Warning: {file} not found]` per missing file → analysis continues with available data, "Analysis Coverage" section in report reflects gaps |
 | `git diff` returns empty | No changes to analyze → notify user and exit without dispatching agent |
 

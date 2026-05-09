@@ -110,10 +110,10 @@ tdd:
 # 路径配置
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。
 paths:
-  domain_registry: ".claude/ecw/domain-registry.md"            # 域注册表
-  path_mappings: ".claude/ecw/ecw-path-mappings.md"            # 代码路径→域映射
+  domain_registry: ".claude/ecw/routing/domain-registry.md"            # 域注册表
+  path_mappings: ".claude/ecw/routing/path-mappings.md"            # 代码路径→域映射
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
-  knowledge_shared: ".claude/knowledge/common/"                # 跨域共享知识
+  knowledge_shared: ".claude/knowledge/shared/"                # 跨域共享知识
 
 # 知识库维护配置
 # 控制 knowledge-audit、knowledge-track、knowledge-repomap 的行为。

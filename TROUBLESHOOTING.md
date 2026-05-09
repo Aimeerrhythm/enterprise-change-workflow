@@ -105,7 +105,7 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 
 **Fix**:
 1. **Keyword coverage**: Review your project `CLAUDE.md`, domain registry, and knowledge files — add missing domain-specific keywords and routing hints
-2. **Shared resources**: Review `.claude/knowledge/common/shared-resources.md` — missing entries can cause under-classification
+2. **Shared resources**: Review `.claude/knowledge/shared/shared-resources.md` — missing entries can cause under-classification
 
 ### domain-collab routes incorrectly
 

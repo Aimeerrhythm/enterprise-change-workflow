@@ -252,15 +252,6 @@ def main():
                 "them based on the `Post-Implementation Tasks` field in session-state.json."
             )
 
-    # 5. Modified files from previous session
-    prev_modified = _check_modified_files(cwd)
-    if prev_modified:
-        file_list = "\n".join(f"- `{f}`" for f in prev_modified[:10])
-        if len(prev_modified) > 10:
-            file_list += f"\n- ...and {len(prev_modified) - 10} more"
-        sections.append(
-            f"# [ECW] Previously modified files\n\n{file_list}"
-        )
 
     if not sections:
         print(json.dumps({"result": "continue"}))

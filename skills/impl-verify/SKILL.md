@@ -49,7 +49,7 @@ Before execution, locate input materials in the following order:
 | Material | Source | Round |
 |----------|--------|-------|
 | **Requirement document** | Current session's requirements-elicitation output / domain-collab report / user's original requirement description | Round 1 |
-| **Domain knowledge** | `.claude/knowledge/{domain}/business-rules.md`, `data-model.md` (locate affected domains via ecw-path-mappings.md) | Round 2 |
+| **Domain knowledge** | `.claude/knowledge/{domain}/business-rules.md`, `data-model.md` (locate affected domains via path-mappings.md) | Round 2 |
 | **Plan file** | Plan file produced by writing-plans in current session | Round 3 |
 | **Changed code** | `git diff --name-only` + `git diff` (get file list and detailed changes) | All Rounds |
 | **Project patterns** | Existing code's naming/layering/error-handling conventions | Round 4 |

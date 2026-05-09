@@ -63,7 +63,7 @@ Use for ANY technical issue:
 
 You MUST complete each phase before proceeding to the next.
 
-### Initial Investigation: Root Cause Investigation
+### Phase 1: Initial Investigation
 
 Detailed steps (read error messages, reproduce, check changes, gather evidence, domain cross-reference, trace data flow, write checkpoint):
 
@@ -91,7 +91,7 @@ Create failing test, implement single fix, verify, escalate on repeated failure,
 
 | Scenario | Handling |
 |----------|---------|
-| Knowledge file missing (`ecw-path-mappings.md`, `business-rules.md`, `cross-domain-calls.md`, etc.) | Log `[Warning: {file} not found, cross-reference degraded]` → continue with available files. If all knowledge files missing: skip Step 5 (domain cross-reference) entirely, rely on code-level investigation only |
+| Knowledge file missing (`path-mappings.md`, `business-rules.md`, `cross-domain-calls.md`, etc.) | Log `[Warning: {file} not found, cross-reference degraded]` → continue with available files. If all knowledge files missing: skip Step 5 (domain cross-reference) entirely, rely on code-level investigation only |
 | `session-state.json` unavailable (risk level unknown) | Use simplified check (P2/P3 level) for Step 5 cross-reference depth |
 | Bug not reproducible after Step 2 | Do not skip to Phase 3 — gather more data first. Log `[Not reproducible: need additional evidence]` and ask user for more context |
 
