@@ -10,8 +10,8 @@ You are a knowledge base quality auditor. When user invokes this Skill, perform 
 ## Prerequisites
 
 Check if `.claude/ecw/ecw.yml` exists:
-- Exists → Read `paths.knowledge_root`, `knowledge_maintenance.stale_days`
-- Not exists → Use defaults `.claude/knowledge/` and 90 days
+- Exists → Read `paths.knowledge_root`
+- Not exists → Use default `.claude/knowledge/`
 
 ## Audit Steps
 
@@ -62,7 +62,7 @@ Based on `project.language`:
 
 **Other languages**:
 - Manual: Extract class/function names from docs, search in code directories
-- Check if `last-verified` date exceeds `stale_days`
+- Check if `last-verified` date exceeds 90 days
 
 ### Step 5: Output Report
 

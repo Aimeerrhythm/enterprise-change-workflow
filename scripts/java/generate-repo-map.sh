@@ -14,10 +14,9 @@ PROJECT_ROOT="$1"; ECW_YML="$2"
 
 # 从 ecw.yml 提取配置
 REPOMAP_OUTPUT=".claude/ecw/knowledge-ops/repo-map.md"
-GROUP_BY_DIR=$(grep 'repomap_group_by_dir:' "$ECW_YML" | head -1 | sed -E 's/.*:[[:space:]]*([a-z]*).*/\1/' | xargs)
+GROUP_BY_DIR="true"  # hardcoded
 PROJECT_NAME=$(grep '^ *name:' "$ECW_YML" | head -1 | sed -E 's/.*:[[:space:]]*"?([^"]*)"?.*/\1/' | xargs)
 
-[ -z "$GROUP_BY_DIR" ] && GROUP_BY_DIR="true"
 [ -z "$PROJECT_NAME" ] && PROJECT_NAME="Project"
 
 OUTPUT="$PROJECT_ROOT/$REPOMAP_OUTPUT"

@@ -10,7 +10,7 @@ You are a code structure indexing tool. When user invokes this Skill, automatica
 ## Prerequisites
 
 Check if `.claude/ecw/ecw.yml` exists:
-- Exists → Read `component_types`, `knowledge_maintenance.repomap_group_by_dir`, `project.name`
+- Exists → Read `component_types`, `project.name`
 - Not exists → Prompt user to run `/ecw-init` first
 
 ## Generation Steps
@@ -20,7 +20,6 @@ Check if `.claude/ecw/ecw.yml` exists:
 Extract from `ecw.yml`:
 - `component_types[]` — Component types to scan (name, grep_pattern, search_path)
 - Output file: `.claude/ecw/knowledge-ops/repo-map.md` (fixed convention)
-- `repomap_group_by_dir` — Whether to group by subdirectory (default true)
 - `project.name` — Project name (for title)
 
 ### Step 2: Run Generation Script
@@ -36,7 +35,7 @@ The script will:
 1. Extract component types from `component_types`
 2. Find matching files under corresponding `search_path`
 3. Extract class names and public method signatures
-4. Group output based on `repomap_group_by_dir` setting
+4. Group output by subdirectory
 5. Write to `.claude/ecw/knowledge-ops/repo-map.md`
 
 **Other languages**:

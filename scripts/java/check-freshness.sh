@@ -14,9 +14,8 @@ PROJECT_ROOT="$1"; ECW_YML="$2"
 
 # 从 ecw.yml 提取配置
 KNOWLEDGE_ROOT=$(grep 'knowledge_root:' "$ECW_YML" | head -1 | sed -E 's/.*:[[:space:]]*"?([^"]*)"?.*/\1/' | xargs)
-STALE_DAYS=$(grep 'stale_days:' "$ECW_YML" | head -1 | sed -E 's/.*:[[:space:]]*([0-9]*).*/\1/' | xargs)
 [ -z "$KNOWLEDGE_ROOT" ] && KNOWLEDGE_ROOT=".claude/knowledge/"
-[ -z "$STALE_DAYS" ] && STALE_DAYS=90
+STALE_DAYS=90  # hardcoded
 
 STALE_REFS_PATH=".claude/ecw/state/stale-refs.md"
 

@@ -68,14 +68,7 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
 - Section exists → **ok**
 - Section missing → **needs-fix**: Add the `hooks:` section from plugin `templates/ecw.yml` to the end of the project file.
 
-### Check F: knowledge_maintenance Configuration
-
-**Check:** Read project `.claude/ecw/ecw.yml`, look for `knowledge_maintenance:` top-level section.
-
-- Section exists → **ok**
-- Section missing → **needs-fix**: Read the `knowledge_maintenance:` section from plugin `templates/ecw.yml` and insert it after the `paths:` section in the project file. Preserve all default values.
-
-### Check G: State & Knowledge-Ops Files
+### Check F: State & Knowledge-Ops Files
 
 **Check:** Verify that ECW runtime/state files and knowledge-ops files created by ecw-init exist, and that the structured subdirectories are present.
 
@@ -91,7 +84,7 @@ For each missing file:
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
 - `.claude/ecw/README.md` / `.claude/ecw/knowledge-ops/README.md` → **needs-fix**: create directory guidance files if absent.
 
-### Check H: Write Permissions in settings.local.json
+### Check G: Write Permissions in settings.local.json
 
 **Check:** Read `.claude/settings.local.json`. Verify `permissions.allow` array contains all three ECW write entries:
 - `Write(.claude/ecw/**)`
