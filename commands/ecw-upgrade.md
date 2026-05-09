@@ -27,22 +27,7 @@ Then stop.
 
 Read each project config file and compare against the current plugin template. For each check, determine status: **ok** (matches template structure) or **needs-fix** (outdated/missing/malformed).
 
-### Check A: CLAUDE.md ECW Workflow Entry Point
-
-**Why:** The plugin CLAUDE.md has a BLOCKING RULE instruction, but models prioritize project-level CLAUDE.md instructions (e.g., "read docs first") over plugin instructions. A project-level trigger is required to ensure `ecw:risk-classifier` fires automatically.
-
-**Check:** Search project root `CLAUDE.md` for `ecw:risk-classifier`.
-
-- Found → **ok**
-- Not found → **needs-fix**: Insert before the domain routing section (before `## 域级知识路由` or similar). If no routing section, append to end.
-
-```markdown
-## ECW 工作流入口
-
-收到变更需求、功能需求或 Bug 报告时，必须先执行 `ecw:risk-classifier` 进行风险分级，再开始任何分析或编码。
-```
-
-### Check B: ecw.yml Structure Sync
+### Check A: ecw.yml Structure Sync
 
 **Check:** Read project `.claude/ecw/ecw.yml` and plugin `templates/ecw.yml`. Compare:
 
@@ -53,7 +38,7 @@ Read each project config file and compare against the current plugin template. F
 
 For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire file.
 
-### Check C: TDD Enabled for Java Projects
+### Check B: TDD Enabled for Java Projects
 
 **Check:** Run `ls pom.xml 2>/dev/null` in project root to detect Java project.
 
@@ -62,35 +47,35 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
   - `true` → **ok**
   - `false` or field missing → **needs-fix**: Set `tdd.enabled: true` using Edit tool
 
-### Check D: Domain Routing Table
+### Check C: Domain Routing Table
 
 **Check:** Verify that the project `CLAUDE.md` has a domain routing table (a markdown table with columns matching keyword/domain/entry-doc pattern).
 
 - Has routing table → **ok**
 - No routing table → **needs-fix**: Read plugin `templates/CLAUDE.md.snippet`, output the template content and instruct the user to fill in their project's domains. (Cannot auto-fix — requires project-specific domain knowledge.)
 
-### Check E: output_language Field
+### Check D: output_language Field
 
 **Check:** Read project `.claude/ecw/ecw.yml`, look for `project.output_language` field.
 
 - Field exists → **ok**
 - Field missing → **needs-fix**: Add `output_language: "zh-CN"` under the `project:` section (after `language:` field). Use Edit tool to insert the line.
 
-### Check G: hooks Configuration
+### Check E: hooks Configuration
 
 **Check:** Read project `.claude/ecw/ecw.yml`, look for `hooks:` top-level section.
 
 - Section exists → **ok**
 - Section missing → **needs-fix**: Add the `hooks:` section from plugin `templates/ecw.yml` to the end of the project file.
 
-### Check H: knowledge_maintenance Configuration
+### Check F: knowledge_maintenance Configuration
 
 **Check:** Read project `.claude/ecw/ecw.yml`, look for `knowledge_maintenance:` top-level section.
 
 - Section exists → **ok**
 - Section missing → **needs-fix**: Read the `knowledge_maintenance:` section from plugin `templates/ecw.yml` and insert it after the `paths:` section in the project file. Preserve all default values.
 
-### Check I: State & Knowledge-Ops Files
+### Check G: State & Knowledge-Ops Files
 
 **Check:** Verify that ECW runtime/state files and knowledge-ops files created by ecw-init exist, and that the structured subdirectories are present.
 
@@ -106,7 +91,7 @@ For each missing file:
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
 - `.claude/ecw/README.md` / `.claude/ecw/knowledge-ops/README.md` → **needs-fix**: create directory guidance files if absent.
 
-### Check J: Write Permissions in settings.local.json
+### Check H: Write Permissions in settings.local.json
 
 **Check:** Read `.claude/settings.local.json`. Verify `permissions.allow` array contains all three ECW write entries:
 - `Write(.claude/ecw/**)`
@@ -138,7 +123,7 @@ Auto-fixable:
 {list each needs-fix check that can be auto-fixed, with brief description}
 
 Manual action needed:
-{list checks that need user input, e.g., Check E domain routing}
+{list checks that need user input, e.g., domain routing table completion}
 
 Skipped (already up to date):
 {list ok checks}
