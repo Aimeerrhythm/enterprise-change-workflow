@@ -70,8 +70,7 @@ OFF_CHAIN_ALLOWED = _mappings["off_chain"]
 def routing_step_to_skill(step):
     """Convert a single Routing chain step to an ECW skill name.
 
-    Returns None for non-skill steps (e.g. Phase 2, Implementation(GREEN), etc.).
-    Note: Phase 3 maps to ecw:risk-classifier via routing alias (Issue #52).
+    Returns None for non-skill steps (e.g. Implementation(GREEN), lean plan, etc.).
     """
     step_stripped = step.strip()
     if not step_stripped:

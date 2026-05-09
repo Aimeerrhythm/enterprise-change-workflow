@@ -8,6 +8,7 @@ PreToolUse (fires when a Skill is about to be invoked):
 
 PostToolUse (fires after each Skill tool invocation):
   - Atomically updates Current Phase (completed) and Working Mode in session-state.json
+  - After risk-classifier: rebuilds full routing chain from routing[0] + tail(risk_level)
   - Injects the remaining routing chain as a systemMessage so the model chains immediately
 
 Replaces the repeated "CRITICAL — Auto-Continue Rule" prompt blocks (Issue #5).
@@ -37,6 +38,42 @@ from routes_utils import (  # noqa: E402
     next_skill_from_routing as _next_skill_from_routing,
 )
 from trace_logger import log_trace  # noqa: E402
+
+# Tail definitions for routing chain reconstruction after risk-classifier.
+# Hook builds: routing = [routing[0]] + _RISK_TAILS[risk_level]
+_RISK_TAILS = {
+    "P0": [
+        "ecw:writing-plans", "ecw:spec-challenge",
+        "TDD:RED", "Implementation(GREEN)",
+        "ecw:impl-verify", "ecw:biz-impact-analysis", "ecw:knowledge-track",
+    ],
+    "P1": [
+        "ecw:writing-plans",
+        "TDD:RED", "Implementation(GREEN)",
+        "ecw:impl-verify", "ecw:biz-impact-analysis", "ecw:knowledge-track",
+    ],
+    "P2": ["TDD:RED", "Implementation(GREEN)", "ecw:impl-verify"],
+    "P3": [],
+}
+
+
+def _rebuild_routing_chain(state_path, fields_dict):
+    """After risk-classifier completes, rebuild full routing chain from routing[0] + tail."""
+    try:
+        routing = fields_dict.get("routing") or []
+        risk_level = (fields_dict.get("risk_level") or "").strip()
+
+        if isinstance(routing, str):
+            routing = [s.strip() for s in routing.split("→") if s.strip()]
+
+        if not routing or not risk_level:
+            return
+
+        first_skill = routing[0]
+        tail = _RISK_TAILS.get(risk_level, [])
+        update_status_fields(state_path, {"routing": [first_skill] + tail})
+    except Exception:
+        pass  # Never block workflow
 
 
 def _handle_pre_tool_use(state_path, skill_name, cwd=""):
@@ -104,21 +141,7 @@ def _advance_session_state(state_path, skill_name):
         return
 
     try:
-        fields_dict = parse_status(state_path) or {}
-
-        # Phase 3 guard for risk-classifier.
-        # knowledge-track's PostToolUse sets next="ecw:risk-classifier" via Phase 3
-        # routing alias. Phase 1 next points to the first downstream skill (e.g.
-        # requirements-elicitation). This is the only reliable discriminator since
-        # current_phase is overwritten to "risk-classifier" by PreToolUse before we
-        # get here, and routing-position checks always fire for P0/P1 chains.
-        effective_phase = phase
-        if skill_name == "ecw:risk-classifier" and phase == "phase1-loaded":
-            if fields_dict.get("next") == "ecw:risk-classifier":
-                effective_phase = "phase3-complete"
-
-        if effective_phase:
-            update_status_fields(state_path, {"current_phase": effective_phase})
+        update_status_fields(state_path, {"current_phase": phase})
     except Exception:
         pass  # Never block workflow
 
@@ -198,6 +221,17 @@ def main():
 
     # Advance phase and mode atomically before injecting the routing message.
     _advance_session_state(state_path, skill_name)
+
+    # After risk-classifier completes, rebuild full routing chain from routing[0] + tail.
+    if skill_name == "ecw:risk-classifier":
+        _rebuild_routing_chain(state_path, fields_dict)
+        # Re-read routing so the systemMessage reflects the full chain.
+        try:
+            updated = parse_status(state_path)
+            if updated:
+                routing = updated.get("routing") or routing
+        except Exception:
+            pass
 
     # spec-challenge has mandatory per-flaw AskUserQuestion confirmation before proceeding.
     # PostToolUse fires immediately after Skill instructions load (before LLM executes them),
