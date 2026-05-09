@@ -10,7 +10,6 @@ Run `/ecw-init` after installation for project initialization, or manually creat
 |------|---------|
 | `.claude/ecw/ecw.yml` | Project config (name, language, component types, scan patterns, paths) |
 | `.claude/ecw/domain-registry.md` | Domain registry (domain definitions, knowledge directories, code directories) |
-| `.claude/ecw/change-risk-classification.md` | Risk factor calibration (keyword→level mapping, sensitivity definitions) |
 | `.claude/ecw/ecw-path-mappings.md` | Code path→domain mapping (used by biz-impact-analysis) |
 
 ## ECW Artifact Files (auto-generated)

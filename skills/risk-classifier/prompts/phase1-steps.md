@@ -3,23 +3,28 @@
 ## Step 1: Keyword Extraction & Domain Identification
 
 Extract from user's requirement description:
-- **Business keywords** → Map to domains via project CLAUDE.md domain routing table (keyword→domain mapping); count matched domains for single/cross-domain routing (see `workflow-routes.yml`)
-- **Operation keywords** → Determine operation type (CRUD, state changes, message format, etc.)
-- **Sensitive words** → Read ecw.yml `paths.risk_factors` (default `.claude/ecw/change-risk-classification.md`) §Quick Reference keyword→level mapping; any match → at least P1
+- **Domain identification** → Map to domains via project CLAUDE.md domain routing table; count matched domains for single/cross-domain routing (see `workflow-routes.yml`)
+- **Operation type** → Determine operation type (CRUD, state changes, message format, external system calls, etc.)
+- **Change scope** → What components change: public method signatures, state machine logic, MQ message format, shared service, private internals
 
-## Step 2: Quick Shared Resource Check
+## Step 2: Domain Knowledge Cross-Reference
 
-Read `shared-resources.md` (§3) under ecw.yml `paths.knowledge_common`. If file missing, log `[Warning: {file} not found]` and skip. Read risk factors §Factor 1 for domain dependency thresholds.
+For each matched domain, read its `business-rules.md` under `.claude/knowledge/{domain}/`. If missing, log `[Warning: {domain} business-rules.md not found]` and continue.
 
-Phase 1 checks §3 (shared resources) + §2 (MQ topology, only if user mentions MQ). Does not check §1/§4/§5 (deferred to Phase 2). **P2 single-domain**: if shared resources or MQ write-ops found, **upgrade to P1 immediately**.
+Assess impact based on:
+- **Shared resources**: Read `shared-resources.md` under ecw.yml `paths.knowledge_common`. Count how many domains depend on the changed component → more dependents = higher risk
+- **Change type risk**:
+  - State machine logic / public method deletion or rename / MQ message format (breaking) → P0
+  - Method signature change with cross-domain callers / data write ops / new external MQ topic / core entity field change → P1
+  - New public method / query condition change / config-driven branches → P2
+  - Log/comment/constant/private method → P3
+- **Business sensitivity**: From domain's business-rules.md — operations involving irreversible side effects (financial, order lifecycle, external system contracts) → elevate to P0/P1
 
 ## Step 3: Composite Assessment
 
 ```
-Total Risk = max(Keyword Estimated Level, Shared Resource Level)
-Cross-Domain = Step 1 matched domain count >= 2 ? "cross-domain" : "single-domain"
+Total Risk = max(Change Type Risk, Shared Resource Risk, Business Sensitivity)
+Cross-Domain = matched domain count >= 2 ? "cross-domain" : "single-domain"
 ```
 
-Full three-dimensional factors in ecw.yml `paths.risk_factors` §Three-Dimensional Risk Factors. Phase 1 uses first two dimensions only.
-
-If information insufficient, **default to P2**. Look up routing in `workflow-routes.yml`.
+If information insufficient (no domain docs, ambiguous scope), **default to P1**. Look up routing in `workflow-routes.yml`.

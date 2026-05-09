@@ -44,7 +44,6 @@ class TestRiskClassifierAutoContinue:
             "risk-classifier must reference session-state.md"
 
 
-
 class TestDomainCollabAutoContinue:
     """Verify domain-collab has NO Downstream Handoff (Issue #62)."""
 

@@ -116,8 +116,6 @@ After Phase 1 user confirmation, create pending Tasks for **post-implementation*
 
 ### Execution Logic
 
-> Workflow steps and skip items are in the file specified by ecw.yml `paths.risk_factors` §Fast Track.
-
 Key points: Retain Phase 1 to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`).
 
 ### Fast Track Output

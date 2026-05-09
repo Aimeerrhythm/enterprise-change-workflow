@@ -111,7 +111,6 @@ tdd:
 # 通常使用默认值即可。仅当项目 .claude 目录结构不同时才需修改。
 paths:
   domain_registry: ".claude/ecw/domain-registry.md"            # 域注册表
-  risk_factors: ".claude/ecw/change-risk-classification.md"    # 风险分级规则
   path_mappings: ".claude/ecw/ecw-path-mappings.md"            # 代码路径→域映射
   knowledge_root: ".claude/knowledge/"                         # 知识库根目录
   knowledge_common: ".claude/knowledge/common/"                # 跨域公共知识

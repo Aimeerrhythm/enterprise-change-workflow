@@ -49,7 +49,6 @@ Search for unreplaced template placeholders:
 
 For each path in the `paths` section, check whether the referenced file/directory exists:
 - `domain_registry`
-- `risk_factors`
 - `path_mappings`
 - `knowledge_root`
 - `knowledge_common`
@@ -102,38 +101,13 @@ Flag mismatches:
 
 ---
 
-## Step 5: Check change-risk-classification.md
-
-Read the risk classification file.
-
-### 5a: Placeholder Check
-
-Search for unfilled template placeholder tokens in table rows and prose (outside code blocks and HTML comments):
-- All `{...}` patterns (e.g., `{your_*}`, `{reason}`, `{resource}`, `{N}`, `{SharedService}`, `{your_core_flow_keyword_*}`)
-- `{{...}}` patterns
-- `TODO` / `TBD` markers
-
----
-
 ## Step 5b: Template Structure Sync Check
 
 Check whether project ECW configuration files remain structurally consistent with current plugin templates. Template updates do not auto-upgrade already-integrated project configurations; this step detects structural drift.
 
 **Important:** When reading templates, use the Read tool from the plugin installation path (i.e., `templates/` under the parent directory containing this `commands/` folder).
 
-### 5b-1: Structural Comparison of As-Is-Copied Files
-
-For the following files (marked as "copy as-is" in ecw-init), compare the project copy against the current template for **structural differences**:
-
-**`change-risk-classification.md`:**
-- Read plugin `templates/change-risk-classification.md`
-- Read project `.claude/ecw/change-risk-classification.md`
-- Compare skill/tool names referenced in the "Risk Level → Workflow Requirements" table:
-  - Extract all skill names appearing in both template and project files (e.g., `impl-verify`, `biz-impact-analysis`, `spec-challenge`, `requirements-elicitation`, `writing-plans`)
-  - If project file uses terminology no longer present in template (e.g., `code-review` replaced by `impl-verify`), flag as "stale terminology"
-- Compare "Three-Dimensional Risk Factors" section: Check if project file still contains unreplaced template placeholders — scan for all `{...}` tokens in table rows (same scope as Step 5a)
-
-### 5b-2: domain-registry Field Completeness
+### 5b-1: domain-registry Field Completeness
 
 Compare each domain definition's field set in the project domain-registry against the Scaffold template's standard field set:
 
@@ -149,7 +123,7 @@ For each registered domain:
 
 **Important:** Only check fields listed in domain-registry. Do NOT infer "migration needed" from the filesystem — if both a root-level file and a `common/` file exist, as long as domain-registry references an existing file the check passes. Never output migration suggestions.
 
-### 5b-3: Output
+### 5b-2: Output
 
 For each detected difference, output:
 - **Stale terminology** (warn): Project file uses terminology replaced in the template
@@ -200,7 +174,6 @@ Output structured validation report:
 | ecw.yml | {pass/warn/fail} |
 | domain-registry.md | {pass/warn/fail} |
 | ecw-path-mappings.md | {pass/warn/fail} |
-| change-risk-classification.md | {pass/warn/fail} |
 | Template structure sync | {pass/warn/fail} |
 | Knowledge file structure | {pass/warn/fail} |
 

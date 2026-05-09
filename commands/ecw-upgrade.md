@@ -62,22 +62,14 @@ For each fix, use Edit tool to surgically add/remove. Do not rewrite the entire 
   - `true` → **ok**
   - `false` or field missing → **needs-fix**: Set `tdd.enabled: true` using Edit tool
 
-### Check D: change-risk-classification.md Terminology
-
-**Check:** Read project `.claude/ecw/change-risk-classification.md` and compare skill/tool names against the current plugin template.
-
-- Search for stale names: `code-review` (should be `impl-verify`), `subagent-driven-development` (should be `impl-orchestration`), `executing-plans` (should be `impl-orchestration`).
-- Found stale names → **needs-fix**: Replace with current names.
-- No stale names → **ok**
-
-### Check E: Domain Routing Table
+### Check D: Domain Routing Table
 
 **Check:** Verify that the project `CLAUDE.md` has a domain routing table (a markdown table with columns matching keyword/domain/entry-doc pattern).
 
 - Has routing table → **ok**
 - No routing table → **needs-fix**: Read plugin `templates/CLAUDE.md.snippet`, output the template content and instruct the user to fill in their project's domains. (Cannot auto-fix — requires project-specific domain knowledge.)
 
-### Check F: output_language Field
+### Check E: output_language Field
 
 **Check:** Read project `.claude/ecw/ecw.yml`, look for `project.output_language` field.
 

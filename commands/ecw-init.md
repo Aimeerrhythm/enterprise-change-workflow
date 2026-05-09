@@ -232,11 +232,7 @@ Key difference from Scaffold: `Knowledge Root` uses user-confirmed **actual path
 - Otherwise → Use the first `.md` file in the directory (alphabetical order)
 - If directory is empty → Use `00-index.md (to be created)`
 
-### 4c: Copy `change-risk-classification.md`
-
-Read `templates/change-risk-classification.md` template. Write as-is to `.claude/ecw/change-risk-classification.md`.
-
-### 4d: Generate `ecw-path-mappings.md`
+### 4c: Generate `ecw-path-mappings.md`
 
 Read `templates/ecw-path-mappings.md` template. Auto-discover project directory structure:
 
@@ -291,9 +287,7 @@ Skip if language is not Java or `--skip-scanners` was passed.
 
 Same as Scaffold Step 6 (6a–6g): Run all Java scan scripts automatically. Since Attach mode preserves existing domain knowledge files, only update common knowledge files (`cross-domain-calls.md`, `shared-resources.md`, `mq-topology.md`, `external-systems.md`) if they contain placeholder rows (`{{...}}`). Skip updating a file if it already has real content (i.e., no `{{...}}` placeholders in the data rows).
 
-Step 6f (fill `change-risk-classification.md` placeholders) always runs regardless of whether common knowledge files were updated.
-
-Step 6g (inline configuration validation) always runs and its results appear in Step 8's output summary.
+Step 6f (inline configuration validation) always runs and its results appear in Step 8's output summary.
 
 ## Attach Step 8: Output Summary
 
@@ -381,7 +375,7 @@ Same as Attach Step 6, using user-specified paths.
 
 ## Manual Step 7-8: Scanners + Summary
 
-Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)". Step 6f (fill change-risk-classification.md) and Step 6g (inline validation) always run regardless of mode.
+Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)". Step 6f (inline validation) always runs regardless of mode.
 
 ---
 
@@ -514,11 +508,7 @@ Read `templates/domain-registry.md`. Generate one block per domain:
 
 Preserve template header/footer, "Adding New Domains" block, keyword matching rules, cross-domain data source sections.
 
-### 3c: Copy `change-risk-classification.md`
-
-Read and copy `templates/change-risk-classification.md` as-is.
-
-### 3d: Generate `ecw-path-mappings.md`
+### 3c: Generate `ecw-path-mappings.md`
 
 Read `templates/ecw-path-mappings.md`. Scan project directory structure, generate mapping table.
 
@@ -631,54 +621,17 @@ Then update `.claude/knowledge/common/external-systems.md`:
 1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
 2. **Generate Repo Map**: Run `bash {plugin_dir}/scripts/java/generate-repo-map.sh {project_root} .claude/ecw/ecw.yml` to auto-generate the code structure index.
 
-### 6f: Fill change-risk-classification.md placeholders from scan results
-
-Using the scan results from steps 6a–6d, replace the `{your_*}` placeholders in `.claude/ecw/change-risk-classification.md`. This is the critical step that makes the file immediately usable — do not skip it.
-
-**Detect single-domain vs multi-domain project** first (count registered domains from the domain list collected in Step 2b):
-
-#### If single-domain project (1 domain only):
-
-- **Factor 1 (Impact Scope)**: All three rows (`{your_shared_service_6plus/4to5/2to3}`) should be replaced with:
-  ```
-  （单域项目 — 此行不适用；域内变更的影响范围因子始终为 P3）
-  ```
-  Rationale: a single-domain project has no cross-domain shared resources by definition.
-
-- **Factor 3 (Business Sensitivity) P0 row**: Replace `{your_critical_resource_ops}` with the domain's most critical write operation (e.g., state update that triggers external system calls). The reason should reference **external system impact or business criticality**, NOT "多域依赖" (which doesn't exist). Example reason: `写入错误 = 下游系统收到错误数据 / 业务核心操作不可逆`.
-
-- **Factor 3 P1 rows**: Replace `{your_high_sensitivity_ops}` and `{your_core_entity_fields}` with domain-specific operations and entities. Reasons should focus on intra-domain business consequence (downstream MQ impact, audit impact, etc.).
-
-- **Quick Reference table row 1**: Replace `{your_critical_resource}/扣减/加{resource} | P0 | {SharedService}，{N} 域依赖` with the domain's critical write keyword. Use `P1` instead of `P0` if the operation has no external system dependency (no MQ/RPC fanout). Use `P0` only if it triggers external MQ/RPC that other systems depend on.
-
-#### If multi-domain project (2+ domains):
-
-- **Factor 1**: Read shared-resources.md scan results. Sort resources by consumer domain count (descending).
-  - Replace `{your_shared_service_6plus}` with the resource with 6+ consumer domains, or `（暂无）` if none.
-  - Replace `{your_shared_service_4to5}` with the resource with 4–5 consumer domains, or `（暂无）` if none.
-  - Replace `{your_shared_service_2to3}` with the resource with 2–3 consumer domains (pick most representative), or `（暂无）` if none.
-  - Format: `ResourceClassName（被 N 域依赖）`
-
-- **Factor 3 and Quick Reference**: Use domain descriptions and scan results to infer critical operations. "多域依赖" IS a valid reason here. In Scaffold mode (no existing business-rules.md), inference is limited to class/method naming — if a term's business criticality is not unambiguous from code structure alone, use `（待确认）` rather than asserting a risk level.
-
-**Shared logic (both single and multi-domain):**
-
-After filling, verify all `{...}` template placeholder tokens in table rows are replaced — not just `{your_*}` patterns, but also `{reason}`, `{resource}`, `{N}`, `{SharedService}`, `{your_core_flow_keyword_*}`, etc. Replace or mark each remaining one as `（待确认：{brief hint}）`. Never leave any raw placeholder token in the file.
-
-### 6g: Inline configuration validation
+### 6f: Inline configuration validation
 
 After all files are generated, perform key validation checks inline (a subset of `/ecw-validate-config` — covers immediate init gaps but not template sync or domain-registry field completeness) and include results in the output summary. Do not ask the user to run a separate command.
 
-**Check 1 — Remaining placeholders in `change-risk-classification.md`:**
-Scan table rows for any remaining `{...}` template tokens (not just `{your_*}`). If any found, list them in the summary as action items. Mark as `⚠ warn`.
-
-**Check 2 — Domain knowledge directories:**
+**Check 1 — Domain knowledge directories:**
 For each registered domain, verify its knowledge directory and entry document exist. Mark missing items as `✗ fail`.
 
-**Check 3 — Path-mappings reference validity:**
+**Check 2 — Path-mappings reference validity:**
 For each mapping row, verify the source directory exists on disk. Mark missing directories as `⚠ warn`.
 
-**Check 4 — ecw.yml path references:**
+**Check 3 — ecw.yml path references:**
 Verify all `paths.*` entries in ecw.yml point to files/directories that exist. Mark missing required files as `✗ fail`.
 
 Output the validation results as part of the Step 7 summary (see "Validation Results" section in template below). If all checks pass, show a ✓ green summary. If there are fails or warns, list them with fix instructions.
@@ -701,7 +654,7 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 |------|--------|
 | `ecw.yml` | Created |
 | `domain-registry.md` | Created |
-| `change-risk-classification.md` | Created |
+| `change-risk-classification.md` | Removed — risk assessment now uses domain docs |
 | `ecw-path-mappings.md` | Created |
 
 #### Knowledge Files — Common (.claude/knowledge/common/)
@@ -734,8 +687,7 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 
 1. **Review `ecw.yml`**: Customize `scan_patterns` and `component_types` if scanners missed project conventions.
 2. **Review `ecw-path-mappings.md`**: Verify directory-to-domain mappings, especially infra/shared layers.
-3. **Verify `change-risk-classification.md`**: Auto-filled from scanner results — confirm risk levels and keywords match business expectations. Any `（待确认：...）` markers need manual resolution.
-4. **Review scanner-filled common knowledge**: Confirm external systems, MQ topology, and shared resources are correct.
+3. **Review scanner-filled common knowledge**: Confirm external systems, MQ topology, and shared resources are correct.
 5. **Enrich domain knowledge files**: Add project-specific business rules and data model details.
 6. **Refine CLAUDE.md keywords**: Add missing domain-specific terms.
 
