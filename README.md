@@ -311,7 +311,7 @@ enterprise-change-workflow/
 ├── skills/                      # 15 core skills
 ├── agents/                      # 7 agent definitions
 ├── commands/                    # 3 slash commands
-├── hooks/                       # Hook architecture (6 event points, 10 scripts)
+├── hooks/                       # Hook architecture (6 event points, 18 Python scripts)
 │   ├── hooks.json               # Hook registration
 │   ├── dispatcher.py            # PreToolUse unified dispatcher
 │   ├── auto-continue.py         # Skill-to-skill auto chaining (PreToolUse + PostToolUse)
@@ -325,7 +325,7 @@ enterprise-change-workflow/
 │   ├── marker_utils.py          # Shared marker/status utilities
 │   └── ...
 ├── templates/                   # Config and knowledge file templates
-├── scripts/java/                # Java/Spring project scanners (3 scripts)
+├── scripts/java/                # Java/Spring utilities and scanners (5 scripts)
 ├── docs/                        # Design reference
 │   ├── design-principles.md     # Architecture principles, six litmus tests
 │   ├── component-design-patterns.md # Component patterns, token budgets, model selection
@@ -362,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` reports broken reference** — A file you modified references a `.claude/` path that doesn't exist. Check for typos or moved files.
 
-**Phase 1 risk level is inaccurate** — Two common causes: (1) keyword mappings in `change-risk-classification.md` are incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract, then re-run risk-classifier Phase 1.
+**Phase 1 risk level is inaccurate** — Two common causes: (1) domain keyword coverage in your project `CLAUDE.md` or knowledge files is incomplete; (2) `shared-resources.md` is missing entries. Use scanning scripts to re-extract shared dependencies, then re-run risk-classifier Phase 1.
 
 → [Full troubleshooting guide](TROUBLESHOOTING.md)
 

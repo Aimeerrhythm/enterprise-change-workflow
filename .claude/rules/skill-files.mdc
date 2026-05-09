@@ -25,8 +25,8 @@ Every SKILL.md MUST declare near the top (after Overview):
 
 1. **Announce at start**: One sentence telling the user which skill is active (transparency)
    - Format: `**Announce at start:** "Using ecw:<skill-name> to <purpose>."`
-2. **Mode switch**: Update session-state.md MODE marker (state tracking)
-   - Format: `**Mode switch**: Update session-state.md MODE marker to \`<mode>\`.`
+2. **Mode switch**: Update `session-state.json` mode/state fields (state tracking)
+   - Format: `**Mode switch**: Update \`session-state.json\` to reflect mode \`<mode>\`.`
 
 ## Rationalization Defense Tables (Critical skills)
 

@@ -16,7 +16,7 @@ Manage cross-service workspaces and coordinate multi-session parallel developmen
 2. Fallback: `workspace.yml` → `output_language`
 3. Fallback: detect from user's input language
 
-All coordinator-written files (cross-service-plan.md, workspace-analysis-task.md, confirmed-contract.md, session-state.md) must use this language for all headings, labels, and descriptive text. Pass `output_language` value explicitly in every dispatched child session prompt and in workspace-analysis-task.md.
+All coordinator-written files (cross-service-plan.md, workspace-analysis-task.md, confirmed-contract.md, and any human-readable status artifacts) must use this language for all headings, labels, and descriptive text. Pass `output_language` value explicitly in every dispatched child session prompt and in workspace-analysis-task.md.
 
 **File encoding**: All files written by coordinator or child sessions must use native UTF-8 characters. Never use Unicode escape sequences (uXXXX or \uXXXX format) for any characters including Chinese. Write characters directly as-is.
 
@@ -98,8 +98,8 @@ Process:
   AskUserQuestion: show readiness table (language follows output_language).
   If any ECW-absent → Options: "Continue with source scan" / "Pause to init ECW"
 Gate-out: User confirms
-          Write initial session-state.md:
-            Location: .claude/ecw/session-data/{wf-id}/session-state.md
+          Write initial `session-state.json`:
+            Location: `.claude/ecw/session-data/{wf-id}/session-state.json`
             Content: Pre-flight → ✅ 完成; all subsequent phases → ⏳ 待开始
 ```
 
@@ -141,7 +141,7 @@ Process:
      Content (see template below)
      Encoding: native UTF-8, no escape sequences
 
-  6. Update session-state.md:
+  6. Update `session-state.json`:
      - Phase 1 row → ✅ 完成
      - Subagent Ledger: record Explore agents as complete
      (This step is mandatory — gate-out verifies it)
@@ -149,7 +149,7 @@ Process:
 Gate-out: ALL of the following must be true:
   - cross-service-plan.md exists at session-data/{wf-id}/
   - workspace-analysis-task.md exists for all services
-  - session-state.md Phase 1 row = ✅ 完成
+  - `session-state.json` reflects Phase 1 completion
 ```
 
 **workspace-analysis-task.md template:** See `./workspace-analysis-task-template.md` (Read on demand when writing workspace-analysis-task.md for each service).
@@ -160,7 +160,7 @@ Gate-out: ALL of the following must be true:
 
 ```
 Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if session-state.md Phase 1 ≠ ✅ 完成 → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect Phase 1 completion → update it now before proceeding
 Process:
   1. Generate per-service start scripts and open one terminal tab per service
      via terminal adapter (see ./terminal-adapters.md § Service Scripts)
@@ -178,13 +178,13 @@ Process:
 
   4. Coordinator reads all analysis-report.md files
 
-  5. Update session-state.md:
+  5. Update `session-state.json`:
      - Phase 2 row → ✅ 完成
      - Subagent Ledger: record analyst child sessions as complete
 
 Gate-out: ALL of the following must be true:
   - analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
-  - session-state.md Phase 2 row = ✅ 完成
+  - `session-state.json` reflects Phase 2 completion
 ```
 
 ---
@@ -193,7 +193,7 @@ Gate-out: ALL of the following must be true:
 
 ```
 Gate-in: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if session-state.md Phase 2 ≠ ✅ 完成 → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect Phase 2 completion → update it now before proceeding
 Process:
   1. Cross-validate for conflicts:
 
@@ -232,18 +232,18 @@ Process:
          - multiple implementation options or "A or B" choices
            (if unsure, surface to user via AskUserQuestion before writing)
 
-  4. Update session-state.md:
+  4. Update `session-state.json`:
      - Phase 3 row → ✅ 完成
 
 Gate-out: ALL of the following must be true:
   - confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
-  - session-state.md Phase 3 row = ✅ 完成
+  - `session-state.json` reflects Phase 3 completion
 ```
 ### Phase 4: Per-Service Implementation (analysis sessions continue, parallel or layered)
 
 ```
 Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if session-state.md Phase 3 ≠ ✅ 完成 → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect Phase 3 completion → update it now before proceeding
 Process:
   Analysis sessions detect confirmed-contract.md via polling and continue into Phase 4 automatically.
   Coordinator does NOT generate new Phase 4 scripts — no user action needed at this phase.
@@ -255,7 +255,7 @@ Process:
   Failed -> AskUserQuestion: continue waiting 30 more minutes / skip this service / abort
 
   After all status.json received:
-  Update session-state.md:
+  Update `session-state.json`:
     - Phase 4 row → ✅ 完成
     - Subagent Ledger: update service child sessions (same sessions from Phase 2) to complete
 
@@ -264,14 +264,14 @@ Gate-out: ALL of the following must be true:
   - Each status.json contains required fields: service, status, summary, files_changed, commits, error
     (verify with: cat {service}/.claude/ecw/session-data/{wf-id}/status.json | python3 -c
      "import json,sys; d=json.load(sys.stdin); missing=[f for f in ['service','status','summary','files_changed','commits','error'] if f not in d]; print('MISSING:',missing) if missing else print('OK')")
-  - session-state.md Phase 4 row = ✅ 完成
+  - `session-state.json` reflects Phase 4 completion
 ```
 
 ### Phase 5: Cross-Service Verification
 
 ```
 Gate-in: status.json exists at {service}/.claude/ecw/session-data/{wf-id}/ for all services
-         Self-check: if session-state.md Phase 4 ≠ ✅ 完成 → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect Phase 4 completion → update it now before proceeding
 Process:
   Each service's ecw:impl-verify already ran inside child sessions.
   Coordinator performs additional cross-service checks:
@@ -289,11 +289,11 @@ Process:
 
   All pass → proceed. Issues → present findings, suggest which service to fix.
 
-  Update session-state.md:
+  Update `session-state.json`:
     - Phase 5 row → ✅ 完成
 
 Gate-out: All checks pass (or user accepts known issues)
-          session-state.md Phase 5 row = ✅ 完成
+          `session-state.json` reflects Phase 5 completion
 ```
 
 ---
@@ -302,7 +302,7 @@ Gate-out: All checks pass (or user accepts known issues)
 
 ```
 Gate-in: Phase 5 passed
-         Self-check: if session-state.md Phase 5 ≠ ✅ 完成 → update it now before proceeding
+         Self-check: if `session-state.json` does not reflect Phase 5 completion → update it now before proceeding
 Process:
   1. Aggregate status.json + git log per service
   2. Present summary:
@@ -313,14 +313,14 @@ Process:
   4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track is auto-invoked
      by impl-verify on pass. Report which services completed
      knowledge-track and which skipped it (ECW-absent services skip by design).
-  5. Update session-state.md:
+  5. Update `session-state.json`:
      - Phase 6 row → ✅ 完成
      - MODE → complete
 Gate-out: Workflow complete
 ```
 
 **Session-state Phase naming note** (Issue 8):
-coordinator's session-state.md Phase Status table must use SKILL.md Phase numbers (1-6).
+coordinator-managed workflow state must use the SKILL.md Phase numbers (1-6).
 Do not invent custom phase names. If coordinator compresses Phase 1-3 into fewer steps,
 annotate the Artifact column to explain (e.g. "Phase 1+2+3 compressed — code-free business decomp only").
 

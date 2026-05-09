@@ -30,7 +30,7 @@ Common issues when using ECW and how to resolve them.
 
 **This is expected.** `ecw-init` generates template files that need to be customized:
 - Replace `{{...}}` placeholders in knowledge files with actual project data
-- Replace `{your_...}` placeholders in `change-risk-classification.md` with project-specific keywords
+- Replace project-specific placeholders and example keywords in generated config/knowledge files with real domain terms
 - Populate cross-domain knowledge files (`cross-domain-calls.md`, `mq-topology.md`, etc.)
 
 Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then populate knowledge files.
@@ -104,8 +104,8 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Symptom**: Phase 1 predicts wrong risk level (e.g., P3 for a critical change).
 
 **Fix**:
-1. **Keyword coverage**: Review `.claude/ecw/change-risk-classification.md` — add missing domain-specific keywords
-2. **Shared resources**: Review `.claude/knowledge/common/shared-resources.md` — missing entries cause under-classification
+1. **Keyword coverage**: Review your project `CLAUDE.md`, domain registry, and knowledge files — add missing domain-specific keywords and routing hints
+2. **Shared resources**: Review `.claude/knowledge/common/shared-resources.md` — missing entries can cause under-classification
 
 ### domain-collab routes incorrectly
 
@@ -123,6 +123,8 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 1. Delete `session-state.json` from the active session-data subdirectory (`.claude/ecw/session-data/{workflow-id}/`) — it will be regenerated when the next workflow starts
 2. If session-data checkpoint files exist (under `.claude/ecw/session-data/`), they can be used to resume
 3. This typically happens when a session was interrupted during a write operation
+
+`session-state.json` is the active workflow state artifact. If you still see `session-state.md` mentioned elsewhere, treat that as legacy wording unless a document explicitly describes historical design context.
 
 ### impl-verify loops without converging
 

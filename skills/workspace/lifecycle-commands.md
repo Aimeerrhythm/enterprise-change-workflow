@@ -87,7 +87,7 @@ Step 8: Generate configuration files
      Replace {workspace_path} with the actual workspace absolute path.
      Replace {svc1}, {svc2}, ... with actual service IDs from the confirmed service list.
      This file is read when the run session starts, preventing prompts during all
-     phase artifact writes (session-state.md, cross-service-plan.md, confirmed-contract.md, etc.).
+     phase artifact writes (`session-state.json`, cross-service-plan.md, confirmed-contract.md, etc.).
 
   b. workspace.yml → {workspace}/.claude/ecw/workspace.yml (include requirement description)
   c. CLAUDE.md → {workspace}/CLAUDE.md

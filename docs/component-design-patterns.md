@@ -70,7 +70,7 @@ routing: [writing-plans, spec-challenge, impl-verify]
 
 ### Why Not Whole-File Overwrite
 
-session-state.md is managed by multiple Hooks writing different sections (STATUS, MODE, LEDGER, TIMELINE, STOP). Whole-file overwrite = multi-writer race = data loss. Markers let each writer modify only its section.
+`session-state.json` is the active workflow state artifact. Older marker-based `session-state.md` designs are historical; for current implementations, avoid whole-file overwrite patterns that let multiple writers clobber shared state.
 
 ### API
 
@@ -308,5 +308,5 @@ Missing declarations → agent attempts out-of-scope operations (historical: spe
 ### Context Management
 
 - Recommend splitting to new session when context exceeds ~100K tokens
-- `session-state.md` is the only cross-session state recovery mechanism
+- `session-state.json` is the current cross-session state recovery artifact
 - PreCompact hook auto-saves checkpoints — Skills don't need manual checkpoint logic

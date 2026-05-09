@@ -311,7 +311,7 @@ enterprise-change-workflow/
 ├── skills/                      # 15 个核心 skill
 ├── agents/                      # 7 个 agent 定义
 ├── commands/                    # 3 个斜杠命令
-├── hooks/                       # Hook 架构（6 个事件点，10 个脚本）
+├── hooks/                       # Hook 架构（6 个事件点，18 个 Python 脚本）
 │   ├── hooks.json               # Hook 注册
 │   ├── dispatcher.py            # PreToolUse 统一调度器
 │   ├── auto-continue.py         # Skill 间自动衔接（PreToolUse + PostToolUse）
@@ -325,7 +325,7 @@ enterprise-change-workflow/
 │   ├── marker_utils.py          # 共享 marker/status 工具模块
 │   └── ...
 ├── templates/                   # 配置和知识文件模板
-├── scripts/java/                # Java/Spring 扫描脚本（3 个）
+├── scripts/java/                # Java/Spring 工具与扫描脚本（5 个）
 ├── docs/                        # 设计参考文档
 │   ├── design-principles.md     # 架构原则，六个试金石
 │   ├── component-design-patterns.md # 组件设计模式、Token 预算、模型选择
@@ -362,7 +362,7 @@ claude plugin update ecw@enterprise-change-workflow
 
 **`verify-completion` 报断裂引用** — 修改的文件引用了不存在的 `.claude/` 路径，检查是否有拼写错误或文件已被移动/删除。
 
-**Phase 1 定级明显不准** — 两个常见原因：(1) `change-risk-classification.md` 关键词映射不完整；(2) `shared-resources.md` 缺少共享资源条目。用扫描脚本重新提取后重新运行 risk-classifier Phase 1。
+**Phase 1 定级明显不准** — 两个常见原因：(1) 项目 `CLAUDE.md` 或知识文件中的领域关键词覆盖不完整；(2) `shared-resources.md` 缺少共享资源条目。可先用扫描脚本重新提取共享依赖，再重新运行 risk-classifier Phase 1。
 
 → [完整排障指南](TROUBLESHOOTING.md)
 
