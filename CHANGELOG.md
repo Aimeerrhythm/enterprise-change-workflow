@@ -4,6 +4,31 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.0] - 2026-05-09
+
+### 架构简化
+
+- **Phase 2/3 移除**：workflow-routes.yml 删除 Phase 2（系统分析）和 Phase 3（方案评审）节点，由 risk-classifier 直接路由到 requirements-elicitation / domain-collab；auto-continue.py 同步删除 Phase 3 guard；所有 SKILL.md、文档、模板、测试全面对齐
+- **session-state 格式统一**：从 `.md` 迁移到 `.json`，全面对齐（hooks + skills + tests），消除双格式混用
+- **移除 `auto_continue` 字段**：session-state 不再持久化该字段，路由始终自动执行
+- **移除 `auto_confirm` 配置项**：ecw.yml 删除该字段，固定为自动执行，不再支持手动确认模式
+- **`knowledge_common` 重命名为 `knowledge_shared`**：ecw.yml 路径键语义更准确，全项目同步
+- **移除 `change-risk-classification.md`**：风险推断改为直接读取域文档（domain-registry、business-rules），消除额外维护文件
+
+### risk-classifier 重构
+
+- 移除 Fast Track 快速通道（规则已归并入主路由矩阵）
+- 折叠 `impl_strategy` 内联规则（从 SKILL.md 移出到 workflow-routes.yml 单一位置）
+- 消除 `_RISK_TAILS` 重复定义（auto-continue.py + marker_utils.py 统一来源）
+- 修复 P2 cross-domain 路由 Bug
+
+### 修复
+
+- 修复 knowledge-track SKILL.md 多余示例行
+- 修复 session-state `.md → .json` 残留引用（hooks / skills / tests 多处）
+- 修正初始化模板两处无效内容
+- 修复 9 个预存测试失败（Phase 2/3 相关测试删除或重写）
+
 ## [1.4.0] - 2026-05-08
 
 ### 架构变更
