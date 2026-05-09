@@ -47,22 +47,12 @@ Classify risk level (P0~P3) for any **requirement or feature change**, driving t
 
 Read `./workflow-routes.yml` for the complete routing matrix, including:
 - Requirement changes (single-domain and cross-domain routing)
-- Fast track routing
-- Implementation strategy selection (direct vs ecw:impl-orchestration)
+- Implementation strategy selection (direct vs ecw:impl-orchestration) — evaluated after ecw:writing-plans, not during risk classification
 - Post-implementation task creation rules
 
 > **Determination method:** During Step 1 domain identification, check the project CLAUDE.md domain routing section (keyword→domain mapping table) and count matched domains. 2+ domain matches = cross-domain requirement.
 >
 > **Confirmation node merge:** risk-classifier's AskUserQuestion outputs level + domain list + mode + downstream routing in one go. After user confirms, downstream skills (ecw:domain-collab / ecw:requirements-elicitation) **skip their own confirmation step** and execute directly.
-
-### Implementation Strategy Selection
-
-**Determined after ecw:writing-plans completes, before entering implementation.** Scan all Tasks in the Plan: aggregate `file_path` references, deduplicate for unique file count. Count domains by mapping file paths through `ecw-path-mappings.md`. See `./workflow-routes.yml` `impl_strategy` for the full decision matrix.
-
-**Relationship with impl-verify**:
-- `ecw:impl-orchestration` has built-in per-task spec review + code quality review (P0), providing **immediate feedback** during implementation to prevent error cascading
-- `ecw:impl-verify` performs cross-validation from requirements/domain knowledge/Plan/engineering standards **after all implementation completes** — a higher-level correctness check
-- The two complement each other; neither replaces the other
 
 ---
 
@@ -101,35 +91,6 @@ After user confirmation of the initial risk assessment, create pending Tasks for
 
 ---
 
-## Fast Track
-
-### Applicable Scenarios
-
-- Production incident emergency fix (hotfix)
-- User explicitly says "urgent" / "hotfix" / "production issue" / "fix first, process later"
-
-### Execution Logic
-
-Key points: retain the initial risk assessment to record level → 1-round simplified confirmation → lean plan → implementation (skip TDD) + mvn test → `ecw:impl-verify` → post-hoc `ecw:biz-impact-analysis` (tagged `[Fast Track]`).
-
-### Fast Track Output
-
-Fast Track uses the same risk assessment output, then appends:
-
-```markdown
-### Mode: Fast Track
-
-> Entered emergency fix mode. Skipping full requirement elicitation, spec-challenge, and TDD.
-> Will run ecw:biz-impact-analysis post-fix.
-
-### Quick Confirmation (3 questions)
-1. What is the issue symptom and impact scope?
-2. Fix approach (what to change, how to change)?
-3. Is there a temporary mitigation already deployed?
-```
-
----
-
 ## Manual Trigger
 
 In addition to automatic triggering, the following manual scenarios are supported:
@@ -139,18 +100,17 @@ In addition to automatic triggering, the following manual scenarios are supporte
 | `/risk-classify` | Manually trigger risk assessment for current requirement |
 | `/risk-classify P0` | Manually force-assign level, skip auto-classification |
 | `/risk-classify --recheck` | Re-run risk assessment (use when scope expansion discovered mid-implementation) |
-| `/risk-classify --hotfix` | Enter Fast Track, use simplified fix workflow |
 
 ---
 
 ## Error Handling
 
-**Standard ECW error recovery patterns applicable to this skill:**
-
-| Scenario | Handling |
+| Scenario | Fallback |
 |----------|---------|
-| Knowledge file missing (`shared-resources.md`, `mq-topology.md`, risk factors file, etc.) | Log `[Warning: {file} not found, analysis degraded]` → continue with available data. Skip the corresponding assessment dimension |
-| `session-state.json` write failure | Retry once → still fails: output session state content directly in conversation so user can manually save |
+| `shared-resources.md` missing | Skip shared-resource risk dimension; determine cross-domain by keyword count only |
+| Domain `business-rules.md` missing | Skip business sensitivity for that domain; rely on Change Type Risk only |
+| CLAUDE.md domain routing table absent | Default `entry_skill` to `ecw:requirements-elicitation`; flag as uncertain in output |
+| `session-state.json` write failure | Retry once → still fails: output JSON inline in conversation for manual save |
 
 ## Supplementary Files
 
