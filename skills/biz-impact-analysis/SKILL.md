@@ -15,12 +15,6 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
 
 **Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
 
-## Trigger
-
-- **Manual**: `/biz-impact-analysis` — Analyze all changes on current branch vs master
-- **Manual (specify range)**: `/biz-impact-analysis HEAD~3` — Analyze last N commits
-- **Automatic**: Appended automatically after ecw:impl-verify completes
-
 ## Flow
 
 1. **Determine Diff Range** — No args: use `git diff master...HEAD`; with args: use `git diff {args}` to get changed file list
@@ -56,24 +50,24 @@ When the agent's report flags "Unregistered Cross-Domain Calls", automatically b
    - **Conservative strategy**: Only add entries. Never modify or delete existing entries.
    - Each appended row should include a trailing comment: `<!-- auto-backfilled by biz-impact-analysis {date} -->`
 
-5. **Report backfill result** — Append the following summary to the end of the analysis report output:
+5. **Report backfill result** — Append the following summary to the end of the analysis report output. Section title and text follow `project.output_language`:
 
 ```
 ---
-### 知识库自动回填
+### Knowledge Auto-Backfill
 
-已自动回填 {N} 条跨域调用到 `cross-domain-calls.md`:
+Auto-backfilled {N} cross-domain call(s) to `cross-domain-calls.md`:
 {list of added entries, one per line}
 
-> 回填策略: 仅追加确认的新调用，不修改/删除现有条目。如需调整请手动编辑。
+> Backfill strategy: append-only for confirmed new calls. Existing entries are never modified or deleted. Edit manually if adjustments are needed.
 ```
 
 If N=0 (all flagged calls already existed), output instead:
 ```
 ---
-### 知识库自动回填
+### Knowledge Auto-Backfill
 
-报告标记的未注册调用均已存在于知识库中，无需回填。
+All unregistered calls flagged in the report already exist in the knowledge base. No backfill needed.
 ```
 
 ### Edge Cases
