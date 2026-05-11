@@ -28,7 +28,7 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level 
 | **P2** | Simplified steps, can merge single-file + no-branch-logic tasks | 5-10 min per step |
 | **P3** | Minimal outline (typically no formal plan needed) | — |
 
-**Task merging rule (P2 only):** See risk-classifier "实现策略选择" section.
+**Task merging rule (P2 only):** See `workflow-routes.yml` `impl_strategy` section.
 
 ## Domain Context Injection
 

@@ -16,7 +16,7 @@ Execute plan by dispatching subagents per task in dependency-aware parallel laye
 Use when:
 - You have an implementation plan (from `ecw:writing-plans`)
 - Tasks are mostly independent
-- `session-state.json` `实现策略` = `subagent-driven`, OR Task count x risk level matches subagent-driven criteria per risk-classifier
+- Auto-continue hook routes here based on `impl_strategy` conditions in `workflow-routes.yml`, OR Task count x risk level matches subagent-driven criteria
 
 Don't use when:
 - No plan exists (write one first)
