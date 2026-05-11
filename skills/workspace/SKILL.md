@@ -16,18 +16,13 @@ Manage cross-service workspaces and coordinate multi-session parallel developmen
 2. Fallback: `workspace.yml` → `output_language`
 3. Fallback: detect from user's input language
 
-All coordinator-written files (cross-service-plan.md, workspace-analysis-task.md, confirmed-contract.md, and any human-readable status artifacts) must use this language for all headings, labels, and descriptive text. Pass `output_language` value explicitly in every dispatched child session prompt and in workspace-analysis-task.md.
+All coordinator-written files must use this language for headings, labels, and descriptive text. Pass `output_language` explicitly in every dispatched child session prompt.
 
-**File encoding**: All files written by coordinator or child sessions must use native UTF-8 characters. Never use Unicode escape sequences (uXXXX or \uXXXX format) for any characters including Chinese. Write characters directly as-is.
+**File encoding**: All files must use native UTF-8 characters. Never use Unicode escape sequences.
 
 **Core principle:** Workspace = infrastructure (git worktree), Coordinator = orchestration (Phase-Gate flow), per-service ECW = execution (unchanged). Three layers, orthogonal.
 
 **Announce at start:** "Using ecw:workspace to [create workspace / coordinate cross-service development / ...]."
-
-## Trigger
-
-- **Manual only**: `/ecw:workspace create|run|status|push|destroy`
-- This Skill is NOT auto-triggered by risk-classifier. User explicitly invokes it when cross-repo development is needed.
 
 ## When to Use
 
@@ -37,7 +32,7 @@ Use when:
 - Need coordinated implementation with contract alignment
 
 Don't use when:
-- Single-repo multi-module change (use standard ECW flow: risk-classifier → ...)
+- Single-repo multi-module change (use standard ECW flow)
 - Services are in a monorepo (use ecw:domain-collab instead)
 - Pure read-only analysis (no implementation needed)
 
@@ -46,12 +41,12 @@ Don't use when:
 | Sub-command | Usage | Description |
 |-------------|-------|-------------|
 | `create` | `/ecw:workspace create <services...> [--name] [--branch]` | Create workspace + auto-enter + start run |
-| `run` | `/ecw:workspace run "<requirement>"` | 6-Phase coordinator flow (usually auto-triggered by create) |
+| `run` | `/ecw:workspace run "<requirement>"` | 6-Phase coordinator flow |
 | `status` | `/ecw:workspace status` | All services' git + session status |
 | `push` | `/ecw:workspace push` | Batch push with confirmation |
 | `destroy` | `/ecw:workspace destroy` | Clean up worktrees + directory |
 
-**One-command flow**: `create` captures the requirement from user's input, creates the workspace, then automatically opens a new session in the workspace and starts `run`. User only needs to describe the requirement once.
+**One-command flow**: `create` captures the requirement, creates workspace, opens new session, starts `run` automatically. Manual only — not auto-triggered by risk-classifier.
 
 For `create`, `status`, `push`, `destroy` details, see `./lifecycle-commands.md`.
 
@@ -67,263 +62,120 @@ For `create`, `status`, `push`, `destroy` details, see `./lifecycle-commands.md`
 ### Phase-Gate Architecture
 
 ```
-Pre-flight → Initial decomposition → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
-    │            │          │          │          │          │          │
-    ▼            ▼          ▼          ▼          ▼          ▼          ▼
-[user OK]  [biz-plan]  [analysis]  [contract]  [status]  [verified]  [pushed]
+Pre-flight → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
 ```
 
 | Phase | Gate Artifact | Written by | Location |
 |-------|--------------|------------|----------|
 | Pre-flight | User confirms readiness | — | interactive |
-| Initial decomposition | `cross-service-plan.md` (business layer only) | Coordinator | `session-data/{wf-id}/` |
-| Phase 2 | `analysis-report.md` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
-| Phase 3 | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/session-data/{wf-id}/` |
-| Phase 4 | `status.json` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
-| Phase 5 | Compatibility checks pass | Coordinator | interactive |
-| Phase 6 | `session-state.json` (MODE: complete) | Coordinator | `session-data/{wf-id}/` |
+| 1. Initial decomposition | `cross-service-plan.md` | Coordinator | `session-data/{wf-id}/` |
+| 2. Per-service analysis | `analysis-report.md` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
+| 3. Contract alignment | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/session-data/{wf-id}/` |
+| 4. Per-service impl | `status.json` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
+| 5. Cross-service verify | Checks pass | Coordinator | interactive |
+| 6. Summary & push | `session-state.json` (MODE: complete) | Coordinator | `session-data/{wf-id}/` |
 
-**Enforcement**: At each Phase start, verify previous artifact exists. Missing → STOP, report — do not backfill silently.
+**Enforcement**: At each Phase start (gate-in), verify previous artifact exists. Missing → STOP, report — do not backfill silently.
+
+**Session-state convention**: After each Phase completes, update `session-state.json` to reflect completion. Use SKILL.md Phase numbers (1-6), do not invent custom names.
 
 ---
 
 ### Pre-flight: ECW Readiness Check
 
-```
-Gate-in: workspace.yml readable
-Process:
-  For each service:
-    Check {service}/.claude/ecw/ecw.yml and {service}/.claude/knowledge/
-    Classify: ECW-ready / ECW-partial / ECW-absent
+For each service, check `{service}/.claude/ecw/ecw.yml` and `{service}/.claude/knowledge/`. Classify: ECW-ready / ECW-partial / ECW-absent.
 
-  AskUserQuestion: show readiness table (language follows output_language).
-  If any ECW-absent → Options: "Continue with source scan" / "Pause to init ECW"
-Gate-out: User confirms
-          Write initial `session-state.json`:
-            Location: `.claude/ecw/session-data/{wf-id}/session-state.json`
-            Content: Pre-flight → ✅ 完成; all subsequent phases → ⏳ 待开始
-```
+AskUserQuestion: show readiness table. If any ECW-absent → offer "Continue with source scan" / "Pause to init ECW".
+
+Gate-out: User confirms. Write initial `session-state.json` to `.claude/ecw/session-data/{wf-id}/`.
 
 ---
 
-### Phase 1: Initial Decomposition — no Read, Bash, Glob, Grep, or Explore (business decomp only)
+### Phase 1: Initial Decomposition (code-free)
 
-**Information constraint**: the initial decomposition uses ONLY `workspace.yml.requirement` text and the user's stated business context. No code reading of any kind is permitted — no Read, Bash, Glob, Grep, or Explore tools. If code-level detail is needed to answer a question, that question is an Open Question for Phase 2, not something to resolve here.
+**Information constraint**: Use ONLY `workspace.yml.requirement` text and user's stated context. **No code reading** — no Read, Bash, Glob, Grep, or Explore tools. Code-level detail → mark as Open Question for Phase 2.
 
-**Output standard**: cross-service-plan.md and workspace-analysis-task.md must contain ONLY business-level content — service roles, interaction types, open questions. Any class name, method name, field name, or SQL in initial decomposition output is a violation.
+**Output standard**: cross-service-plan.md must contain ONLY business-level content (service roles, interaction types, open questions). Any class/method/field name or SQL is a violation.
 
-```
-Gate-in: Pre-flight confirmed
 Process:
-  1. Read workspace.yml → original requirement + service list
-     (This is the ONLY information source for the initial decomposition)
+1. Read workspace.yml → requirement + service list (ONLY information source)
+2. Decompose from pure business perspective: per-service responsibilities, Provider/Consumer roles, interaction type (Dubbo / MQ / unclear)
+3. AskUserQuestion: present per-service business responsibilities for confirmation
+4. Write `session-data/{wf-id}/cross-service-plan.md`
+5. Write `{service}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` per service — see `./workspace-analysis-task-template.md` for template
 
-  2. Decompose requirement from pure business perspective:
-     - What is each service responsible for in this change?
-     - Which services are Provider (data/event source) vs Consumer?
-     - What cross-service interaction is needed? (MQ / Dubbo / unclear)
-     If interaction type cannot be determined from the requirement alone → mark as "unclear",
-     Phase 2 child session will investigate. Do NOT read code to guess.
-
-  3. AskUserQuestion: present per-service business responsibilities.
-     For each service show:
-       - Role (Provider / Consumer / Both)
-       - Business responsibility (1-2 sentences, business language only)
-       - Interaction type (Dubbo / MQ / unclear — flag for Phase 2)
-     Options: "Confirm" / "Adjust"
-
-  4. Once confirmed, write cross-service-plan.md (business layer only):
-     Location: .claude/ecw/session-data/{wf-id}/cross-service-plan.md
-     Content: per-service roles, interaction patterns, open questions for Phase 2
-     Encoding: native UTF-8, no escape sequences
-
-  5. Write workspace-analysis-task.md for each service:
-     Location: {service}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md
-     Content (see template below)
-     Encoding: native UTF-8, no escape sequences
-
-  6. Update `session-state.json`:
-     - Initial decomposition row → ✅ 完成
-     - Subagent Ledger: record Explore agents as complete
-     (This step is mandatory — gate-out verifies it)
-
-Gate-out: ALL of the following must be true:
-  - cross-service-plan.md exists at session-data/{wf-id}/
-  - workspace-analysis-task.md exists for all services
-  - `session-state.json` reflects initial decomposition completion
-```
-
-**workspace-analysis-task.md template:** See `./workspace-analysis-task-template.md` (Read on demand when writing workspace-analysis-task.md for each service).
+Gate-out: cross-service-plan.md + all workspace-analysis-task.md exist.
 
 ---
 
-### Phase 2: Per-Service Code Analysis (Child sessions, interactive, parallel)
+### Phase 2: Per-Service Code Analysis (parallel, interactive)
 
-```
-Gate-in: workspace-analysis-task.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if `session-state.json` does not reflect initial decomposition completion → update it now before proceeding
-Process:
-  1. Generate per-service start scripts and open one terminal tab per service
-     via terminal adapter (see ./terminal-adapters.md § Service Scripts)
+Generate per-service start scripts and open terminal tabs via `./terminal-adapters.md` § Service Scripts.
 
-     Script name: start-{svc}.sh
-     Script prompt: "Read .claude/ecw/session-data/{wf-id}/workspace-analysis-task.md and follow all instructions."
-     Flags: --name {svc}-analyst --permission-mode bypassPermissions
+Child sessions follow workspace-analysis-task-template.md: analysis → poll contract → impl. Coordinator only monitors artifacts.
 
-  2. Child sessions run in parallel (interactive — user can observe and intervene):
-     Each session follows workspace-analysis-task-template.md: analysis → poll contract → impl.
-     Session behavior details are in the template; coordinator only monitors artifacts.
+Poll: check `{service}/.claude/ecw/session-data/{wf-id}/analysis-report.md` every 5 seconds.
 
-  3. Poll for completion: check {service}/.claude/ecw/session-data/{wf-id}/analysis-report.md
-     every 5 seconds
-
-  4. Coordinator reads all analysis-report.md files
-
-  5. Update `session-state.json`:
-     - Phase 2 row → ✅ 完成
-     - Subagent Ledger: record analyst child sessions as complete
-
-Gate-out: ALL of the following must be true:
-  - analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
-  - `session-state.json` reflects Phase 2 completion
-```
+Gate-out: analysis-report.md exists for all services.
 
 ---
 
 ### Phase 3: Contract Alignment + Conflict Resolution
 
-```
-Gate-in: analysis-report.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if `session-state.json` does not reflect Phase 2 completion → update it now before proceeding
-Process:
-  1. Cross-validate for conflicts:
+Cross-validate analysis reports for conflicts:
+- MQ: Producer topic/DTO ↔ Consumer expected topic/DTO
+- Dubbo: Provider interface signature ↔ Consumer expected signature
+- Interaction pattern conflicts (sync vs async)
+- Responsibility boundary conflicts
 
-     a. MQ contracts:
-        Producer's topic name / DTO fields ↔ Consumer's expected topic / DTO fields
-     b. Dubbo contracts:
-        Provider's interface signature ↔ Consumer's expected call signature
-     c. Interaction pattern conflicts:
-        Service A wants sync Dubbo ↔ Service B prefers async MQ
-     d. Responsibility boundary conflicts:
-        Both/neither claim ownership of shared logic
+Conflicts found → AskUserQuestion per conflict, user decides.
 
-  2. If conflicts found → AskUserQuestion per conflict (language follows output_language):
-     Present:
-       - Which services disagree
-       - Each side's reasoning
-       - Option A / Option B / Option C (custom)
-     User decides → coordinator records decision
+Once aligned:
+- Update cross-service-plan.md with final contracts
+- Write `{service}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md` per service
 
-  3. Once all contracts aligned:
-     - Update cross-service-plan.md with final contracts
-     - Write confirmed-contract.md for EACH affected service:
-       Location: {service}/.claude/ecw/session-data/{wf-id}/confirmed-contract.md
-       Encoding: native UTF-8, no escape sequences
-       Content scope — ONLY cross-service contract layer:
-         - field names, field types, nullable annotations
-         - topic names / interface signatures
-         - interaction_pattern (mq / dubbo) for Phase 4 dispatch logic
-         - execution order (layer assignment)
-         - impl-verify requirement: "impl-verify MUST pass before writing status.json"
-       Content exclusion — do NOT include:
-         - class names, method names, internal implementation entry points
-           (these are in analysis-report.md, owned by child sessions)
-         - task decomposition or implementation steps
-           (child sessions own this via ecw:writing-plans)
-         - multiple implementation options or "A or B" choices
-           (if unsure, surface to user via AskUserQuestion before writing)
+Read `./coordination-protocol.md` for confirmed-contract.md content scope and exclusion rules.
 
-  4. Update `session-state.json`:
-     - Phase 3 row → ✅ 完成
+**Content scope** — ONLY cross-service contract layer: field names/types, topic names/interface signatures, interaction_pattern, execution order, impl-verify requirement. Do NOT include class names, method names, multiple implementation options, implementation steps, or "A or B" choices.
 
-Gate-out: ALL of the following must be true:
-  - confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
-  - `session-state.json` reflects Phase 3 completion
-```
-### Phase 4: Per-Service Implementation (analysis sessions continue, parallel or layered)
+Gate-out: confirmed-contract.md exists for all services.
 
-```
-Gate-in: confirmed-contract.md exists for all services at .claude/ecw/session-data/{wf-id}/
-         Self-check: if `session-state.json` does not reflect Phase 3 completion → update it now before proceeding
-Process:
-  Analysis sessions detect confirmed-contract.md via polling and continue into Phase 4 automatically.
-  Coordinator does NOT generate new Phase 4 scripts — no user action needed at this phase.
-  Child session behavior (risk-classifier entry + MQ parallel / Dubbo non-blocking scheduling) is defined in
-  workspace-analysis-task-template.md — coordinator does not need to manage dispatch.
+---
 
-  Poll: check {service}/.claude/ecw/session-data/{wf-id}/status.json every 5 seconds,
-        timeout 120 minutes.
-  Failed -> AskUserQuestion: continue waiting 30 more minutes / skip this service / abort
+### Phase 4: Per-Service Implementation (parallel or layered)
 
-  After all status.json received:
-  Update `session-state.json`:
-    - Phase 4 row → ✅ 完成
-    - Subagent Ledger: update service child sessions (same sessions from Phase 2) to complete
+Child sessions detect confirmed-contract.md via polling and continue into Phase 4 automatically. Coordinator does NOT generate new scripts — no user action needed.
 
-Gate-out: ALL of the following must be true:
-  - status.json exists for all services at .claude/ecw/session-data/{wf-id}/
-  - Each status.json contains required fields: service, status, summary, files_changed, commits, error
-    (verify with: cat {service}/.claude/ecw/session-data/{wf-id}/status.json | python3 -c
-     "import json,sys; d=json.load(sys.stdin); missing=[f for f in ['service','status','summary','files_changed','commits','error'] if f not in d]; print('MISSING:',missing) if missing else print('OK')")
-  - `session-state.json` reflects Phase 4 completion
-```
+Poll: check `{service}/.claude/ecw/session-data/{wf-id}/status.json` every 5 seconds, timeout 120 minutes. See `./coordination-protocol.md` for status.json schema and timeout handling.
+
+Failed/timeout → AskUserQuestion: continue waiting / skip / abort.
+
+Gate-out: status.json exists for all services with required fields (service, status, summary, files_changed, commits, error).
+
+---
 
 ### Phase 5: Cross-Service Verification
 
-```
-Gate-in: status.json exists at {service}/.claude/ecw/session-data/{wf-id}/ for all services
-         Self-check: if `session-state.json` does not reflect Phase 4 completion → update it now before proceeding
-Process:
-  Each service's ecw:impl-verify already ran inside child sessions.
-  Coordinator performs additional cross-service checks:
+Each service's ecw:impl-verify already ran inside child sessions. Coordinator performs cross-service checks:
 
-  MQ checks:
-    a. Producer DTO field name = Consumer DTO field name (exact match)
-    b. Producer DTO field type = Consumer DTO field type (e.g. String ↔ String)
-    c. Nullable annotation consistent (both nullable or both required)
-    d. Topic name: Producer publish topic = Consumer subscribe topic
+**MQ**: field names match, field types match, nullable annotations consistent, topic names match.
 
-  Dubbo checks:
-    a. Provider interface method signature = Consumer call signature
-       (method name, parameter types, return type, exception declarations)
-    b. Maven: Consumer pom.xml API Jar version = Provider published version
+**Dubbo**: method signatures match (name, params, return type, exceptions), Consumer pom.xml API jar version = Provider published version.
 
-  All pass → proceed. Issues → present findings, suggest which service to fix.
+All pass → proceed. Issues → present findings, suggest which service to fix.
 
-  Update `session-state.json`:
-    - Phase 5 row → ✅ 完成
-
-Gate-out: All checks pass (or user accepts known issues)
-          `session-state.json` reflects Phase 5 completion
-```
+Gate-out: All checks pass (or user accepts known issues).
 
 ---
 
 ### Phase 6: Summary & Push Confirmation
 
-```
-Gate-in: Phase 5 passed
-         Self-check: if `session-state.json` does not reflect Phase 5 completion → update it now before proceeding
-Process:
-  1. Aggregate status.json + git log per service
-  2. Present summary:
-     - Commits, files changed per service
-     - Deploy order (from confirmed-contract.md)
-     - ECW coverage per service: ECW-ready (full flow) or ECW-absent (impl-verify only)
-  3. AskUserQuestion: Push now or later?
-  4. Knowledge tracking: For ECW-ready services, /ecw:knowledge-track is auto-invoked
-     by impl-verify on pass. Report which services completed
-     knowledge-track and which skipped it (ECW-absent services skip by design).
-  5. Update `session-state.json`:
-     - Phase 6 row → ✅ 完成
-     - MODE → complete
-Gate-out: Workflow complete
-```
+1. Aggregate status.json + git log per service
+2. Present summary: commits, files changed, deploy order, ECW coverage per service
+3. AskUserQuestion: Push now or later?
+4. Knowledge tracking: report which services completed knowledge-track
 
-**Session-state Phase naming note** (Issue 8):
-coordinator-managed workflow state must use the SKILL.md Phase numbers (1-6).
-Do not invent custom phase names. If coordinator compresses initial decomposition–Phase 3 into fewer steps,
-annotate the Artifact column to explain (e.g. "Initial decomposition + Phase 2 + Phase 3 compressed — code-free business decomp only").
+Gate-out: Workflow complete, session-state MODE → complete.
 
 ---
 
@@ -331,22 +183,21 @@ annotate the Artifact column to explain (e.g. "Initial decomposition + Phase 2 +
 
 | Scenario | Handling |
 |----------|---------|
-| Child session fails (status: failed) | Report, ask: retry / skip / abort |
+| Child session fails | Report, ask: retry / skip / abort |
 | Child session blocked | Report, user resolves in split pane |
-| Contract mismatch (Phase 3) | Present diff, user adjusts plan |
-| Cross-service verification fails (Phase 5) | Present findings, suggest fix |
+| Contract mismatch (Phase 3) | Present diff, user adjusts |
+| Cross-service verification fails | Present findings, suggest fix |
 | Terminal adapter fails | Fall back to manual adapter |
-| Polling timeout (30 min) | Notify, offer: continue / skip / abort |
-| Maven install/deploy fails | Report, user fixes manually |
+| Polling timeout (120 min) | Notify, offer: continue / skip / abort |
 
 ## Anti-Patterns
 
-Read `./prompts/anti-patterns.md` for never-rules and common rationalizations to avoid.
+Read `./prompts/anti-patterns.md` for never-rules and common rationalizations.
 
 ## Supplementary Files
 
 - `./lifecycle-commands.md` — create / status / push / destroy detailed process
-- `./terminal-adapters.md` — Terminal detection + adapter implementations (Ghostty, iTerm2, tmux, manual)
+- `./terminal-adapters.md` — Terminal detection + adapter implementations
 - `./coordination-protocol.md` — status.json / api-ready.json schema, polling mechanism, artifact locations
-- `./workspace-analysis-task-template.md` — Child session task template (analysis → impl full flow)
+- `./workspace-analysis-task-template.md` — Child session task template
 - `./prompts/anti-patterns.md` — Never rules + common rationalizations
