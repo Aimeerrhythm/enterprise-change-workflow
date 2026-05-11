@@ -81,6 +81,7 @@ Pre-flight → Initial decomposition → Phase 2 → Phase 3 → Phase 4 → Pha
 | Phase 3 | `confirmed-contract.md` per service | Coordinator | `{service}/.claude/ecw/session-data/{wf-id}/` |
 | Phase 4 | `status.json` per service | Child sessions | `{service}/.claude/ecw/session-data/{wf-id}/` |
 | Phase 5 | Compatibility checks pass | Coordinator | interactive |
+| Phase 6 | `session-state.json` (MODE: complete) | Coordinator | `session-data/{wf-id}/` |
 
 **Enforcement**: At each Phase start, verify previous artifact exists. Missing → STOP, report — do not backfill silently.
 

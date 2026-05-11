@@ -28,7 +28,7 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level 
 | **P2** | Simplified steps, can merge single-file + no-branch-logic tasks | 5-10 min per step |
 | **P3** | Minimal outline (typically no formal plan needed) | — |
 
-**Task merging rule (P2 only):** Single-file change with no conditional branch logic = can merge. State machine / cross-domain / multi-file coordination = must stay independent. Reference: risk-classifier "实现策略选择" section.
+**Task merging rule (P2 only):** See risk-classifier "实现策略选择" section.
 
 ## Domain Context Injection
 
@@ -61,12 +61,12 @@ When **both** conditions are false (single domain AND knowledge files < 3), use 
 Coordinator constructs the subagent prompt with the following inputs — **does not read knowledge file contents itself**:
 
 1. **Requirement summary path**: `requirements-summary.md` or `domain-collab-report.md` (subagent reads the file)
-3. **Knowledge file path list**:
+2. **Knowledge file path list**:
    - `.claude/ecw/routing/path-mappings.md`
    - `.claude/knowledge/{domain}/business-rules.md` (one per affected domain)
    - `.claude/ecw/session-data/{workflow-id}/knowledge-summary.md` (if exists)
-4. **Plan output target path**: `.claude/plans/{feature}.md`
-5. **Risk level + Plan detail requirements**: From `session-state.json` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
+3. **Plan output target path**: `.claude/plans/{feature}.md`
+4. **Risk level + Plan detail requirements**: From `session-state.json` (P0/P1/P2 detail table in "Risk-Aware Detail Level" section)
 
 ### Subagent Responsibilities
 

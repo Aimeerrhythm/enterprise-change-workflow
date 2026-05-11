@@ -20,6 +20,18 @@ After a plan/design document is produced, dispatch the `spec-challenge` agent fo
 - **Manual (no args)**: `/spec-challenge` — Auto-find the most recently produced spec file in current session
 - **Automatic**: After ecw:writing-plans completes for P0 changes or P1 cross-domain changes
 
+**Auto-trigger flow**:
+
+```
+ecw:risk-classifier (P0 / P1 cross-domain)
+  → ecw:requirements-elicitation / ecw:domain-collab
+  → Phase 2
+  → ecw:writing-plans: write plan
+  → ecw:spec-challenge (adversarial review + author response)
+  → user review (with challenge results visible)
+  → implementation
+```
+
 ## Flow
 
 ```dot
@@ -169,6 +181,10 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 - Document has been updated to reflect all "agree to modify" and "adopted" changes
 - **User final confirmation** on response summary — review passed
 
+## Post-Review: Auto-Continue to Implementation
+
+After spec-challenge completes and user confirms review results (Plan updated), immediately invoke the next skill. Read `next` from `.claude/ecw/session-data/{workflow-id}/session-state.json` and call it directly — do not ask for confirmation, do not output a transition message. The user already approved the full routing chain during Phase 1. All analysis artifacts are already persisted to `session-data/`.
+
 ## Error Handling
 
 | Scenario | Handling |
@@ -181,40 +197,6 @@ After outputting summary, use AskUserQuestion for user final confirmation:
 ## Common Rationalizations
 
 Read `./prompts/common-rationalizations.md` for anti-patterns to avoid.
-
-## Workflow Integration
-
-### Auto-Trigger Scenarios
-
-After ecw:writing-plans completes, ecw:spec-challenge adversarial review auto-triggers for:
-
-- **P0 changes** (any domain mode)
-- **P1 cross-domain changes** (high-risk changes involving 2+ domains — cross-domain coupling risks need independent review)
-
-Flow:
-
-1. ecw:writing-plans outputs plan file
-2. **Trigger ecw:spec-challenge first** — Adversarial review of the plan
-3. After challenge-response completes, present updated plan for user review
-4. After user review passes, enter implementation
-
-```
-ecw:risk-classifier (P0 / P1 cross-domain)
-  → ecw:requirements-elicitation / ecw:domain-collab
-  → Phase 2
-  → ecw:writing-plans: write plan
-  → ecw:spec-challenge (adversarial review + author response)
-  → user review (with challenge results visible)
-  → implementation
-```
-
-### Post-Review: Auto-Continue to Implementation
-
-After spec-challenge completes and user confirms review results (Plan updated), immediately invoke the next skill. Read `next` from `.claude/ecw/session-data/{workflow-id}/session-state.json` and call it directly — do not ask for confirmation, do not output a transition message. The user already approved the full routing chain during Phase 1. All analysis artifacts are already persisted to `session-data/`; PreCompact hook automatically preserves checkpoints if context compression occurs.
-
-### Manual Trigger
-
-At any time, run `/spec-challenge <file path>` on any spec/plan file.
 
 ## Supplementary Files
 

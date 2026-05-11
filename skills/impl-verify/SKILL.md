@@ -12,18 +12,7 @@ After implementation completes and before marking the task done, perform multi-d
 
 **Announce at start:** "Using ecw:impl-verify to verify implementation correctness."
 
-**Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `impl-verify-findings.md` follow this language. Pass to dispatched verifier agent prompts.
-
-## Why This Is Needed
-
-The most dangerous thing during implementation is not "code won't compile" but "code compiles but logic is wrong." Typical issues:
-
-- State machine missing a transition — business flow deadlocks in certain scenarios
-- Validation rule omitted — invalid data written to database
-- Plan says "rollback on failure" — code swallows the exception
-- Requirement says "read from config" — code hardcodes the value
-
-These issues cannot be caught by compilation checks (compilation passes), nor by structural consistency checks (no inter-file contradictions). Only line-by-line comparison of code logic against requirements/rules/design decisions can reveal them.
+**Output language**: Read `ecw.yml` → `project.output_language`.
 
 ## Trigger
 
@@ -39,8 +28,6 @@ These issues cannot be caught by compilation checks (compilation passes), nor by
 | ecw:biz-impact-analysis | Business impact scope | Single analysis | Yes (P0/P1 mandatory) |
 | ecw:cross-review | Inter-file structural consistency | Multi-round convergence | No (manual, optional) |
 | ecw:spec-challenge | Plan blind spots, boundary conditions | Challenge-response | Plan phase, not implementation phase |
-
-**Relationship with code-reviewer**: impl-verify Round 4 (engineering standards) absorbs the code quality review responsibility of code-reviewer. In the ECW workflow, impl-verify replaces code-reviewer as the post-implementation code review step.
 
 ## Input Material Collection
 
@@ -122,21 +109,14 @@ summary: "One-line summary of this round"
 
 ## Execution Protocol
 
-### Round 1 — Requirements ↔ Code [Subagent]
+Coordinator dispatches Rounds 1-4 as parallel `ecw:impl-verifier` subagents. Each subagent receives the relevant section from `./prompts/round-checklists.md`:
 
-Read `./prompts/round-checklists.md` — Round 1 section for the full bidirectional tracing checklist.
+- **Round 1 — Requirements ↔ Code**: bidirectional tracing checklist
+- **Round 2 — Domain Knowledge ↔ Code**: domain rule alignment checklist
+- **Round 3 — Plan ↔ Code**: plan decision verification checklist
+- **Round 4 — Engineering Standards ↔ Code**: engineering standards quality review checklist
 
-### Round 2 — Domain Knowledge ↔ Code [Subagent]
-
-Read `./prompts/round-checklists.md` — Round 2 section for the domain rule alignment checklist.
-
-### Round 3 — Plan ↔ Code [Subagent]
-
-Read `./prompts/round-checklists.md` — Round 3 section for the plan decision verification checklist.
-
-### Round 4 — Engineering Standards ↔ Code [Subagent]
-
-Read `./prompts/round-checklists.md` — Round 4 section for the engineering standards quality review checklist.
+**Before generating output**, each subagent reads `./output-templates.md` for per-round findings format, zero-findings format, and final pass summary structure. For severity judgment rules, read `./prompts/common-rationalizations.md`.
 
 ### Round N+ (Conditional Trigger) — Fix Re-Verification
 
@@ -159,11 +139,6 @@ Read `./prompts/round-checklists.md` — Round 4 section for the engineering sta
 - Suggestion-level findings do not block convergence; recorded in final report for reference
 - **Loop cap**: Maximum 5 rounds. If must-fix findings remain after 5 rounds, output all unresolved items and suggest user intervention
 - **Stall detection**: If must-fix count does not decrease for 2 consecutive rounds (Round N and N+1 have equal or higher must-fix count), stop iterating and escalate to user: `[Stall detected: must-fix count not decreasing after {N} rounds. Remaining {X} must-fix items require manual intervention.]`
-- **Context savings**: By dispatching Rounds as subagents, the coordinator holds only the changed file list (~500 tokens) plus aggregated findings YAML (~200 tokens per finding). In the WMS P0 session, this would have reduced coordinator context from ~49 file reads to ~4 YAML summaries.
-
-## Severity Definitions and Verification Discipline
-
-Read `./prompts/common-rationalizations.md` for severity definitions, the must-fix/suggestion judgment principle, and the common rationalization guard (iron law).
 
 ## Risk Level Behavior Differences
 
@@ -181,10 +156,6 @@ Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.json`
 - A→B: Bug description issue → Does fix code actually resolve it?
 - B→A: Does fix code only change what needs changing, without introducing unrelated changes?
 - Additional: On the code path involved in the bug, check for other potential similar issues
-
-## Output Format
-
-**Before generating verification output**, Read `./output-templates.md` for per-round findings format, zero-findings format, final pass summary structure, and output constraints.
 
 ## Error Handling
 
@@ -207,13 +178,9 @@ Read risk level from `.claude/ecw/session-data/{workflow-id}/session-state.json`
   - Does not analyze business impact scope (ecw:biz-impact-analysis's responsibility)
   - Does not review plan design (ecw:spec-challenge's responsibility, plan phase not implementation phase)
 
-## Common Implementation Deviation Patterns
-
-For focused attention in each Round, Read `./deviation-patterns.md` for the 14 most common deviation patterns with Round mapping and examples.
-
 ## Supplementary Files
 
 - `output-templates.md` — Per-round findings format, zero-findings format, final pass summary, output constraints
-- `deviation-patterns.md` — 14 common implementation deviation patterns by Round
+- `deviation-patterns.md` — 14 common implementation deviation patterns, mapped to verification Round
 - `prompts/round-checklists.md` — Round 1-4 verification checklists (subagent reasoning instructions)
 - `prompts/common-rationalizations.md` — Severity definitions and verification discipline guard (iron law)

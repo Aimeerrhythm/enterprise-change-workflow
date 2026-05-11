@@ -12,10 +12,6 @@ Execute multi-round cross-consistency verification on changed files. Exit only w
 
 **Announce at start:** "Using ecw:cross-review to verify cross-file consistency."
 
-## Why This Is Needed
-
-The same concept described in different sections of the same file or across multiple files often becomes inconsistent (table row counts differ, list items missing, terminology mixed). This is especially common in document-heavy changes (multiple markdown files cross-referencing each other). Structured multi-dimensional verification + convergence loop systematically eliminates these issues.
-
 ## Trigger
 
 - **Manual**: `/ecw:cross-review`

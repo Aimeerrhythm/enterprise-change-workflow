@@ -166,8 +166,6 @@ Write key information from knowledge files read during this analysis to `.claude
 
 ---
 
----
-
 ## Fallback Logic
 
 If all domain Agents return `impact_level: none`:

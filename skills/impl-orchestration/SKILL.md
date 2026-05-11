@@ -7,8 +7,6 @@ description: Use when executing implementation plans with independent tasks. Ris
 
 Execute plan by dispatching subagents per task in dependency-aware parallel layers, with risk-aware review gates.
 
-**Why subagents:** Delegate tasks to specialized agents with isolated context. Precisely craft their instructions — they never inherit your session context. This preserves your context for coordination work.
-
 **Core principle:** Dependency graph → parallel layers → worktree-isolated dispatch → merge → review = high quality, fast execution.
 
 **Announce at start:** "Using ecw:impl-orchestration to execute the plan with parallel layer dispatch."
@@ -151,6 +149,8 @@ Execute one layer at a time. Each layer follows a 5-phase cycle.
 
 ### Phase 1: Parallel Implementation (worktree-isolated)
 
+Read `./prompts/implementer-prompt-guide.md` for prompt construction guidelines, model selection, and timeout rules before dispatching.
+
 Dispatch ALL tasks in the current layer simultaneously. Each implementer runs in an isolated git worktree via the Agent tool's `isolation: "worktree"` parameter.
 
 **Critical**: ALL Agent calls for the same layer MUST be in a **single message** to achieve true parallel execution. Sequential calls defeat the purpose.
@@ -197,10 +197,7 @@ After ALL implementers in the layer complete, for each worktree branch **in sequ
 cat {worktree_path}/.claude/ecw/task-result.json
 ```
 
-Read `./task-result-schema.md` for the full schema. This is the authoritative source for the Subagent Ledger; the Agent tool result text is secondary. If the file is missing:
-- Fall back to `git log {worktree_branch}` to infer what was done
-- Write `.claude/ecw/session-data/{wf-id}/task-{N}-aggregation-warning.md` to record the gap explicitly
-- Continue merge (do not block the layer)
+Read `./task-result-schema.md` for the full schema, missing-file fallback, and coordinator protocol. This is the authoritative source for the Subagent Ledger; the Agent tool result text is secondary.
 
 **Step 2 — Merge the branch:**
 
@@ -285,10 +282,6 @@ Read `./prompts/code-quality-review-template.md` for the P0 code quality review 
   duration: "~18s"
 ```
 
-## Implementer Prompt Construction
-
-Read `./prompts/implementer-prompt-guide.md` for prompt construction guidelines, model selection, timeout rules, and implementer status handling.
-
 ## Loop Safety Controls
 
 Guard against infinite loops and runaway costs. Read `./loop-safety-reference.md` for full rules.
@@ -303,11 +296,7 @@ After all tasks complete, invoke `ecw:impl-verify`. If a pending `ecw:impl-verif
 
 ## Task Merging
 
-If plan has many small tasks, consider merging per risk-classifier rules:
-- Single-file + no conditional branch logic = can merge
-- State machine / cross-domain / multi-file = must stay independent
-
-Reference `workflow-routes.yml` `impl_strategy` section for authoritative rules. Do not redefine here.
+If plan has many small tasks, consider merging. See `workflow-routes.yml` `impl_strategy` section for authoritative rules.
 
 ## Error Handling
 
@@ -322,10 +311,6 @@ Reference `workflow-routes.yml` `impl_strategy` section for authoritative rules.
 | Multiple implementers fail in same layer | Merge successful ones, move failed ones to retry layer |
 | Post-merge compile failure | Identify which merge introduced the issue (bisect last N merges). Fix inline or re-dispatch implementer for the offending task |
 | Layer fully times out | Terminate remaining agents. Retry timed-out tasks with simplified scope. If still failing, escalate to user |
-
-## Anti-Patterns
-
-Read `./prompts/anti-patterns.md` for never-rules and common rationalizations to avoid.
 
 ## ecw.yml Configuration
 

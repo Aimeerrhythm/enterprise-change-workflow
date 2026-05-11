@@ -93,7 +93,7 @@ When **Implementation Strategy** in `session-state.json` is `subagent-driven` (i
 
 1. Invoke `ecw:impl-orchestration` via Skill tool
 
-TDD protocol (Iron Law, risk-aware enforcement, cycle rules) is embedded into each implementer's prompt by `ecw:impl-orchestration`. Do NOT execute any TDD cycle in the coordinator when strategy is subagent-driven.
+Do NOT execute any TDD cycle in the coordinator when strategy is subagent-driven.
 
 When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 unique files**:
 
@@ -104,8 +104,6 @@ When **Implementation Strategy** is `direct` but the Plan involves **≥ 6 uniqu
 5. The coordinator tracks cycle progress but does NOT read implementation file contents
 
 **Timeout per cycle subagent**: 180s. If a cycle subagent times out, terminate and fall back to direct execution for that cycle.
-
-**Rationale**: In the WMS P0 cross-domain task, TDD executed 107 file reads in the coordinator, causing 3 context compressions. Delegating cycles to subagents keeps coordinator context lean.
 
 ## TDD Execution Protocol
 
