@@ -15,8 +15,6 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 
 **Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels in `requirements-summary.md` follow this language.
 
-**Core Principle:** Every question you don't ask now becomes a future bug, rework, or misunderstanding. Ask more now, change less later.
-
 **Announce at start:** "Using ecw:requirements-elicitation for systematic requirement analysis."
 
 ## When to Use
@@ -33,14 +31,6 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 **When NOT to use:**
 - User gives a precise, fully-specified technical task ("fix the null pointer on line 42")
 - User explicitly says "just do it, don't ask questions"
-- **Bug fix / debugging scenarios** — route to `ecw:systematic-debugging` instead
-
-## Skill Handoff
-
-**After user confirms the requirement summary, invoke `ecw:writing-plans`** — the auto-continue hook injects the remaining routing chain automatically.
-
-- Workflow mode (session-state.json exists): hook already has the full routing chain; just invoke `ecw:writing-plans`.
-- Standalone mode (no session-state.json): invoke `ecw:writing-plans` directly; writing-plans defaults to P0 full detail mode.
 
 ## Core Flow
 
@@ -60,7 +50,6 @@ digraph requirements {
   "Present findings to user" [shape=box];
   "Produce final requirement summary" [shape=box];
   "User confirms?" [shape=diamond];
-  "Phase 2 precise classification" [shape=box];
   "invoke ecw:writing-plans" [shape=doublecircle];
 
   "User proposes requirement" -> "Read existing materials";
@@ -77,8 +66,7 @@ digraph requirements {
   "Present findings to user" -> "Produce final requirement summary";
   "Produce final requirement summary" -> "User confirms?";
   "User confirms?" -> "Select uncovered dimension" [label="no, gaps found"];
-  "User confirms?" -> "Phase 2 precise classification" [label="yes (P0/P1)"];
-  "Phase 2 precise classification" -> "invoke ecw:writing-plans";
+  "User confirms?" -> "invoke ecw:writing-plans" [label="yes"];
 }
 ```
 
@@ -160,15 +148,19 @@ After synthesis analysis completes and user has made decisions on findings, prod
 [Questions still unresolved]
 ```
 
-**Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (Phase 2, writing-plans) without depending on conversation history.
+**Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (writing-plans) without depending on conversation history.
 
-Wait for user confirmation. After confirmation, the auto-continue hook routes to the next skill based on risk level.
+Wait for user confirmation.
+
+## Skill Handoff
+
+After user confirmation, invoke `ecw:writing-plans`.
 
 ## Error Handling
 
 | Scenario | Handling |
 |----------|---------|
-| Synthesis analysis Agent returns empty or fails | Record `FAILED` in Subagent Ledger → retry once → still fails: skip synthesis, present Q&A findings directly to user with `[Warning: automated synthesis unavailable, manual review recommended]` |
+| Synthesis analysis Agent returns empty or fails | Retry once → still fails: skip synthesis, present Q&A findings directly to user with `[Warning: automated synthesis unavailable, manual review recommended]` |
 | `requirements-summary.md` write failure | Retry once → still fails: output full requirement summary in conversation (ensures downstream skills can still reference it) |
 
 ## Supplementary Files
@@ -178,5 +170,3 @@ Wait for user confirmation. After confirmation, the auto-continue hook routes to
 | `./prompts/questioning-guide.md` | 9-dimension checklist + questioning discipline (rules, red flags, when to stop, termination limits) |
 | `./prompts/synthesis-prompt.md` | Synthesis analysis Agent prompt template + return value validation rules |
 | `./prompts/common-mistakes.md` | Common anti-patterns to avoid during elicitation |
-
-Read `./prompts/common-mistakes.md` before beginning elicitation as a self-check reminder.
