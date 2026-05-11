@@ -93,6 +93,28 @@ For each missing file:
 
 Any missing entry → **needs-fix**: Merge into `permissions.allow` (create the file / array if it doesn't exist, never overwrite existing entries).
 
+### Check H: Project-local ECW Hook Registration
+
+**Check:** Verify the project has ECW runtime hooks registered at project scope.
+
+Two things must both be present:
+
+1. `.claude/ecw/hook-runner.sh` exists and is executable.
+2. `.claude/settings.json` contains ECW hook registrations for all required events:
+   - `SessionStart` → `hook-runner.sh session-start.py`
+   - `Stop` → `hook-runner.sh stop-persist.py`
+   - `PreToolUse` → `hook-runner.sh dispatcher.py`, `hook-runner.sh auto-continue.py`, `hook-runner.sh eval-gate.py`
+   - `PostToolUse` → `hook-runner.sh post-edit-check.py`, `hook-runner.sh auto-continue.py`, `hook-runner.sh knowledge-read-logger.py`
+   - `PreCompact` → `hook-runner.sh pre-compact.py`
+   - `SessionEnd` → `hook-runner.sh session-end.py`
+
+Any missing item → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script installs or refreshes `hook-runner.sh` and merges any missing hook entries into `.claude/settings.json` idempotently without removing unrelated project settings.
+
+Important:
+- Do **not** modify global `~/.claude/settings.json`.
+- Do **not** remove unrelated project-local hooks.
+- `hook-runner.sh` must be refreshed on each upgrade (the script handles this automatically).
+
 ---
 
 ## Step 2: Present & Confirm

@@ -287,7 +287,7 @@ Skip if language is not Java or `--skip-scanners` was passed.
 
 Same as Scaffold Step 6 (6a–6g): Run all Java scan scripts automatically. Since Attach mode preserves existing domain knowledge files, only update common knowledge files (`cross-domain-calls.md`, `shared-resources.md`, `mq-topology.md`, `external-systems.md`) if they contain placeholder rows (`{{...}}`). Skip updating a file if it already has real content (i.e., no `{{...}}` placeholders in the data rows).
 
-Step 6f (inline configuration validation) always runs and its results appear in Step 8's output summary.
+Step 6g (inline configuration validation) always runs and its results appear in Step 8's output summary.
 
 ## Attach Step 8: Output Summary
 
@@ -621,7 +621,15 @@ Then update `.claude/knowledge/shared/external-systems.md`:
 1. **Copy doc-tracker template**: Read `templates/doc-tracker.md` and write to `.claude/ecw/knowledge-ops/doc-tracker.md`.
 2. **Generate Repo Map**: Run `bash {plugin_dir}/scripts/java/generate-repo-map.sh {project_root} .claude/ecw/ecw.yml` to auto-generate the code structure index.
 
-### 6f: Inline configuration validation
+### 6f: Project-local hook registration
+
+Write ECW runtime hooks into the project so they are only active in ECW-integrated projects.
+
+1. **Install hook runner**: Copy `templates/hook-runner.sh` from the plugin directory to `.claude/ecw/hook-runner.sh`. Mark it executable (`chmod +x`). This script dynamically resolves the ECW plugin path at runtime, avoiding `${CLAUDE_PLUGIN_ROOT}` which is only available inside plugin-owned hooks.
+
+2. **Merge settings.json**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script idempotently merges ECW `permissions.allow` entries and `hooks` registrations into `.claude/settings.json`, preserving any unrelated project-local settings. If the file does not exist, it is created from `templates/settings.ecw.json`.
+
+### 6g: Inline configuration validation
 
 After all files are generated, perform key validation checks inline (a subset of `/ecw-validate-config` — covers immediate init gaps but not template sync or domain-registry field completeness) and include results in the output summary. Do not ask the user to run a separate command.
 
