@@ -61,9 +61,9 @@ Priority: Start with `domain-registry.md` and `ecw-path-mappings.md`, then popul
 **Symptom**: Marking a task as complete does not trigger the verification hook.
 
 **Diagnosis**:
-1. Check `hooks/hooks.json` is valid JSON: `python3 -c "import json; json.load(open('hooks/hooks.json'))"`
+1. Check `.claude/settings.json` exists and contains `PreToolUse` → `hook-runner.sh dispatcher.py` entry. If missing, run `/ecw-upgrade` to repair.
 2. The hook triggers on `TaskUpdate` with `status=completed` only — other TaskUpdate calls are ignored
-3. Verify the plugin is installed and enabled (hook paths use `${CLAUDE_PLUGIN_ROOT}`)
+3. Verify `.claude/ecw/hook-runner.sh` exists and is executable (`ls -l .claude/ecw/hook-runner.sh`)
 
 ### "Broken reference" blocks completion
 
