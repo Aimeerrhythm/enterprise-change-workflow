@@ -115,38 +115,7 @@ After Agent returns:
 
 ## Output: Requirement Summary
 
-After synthesis analysis completes and user has made decisions on findings, produce the final summary:
-
-```markdown
-## Requirement Summary: [Title]
-
-### Problem Statement
-[1-2 sentences on what problem this solves]
-
-### Scope
-- In scope: [list]
-- Out of scope: [list]
-- Assumptions: [list]
-
-### Detailed Requirements
-[Organized by functional area, each item with clear acceptance criteria]
-
-### Data Changes
-[New/modified entities, fields, states]
-
-### Workflow
-[Step-by-step process with decision points]
-
-### Edge Cases & Error Handling
-[Each scenario with expected behavior]
-
-### Analysis Findings
-- Critical/important findings integrated into corresponding sections above
-- User decisions on open questions: [list each]
-
-### Open Questions
-[Questions still unresolved]
-```
+After synthesis analysis completes and user has made decisions on findings, produce the final summary. Schema: `templates/artifact-schemas.md` → `requirements-summary.md`.
 
 **Checkpoint**: After producing the requirement summary above, write it to `.claude/ecw/session-data/{workflow-id}/requirements-summary.md` using the Write tool. This ensures the summary survives context compaction and is available for downstream skills (writing-plans) without depending on conversation history.
 
