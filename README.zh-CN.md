@@ -264,7 +264,7 @@ bash <plugin-path>/scripts/java/scan-mq-topology.sh       <project_root>
 <details>
 <summary>Hooks（6 个事件点，Dispatcher 架构）</summary>
 
-ECW 使用统一 Dispatcher 模式。`hooks.json` 注册 6 个事件点：
+ECW 使用统一 Dispatcher 模式。Hooks **按项目注册**——由 `scripts/merge-settings.py` 写入各项目的 `.claude/settings.json`，而非全局注册。这确保 hooks 仅在接入 ECW 的项目中生效。`hook-runner.sh` 代理脚本在运行时动态解析插件路径。6 个事件点：
 
 | 事件 | 文件 | 说明 |
 |------|------|------|
@@ -312,7 +312,7 @@ enterprise-change-workflow/
 ├── agents/                      # 7 个 agent 定义
 ├── commands/                    # 3 个斜杠命令
 ├── hooks/                       # Hook 架构（6 个事件点，18 个 Python 脚本）
-│   ├── hooks.json               # Hook 注册
+│   ├── hooks.json               # 空文件 — hooks 按项目注册，非全局
 │   ├── dispatcher.py            # PreToolUse 统一调度器
 │   ├── auto-continue.py         # Skill 间自动衔接（PreToolUse + PostToolUse）
 │   ├── verify-completion.py     # 4 项硬拦截 + 1 项软提醒

@@ -160,6 +160,29 @@ For each domain in the domain registry, check its knowledge directory:
 
 ---
 
+## Step 6d: Project-local Hook Registration
+
+Read `.claude/settings.json` and `.claude/ecw/hook-runner.sh`.
+
+Validate that both artifacts exist and that `settings.json` contains ECW hook registrations for all required events:
+
+- `SessionStart` → `hook-runner.sh session-start.py`
+- `Stop` → `hook-runner.sh stop-persist.py`
+- `PreToolUse` → `hook-runner.sh dispatcher.py`, `hook-runner.sh auto-continue.py`, `hook-runner.sh eval-gate.py`
+- `PostToolUse` → `hook-runner.sh post-edit-check.py`, `hook-runner.sh auto-continue.py`, `hook-runner.sh knowledge-read-logger.py`
+- `PreCompact` → `hook-runner.sh pre-compact.py`
+- `SessionEnd` → `hook-runner.sh session-end.py`
+
+Validation rules:
+- `.claude/settings.json` missing → **fail**
+- `.claude/ecw/hook-runner.sh` missing → **fail**
+- Any required event missing from `settings.json` → **fail**
+- `settings.json` contains hooks referencing `${CLAUDE_PLUGIN_ROOT}` → **fail** (old architecture, must re-run `/ecw-upgrade`)
+
+Fix: run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}` to install missing entries idempotently.
+
+---
+
 ## Step 7: Output Report
 
 Output structured validation report:
@@ -176,6 +199,7 @@ Output structured validation report:
 | path-mappings.md | {pass/warn/fail} |
 | Template structure sync | {pass/warn/fail} |
 | Knowledge file structure | {pass/warn/fail} |
+| Project-local hooks | {pass/warn/fail} |
 
 ### Issue List
 

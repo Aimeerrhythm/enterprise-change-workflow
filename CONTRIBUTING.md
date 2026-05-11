@@ -8,7 +8,7 @@ Conventions and processes for all contribution types.
 skills/           — SKILL.md prompt files (one directory per skill)
 agents/           — Standalone subagent definition files
 commands/         — User-invocable command definitions (/ecw-init, etc.)
-hooks/            — Python hook scripts + hooks.json registration
+hooks/            — Python hook scripts (dispatcher architecture; no global registration)
 templates/        — Configuration and knowledge file templates
   └── rules/      — Engineering rule templates (common/ + language-specific/)
 docs/             — Architecture spec and component reference
@@ -40,7 +40,7 @@ tests/
 3. **Output**: JSON to stdout — `{"result": "continue"}`, `{"result": "continue", "systemMessage": "..."}`, or `{"result": "block", "reason": "..."}`
 4. **Error handling**: See `docs/component-design-patterns.md` §7. Hooks must never block the workflow due to their own bugs.
 5. **Logging**: stderr only (`sys.stderr.write`), never stdout (reserved for JSON output)
-6. **Registration**: `hooks/hooks.json` under the appropriate event type
+6. **Registration**: hooks are registered project-level via `scripts/merge-settings.py` into `.claude/settings.json`. `hooks/hooks.json` is intentionally empty — do not add entries there.
 7. **Testing**: Create `tests/static/test_{hook_name}.py`
 
 ### Adding Engineering Rules

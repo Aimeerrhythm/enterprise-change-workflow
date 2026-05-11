@@ -264,7 +264,7 @@ bash <plugin-path>/scripts/java/scan-mq-topology.sh       <project_root>
 <details>
 <summary>Hooks (6 event points, dispatcher architecture)</summary>
 
-ECW uses a unified dispatcher pattern. `hooks.json` registers 6 event points:
+ECW uses a unified dispatcher pattern. Hooks are registered **per-project** via `scripts/merge-settings.py` into each project's `.claude/settings.json` — not globally. This ensures hooks only activate in ECW-integrated projects. The `hook-runner.sh` proxy resolves the plugin path at runtime. 6 event points:
 
 | Event | File | Description |
 |-------|------|-------------|
@@ -311,7 +311,7 @@ enterprise-change-workflow/
 ├── agents/                      # 7 agent definitions
 ├── commands/                    # 3 slash commands
 ├── hooks/                       # Hook architecture (6 event points, 18 Python scripts)
-│   ├── hooks.json               # Hook registration
+│   ├── hooks.json               # Empty — hooks registered per-project, not globally
 │   ├── dispatcher.py            # PreToolUse unified dispatcher
 │   ├── auto-continue.py         # Skill-to-skill auto chaining (PreToolUse + PostToolUse)
 │   ├── verify-completion.py     # 4 hard blocks + 1 soft reminder

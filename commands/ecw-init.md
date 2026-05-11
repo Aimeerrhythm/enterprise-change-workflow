@@ -375,7 +375,7 @@ Same as Attach Step 6, using user-specified paths.
 
 ## Manual Step 7-8: Scanners + Summary
 
-Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)". Step 6f (inline validation) always runs regardless of mode.
+Same as Attach Step 7-8. Summary title: "ECW Initialization Complete (Manual Mode)". Step 6g (inline validation) always runs regardless of mode.
 
 ---
 
@@ -665,6 +665,8 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 | `change-risk-classification.md` | Removed — risk assessment now uses domain docs |
 | `.claude/ecw/routing/path-mappings.md` | Created |
 | `.claude/ecw/README.md` | Created |
+| `.claude/ecw/hook-runner.sh` | Created — runtime ECW plugin resolver |
+| `.claude/settings.json` | Created / Updated — project-scoped ECW hook registrations |
 
 #### Knowledge Files — Common (.claude/knowledge/shared/)
 | File | Status |
