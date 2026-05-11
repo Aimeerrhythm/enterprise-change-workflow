@@ -84,14 +84,14 @@ For each missing file:
 - `.claude/ecw/knowledge-ops/doc-tracker.md` → **needs-fix**: `mkdir -p .claude/ecw/knowledge-ops` then copy from plugin `templates/doc-tracker.md`.
 - `.claude/ecw/README.md` / `.claude/ecw/knowledge-ops/README.md` → **needs-fix**: create directory guidance files if absent.
 
-### Check G: Write Permissions in settings.local.json
+### Check G: Write Permissions
 
-**Check:** Read `.claude/settings.local.json`. Verify `permissions.allow` array contains all three ECW write entries:
+**Check:** ECW requires three write permissions to function without interactive prompts. Look for them in **either** `.claude/settings.json` or `.claude/settings.local.json` (pass if found in either file):
 - `Write(.claude/ecw/**)`
 - `Write(.claude/knowledge/**)`
 - `Write(.claude/plans/**)`
 
-Any missing entry → **needs-fix**: Merge into `permissions.allow` (create the file / array if it doesn't exist, never overwrite existing entries).
+Any missing entry → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}` — it merges permissions into `.claude/settings.json` alongside the ECW hook registrations.
 
 ### Check H: Project-local ECW Hook Registration
 

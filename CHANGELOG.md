@@ -4,6 +4,34 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+# 更新日志
+
+本文件记录项目的所有重要变更。
+
+格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
+
+## [1.5.4] - 2026-05-11
+
+### 新增
+
+- **templates/hook-runner.sh**：项目级 hook 代理脚本，运行时动态解析 ECW plugin 最新版本路径，替代 `${CLAUDE_PLUGIN_ROOT}`（该变量在 project-level hooks 中值为空）
+- **templates/settings.ecw.json**：项目级 hook 注册模板，所有命令使用 `hook-runner.sh` 语法
+- **scripts/merge-settings.py**：幂等合并 ECW 权限与 hook 注册到 `.claude/settings.json`，同时安装/更新 `hook-runner.sh`，不覆盖非 ECW 条目
+
+### 改进
+
+- **hooks/hooks.json**：清空全局 hook 注册，hooks 改为按项目注册，仅在接入 ECW 的项目中生效
+- **ecw-init Step 6f**：新增项目本地 hook 注册步骤，写入 `hook-runner.sh` 并调用 `merge-settings.py` 合并 `.claude/settings.json`
+- **ecw-upgrade Check G**：扩展为检查 `settings.json` 和 `settings.local.json` 两处，`merge-settings.py` 自动修复
+- **ecw-upgrade Check H**：新增 hook 注册完整性检查，缺失时调用 `merge-settings.py` 修复
+- **ecw-validate-config Step 6d**：新增项目级 hook 注册完整性校验，含 `${CLAUDE_PLUGIN_ROOT}` 旧架构检测
+
+## [1.5.3] - 2026-05-09
+
+### 修复
+
+- **Revert 1.5.2**：撤销 `settings.local.json` 项目本地 hook 管理方案，原因：`${CLAUDE_PLUGIN_ROOT}` 在 project-level hooks 中值为空，导致所有 hook 命令路径解析失败
+
 ## [1.5.2] - 2026-05-09
 
 ### 新增
