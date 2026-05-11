@@ -1,7 +1,6 @@
 """Unit tests for hooks/session-end.py
 
 Tests the SessionEnd hook's cleanup behavior:
-- Marks session-state.json status as "ended" with timestamp
 - Cleans up transient state files
 - Graceful handling when no state exists
 """
@@ -33,44 +32,6 @@ def session_end():
 
 
 # ══════════════════════════════════════════════════════
-# Mark Session Ended
-# ══════════════════════════════════════════════════════
-
-_STATE_JSON = json.dumps({
-    "risk_level": "P1",
-    "current_phase": "phase2-complete",
-})
-
-
-class TestMarkSessionEnded:
-    """Tests for _mark_session_ended function."""
-
-    def test_writes_session_status(self, session_end, tmp_path):
-        """session_status field is written to session-state.json."""
-        state_file = tmp_path / "session-state.json"
-        state_file.write_text(_STATE_JSON)
-
-        session_end._mark_session_ended(str(state_file))
-        data = json.loads(state_file.read_text())
-        assert "session_status" in data
-        assert "ended" in data["session_status"]
-
-    def test_existing_fields_preserved(self, session_end, tmp_path):
-        """Existing fields (risk_level, etc.) are preserved after update."""
-        state_file = tmp_path / "session-state.json"
-        state_file.write_text(_STATE_JSON)
-
-        session_end._mark_session_ended(str(state_file))
-        data = json.loads(state_file.read_text())
-        assert data["risk_level"] == "P1"
-        assert data["current_phase"] == "phase2-complete"
-
-    def test_file_unreadable_no_exception(self, session_end, tmp_path):
-        """Unreadable file path does not raise an exception."""
-        session_end._mark_session_ended(str(tmp_path / "nonexistent.json"))  # Should not raise
-
-
-# ══════════════════════════════════════════════════════
 # State File Cleanup
 # ══════════════════════════════════════════════════════
 
@@ -97,13 +58,11 @@ class TestSessionEndMain:
                 output = json.loads(mock_print.call_args[0][0])
                 assert output["result"] == "continue"
 
-    def test_marks_state_and_cleans_up(self, session_end, tmp_path):
-        """Full flow: marks ended in JSON and cleans transient state."""
+    def test_cleans_up_state(self, session_end, tmp_path):
+        """Full flow: cleans transient state and returns continue."""
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "test-wf"
         state_dir.mkdir(parents=True)
-        state_file = state_dir / "session-state.json"
-        state_file.write_text(_STATE_JSON)
-        # ecw.yml required for main() to proceed
+        (state_dir / "session-state.json").write_text('{"risk_level": "P1"}')
         ecw_dir = tmp_path / ".claude" / "ecw"
         (ecw_dir / "ecw.yml").write_text("project:\n  name: test\n")
 
@@ -113,8 +72,6 @@ class TestSessionEndMain:
                 session_end.main()
                 output = json.loads(mock_print.call_args[0][0])
                 assert output["result"] == "continue"
-
-        assert "ended" in json.loads(state_file.read_text()).get("session_status", "")
 
     def test_empty_cwd_returns_continue(self, session_end):
         input_data = {"cwd": ""}
