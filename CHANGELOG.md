@@ -10,6 +10,13 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.5] - 2026-05-11
+
+### 修复
+
+- **scripts/merge-settings.py**：目标文件从 `settings.json` 改为 `settings.local.json`（gitignored），确保 hook 注册仅对安装了 ECW plugin 的开发者生效，不污染团队共享的 git 配置
+- **ecw-init / ecw-upgrade / ecw-validate-config**：同步更新所有 `settings.json` 引用为 `settings.local.json`
+
 ## [1.5.4] - 2026-05-11
 
 ### 新增

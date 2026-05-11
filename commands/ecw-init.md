@@ -627,7 +627,7 @@ Write ECW runtime hooks into the project so they are only active in ECW-integrat
 
 1. **Install hook runner**: Copy `templates/hook-runner.sh` from the plugin directory to `.claude/ecw/hook-runner.sh`. Mark it executable (`chmod +x`). This script dynamically resolves the ECW plugin path at runtime, avoiding `${CLAUDE_PLUGIN_ROOT}` which is only available inside plugin-owned hooks.
 
-2. **Merge settings.json**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script idempotently merges ECW `permissions.allow` entries and `hooks` registrations into `.claude/settings.json`, preserving any unrelated project-local settings. If the file does not exist, it is created from `templates/settings.ecw.json`.
+2. **Merge settings.local.json**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script idempotently merges ECW `permissions.allow` entries and `hooks` registrations into `.claude/settings.local.json` (gitignored — only activates for developers with ECW installed), preserving any unrelated project-local settings. If the file does not exist, it is created from `templates/settings.ecw.json`.
 
 ### 6g: Inline configuration validation
 
@@ -666,7 +666,7 @@ Output the validation results as part of the Step 7 summary (see "Validation Res
 | `.claude/ecw/routing/path-mappings.md` | Created |
 | `.claude/ecw/README.md` | Created |
 | `.claude/ecw/hook-runner.sh` | Created — runtime ECW plugin resolver |
-| `.claude/settings.json` | Created / Updated — project-scoped ECW hook registrations |
+| `.claude/settings.local.json` | Created / Updated — project-scoped ECW hook registrations (gitignored) |
 
 #### Knowledge Files — Common (.claude/knowledge/shared/)
 | File | Status |

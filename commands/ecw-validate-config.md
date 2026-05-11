@@ -162,9 +162,9 @@ For each domain in the domain registry, check its knowledge directory:
 
 ## Step 6d: Project-local Hook Registration
 
-Read `.claude/settings.json` and `.claude/ecw/hook-runner.sh`.
+Read `.claude/settings.local.json` and `.claude/ecw/hook-runner.sh`.
 
-Validate that both artifacts exist and that `settings.json` contains ECW hook registrations for all required events:
+Validate that both artifacts exist and that `settings.local.json` contains ECW hook registrations for all required events:
 
 - `SessionStart` → `hook-runner.sh session-start.py`
 - `Stop` → `hook-runner.sh stop-persist.py`
@@ -174,10 +174,10 @@ Validate that both artifacts exist and that `settings.json` contains ECW hook re
 - `SessionEnd` → `hook-runner.sh session-end.py`
 
 Validation rules:
-- `.claude/settings.json` missing → **fail**
+- `.claude/settings.local.json` missing → **fail**
 - `.claude/ecw/hook-runner.sh` missing → **fail**
-- Any required event missing from `settings.json` → **fail**
-- `settings.json` contains hooks referencing `${CLAUDE_PLUGIN_ROOT}` → **fail** (old architecture, must re-run `/ecw-upgrade`)
+- Any required event missing from `settings.local.json` → **fail**
+- `settings.local.json` contains hooks referencing `${CLAUDE_PLUGIN_ROOT}` → **fail** (old architecture, must re-run `/ecw-upgrade`)
 
 Fix: run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}` to install missing entries idempotently.
 

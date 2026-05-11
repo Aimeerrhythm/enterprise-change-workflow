@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Merge ECW project settings into .claude/settings.json.
+"""Merge ECW project settings into .claude/settings.local.json.
 
 Usage:
   python3 scripts/merge-settings.py <project_root> [<template_path>]
 
 Behavior:
-- Creates .claude/settings.json from template if missing
+- Creates .claude/settings.local.json from template if missing
 - Merges permissions.allow by set union, preserving existing order
 - Merges hooks by event + exact command match, preserving unrelated hooks
 - Copies hook-runner.sh to .claude/ecw/hook-runner.sh if missing or outdated
 - Fails with non-zero exit code if existing JSON is invalid
+
+Target is settings.local.json (gitignored) so hooks only activate for
+developers who have the ECW plugin installed, not all team members.
 """
 
 import json
@@ -92,7 +95,7 @@ def main(argv):
     plugin_dir = os.path.dirname(script_dir)
     default_template = os.path.join(plugin_dir, "templates", "settings.ecw.json")
     template_path = os.path.abspath(argv[2]) if len(argv) == 3 else default_template
-    target_path = os.path.join(project_root, ".claude", "settings.json")
+    target_path = os.path.join(project_root, ".claude", "settings.local.json")
 
     try:
         template = _load_json(template_path)

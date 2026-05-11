@@ -86,12 +86,12 @@ For each missing file:
 
 ### Check G: Write Permissions
 
-**Check:** ECW requires three write permissions to function without interactive prompts. Look for them in **either** `.claude/settings.json` or `.claude/settings.local.json` (pass if found in either file):
+**Check:** ECW requires three write permissions to function without interactive prompts. Look for them in **either** `.claude/settings.local.json` or `.claude/settings.json` (pass if found in either file):
 - `Write(.claude/ecw/**)`
 - `Write(.claude/knowledge/**)`
 - `Write(.claude/plans/**)`
 
-Any missing entry → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}` — it merges permissions into `.claude/settings.json` alongside the ECW hook registrations.
+Any missing entry → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}` — it merges permissions into `.claude/settings.local.json` alongside the ECW hook registrations.
 
 ### Check H: Project-local ECW Hook Registration
 
@@ -108,7 +108,7 @@ Two things must both be present:
    - `PreCompact` → `hook-runner.sh pre-compact.py`
    - `SessionEnd` → `hook-runner.sh session-end.py`
 
-Any missing item → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script installs or refreshes `hook-runner.sh` and merges any missing hook entries into `.claude/settings.json` idempotently without removing unrelated project settings.
+Any missing item → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-settings.py {project_root}`. The script installs or refreshes `hook-runner.sh` and merges any missing hook entries into `.claude/settings.local.json` idempotently without removing unrelated project settings.
 
 Important:
 - Do **not** modify global `~/.claude/settings.json`.

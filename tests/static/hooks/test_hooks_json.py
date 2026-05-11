@@ -4,7 +4,7 @@ Architecture: hooks are no longer registered globally in hooks/hooks.json.
 Instead, they are registered per-project via:
   - templates/settings.ecw.json  — hook command template (uses hook-runner.sh)
   - templates/hook-runner.sh     — runtime resolver for ECW plugin path
-  - scripts/merge-settings.py    — idempotent merge into .claude/settings.json
+  - scripts/merge-settings.py    — idempotent merge into .claude/settings.local.json
 
 hooks/hooks.json must be empty (no global registration).
 """
@@ -211,7 +211,7 @@ class TestMergeSettings:
         assert MERGE_SCRIPT.exists(), "scripts/merge-settings.py must exist"
 
     def test_merge_creates_settings_json(self, tmp_path):
-        """merge-settings.py must create .claude/settings.json from template."""
+        """merge-settings.py must create .claude/settings.local.json from template."""
         result = subprocess.run(
             [sys.executable, str(MERGE_SCRIPT), str(tmp_path)],
             capture_output=True,
@@ -220,7 +220,7 @@ class TestMergeSettings:
         assert result.returncode == 0, f"merge-settings.py failed: {result.stderr}"
         out = json.loads(result.stdout)
         assert out["status"] == "created"
-        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path = tmp_path / ".claude" / "settings.local.json"
         assert settings_path.exists()
         data = json.loads(settings_path.read_text())
         assert "hooks" in data
@@ -248,11 +248,11 @@ class TestMergeSettings:
                 "UserPromptSubmit": [{"matcher": "*", "hooks": [{"type": "command", "command": "custom.sh"}]}]
             }
         }
-        (settings_dir / "settings.json").write_text(json.dumps(existing), encoding="utf-8")
+        (settings_dir / "settings.local.json").write_text(json.dumps(existing), encoding="utf-8")
 
         subprocess.run([sys.executable, str(MERGE_SCRIPT), str(tmp_path)], capture_output=True)
 
-        merged = json.loads((settings_dir / "settings.json").read_text())
+        merged = json.loads((settings_dir / "settings.local.json").read_text())
         assert "Bash(custom-cmd:*)" in merged["permissions"]["allow"]
         assert "UserPromptSubmit" in merged["hooks"]
 
