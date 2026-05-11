@@ -31,132 +31,38 @@ Read `.claude/ecw/session-data/{workflow-id}/session-state.json` for risk level.
 |-----------|---------------------|----------------------------|-----------|
 | **P0** | Mandatory | Mandatory (simplified inline) | ecw:impl-verify (full 4 Rounds) |
 | **P1** | Mandatory | **Skip** (impl-verify Round 4 covers this) | ecw:impl-verify (full 4 Rounds) |
-| **P2** | Not applicable (P2 doesn't use orchestration) | — | ecw:impl-verify |
 
 **Why P0 keeps code quality review:** Error cost at P0 is extreme. Catching issues per-task is cheaper than finding them across the full implementation.
 
-**Why P1 skips code quality review:** impl-verify Round 4 (engineering standards) provides the same checks with full implementation context, avoiding duplicate work.
+## Process Overview
 
-## The Process
+For a visual overview, see `./process-diagram.md`.
 
-For a visual overview of the full process (Setup → Per-Layer Cycle → impl-verify), see `./process-diagram.md`.
-
-## Setup
+### Setup
 
 1. **Read plan file once** — extract all tasks with full text
-2. **Build dependency graph** — see Dependency Graph Construction below
-3. **Create TaskCreate list** — one Task per plan task, with dependency chain
-4. **Display execution layers** — show user the parallel execution plan before starting
-5. **Pre-check** — read ecw.yml, run compile + test commands once to establish baseline. Timeout 120s. If pre-check fails: attempt auto-fix → retry → still fails: notify user and continue (don't block)
-6. **Note context** — architectural decisions, domain constraints, file structure
+2. **Pre-flight check** — Read `./dep-graph-usage.md` § Pre-flight Check. Controlled by ecw.yml `impl_orchestration.pre_check` (default: true). Timeout 120s compile / 600s test. On failure: auto-fix → retry → ask user
+3. **Build dependency graph** — Read `./dep-graph-usage.md` § Steps 1-3. Extract task metadata → call `dep_graph.py` → get parallel layers
+4. **Create Tasks** — one TaskCreate per plan task, with dependency chain
+5. **Display execution layers** — show user the parallel execution plan before starting
 
-## Pre-flight Check
+### Execution Mode
 
-Before dispatching the first Task, run a build/test pre-flight to catch pre-existing failures early. This prevents wasting multiple Task dispatches before discovering a broken baseline.
+**Default: parallel** — max 3 concurrent implementer subagents (configurable: ecw.yml `impl_orchestration.max_parallelism`). Layers with more tasks than max are split into sub-layers.
 
-**Controlled by** `impl_orchestration.pre_check` in ecw.yml (default: `true`). Set to `false` to skip.
+**Serial fallback** when: dependency graph is a single chain, plan has ≤ 3 tasks, user requests serial, or ecw.yml `impl_orchestration.parallel: false`. Serial still dispatches implementer subagents (one at a time, no worktree) — coordinator NEVER writes implementation code itself.
 
-**Steps:**
+## Layer Execution (5 Phases)
 
-1. Read ecw.yml to determine project type:
-   - Java (`pom.xml` exists): run `mvn compile -q -T 1C` and `mvn test -q -T 1C`
-   - Other project types: skip (no universal pre-flight command)
-2. **Timeout**: 120s for compile, 600s (10 minutes) for tests
-3. **On failure**:
-   - Attempt one auto-fix pass (read error output, fix obvious issues like missing imports or syntax errors)
-   - Re-run the failed check
-   - If still failing: notify user with the error summary via AskUserQuestion — "Pre-flight check failed: {summary}. Continue anyway or fix first?" — then proceed based on user choice
-4. **Record result** in session-state.json: `Pre-flight: PASS` or `Pre-flight: FAIL (continued)`
-5. On success or user-approved continue: proceed to Dependency Graph Construction
-
-## Dependency Graph Construction
-
-Before dispatching any task, build a dependency graph to determine which tasks can run in parallel.
-
-### Step 1: Extract Task Metadata from Plan (LLM)
-
-For each `## Task N:` heading in the plan, extract:
-- `id` (int): task number
-- `files` (list of strings): files to create or modify — from "Files:" line or inferred from task description
-- `depends_on` (list of ints): explicit dependency IDs — from "depends on Task N" / "after Task N" / "requires output from Task N" phrases
-
-Plan task ordering often implies sequence — but only include in `depends_on` when explicitly stated or logically required (e.g., Task creates a class that another Task extends).
-
-Heuristics for `files`:
-- Plan usually lists "Files to create/modify" per task
-- Same module + same class/file → include both tasks
-- Same configuration file → include both tasks
-- Uncertain → include the file (safe default — the script will serialize conflicting tasks)
-
-### Step 2: Call dep_graph.py (Deterministic)
-
-Format the extracted task list as JSON and run:
-
-```bash
-echo '[{"id": 1, "files": ["A.java"], "depends_on": []}, {"id": 2, "files": ["B.java", "Shared.java"], "depends_on": [1]}, {"id": 3, "files": ["C.java", "Shared.java"], "depends_on": []}]' | python3 "${CLAUDE_PLUGIN_ROOT}/hooks/dep_graph.py"
-```
-
-The script handles:
-- **File conflict detection**: tasks touching the same file are automatically serialized (lower ID first)
-- **Topological sort**: Kahn's algorithm groups tasks into parallel execution layers
-- **Cycle detection**: reports involved tasks if a cycle exists
-
-Output:
-```json
-{"layers": [[1, 3], [2]], "conflicts": [{"tasks": [2, 3], "file": "Shared.java"}]}
-```
-
-If the output contains an `"error"` field (cycle detected), report the error to the user and ask how to resolve (remove a dependency, merge tasks, or restructure).
-
-### Step 3: Display Execution Layers
-
-Use the returned `layers` to display the execution plan to the user:
-
-```
-Execution Layers (max parallelism: 3):
-  Layer 0: Task 1                       [1 task, serial]
-  Layer 1: Task 2 | Task 4 | Task 6    [3 parallel]
-  Layer 2: Task 3 | Task 5 | Task 7    [3 parallel]
-  Layer 3: Task 8 | Task 9 | Task 10   [3 parallel]
-  Layer 4: Task 12 | Task 13           [2 parallel]
-
-  Estimated: 5 layers (vs 13 serial tasks)
-```
-
-If `conflicts` is non-empty, also display detected file conflicts so the user can verify the file-level serialization is correct.
-
-### Max Parallelism
-
-Default: **3** concurrent implementer subagents. Configurable via ecw.yml `impl_orchestration.max_parallelism`.
-
-If a layer has more tasks than max parallelism, split into sub-layers (e.g., 5 tasks with max 3 → sub-layer A: 3 tasks, sub-layer B: 2 tasks).
-
-### Serial Fallback
-
-Fall back to fully serial execution (no worktree isolation) when:
-- Dependency graph is a single chain (all tasks mutually dependent)
-- Plan has ≤ 3 tasks (parallelism overhead exceeds benefit)
-- User explicitly requests serial execution
-- ecw.yml sets `impl_orchestration.parallel: false`
-
-**Serial ≠ coordinator-direct.** Serial mode still dispatches implementer subagents — just one at a time without worktree isolation. The coordinator NEVER writes implementation code itself. This ensures ecw.yml `models` config is respected and hook enforcement (gateguard, verify-completion) applies consistently.
-
-Announce: "Tasks are interdependent / few enough — using serial execution (subagent dispatch, no worktree)."
-
-## Layer Execution
-
-Execute one layer at a time. Each layer follows a 5-phase cycle.
+Execute one layer at a time.
 
 ### Phase 1: Parallel Implementation (worktree-isolated)
 
-Read `./prompts/implementer-prompt-guide.md` for prompt construction guidelines, model selection, and timeout rules before dispatching.
+Read `./prompts/implementer-prompt-guide.md` for prompt construction, model selection, and timeout rules.
 
-Dispatch ALL tasks in the current layer simultaneously. Each implementer runs in an isolated git worktree via the Agent tool's `isolation: "worktree"` parameter.
-
-**Critical**: ALL Agent calls for the same layer MUST be in a **single message** to achieve true parallel execution. Sequential calls defeat the purpose.
+Dispatch ALL tasks in the current layer simultaneously via Agent tool with `isolation: "worktree"`. **All Agent calls for the same layer MUST be in a single message.**
 
 ```
-# Example: Layer 1 with 3 tasks — single message, 3 Agent calls
 Agent(
   description: "impl Task 2: Add inventory lock DTO",
   subagent_type: "ecw:implementer",
@@ -164,153 +70,68 @@ Agent(
   model: "sonnet",
   prompt: "<full task prompt with context>"
 )
-Agent(
-  description: "impl Task 4: Add MQ consumer config",
-  subagent_type: "ecw:implementer",
-  isolation: "worktree",
-  model: "haiku",
-  prompt: "<full task prompt with context>"
-)
-Agent(
-  description: "impl Task 6: Add lock service interface",
-  subagent_type: "ecw:implementer",
-  isolation: "worktree",
-  model: "sonnet",
-  prompt: "<full task prompt with context>"
-)
 ```
 
-Each implementer:
-- Works in its own worktree (isolated filesystem)
-- Commits changes to its worktree branch
-- Returns: status, changed files list, commit summary
+Each implementer works in its own worktree, commits changes, writes `task-result.json`.
 
-**Single-task layer optimization**: When a layer has only 1 task, skip worktree isolation — dispatch directly on the current branch. Avoids unnecessary merge overhead.
+**Single-task layer**: skip worktree isolation — dispatch directly on current branch.
 
 ### Phase 2: Sequential Merge
 
-After ALL implementers in the layer complete, for each worktree branch **in sequence**:
+After ALL implementers complete, for each worktree branch in sequence:
 
-**Step 1 — Read result file (BEFORE merge):**
+1. Read `{worktree_path}/.claude/ecw/task-result.json` — see `./task-result-schema.md` for schema and fallback protocol
+2. `git merge <worktree-branch> --no-edit` (merge largest changeset first)
 
-```bash
-cat {worktree_path}/.claude/ecw/task-result.json
-```
+| Conflict type | Action |
+|---------------|--------|
+| Clean merge | Continue |
+| Test files only | Auto-resolve: keep both, fix imports |
+| Source files | Attempt auto-resolve → fails: move task to overflow serial layer |
+| Merge fails | `git merge --abort`, move to overflow layer |
 
-Read `./task-result-schema.md` for the full schema, missing-file fallback, and coordinator protocol. This is the authoritative source for the Subagent Ledger; the Agent tool result text is secondary.
-
-**Step 2 — Merge the branch:**
-
-```bash
-git merge <worktree-branch> --no-edit
-```
-
-**Merge order**: Merge largest changeset first (more context for subsequent merges).
-
-**Conflict handling:**
-
-| Scenario | Action |
-|----------|--------|
-| Clean merge | Continue to next branch |
-| Conflict in test files only | Auto-resolve: keep both versions, fix imports/duplicates |
-| Conflict in source files | This should be rare (file-conflict detection prevents it). Attempt auto-resolve → if fails: mark task for re-execution in a later serial pass |
-| Merge fails completely | `git merge --abort`, move the failed task to an overflow serial layer at the end |
-
-After all merges succeed, run a quick compile check (if configured in ecw.yml) to verify no integration issues.
+After all merges: run compile check if ecw.yml `impl_orchestration.merge_compile_check: true`.
 
 ### Phase 3: Parallel Spec Review
 
-Dispatch spec reviewers for ALL layer tasks simultaneously. Reviews are read-only — no worktree needed:
+Dispatch spec reviewers for ALL layer tasks simultaneously (single message, `subagent_type: "ecw:spec-reviewer"`, `model: "sonnet"`, timeout 120s). Same parallel dispatch pattern as Phase 1.
 
-```
-# All spec reviews in a single message
-Agent(description: "spec-review Task 2", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
-Agent(description: "spec-review Task 4", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
-Agent(description: "spec-review Task 6", subagent_type: "ecw:spec-reviewer", model: "sonnet", prompt: "...")
-```
-
-The reviewer reads actual code and verifies:
-- Missing requirements
-- Extra/unneeded work
-- Misunderstandings
-
-If issues found for any task:
-1. Dispatch a **repair implementer subagent** (same `subagent_type: "ecw:implementer"`, same model as original implementer) with: the spec review findings + task context + "fix these issues only, do not re-implement". The coordinator MUST NOT edit source code directly — this bypasses ecw.yml models config and gateguard hook.
-2. Re-review only the repaired tasks (dispatch spec reviewer again)
-3. Max 3 rounds per task (see Loop Safety Controls)
-
-**Spec reviewer timeout**: 120s. If reviewer times out, coordinator performs simplified spec check inline.
+If issues found: dispatch repair implementer → re-review. Max 3 rounds per task (see `./loop-safety-reference.md`).
 
 ### Phase 4: Code Quality Review (P0 Only)
 
-Read `./prompts/code-quality-review-template.md` for the P0 code quality review dispatch template and criteria.
+Read `./prompts/code-quality-review-template.md` for dispatch template. Max 2 rounds per task.
 
 ### Phase 5: Complete Layer
 
 - Mark all layer tasks complete via TaskUpdate
-- Record layer timing: `Layer {N}: {task_count} tasks, {elapsed}s (parallel), merge {merge_time}s`
+- Record layer timing
 - Proceed to next layer
-
-```yaml
-- phase: "Task 2: Add DTO"
-  agent: implementer
-  type: general
-  model: sonnet
-  scale: medium
-  started: "14:30"
-  duration: "~45s"
-- phase: "Task 2: Add DTO"
-  agent: spec-reviewer
-  type: general
-  model: sonnet
-  scale: small
-  started: "14:31"
-  duration: "~20s"
-- phase: "Task 4: MQ config"
-  agent: implementer
-  type: general
-  model: haiku
-  scale: small
-  started: "14:30"
-  duration: "~30s"
-- phase: "Task 4: MQ config"
-  agent: spec-reviewer
-  type: general
-  model: sonnet
-  scale: small
-  started: "14:31"
-  duration: "~18s"
-```
-
-## Loop Safety Controls
-
-Guard against infinite loops and runaway costs. Read `./loop-safety-reference.md` for full rules.
-
-Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-dispatch max 2, global budget 50 dispatches, stall detection at 6 dispatches per task. Exceed any limit → AskUserQuestion escalation.
 
 ## After All Tasks
 
-**Do NOT dispatch a final code reviewer.** ECW uses `ecw:impl-verify` (4-Round multi-dimensional verification) which is more comprehensive.
-
-After all tasks complete, invoke `ecw:impl-verify`. If a pending `ecw:impl-verify` task exists in TaskList, mark it `in_progress` first.
+**Do NOT dispatch a final code reviewer.** Invoke `ecw:impl-verify` (4-Round verification). If a pending impl-verify Task exists, mark it `in_progress` first.
 
 ## Task Merging
 
 If plan has many small tasks, consider merging. See `workflow-routes.yml` `impl_strategy` section for authoritative rules.
 
+## Loop Safety Controls
+
+Read `./loop-safety-reference.md` for full rules. Key limits: spec review max 3 rounds, code quality max 2 rounds, BLOCKED re-dispatch max 2, global budget 50 dispatches, stall detection at 6 dispatches per task.
+
 ## Error Handling
 
 | Scenario | Handling |
 |----------|---------|
-| `task-result.json` missing after worktree merge | Fall back to `git log {worktree-branch}` to infer task result. Write `.claude/ecw/session-data/{wf-id}/task-{N}-aggregation-warning.md`. Mark Ledger entry with `[inferred]`. Continue processing — do not block the layer |
-| Implementer subagent fails or returns empty | Record `FAILED` in Subagent Ledger → retry once with same model → still fails: escalate model (sonnet→opus) → still fails: notify user and mark task BLOCKED |
-| Spec reviewer returns empty or malformed | Retry once → still fails: coordinator performs simplified spec check inline (verify file changes match task requirements) |
-| Code quality reviewer fails (P0 only) | Retry once → still fails: skip code quality review for this task with `[Warning: code quality review unavailable for Task N]`, continue to next task. impl-verify Round 4 will catch quality issues |
-| Implementer returns BLOCKED status | 1. Context problem → provide more context, re-dispatch 2. Task too complex → escalate model 3. Plan issue → AskUserQuestion to discuss with user. Max 2 re-dispatches per task, then escalate to user |
-| Worktree merge conflict (unexpected) | Log as dependency graph miss. `git merge --abort`, move conflicting task to overflow serial layer at end |
-| Multiple implementers fail in same layer | Merge successful ones, move failed ones to retry layer |
-| Post-merge compile failure | Identify which merge introduced the issue (bisect last N merges). Fix inline or re-dispatch implementer for the offending task |
-| Layer fully times out | Terminate remaining agents. Retry timed-out tasks with simplified scope. If still failing, escalate to user |
+| `task-result.json` missing | Fall back to `git log` inference, write aggregation warning, continue |
+| Implementer fails or empty | Retry once → escalate model → still fails: notify user, mark BLOCKED |
+| Spec reviewer fails | Retry once → still fails: coordinator performs simplified spec check inline |
+| Code quality reviewer fails (P0) | Retry once → still fails: skip with warning, impl-verify Round 4 catches issues |
+| Implementer returns BLOCKED | Provide context → escalate model → still blocked after 2 re-dispatches: ask user |
+| Unexpected merge conflict | `git merge --abort`, move task to overflow serial layer |
+| Multiple implementers fail | Merge successful ones, move failed to retry layer |
+| Post-merge compile failure | Bisect last N merges, fix or re-dispatch offending task |
 
 ## ecw.yml Configuration
 
@@ -322,13 +143,12 @@ impl_orchestration:
   merge_compile_check: true      # Run compile check after each layer merge (default: true)
 ```
 
-When `parallel: false`, the orchestrator uses the serial fallback mode throughout.
-
 ## Supplementary Files
 
-- `process-diagram.md` — DOT visual overview of Setup → Per-Layer Cycle → impl-verify flow
-- `loop-safety-reference.md` — Iteration limits, global budget, stall/error/timeout detection rules
+- `process-diagram.md` — Visual overview of Setup → Per-Layer Cycle → impl-verify
+- `dep-graph-usage.md` — Dependency graph construction details + pre-flight check procedure
+- `loop-safety-reference.md` — Iteration limits, global budget, stall/error/timeout detection
 - `prompts/implementer-prompt-guide.md` — Prompt construction, model selection, status handling
 - `prompts/code-quality-review-template.md` — P0 code quality review dispatch template
 - `prompts/anti-patterns.md` — Never rules + common rationalizations
-- `task-result-schema.md` — Worktree result file schema, coordinator read protocol, missing-file fallback
+- `task-result-schema.md` — Worktree result file schema, coordinator read protocol
