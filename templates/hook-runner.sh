@@ -1,6 +1,6 @@
 #!/bin/bash
 # ECW hook runner — dynamically resolves the ECW plugin path at runtime.
-# Written to .claude/ecw/hook-runner.sh during ecw-init / ecw-upgrade.
+# Written to .claude/ecw/scripts/hook-runner.sh during ecw-init / ecw-upgrade.
 #
 # Usage: bash hook-runner.sh <hook-script-name>
 # Example: bash hook-runner.sh session-start.py

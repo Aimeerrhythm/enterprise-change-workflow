@@ -10,6 +10,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.6] - 2026-05-11
+
+### 改进
+
+- **hook-runner.sh 安装路径**：从 `.claude/ecw/hook-runner.sh` 改为 `.claude/ecw/scripts/hook-runner.sh`，统一归入 scripts/ 子目录
+
 ## [1.5.5] - 2026-05-11
 
 ### 修复

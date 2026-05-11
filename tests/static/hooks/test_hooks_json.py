@@ -259,8 +259,8 @@ class TestMergeSettings:
     def test_merge_installs_hook_runner(self, tmp_path):
         """merge-settings.py must copy hook-runner.sh to .claude/ecw/."""
         subprocess.run([sys.executable, str(MERGE_SCRIPT), str(tmp_path)], capture_output=True)
-        runner = tmp_path / ".claude" / "ecw" / "hook-runner.sh"
-        assert runner.exists(), ".claude/ecw/hook-runner.sh must be installed by merge-settings.py"
+        runner = tmp_path / ".claude" / "ecw" / "scripts" / "hook-runner.sh"
+        assert runner.exists(), ".claude/ecw/scripts/hook-runner.sh must be installed by merge-settings.py"
         assert os.access(runner, os.X_OK), "hook-runner.sh must be executable"
 
 

@@ -8,7 +8,7 @@ Behavior:
 - Creates .claude/settings.local.json from template if missing
 - Merges permissions.allow by set union, preserving existing order
 - Merges hooks by event + exact command match, preserving unrelated hooks
-- Copies hook-runner.sh to .claude/ecw/hook-runner.sh if missing or outdated
+- Copies hook-runner.sh to .claude/ecw/scripts/hook-runner.sh if missing or outdated
 - Fails with non-zero exit code if existing JSON is invalid
 
 Target is settings.local.json (gitignored) so hooks only activate for
@@ -66,7 +66,7 @@ def _merge_hooks(target, template):
 def _install_hook_runner(project_root, plugin_dir):
     """Copy hook-runner.sh to .claude/ecw/ if missing or outdated."""
     src = os.path.join(plugin_dir, "templates", "hook-runner.sh")
-    dst_dir = os.path.join(project_root, ".claude", "ecw")
+    dst_dir = os.path.join(project_root, ".claude", "ecw", "scripts")
     dst = os.path.join(dst_dir, "hook-runner.sh")
 
     if not os.path.exists(src):

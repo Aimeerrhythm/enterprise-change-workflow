@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" session-start.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" session-start.py",
             "timeout": 10
           }
         ]
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" session-start.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" session-start.py",
             "timeout": 10
           }
         ]
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" stop-persist.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" stop-persist.py",
             "timeout": 10
           }
         ]
@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" dispatcher.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" dispatcher.py",
             "timeout": 150
           }
         ]
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" auto-continue.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" auto-continue.py",
             "timeout": 10
           }
         ]
@@ -67,7 +67,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" eval-gate.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" eval-gate.py",
             "timeout": 300
           }
         ]
@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" post-edit-check.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" post-edit-check.py",
             "timeout": 10
           }
         ]
@@ -89,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" auto-continue.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" auto-continue.py",
             "timeout": 10
           }
         ]
@@ -99,7 +99,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" knowledge-read-logger.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" knowledge-read-logger.py",
             "timeout": 5
           }
         ]
@@ -111,7 +111,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" pre-compact.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" pre-compact.py",
             "timeout": 10
           }
         ]
@@ -123,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/hook-runner.sh\" session-end.py",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh\" session-end.py",
             "timeout": 10
           }
         ]

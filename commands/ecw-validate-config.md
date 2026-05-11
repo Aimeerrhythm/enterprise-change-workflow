@@ -162,7 +162,7 @@ For each domain in the domain registry, check its knowledge directory:
 
 ## Step 6d: Project-local Hook Registration
 
-Read `.claude/settings.local.json` and `.claude/ecw/hook-runner.sh`.
+Read `.claude/settings.local.json` and `.claude/ecw/scripts/hook-runner.sh`.
 
 Validate that both artifacts exist and that `settings.local.json` contains ECW hook registrations for all required events:
 
@@ -175,7 +175,7 @@ Validate that both artifacts exist and that `settings.local.json` contains ECW h
 
 Validation rules:
 - `.claude/settings.local.json` missing → **fail**
-- `.claude/ecw/hook-runner.sh` missing → **fail**
+- `.claude/ecw/scripts/hook-runner.sh` missing → **fail**
 - Any required event missing from `settings.local.json` → **fail**
 - `settings.local.json` contains hooks referencing `${CLAUDE_PLUGIN_ROOT}` → **fail** (old architecture, must re-run `/ecw-upgrade`)
 

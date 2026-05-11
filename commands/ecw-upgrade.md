@@ -99,8 +99,8 @@ Any missing entry → **needs-fix**: Run `python3 {plugin_dir}/scripts/merge-set
 
 Two things must both be present:
 
-1. `.claude/ecw/hook-runner.sh` exists and is executable.
-2. `.claude/settings.json` contains ECW hook registrations for all required events:
+1. `.claude/ecw/scripts/hook-runner.sh` exists and is executable.
+2. `.claude/settings.local.json` contains ECW hook registrations for all required events:
    - `SessionStart` → `hook-runner.sh session-start.py`
    - `Stop` → `hook-runner.sh stop-persist.py`
    - `PreToolUse` → `hook-runner.sh dispatcher.py`, `hook-runner.sh auto-continue.py`, `hook-runner.sh eval-gate.py`
