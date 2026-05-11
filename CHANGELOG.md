@@ -10,6 +10,12 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.5.7] - 2026-05-11
+
+### 修复
+
+- **risk-classifier**：移除 SKILL.md 中残留的 `AskUserQuestion` 描述，统一改为 Auto-Flow 语义；消除 "After user confirmation" 歧义措辞，使状态持久化和 Task 创建在 auto-proceed 后立即执行，不再等待用户手动确认
+
 ## [1.5.6] - 2026-05-11
 
 ### 改进
