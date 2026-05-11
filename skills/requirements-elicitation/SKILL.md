@@ -24,10 +24,6 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 - User says "I want to...", "We need to...", "Add a feature..."
 - User provides a PRD, specification, or requirement document for implementation
 
-**Invocation modes:**
-- **Standalone**: `/ecw:requirements-elicitation` — execute full 9-dimension questioning directly. No risk-classifier prerequisite needed.
-- **Auto-routed**: `ecw:risk-classifier` invokes this skill for P0/P1 single-domain requirements (risk level and domain info available via session-state.json).
-
 **When NOT to use:**
 - User gives a precise, fully-specified technical task ("fix the null pointer on line 42")
 - User explicitly says "just do it, don't ask questions"
