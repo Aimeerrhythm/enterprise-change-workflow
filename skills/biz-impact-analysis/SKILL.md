@@ -25,13 +25,14 @@ After code changes are complete, dispatch the `biz-impact-analysis` agent to ana
    4. Fill above results into Agent prompt, replacing full diff
 
 > **Knowledge file robustness**: If `path-mappings.md` is missing, pass the raw file list to the Agent without domain mapping. The Agent will use path-based heuristic grouping and note `[Warning: path mappings not found, domain identification is heuristic]` in the report.
-3. **Dispatch biz-impact-analysis agent** — Read `./prompts/agent-prompt-template.md` for the dispatch prompt structure and argument parsing rules. Model: `opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Pass in preprocessed results, await impact analysis report
+3. **Dispatch biz-impact-analysis agent** — Read `./prompts/agent-prompt-template.md` for the dispatch prompt structure and argument parsing rules. Model: `opus` (default from `models.defaults.analysis`; configurable via ecw.yml). Timeout: 300s. Pass in preprocessed results, await impact analysis report
 4. **Return value validation**: Verify the agent's report contains required sections ("Analysis Coverage", "Change Summary", "Direct Impact"). If the report is missing critical sections:
    - Log to Ledger: `[FAILED: biz-impact-analysis, reason: incomplete report]`
    - Retry once with the same model
    - If retry also fails: output the partial report as-is with `[degraded: incomplete analysis]` header, and warn user that manual impact review may be needed
 5. **Auto-backfill knowledge base** — If the agent's report contains "Unregistered Cross-Domain Calls", execute the knowledge backfill procedure (see [Knowledge Auto-Backfill](#knowledge-auto-backfill) below)
 6. **Present analysis report** — Write the full report to `session-data/{workflow-id}/biz-impact-report.md` (read the workflow-id from the STATUS block in session-state.json). Then output the agent's formatted report directly; append backfill summary if any calls were added
+7. **Mark Task complete** — Mark the biz-impact-analysis Task as complete via TaskUpdate
 
 ## Knowledge Auto-Backfill
 
@@ -78,18 +79,6 @@ All unregistered calls flagged in the report already exist in the knowledge base
 | `cross-domain-calls.md` has no table header | Skip backfill, warn: `[Warning: cross-domain-calls.md format unrecognized, skipping auto-backfill]` |
 | Agent report has no "Unregistered Cross-Domain Calls" section | No backfill needed, skip silently |
 | Agent report parsing ambiguous | Skip backfill for ambiguous entries, only backfill clearly parseable ones, note skipped count in summary |
-
-## Integration with impl-verify
-
-When `ecw:impl-verify` completes, dispatch biz-impact-analysis based on the same diff range. Trigger conditions by risk level: see `workflow-routes.yml`.
-
-## Integration with Phase 3
-
-After biz-impact-analysis report is output, mark the biz-impact-analysis Task as complete.
-
-If TaskList has a pending "Phase 3 Calibration" Task, marking biz-impact-analysis Task as completed will automatically unblock that Task.
-
-**Timeout**: 300s (agent reads multiple knowledge files and scans code). If Agent has not returned, terminate and offer retry (see Error Handling).
 
 ## Error Handling
 
