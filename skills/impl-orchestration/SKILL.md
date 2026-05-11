@@ -42,7 +42,7 @@ For a visual overview, see `./process-diagram.md`.
 
 1. **Read plan file once** — extract all tasks with full text
 2. **Pre-flight check** — Read `./dep-graph-usage.md` § Pre-flight Check. Controlled by ecw.yml `impl_orchestration.pre_check` (default: true). Timeout 120s compile / 600s test. On failure: auto-fix → retry → ask user
-3. **Build dependency graph** — Read `./dep-graph-usage.md` § Steps 1-3. Extract task metadata → call `dep_graph.py` → get parallel layers
+3. **Build dependency graph** — Read `./dep-graph-usage.md` § Steps 1-3. Extract task metadata → call `dep_graph.py` → get parallel layers (Layer 0, Layer 1, ...)
 4. **Create Tasks** — one TaskCreate per plan task, with dependency chain
 5. **Display execution layers** — show user the parallel execution plan before starting
 
@@ -58,7 +58,7 @@ Execute one layer at a time.
 
 ### Phase 1: Parallel Implementation (worktree-isolated)
 
-Read `./prompts/implementer-prompt-guide.md` for prompt construction, model selection, and timeout rules.
+Read `./prompts/implementer-prompt-guide.md` for prompt construction, model selection (haiku/sonnet/opus tiers from ecw.yml `models` config), and timeout rules.
 
 Dispatch ALL tasks in the current layer simultaneously via Agent tool with `isolation: "worktree"`. **All Agent calls for the same layer MUST be in a single message.**
 

@@ -35,13 +35,13 @@ Use for ANY technical issue:
 
 **When invoked as the bug fix entry point**, create session-state immediately after announcing start:
 
-**Before writing**, Read `skills/risk-classifier/session-state-format.md` for the JSON schema.
-
-Write `.claude/ecw/session-data/{workflow-id}/session-state.json` with:
-- `change_type: "bug"`
-- `routing: ["ecw:systematic-debugging", "TDD:RED", "Fix(GREEN)", "ecw:impl-verify"]`
-- `next: "ecw:tdd"`
-- `current_phase: "systematic-debugging"`
+1. Read `skills/risk-classifier/session-state-format.md` for the JSON schema.
+2. Read `skills/risk-classifier/workflow-routes.yml` — find the route where `type: bug` and extract its `chain`.
+3. Write `.claude/ecw/session-data/{workflow-id}/session-state.json` with:
+   - `change_type: "bug"`
+   - `routing`: the `chain` array from step 2
+   - `next`: second element of `chain`, resolved via `skill_metadata[*].routing_aliases` if needed
+   - `current_phase: "systematic-debugging"`
 
 Generate `{workflow-id}` as `{YYYYMMDD}-{xxxx}` (same convention as risk-classifier; use `currentDate` system-reminder for the date).
 
