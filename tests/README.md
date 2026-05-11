@@ -713,7 +713,7 @@ tests/
 │   │   ├── test_config_protect.py        # config-protect hook
 │   │   ├── test_gateguard_fact_force.py  # gateguard hook
 │   │   ├── test_hook_exception_safety.py # hook 异常安全
-│   │   ├── test_hooks_json.py            # hooks.json 注册
+│   │   ├── test_hooks_json.py            # 项目级 hook 注册架构（settings.ecw.json / hook-runner.sh）
 │   │   ├── test_marker_utils.py          # marker_utils 工具函数
 │   │   ├── test_parse_status.py          # parse_status 工具函数
 │   │   ├── test_post_edit_check.py       # post-edit-check hook
