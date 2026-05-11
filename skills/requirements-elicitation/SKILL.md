@@ -152,10 +152,6 @@ After synthesis analysis completes and user has made decisions on findings, prod
 
 Wait for user confirmation.
 
-## Skill Handoff
-
-After user confirmation, invoke `ecw:writing-plans`.
-
 ## Error Handling
 
 | Scenario | Handling |
