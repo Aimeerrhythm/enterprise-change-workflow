@@ -14,24 +14,6 @@ After a plan/design document is produced, dispatch the `spec-challenge` agent fo
 
 **Output language**: Read `ecw.yml` → `project.output_language`. Pass to dispatched agent prompt. Report headings and labels follow this language.
 
-## Trigger
-
-- **Manual**: `/spec-challenge <file path>` — Launch review on specified document
-- **Manual (no args)**: `/spec-challenge` — Auto-find the most recently produced spec file in current session
-- **Automatic**: After ecw:writing-plans completes for P0 changes or P1 cross-domain changes
-
-**Auto-trigger flow**:
-
-```
-ecw:risk-classifier (P0 / P1 cross-domain)
-  → ecw:requirements-elicitation / ecw:domain-collab
-  → Phase 2
-  → ecw:writing-plans: write plan
-  → ecw:spec-challenge (adversarial review + author response)
-  → user review (with challenge results visible)
-  → implementation
-```
-
 ## Flow
 
 ```dot

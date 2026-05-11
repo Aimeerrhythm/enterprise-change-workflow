@@ -12,12 +12,6 @@ Execute multi-round cross-consistency verification on changed files. Exit only w
 
 **Announce at start:** "Using ecw:cross-review to verify cross-file consistency."
 
-## Trigger
-
-- **Manual**: `/ecw:cross-review`
-- Applicable scenarios: Document-heavy changes (when multiple markdown/config files cross-reference each other)
-- Not in the required development workflow — code correctness and quality are handled by `ecw:impl-verify`
-
 ## Relationship with Other Verification Components
 
 | Component | What It Reviews | Distinction |

@@ -14,11 +14,6 @@ After implementation completes and before marking the task done, perform multi-d
 
 **Output language**: Read `ecw.yml` → `project.output_language`.
 
-## Trigger
-
-- **Automatic**: After implementation completes, before marking task as complete
-- **Manual**: `/ecw:impl-verify`
-
 ## Relationship with Other Verification Components
 
 | Component | What It Verifies | Execution Model | Mandatory? |
