@@ -52,7 +52,7 @@ Read `./workflow-routes.yml` for the complete routing matrix, including:
 
 > **Determination method:** During Step 1 domain identification, check the project CLAUDE.md domain routing section (keyword→domain mapping table) and count matched domains. 2+ domain matches = cross-domain requirement.
 >
-> **Confirmation node merge:** risk-classifier's AskUserQuestion outputs level + domain list + mode + downstream routing in one go. After user confirms, downstream skills (ecw:domain-collab / ecw:requirements-elicitation) **skip their own confirmation step** and execute directly.
+> **Auto-Flow merge:** risk-classifier outputs level + domain list + mode + downstream routing, then auto-proceeds. Downstream skills (ecw:domain-collab / ecw:requirements-elicitation) **skip their own confirmation step** and execute directly.
 
 ---
 
@@ -72,7 +72,7 @@ Use the "Assessment Output and Confirmation Flow" section in `./prompts/risk-ass
 
 ### State Persistence
 
-After user confirmation of the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`.
+After auto-proceeding past the initial risk assessment, write ECW state to `.claude/ecw/session-data/{workflow-id}/session-state.json`.
 
 Read `./session-state-format.md` for the exact JSON schema, field reference, workflow ID generation, conflict detection, and context advisory. On conflict: regenerate workflow ID up to max 3 attempts before prompting user.
 
@@ -80,7 +80,7 @@ Read `./session-state-format.md` for the exact JSON schema, field reference, wor
 
 ### Route Task Creation
 
-After user confirmation of the initial risk assessment, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
+After auto-proceeding past the initial risk assessment, create pending Tasks for **post-implementation** workflow steps to prevent omission. See `./workflow-routes.yml` `post_impl_tasks` for rules per risk level.
 
 **Creation method**: Use TaskCreate tool, set blockedBy dependency chain:
 
