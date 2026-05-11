@@ -4,11 +4,31 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-# 更新日志
+## [1.6.0] - 2026-05-11
 
-本文件记录项目的所有重要变更。
+### 改进
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
+- **skill 触发描述**：精简多个 skill 的触发描述与冗余章节，减少 SKILL.md 体积，降低 Claude 上下文消耗
+
+## [1.5.9] - 2026-05-11
+
+### 修复
+
+- **session-end hook**：删除 hook 中无用的 `session_status` 写入逻辑，该字段未被任何下游消费
+
+## [1.5.8] - 2026-05-11
+
+### 改进
+
+- **workspace SKILL.md**：精简从 347 行压缩至 205 行，移除冗余说明
+- **impl-orchestration SKILL.md**：精简从 335 行压缩至 154 行，移除冗余说明
+
+### 修复
+
+- **systematic-debugging**：从 `workflow-routes.yml` 读取 bug chain，消除硬编码重复
+- **biz-impact-analysis**：知识库回填输出模板遵循 `output_language` 配置；移除纯文档性 Integration 段
+- **requirements-elicitation**：Output 模板改为引用 `artifact-schemas.md`；删除多余的 Skill Handoff section；精简 SKILL.md 与 common-mistakes.md
+- **多个 skill**：移除硬编码中文提示，遵循 `output_language` 配置；删除残留的 `"实现策略"` 中文字段引用；删除 Invocation modes 描述（路由已由 `workflow-routes.yml` 和 frontmatter 定义）
 
 ## [1.5.7] - 2026-05-11
 
