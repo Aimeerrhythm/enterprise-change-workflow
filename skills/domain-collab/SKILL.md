@@ -14,14 +14,7 @@ Accepts natural language requirements spanning 2+ domains, dispatches domain-spe
 
 **Output language**: Read `ecw.yml` → `project.output_language`. All artifact headings, table headers, and labels follow this language. Pass `output_language` value to every dispatched agent prompt.
 
-> **Single-domain requirements** are handled by `ecw:requirements-elicitation`. This skill focuses on multi-domain scenarios.
-
 **Announce at start:** "Using ecw:domain-collab to coordinate multi-domain requirement analysis."
-
-## Trigger
-
-- **Manual**: `/domain-collab <requirement or change description>`
-- **Auto-detect**: Triggered when user describes a business requirement
 
 ## Prerequisites
 
@@ -180,11 +173,9 @@ If all domain Agents return `impact_level: none`:
 
 ---
 
-## Phase 2 Handoff Context
+## Context Management
 
-After Round 3 completes, the collaboration analysis report is output and persisted. The auto-continue hook handles routing to the next skill based on risk level.
-
-**Context management**: All analysis data has been persisted to files (domain-collab-report.md, knowledge-summary.md, session-data checkpoints). After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation: output "上下文较大，建议输入 /compact 后自动继续" but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
+After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, suggest compaction as a non-blocking recommendation (follow `project.output_language`) but do NOT wait for user response — proceed to the next skill immediately. If user does compact, the pre-compact hook ensures auto-resume.
 
 ---
 
