@@ -26,7 +26,6 @@ flowchart TD
     TDD --> GREEN[Implementation: GREEN]
     GREEN --> IV[impl-verify]
     IV --> |P0/P1| BIA[biz-impact-analysis]
-    BIA --> KT[knowledge-track]
     KT --> DONE[✅ 完成]
     IV --> |P2| DONE2[✅ 完成]
 
@@ -155,14 +154,7 @@ flowchart TD
         B5 --> B6
     end
 
-    B6 --> KT
-
-    subgraph KT [⑩ knowledge-track]
-        K1[追踪知识利用: hit/miss/redundant/misleading]
-        K1 --> K2[输出 doc-tracker.md]
-    end
-
-    K2 --> FINISH([✅ P0 流程完成])
+    B6 --> FINISH([✅ P0 流程完成])
 
     style PHASE1 fill:#ffeaa7
     style REQE fill:#dfe6e9
@@ -193,7 +185,7 @@ flowchart TD
         DC4 --> DC5[输出 domain-collab-report.md<br/>+ knowledge-summary.md]
     end
 
-    DC5 --> NEXT[③~⑩ 后续流程同单域 P0（writing-plans 起）]
+    DC5 --> NEXT[③~⑨ 后续流程同单域 P0（writing-plans 起）]
 
     style DC fill:#fd79a8,color:#fff
 ```
@@ -258,8 +250,7 @@ sequenceDiagram
     "TDD:RED",
     "Implementation(GREEN)",
     "ecw:impl-verify",
-    "ecw:biz-impact-analysis",
-    "ecw:knowledge-track"
+    "ecw:biz-impact-analysis"
   ],
   "current_phase": "plan-loaded",
   "next": "ecw:spec-challenge"

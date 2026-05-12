@@ -61,8 +61,7 @@ flowchart TD
 
     IMPL[Implementation] --> IV
     IV["impl-verify\n(multi-round convergence)"] --> BIA
-    BIA["biz-impact-analysis"] --> KT
-    KT["knowledge-track"] --> DONE
+    BIA["biz-impact-analysis"] --> DONE
     BIA -->|P2/P3| DONE
 
     DONE([✓ Verified Complete])

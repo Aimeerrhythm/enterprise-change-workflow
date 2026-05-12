@@ -199,13 +199,13 @@ class TestComputeRoutingTail:
         self.fn = mod.compute_routing_tail
 
     def test_p0_single_domain_tail(self):
-        """P0 single-domain tail: writing-plans → spec-challenge → TDD:RED → ... → knowledge-track."""
+        """P0 single-domain tail: writing-plans → spec-challenge → TDD:RED → ... → biz-impact-analysis."""
         tail = self.fn("P0", "ecw:requirements-elicitation")
         assert "ecw:writing-plans" in tail
         assert "ecw:spec-challenge" in tail
         assert "ecw:impl-verify" in tail
         assert "ecw:biz-impact-analysis" in tail
-        assert "ecw:knowledge-track" in tail
+        assert "ecw:knowledge-track" not in tail
 
     def test_p1_single_domain_no_spec_challenge(self):
         """P1 single-domain tail must NOT include spec-challenge."""

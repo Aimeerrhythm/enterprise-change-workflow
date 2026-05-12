@@ -173,7 +173,6 @@ Gate-out: All checks pass (or user accepts known issues).
 1. Aggregate status.json + git log per service
 2. Present summary: commits, files changed, deploy order, ECW coverage per service
 3. AskUserQuestion: Push now or later?
-4. Knowledge tracking: report which services completed knowledge-track
 
 Gate-out: Workflow complete, session-state MODE → complete.
 

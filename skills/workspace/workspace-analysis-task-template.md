@@ -111,8 +111,8 @@ Use non-blocking dependency scheduling:
   If TIMEOUT: AskUserQuestion "Continue waiting 15 more minutes?" / "Skip Provider dependency" / "Abort this session"
 
 **After all tasks done (all scenarios):**
-- ECW-ready: ecw:impl-verify is auto-triggered by BLOCKING RULE. After pass, ecw:knowledge-track runs automatically.
-- ECW-absent: run `/ecw:impl-verify` manually. After pass, run `/ecw:knowledge-track`.
+- ECW-ready: ecw:impl-verify is auto-triggered by BLOCKING RULE.
+- ECW-absent: run `/ecw:impl-verify` manually.
 - Write status.json → `.claude/ecw/session-data/{wf-id}/status.json`
   Use exactly this schema (fill in values, do not add or rename fields):
   ```json

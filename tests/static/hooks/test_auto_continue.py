@@ -515,10 +515,10 @@ class TestNextSkillFromRouting:
         routing = "ecw:systematic-debugging → TDD:RED → Fix(GREEN) → ecw:impl-verify"
         assert self.fn(routing, "ecw:systematic-debugging") == "ecw:tdd"
 
-    def test_biz_impact_followed_by_knowledge_track(self):
-        """After biz-impact-analysis, ecw:knowledge-track is the next skill."""
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        assert self.fn(routing, "ecw:biz-impact-analysis") == "ecw:knowledge-track"
+    def test_biz_impact_is_last_skill(self):
+        """After biz-impact-analysis, no further auto-chained skill (knowledge-track removed from chain)."""
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis"
+        assert self.fn(routing, "ecw:biz-impact-analysis") is None
 
     def test_skill_not_found_returns_none(self):
         """If current skill not in routing, return None (not the full chain)."""
@@ -527,8 +527,8 @@ class TestNextSkillFromRouting:
 
     def test_last_skill_in_chain_returns_none(self):
         """If current skill is last ECW skill with no Phase 3 marker, return None."""
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        assert self.fn(routing, "ecw:knowledge-track") is None
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis"
+        assert self.fn(routing, "ecw:biz-impact-analysis") is None
 
     def test_empty_routing_returns_none(self):
         assert self.fn("", "ecw:tdd") is None
@@ -633,24 +633,20 @@ class TestPreToolUseHandler:
 
     def test_pre_tool_use_does_not_update_next_when_last_skill(self, tmp_path, monkeypatch):
         """When the skill is last in the chain, Next must not be overwritten to None."""
-        # knowledge-track is the true last ECW skill before Phase 3 (which maps to risk-classifier)
-        # Use a chain where knowledge-track is last with no further steps.
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        state_file = self._make_state(tmp_path, routing, next_val="ecw:knowledge-track")
-        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:knowledge-track")
+        # biz-impact-analysis is now the last ECW skill in P0/P1 chain (knowledge-track removed).
+        routing = "ecw:impl-verify → ecw:biz-impact-analysis"
+        state_file = self._make_state(tmp_path, routing, next_val="ecw:biz-impact-analysis")
+        self._run_pre_tool_use(tmp_path, monkeypatch, "ecw:biz-impact-analysis")
         fields = self._parse_state(state_file)
-        # knowledge-track is last skill; _next_skill_from_routing returns None → Next unchanged
-        assert fields["next"] == "ecw:knowledge-track"
+        # biz-impact-analysis is last skill; _next_skill_from_routing returns None → Next unchanged
+        assert fields["next"] == "ecw:biz-impact-analysis"
 
 
-class TestKnowledgeTrackInjection:
-    """After biz-impact-analysis PostToolUse, the normal routing message must include
-    knowledge-track when it is in the routing chain (P0/P1 standard workflow).
+class TestKnowledgeTrackNotInChain:
+    """knowledge-track is no longer auto-chained — must never appear in routing for any risk level.
 
-    Issue #38: knowledge-track injection is now handled by normal route injection
-    (knowledge-track is always in the P0/P1 routing chain). The hook no longer
-    has a fallback injection path — biz-impact-analysis SKILL.md owns the explicit
-    call instruction for the correct timing.
+    Removed from P0/P1 chains as a manual-only skill. Verifies normal route injection
+    does not include it for any standard chain.
     """
 
     @pytest.fixture(autouse=True)
@@ -664,8 +660,7 @@ class TestKnowledgeTrackInjection:
 
     def _make_state(self, tmp_path, risk_level="P0", routing=None):
         if routing is None:
-            # Default: P0/P1 chain always has knowledge-track (Issue #38)
-            routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
+            routing = "ecw:impl-verify → ecw:biz-impact-analysis"
         state_dir = tmp_path / ".claude" / "ecw" / "session-data" / "20260430-dd01"
         state_dir.mkdir(parents=True)
         state_file = state_dir / "session-state.json"
@@ -680,14 +675,6 @@ class TestKnowledgeTrackInjection:
             "current_phase": "verify-complete",
         }))
         return state_file
-
-    def _make_ecw_yml(self, tmp_path, with_knowledge_root=True):
-        ecw_dir = tmp_path / ".claude" / "ecw"
-        ecw_dir.mkdir(parents=True, exist_ok=True)
-        content = "paths:\n"
-        if with_knowledge_root:
-            content += "  knowledge_root: .claude/knowledge\n"
-        (ecw_dir / "ecw.yml").write_text(content)
 
     def _run_post_tool_use(self, tmp_path, monkeypatch):
         import io
@@ -704,49 +691,29 @@ class TestKnowledgeTrackInjection:
             "flush": lambda self: None,
         })())
         self.hook.main()
-        return json.loads("".join(captured))
+        out = "".join(captured)
+        return json.loads(out) if out else {}
 
-    def test_knowledge_track_in_routing_is_injected_via_normal_route(self, tmp_path, monkeypatch):
-        """When knowledge-track is in routing chain, normal route message includes it (P0)."""
-        # Standard P0/P1 routing: knowledge-track is always in chain (Issue #38 fix)
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        self._make_state(tmp_path, risk_level="P0", routing=routing)
-        output = self._run_post_tool_use(tmp_path, monkeypatch)
-        assert "systemMessage" in output
-        msg = output["systemMessage"]
-        assert "knowledge-track" in msg.lower() or "ecw:knowledge-track" in msg, (
-            "Normal route injection must include ecw:knowledge-track in systemMessage "
-            "when it appears in the routing chain (standard P0/P1 workflow)"
-        )
-
-    def test_knowledge_track_in_routing_p1(self, tmp_path, monkeypatch):
-        """P1 workflow: knowledge-track in routing chain is injected via normal route."""
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        self._make_state(tmp_path, risk_level="P1", routing=routing)
-        output = self._run_post_tool_use(tmp_path, monkeypatch)
-        assert "systemMessage" in output
-        msg = output["systemMessage"]
-        assert "knowledge-track" in msg.lower() or "ecw:knowledge-track" in msg
-
-    def test_no_knowledge_track_for_p2(self, tmp_path, monkeypatch):
-        """P2 does not have knowledge-track in routing; must not appear in systemMessage."""
-        self._make_state(tmp_path, risk_level="P2",
-                         routing="ecw:impl-verify → ecw:biz-impact-analysis")
+    def test_no_knowledge_track_for_p0(self, tmp_path, monkeypatch):
+        """P0 chain no longer contains knowledge-track."""
+        self._make_state(tmp_path, risk_level="P0")
         output = self._run_post_tool_use(tmp_path, monkeypatch)
         msg = output.get("systemMessage", "")
         assert "knowledge-track" not in msg.lower()
 
-    def test_knowledge_track_in_routing_not_duplicated(self, tmp_path, monkeypatch):
-        """When knowledge-track is in Routing, use normal route injection (no duplicate)."""
-        routing = "ecw:impl-verify → ecw:biz-impact-analysis → ecw:knowledge-track"
-        self._make_state(tmp_path, risk_level="P0", routing=routing)
-        self._make_ecw_yml(tmp_path, with_knowledge_root=True)
+    def test_no_knowledge_track_for_p1(self, tmp_path, monkeypatch):
+        """P1 chain no longer contains knowledge-track."""
+        self._make_state(tmp_path, risk_level="P1")
         output = self._run_post_tool_use(tmp_path, monkeypatch)
-        # Normal systemMessage includes remaining route (ecw:knowledge-track)
-        assert "systemMessage" in output
-        msg = output["systemMessage"]
-        # Should appear exactly once (from the remaining route)
-        assert msg.count("knowledge-track") >= 1
+        msg = output.get("systemMessage", "")
+        assert "knowledge-track" not in msg.lower()
+
+    def test_no_knowledge_track_for_p2(self, tmp_path, monkeypatch):
+        """P2 never had knowledge-track in routing."""
+        self._make_state(tmp_path, risk_level="P2")
+        output = self._run_post_tool_use(tmp_path, monkeypatch)
+        msg = output.get("systemMessage", "")
+        assert "knowledge-track" not in msg.lower()
 
 
 class TestOffChainDeviation:
@@ -861,7 +828,7 @@ class TestTailComputation:
         assert "ecw:spec-challenge" in routing
         assert "ecw:impl-verify" in routing
         assert "ecw:biz-impact-analysis" in routing
-        assert "ecw:knowledge-track" in routing
+        assert "ecw:knowledge-track" not in routing
 
     def test_p1_tail_appended(self, tmp_path, monkeypatch):
         """P1 routing: routing[0] + P1 tail (no spec-challenge)."""

@@ -26,9 +26,8 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
-      - knowledge-track
     must_include: [requirements-elicitation, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
-    must_exclude: [domain-collab]
+    must_exclude: [domain-collab, knowledge-track]
 
   - level: P1
     mode: single-domain
@@ -40,9 +39,8 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
-      - knowledge-track
     must_include: [requirements-elicitation, writing-plans, impl-verify, biz-impact-analysis]
-    must_exclude: [domain-collab, spec-challenge]
+    must_exclude: [domain-collab, spec-challenge, knowledge-track]
 
   - level: P2
     mode: single-domain
@@ -77,9 +75,8 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
-      - knowledge-track
     must_include: [domain-collab, writing-plans, spec-challenge, impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation]
+    must_exclude: [requirements-elicitation, knowledge-track]
 
   - level: P1
     mode: cross-domain
@@ -91,9 +88,8 @@ routes:
       - "Implementation(GREEN)"
       - impl-verify
       - biz-impact-analysis
-      - knowledge-track
     must_include: [domain-collab, writing-plans, impl-verify, biz-impact-analysis]
-    must_exclude: [requirements-elicitation, spec-challenge]
+    must_exclude: [requirements-elicitation, spec-challenge, knowledge-track]
 
   - level: P2
     mode: cross-domain
@@ -119,7 +115,7 @@ routes:
 
   # ── Bug Fix Changes ──
   # Entry point: ecw:systematic-debugging (no risk-classifier needed).
-  # biz-impact-analysis and knowledge-track available for manual invocation.
+  # biz-impact-analysis available for manual invocation.
 
   - level: any
     mode: any
@@ -211,14 +207,13 @@ skill_metadata:
   biz-impact-analysis:
     mode: verification
     phase_name: biz-impact
-  knowledge-track:
-    mode: verification
 
 # Skills legitimately invoked outside the routing chain (manual-only tools).
 off_chain_skills:
   - cross-review
   - knowledge-audit
   - knowledge-repomap
+  - knowledge-track
   - workspace
 
 # ── Cross-Domain Determination ──

@@ -32,8 +32,8 @@ The auto-continue hook PostToolUse rebuilds: `routing = [routing[0]] + tail(risk
 
 | `risk_level` | `routing[0]` options | Tail |
 |-------------|---------------------|------|
-| P0 | requirements-elicitation / domain-collab | writing-plans → spec-challenge → TDD:RED → impl-verify → biz-impact-analysis → knowledge-track |
-| P1 | requirements-elicitation / domain-collab | writing-plans → TDD:RED → impl-verify → biz-impact-analysis → knowledge-track |
+| P0 | requirements-elicitation / domain-collab | writing-plans → spec-challenge → TDD:RED → impl-verify → biz-impact-analysis |
+| P1 | requirements-elicitation / domain-collab | writing-plans → TDD:RED → impl-verify → biz-impact-analysis |
 | P2 | writing-plans | TDD:RED → impl-verify |
 | P3 | (empty) | (empty — direct implementation) |
 

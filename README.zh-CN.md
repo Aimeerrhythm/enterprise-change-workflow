@@ -61,8 +61,7 @@ flowchart TD
 
     IMPL[Implementation] --> IV
     IV["impl-verify\n(多轮收敛)"] --> BIA
-    BIA["biz-impact-analysis"] --> KT
-    KT["knowledge-track"] --> DONE
+    BIA["biz-impact-analysis"] --> DONE
     BIA -->|P2/P3| DONE
 
     DONE([✓ 完成验证])
