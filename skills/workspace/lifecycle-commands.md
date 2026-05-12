@@ -65,24 +65,47 @@ Step 6.5: Sync ignored ECW infrastructure into each worktree ★ CRITICAL
   ```bash
   src="{source_path}/.claude"
   dst="{workspace_path}/{service_id}/.claude"
+  wf_id="{wf-id}"
 
   # 1. ECW hook runner directory (bash scripts under .claude/ecw/scripts/)
-  if [ -d "${src}/ecw/scripts" ]; then
+  hook_runner_ok=false
+  if [ -f "${src}/ecw/scripts/hook-runner.sh" ]; then
     mkdir -p "${dst}/ecw"
     cp -R "${src}/ecw/scripts" "${dst}/ecw/scripts"
+    hook_runner_ok=true
   else
-    echo "WARN: ${service_id} source repo has no .claude/ecw/scripts/ — child session will run with NO ECW hooks. baseline_commit, auto-continue, knowledge-read-logger all disabled."
+    echo "WARN: ${service_id} source repo has no .claude/ecw/scripts/hook-runner.sh — child session will run with NO ECW hooks. baseline_commit, auto-continue, knowledge-read-logger all disabled."
   fi
 
-  # 2. Project-local hook registration
+  # 2. Project-local hook registration (settings.json / settings.local.json)
   for f in settings.json settings.local.json; do
     [ -f "${src}/${f}" ] && cp "${src}/${f}" "${dst}/${f}"
   done
+
+  # 2a. Verify settings actually reference hook-runner.sh (file present ≠ hooks active).
+  # Hook scripts are useless if settings don't register them. Surface the gap.
+  if $hook_runner_ok; then
+    settings_referencing_runner=$(grep -l "ecw/scripts/hook-runner.sh" "${dst}/settings.json" "${dst}/settings.local.json" 2>/dev/null)
+    if [ -z "$settings_referencing_runner" ]; then
+      echo "WARN: ${service_id} has hook-runner.sh but no settings*.json registers it. Hooks will not fire. The source repo's ECW install may be incomplete — re-run the ECW init script in the source repo."
+    fi
+  fi
+
+  # 2b. Augment settings.local.json with worktree-specific write permissions.
+  # The source repo's settings allow `Write(.claude/ecw/session-data/{any-wf-id}/*)`,
+  # which uses a relative path and resolves correctly inside the worktree (cwd-relative
+  # patterns travel with the cp). But the new wf-id from this workspace must be
+  # writable — use `merge-settings.py` to union-merge instead of trusting the source
+  # to already cover it.
+  if command -v python3 >/dev/null 2>&1 && [ -f "${PLUGIN_ROOT:-}/scripts/merge-settings.py" ]; then
+    python3 "${PLUGIN_ROOT}/scripts/merge-settings.py" "${dst}/.." || \
+      echo "WARN: merge-settings.py failed for ${service_id}; child session may hit permission prompts when writing .claude/ecw/session-data/${wf_id}/*"
+  fi
   ```
 
-  Run this BEFORE Step 7 (pre-trust). Failures are warnings, not aborts — but the
-  warning must be surfaced so the user knows the child session has degraded
-  observability for that service.
+  Run this BEFORE Step 7 (pre-trust). Failures here are warnings — the run continues
+  with reduced observability — but every warning must be surfaced so the user knows
+  which services have degraded child sessions.
 
 Step 7: Pre-trust workspace directories
   - For each service: cd {workspace_path}/{service_id} && claude -p "echo ok"

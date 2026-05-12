@@ -97,9 +97,19 @@ Proceed to implementation immediately. No cross-service dependency.
       Module appears in any Consumer pom → mark it as "publish required". No match → skip (internal-only changes; e.g. `wms-service` impl edits do not require version bump because Consumer never depends on `wms-service` jar — Dubbo RPC is runtime).
 
 2. **For each "publish required" module, bump to a unique SNAPSHOT version**:
-   - New version: `{original-version-without-SNAPSHOT}-{wf-id}-SNAPSHOT` (e.g. `1.0.71-0511` → `1.0.72-wf-20260512155614-SNAPSHOT`)
-   - Edit that module's `pom.xml` `<version>` AND every internal pom that hardcodes this version (parent pom, sibling modules referencing it). Do NOT change unrelated dependency versions.
-   - **Never reuse the original release version** — that would silently overwrite local maven cache and create a hidden version-pollution bug for CI / other developers.
+   - Rule: take the module's current `<version>` (e.g. `1.0.71-0511`), strip any trailing
+     `-SNAPSHOT` if present, then append `-{wf-id}-SNAPSHOT`. **Do NOT bump the patch
+     number.** Examples:
+     - `1.0.71-0511` → `1.0.71-0511-{wf-id}-SNAPSHOT`
+     - `2.3.0-SNAPSHOT` → `2.3.0-{wf-id}-SNAPSHOT`
+     The wf-id segment makes the version unique per workflow, eliminating cache collisions
+     across concurrent workflows. Patch-bumping is reserved for actual releases (humans
+     decide), not for in-flight workflow SNAPSHOTs.
+   - Edit that module's `pom.xml` `<version>` AND every internal pom that hardcodes this
+     version (parent pom, sibling modules referencing it). Do NOT change unrelated
+     dependency versions.
+   - **Never reuse the original release version** — that would silently overwrite local
+     maven cache and create a hidden version-pollution bug for CI / other developers.
 
 3. **Implement API layer** (interfaces + DTOs defined in the contract).
 
@@ -134,9 +144,15 @@ Use non-blocking dependency scheduling:
 
 **Once api-ready.json is found** — update your own pom before running any code that uses the new API:
 1. Parse `modules[]` from api-ready.json
-2. For each `{name, version}` entry, edit your pom files (root + any module pom that pins the dep) so the dependency on `<artifactId>{name}</artifactId>` uses `<version>{version}</version>`
-3. Verify resolvable: `mvn -pl . dependency:resolve -Dincludes=*:{name} -q`
-4. Commit the pom change as its own step before implementation commits
+2. For each `{name, version}` entry, locate every pom under your service that ACTUALLY declares a dependency on `<artifactId>{name}</artifactId>`:
+   ```bash
+   grep -rl "<artifactId>{name}</artifactId>" . --include=pom.xml
+   ```
+   - **Only edit the pom files returned by grep** — never blindly modify root or module poms that don't reference the artifact.
+   - **If grep returns zero hits** for a `{name}` listed in api-ready.modules[]: HARD FAIL. The Provider published a module that this Consumer claims to depend on but the dependency is not declared. Surface this to the user via AskUserQuestion before proceeding (likely contract / scope mismatch).
+3. In each matched pom, change the `<version>` of that specific dependency to the api-ready version. Leave unrelated `<dependency>` blocks untouched.
+4. Verify resolvable: `mvn -pl . dependency:resolve -Dincludes=*:{name} -q`
+5. Commit the pom changes as their own step before implementation commits
 
 If api-ready.json still absent after independent tasks done → poll with 60-minute timeout:
   ```bash

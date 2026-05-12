@@ -37,10 +37,12 @@ Recommended ECW layout:
 | `.claude/ecw/state/stale-refs.md` | After knowledge-audit run | Stale reference findings, consumed by verify-completion hook |
 | `.claude/ecw/workspace.yml` | After workspace create | Workspace config: services, branches, build settings (workspace root only) |
 | `.claude/ecw/session-data/{workflow-id}/cross-service-plan.md` | After workspace run initial decomposition + updated Phase 3 | Cross-service business decomposition → finalized with contracts + execution order |
-| `{service}/.claude/ecw/workspace-analysis-task.md` | After workspace run initial decomposition | Per-service analysis task: original requirement (verbatim) + coordinator's hypothesis |
-| `{service}/.claude/ecw/analysis-report.md` | After workspace run Phase 2 (child session) | Per-service technical plan: entry points, interaction pattern, concerns |
-| `{service}/.claude/ecw/confirmed-contract.md` | After workspace run Phase 3 | Final aligned contracts for this service; triggers Phase 4 implementation |
-| `{service}/status.json` | After workspace run Phase 4 (child session) | Child session completion marker, read by coordinator |
+| `{service}/.claude/ecw/session-data/{workflow-id}/workspace-analysis-task.md` | After workspace run initial decomposition | Per-service analysis task: original requirement (verbatim) + coordinator's hypothesis |
+| `{service}/.claude/ecw/session-data/{workflow-id}/analysis-report.md` | After workspace run Phase 2 (child session) | Per-service technical plan: entry points, interaction pattern, concerns |
+| `{service}/.claude/ecw/session-data/{workflow-id}/confirmed-contract.md` | After workspace run Phase 3 | Final aligned contracts for this service; triggers Phase 4 implementation |
+| `{service}/.claude/ecw/session-data/{workflow-id}/api-ready.json` | After workspace run Phase 4 (Dubbo Provider only) | Multi-module SNAPSHOT publish manifest: `{service, modules[{name, version}], published_at}` |
+| `{service}/.claude/ecw/session-data/{workflow-id}/status.json` | After workspace run Phase 4 (child session) | Child session completion marker, read by coordinator |
+| `{service}/.claude/ecw/session-data/{workflow-id}/session-state.json` | Written by child session's risk-classifier (Phase 4 entry) | Per-service ECW flow state — child-owned, separate from workspace coordinator's session-state |
 
 ## Knowledge Files (populate as needed)
 

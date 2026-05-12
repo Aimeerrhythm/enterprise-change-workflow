@@ -49,6 +49,13 @@ echo ">>> Syncing with origin/{base_branch}..."
 git fetch origin {base_branch}
 behind=$(git rev-list --count HEAD..origin/{base_branch})
 if [ "$behind" -gt 0 ]; then
+  # rebase requires a clean tree — abort early with a clear message instead of
+  # letting `git rebase` produce its terser "cannot rebase: unstaged changes" error
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: worktree has uncommitted changes; cannot rebase onto origin/{base_branch}."
+    echo "Commit or stash first, then re-run this script."
+    exit 1
+  fi
   echo ">>> Local branch is $behind commits behind origin/{base_branch}, rebasing..."
   if ! git rebase origin/{base_branch}; then
     echo "ERROR: rebase conflict against origin/{base_branch}."

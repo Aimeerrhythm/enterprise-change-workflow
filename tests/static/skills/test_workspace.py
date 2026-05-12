@@ -248,10 +248,16 @@ class TestCoordinationProtocol:
         assert "blocked" in lower
 
     def test_api_ready_json_schema(self, coordination_md):
-        """Dubbo api-ready.json schema must be defined."""
+        """Dubbo api-ready.json schema must be defined (multi-module)."""
         assert "api-ready.json" in coordination_md
-        assert '"api_module"' in coordination_md
+        # Multi-module schema: modules[] array with name + version fields
+        assert '"modules"' in coordination_md
+        assert '"name"' in coordination_md
         assert '"version"' in coordination_md
+        # Old single-module schema must NOT be present
+        assert '"api_module"' not in coordination_md, (
+            "api-ready.json should use multi-module schema (modules[]), not legacy api_module field"
+        )
 
     def test_polling_timeout_120_minutes(self, coordination_md):
         """Polling timeout must be 120 minutes."""
