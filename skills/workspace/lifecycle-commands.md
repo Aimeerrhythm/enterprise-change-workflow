@@ -49,6 +49,41 @@ Step 6: Create git worktrees (always based on origin/{base_branch})
   - Always use origin/{base_branch} (not local) to guarantee worktree starts from latest remote code.
   - On failure: log error, continue with remaining. ALL fail → abort and clean up.
 
+Step 6.5: Sync ignored ECW infrastructure into each worktree ★ CRITICAL
+
+  Source repos with ECW installed have `.claude/ecw/scripts/` (hook-runner.sh) and
+  `.claude/settings.json` (or `.claude/settings.local.json`) — both are typically
+  in `.gitignore`. `git worktree add` does NOT copy ignored files, so the worktree
+  ends up with `.claude/ecw/ecw.yml` (tracked) but no `scripts/` and no `settings.json`.
+  When the child session starts, every ECW hook fails silently because
+  `${CLAUDE_PROJECT_DIR}/.claude/ecw/scripts/hook-runner.sh` does not exist.
+  Symptoms: baseline_commit stays "TBD", auto-continue never advances current_phase,
+  knowledge-reads.jsonl is never written.
+
+  For each service worktree, mirror these from the source repo:
+
+  ```bash
+  src="{source_path}/.claude"
+  dst="{workspace_path}/{service_id}/.claude"
+
+  # 1. ECW hook runner directory (bash scripts under .claude/ecw/scripts/)
+  if [ -d "${src}/ecw/scripts" ]; then
+    mkdir -p "${dst}/ecw"
+    cp -R "${src}/ecw/scripts" "${dst}/ecw/scripts"
+  else
+    echo "WARN: ${service_id} source repo has no .claude/ecw/scripts/ — child session will run with NO ECW hooks. baseline_commit, auto-continue, knowledge-read-logger all disabled."
+  fi
+
+  # 2. Project-local hook registration
+  for f in settings.json settings.local.json; do
+    [ -f "${src}/${f}" ] && cp "${src}/${f}" "${dst}/${f}"
+  done
+  ```
+
+  Run this BEFORE Step 7 (pre-trust). Failures are warnings, not aborts — but the
+  warning must be surfaced so the user knows the child session has degraded
+  observability for that service.
+
 Step 7: Pre-trust workspace directories
   - For each service: cd {workspace_path}/{service_id} && claude -p "echo ok"
   - Triggers trust dialog (one-time per directory)
