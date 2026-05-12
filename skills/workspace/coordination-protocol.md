@@ -28,16 +28,25 @@ Status values:
 
 ## api-ready.json Schema
 
-Written by Provider child session after `mvn install` of API module. Read by Consumer child session for dependency scheduling. Dubbo only.
+Written by Provider child session after `mvn install` of every API module that any Consumer depends on. Read by Consumer child session for dependency scheduling and pom version updates. Dubbo only.
 
 ```json
 {
   "service": "{provider_service_id}",
-  "api_module": "{maven_module_name}",
-  "version": "{maven_version}",
+  "modules": [
+    {
+      "name": "{maven_artifact_id}",
+      "version": "{snapshot_version}"
+    }
+  ],
   "published_at": "{ISO-8601 timestamp}"
 }
 ```
+
+Rules:
+- `modules` is always a non-empty array, even when only one module is published.
+- Each `version` MUST be a unique SNAPSHOT (e.g. `1.0.72-{wf-id}-SNAPSHOT`) — never the existing release version, to avoid silently overwriting local maven cache.
+- Provider identifies which modules to publish by checking which modules each Consumer's pom depends on (see `workspace-analysis-task-template.md` Provider section).
 
 ## Polling Mechanism
 

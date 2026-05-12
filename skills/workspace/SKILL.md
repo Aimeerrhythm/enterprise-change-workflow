@@ -160,7 +160,7 @@ Each service's ecw:impl-verify already ran inside child sessions. Coordinator pe
 
 **MQ**: field names match, field types match, nullable annotations consistent, topic names match.
 
-**Dubbo**: method signatures match (name, params, return type, exceptions), Consumer pom.xml API jar version = Provider published version.
+**Dubbo**: method signatures match (name, params, return type, exceptions). For each entry in Provider's `api-ready.json` `modules[]`, the Consumer pom's dependency on `<artifactId>{name}</artifactId>` MUST pin `<version>{version}</version>` (the SNAPSHOT version, not the original release version). Mismatch = HARD FAIL — surfaces the version-pollution bug where Consumer pom still references the release version while Provider has only published a SNAPSHOT.
 
 All pass → proceed. Issues → present findings, suggest which service to fix.
 

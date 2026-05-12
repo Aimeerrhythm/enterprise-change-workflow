@@ -84,20 +84,61 @@ Read confirmed-contract.md to determine your interaction pattern and layer, then
 Proceed to implementation immediately. No cross-service dependency.
 
 **Dubbo — Provider (layer 1):**
-1. Implement API layer first (interfaces + DTOs defined in the contract)
-2. Run `mvn install` for the API module only
-3. Write api-ready.json → `.claude/ecw/session-data/{wf-id}/api-ready.json`
-4. Continue with Service layer implementation without waiting for Consumer
+
+1. **Identify modules that Consumer depends on** (do NOT hardcode names like `wms-interfaces`):
+   a. From confirmed-contract.md, list every file path you will create/modify (e.g. `wms-interfaces/src/.../PutAwayFacade.java`)
+   b. For each file path, find the nearest enclosing `pom.xml` to determine its maven module's `<artifactId>` and `<version>`
+   c. For each candidate module, grep every Consumer service's poms to check whether it is depended on:
+      ```bash
+      for consumer_path in {other_service_paths}; do
+        grep -rl "<artifactId>${module}</artifactId>" "${consumer_path}" --include=pom.xml
+      done
+      ```
+      Module appears in any Consumer pom → mark it as "publish required". No match → skip (internal-only changes; e.g. `wms-service` impl edits do not require version bump because Consumer never depends on `wms-service` jar — Dubbo RPC is runtime).
+
+2. **For each "publish required" module, bump to a unique SNAPSHOT version**:
+   - New version: `{original-version-without-SNAPSHOT}-{wf-id}-SNAPSHOT` (e.g. `1.0.71-0511` → `1.0.72-wf-20260512155614-SNAPSHOT`)
+   - Edit that module's `pom.xml` `<version>` AND every internal pom that hardcodes this version (parent pom, sibling modules referencing it). Do NOT change unrelated dependency versions.
+   - **Never reuse the original release version** — that would silently overwrite local maven cache and create a hidden version-pollution bug for CI / other developers.
+
+3. **Implement API layer** (interfaces + DTOs defined in the contract).
+
+4. **Build and install for each "publish required" module**:
+   ```bash
+   mvn -pl {module} -am install -DskipTests
+   ```
+
+5. **Write api-ready.json** → `.claude/ecw/session-data/{wf-id}/api-ready.json` with this multi-module schema:
+   ```json
+   {
+     "service": "{provider_service_id}",
+     "modules": [
+       {"name": "{module-1}", "version": "{snapshot-version-1}"},
+       {"name": "{module-2}", "version": "{snapshot-version-2}"}
+     ],
+     "published_at": "{ISO-8601}"
+   }
+   ```
+   If only one module is published, `modules` still has length 1.
+
+6. Continue with Service layer implementation without waiting for Consumer.
 
 **Dubbo — Consumer (layer 2):**
+
 Use non-blocking dependency scheduling:
 - Decompose all tasks from the contract and analysis-report.md
 - For each task: if it requires Provider's API (imports Dubbo interface/DTO), check
   `{provider_service_path}/.claude/ecw/session-data/{wf-id}/api-ready.json`
   - Not found → skip for now, continue with other tasks
-  - Found → execute
-- After completing all independent tasks, retry any skipped tasks
-- If api-ready.json still absent → poll with 60-minute timeout:
+  - Found → proceed to the dependency-update step below, then execute the task
+
+**Once api-ready.json is found** — update your own pom before running any code that uses the new API:
+1. Parse `modules[]` from api-ready.json
+2. For each `{name, version}` entry, edit your pom files (root + any module pom that pins the dep) so the dependency on `<artifactId>{name}</artifactId>` uses `<version>{version}</version>`
+3. Verify resolvable: `mvn -pl . dependency:resolve -Dincludes=*:{name} -q`
+4. Commit the pom change as its own step before implementation commits
+
+If api-ready.json still absent after independent tasks done → poll with 60-minute timeout:
   ```bash
   wf_id="{wf-id}"
   provider_path="{provider_service_path}"
