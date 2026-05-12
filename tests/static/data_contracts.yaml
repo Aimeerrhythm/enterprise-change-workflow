@@ -34,9 +34,11 @@ skills:
     writes:
       - key: requirements-summary
         path_pattern: "requirements-summary.md"
-    reads:
-      - key: session-state
-        fields: [risk_level, domains]
+    # No reads: requirements-elicitation does not consume any artifact at runtime.
+    # It is invoked via the routing chain (after risk-classifier) but its 9-dimension
+    # elicitation flow is fixed and does not branch on risk_level. The previous
+    # `reads: session-state[risk_level, domains]` declaration was over-claim and
+    # was removed when reconciling contract with actual SKILL behavior.
     subagent_dispatches:
       - phase: synthesis
         model: sonnet

@@ -173,12 +173,6 @@ If all domain Agents return `impact_level: none`:
 
 ---
 
-## Context Management
-
-After Round 3 completes, check `.claude/ecw/state/context-health.txt` — if the file exists and starts with `HIGH`, output a non-blocking suggestion to run `/compact` (follow `project.output_language`) and proceed to the next skill immediately without waiting for user response. If user does invoke `/compact`, the pre-compact hook ensures auto-resume. If the health file is missing, LOW, or MEDIUM, skip the suggestion entirely.
-
----
-
 ## Error Handling
 
 | Scenario | Handling |

@@ -75,16 +75,16 @@ class TestSessionDataCheckpoints:
 # ══════════════════════════════════════════════════════
 
 class TestCompactSuggestions:
-    """Verify that key stage-transition skills suggest /compact to the user."""
+    """Verify that key stage-transition skills suggest /compact to the user.
 
-    def test_domain_collab_has_compact_suggestion(self):
-        """domain-collab SKILL.md must suggest /compact after Round 3
-        (the analysis is complete and a large context can be reclaimed)."""
-        content = _read_skill("domain-collab")
-        assert "/compact" in content, (
-            "domain-collab SKILL.md must include a '/compact' suggestion "
-            "after Round 3 to help manage context window"
-        )
+    Note: only skills where the suggestion is a real *decision point* (blocking
+    AskUserQuestion + STOP, like writing-plans before implementation) are checked.
+    Non-blocking "suggest then continue" prompts (previously enforced for
+    domain-collab) were noisy without effect — Claude Code's built-in context
+    indicator and the PreCompact hook already cover that path. The
+    test_domain_collab_has_compact_suggestion check was removed when the
+    corresponding low-value SKILL section was deleted.
+    """
 
     def test_writing_plans_has_compact_suggestion(self):
         """writing-plans SKILL.md must suggest /compact after plan production
