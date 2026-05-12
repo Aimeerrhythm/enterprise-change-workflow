@@ -4,6 +4,32 @@
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [1.6.1] - 2026-05-12
+
+### 修复
+
+- **workspace 子 session ECW hook 全失效（baseline_commit 一直 TBD 的真因）**：源仓库 `.claude/ecw/scripts/` 与 `settings*.json` 通常被 `.gitignore`，`git worktree add` 不拷贝 ignored 文件，导致 worktree 里 `hook-runner.sh` 不存在，所有 ECW hook 静默失败。`lifecycle-commands.md` 增加 Step 6.5：worktree 创建后从源仓库拷贝 `scripts/` 与 `settings*.json`，校验 settings 是否真的引用 hook-runner.sh，调用 `merge-settings.py` 合并新 wf-id 的 session-data 写权限；缺失时显式 WARN。
+- **knowledge-track 自动触发但实际从未执行**：从 P0/P1 routing chain 移除 knowledge-track，改为纯手动 `/ecw:knowledge-track`。同步清理 `workflow-routes.yml`、`workflow_traces.yaml`、`workflow-execution-flow.md`、`README.md`、`README.zh-CN.md`、`design-reference.md`、`knowledge-track/SKILL.md` description 中的相关声明。
+- **Dubbo SNAPSHOT 版本污染**：`workspace-analysis-task-template.md` Provider 段重写——动态识别 Consumer 实际依赖的模块（不再写死 wms-interfaces），按 `{原版本}-{wf-id}-SNAPSHOT` 升版（不 bump patch），明确禁止复用原 release 版本以避免覆盖本地 maven 缓存。Consumer 段必须先 grep 命中 artifactId 再改 pom，零命中视为 HARD FAIL。
+- **PLUGIN_ROOT 变量名错误**：`lifecycle-commands.md` Step 6.5 误用 `${PLUGIN_ROOT}`，仓库标准是 `${CLAUDE_PLUGIN_ROOT}`，致使 `merge-settings.py` 实际从未执行。
+
+### 新增
+
+- **`scripts/cross-service-verify.py`**：Phase 5 Dubbo 跨服务版本一致性的确定性校验脚本（替代原 prompt 层指令）。读 Provider 的 `api-ready.json` `modules[]` + 扫 Consumer pom（含 `${properties}` 单层解析、target/ 排除、多模块），输出 PASS/FAIL/SKIP JSON 报告与退出码（0/1/2）；`tests/static/scripts/test_cross_service_verify.py` 提供 8 个测试用例覆盖匹配/版本污染/无关依赖/property 解析/多模块/target 剪枝。
+- **start-{service}.sh 自动 fetch + rebase**：子 session 启动前先 `git fetch origin {base_branch}`，落后则 `git rebase`；rebase 前检查工作区是否 clean、冲突时停下让用户处理，不让 git 产生模糊错误。
+- **api-ready.json 多模块 schema**：`{service, modules[{name, version}], published_at}` 替代旧 `api_module` 单字段；`coordination-protocol.md`、`artifact-reference.md`、`test_workspace.py` 同步。
+
+### 变更
+
+- **`anti-patterns.md` child session-state 规则**：原版本笼统禁止 child 写 session-state，与模板让 child 写 `{service}/.claude/ecw/session-data/{wf-id}/session-state.json` 冲突。改为明确区分 coordinator-owned（workspace 根）vs child-owned（service 内），后者是允许的。
+- **`docs/artifact-reference.md` service 内 artifact 路径**：全部加 `session-data/{wf-id}/` 前缀；新增 `api-ready.json` 与 child-scoped `session-state.json` 条目。
+- **`docs/workflow-execution-flow.md`**：knowledge-track 节点标记为 `manual-only` 并改为虚线连接，避免误读为自动产物流。
+- **`tests/static/anchor_keywords.yaml` 与 `lint_skills.py`**：从 risk-classifier 必须含 `AskUserQuestion` 锚点中移除——risk-classifier 设计是 auto-proceeding，原断言与设计冲突。
+- **`tests/static/skills/test_requirements_elicitation.py::test_has_phase2_handoff`**：原断言要求文档含字面 "phase 2"，但 Phase 1/2 是 workspace 多服务概念，不适用单服务流。改断言为匹配 writing-plans / next skill / handoff / routing chain。
+- **`tests/static/skills/test_spec_challenge.py::test_mentions_precompact_protection` 删除**：PreCompact 是 ECW 全局 hook，无需每个写 session-data 的 skill 在 SKILL.md 重复保护文字。
+- **`tests/static/consistency/test_session_data_checkpoints.py::test_domain_collab_has_compact_suggestion` 删除**：原 SKILL 让 LLM 检查 `context-health.txt` 后输出非阻塞 `/compact` 建议；ECW 已有 PreCompact hook 自动机制，Claude Code 自带 context indicator，"建议然后继续"是噪音；同步删除 SKILL 中对应段落。保留 writing-plans 的 `/compact` 测试（那个是真决策点：AskUserQuestion + STOP）。
+- **`tests/static/data_contracts.yaml`**：删除 requirements-elicitation 的 `reads.session-state` 声明——原声明是 over-claim，SKILL 9-dimension 流程实际不消费 risk_level/domains。
+
 ## [1.6.0] - 2026-05-11
 
 ### 改进
