@@ -1,6 +1,6 @@
 ---
 name: knowledge-track
-description: Knowledge doc utilization tracking. After a dev task, analyzes how AI actually used knowledge docs during the conversation. Classifies as doc-hit/miss/redundant/misleading/code-derived. Recommended after ecw:impl-verify or ecw:biz-impact-analysis.
+description: Knowledge doc utilization tracking. Manual-only — invoke with `/ecw:knowledge-track` after a dev task; analyzes how AI actually used knowledge docs during the conversation. Classifies as doc-hit/miss/redundant/misleading/code-derived. Not part of any automatic routing chain.
 ---
 
 # Knowledge Doc Utilization Tracking

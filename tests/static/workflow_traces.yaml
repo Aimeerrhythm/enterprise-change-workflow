@@ -24,14 +24,12 @@ traces:
         - tdd
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: requirements-elicitation, key: requirements-summary}
         - {skill: writing-plans, key: plan-file}
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, tdd]
 
   - name: "P1 single-domain requirement"
@@ -44,13 +42,11 @@ traces:
         - tdd
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: requirements-elicitation, key: requirements-summary}
         - {skill: writing-plans, key: plan-file}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, tdd]
 
   - name: "P2 single-domain requirement"
@@ -89,7 +85,6 @@ traces:
         - tdd
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: domain-collab, key: domain-collab-report}
@@ -97,7 +92,6 @@ traces:
         - {skill: writing-plans, key: plan-file}
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, writing-plans, spec-challenge, tdd]
 
   - name: "P1 cross-domain requirement"
@@ -110,14 +104,12 @@ traces:
         - tdd
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: domain-collab, key: domain-collab-report}
         - {skill: domain-collab, key: knowledge-summary}
         - {skill: writing-plans, key: plan-file}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, writing-plans, tdd]
 
   - name: "P2 cross-domain requirement"
@@ -184,7 +176,6 @@ traces:
         - impl-orchestration
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: requirements-elicitation, key: requirements-summary}
@@ -192,7 +183,6 @@ traces:
         - {skill: spec-challenge, key: spec-challenge-report}
         - {skill: impl-orchestration, key: session-state}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, spec-challenge, impl-orchestration]
 
   - name: "P1 single-domain requirement (impl-orchestration)"
@@ -205,12 +195,10 @@ traces:
         - impl-orchestration
         - impl-verify
         - biz-impact-analysis
-        - knowledge-track
       checkpoint_writes:
         - {skill: risk-classifier, key: session-state}
         - {skill: requirements-elicitation, key: requirements-summary}
         - {skill: writing-plans, key: plan-file}
         - {skill: impl-orchestration, key: session-state}
         - {skill: impl-verify, key: impl-verify-findings}
-        - {skill: knowledge-track, key: doc-tracker}
       ask_user_skills: [risk-classifier, requirements-elicitation, writing-plans, impl-orchestration]

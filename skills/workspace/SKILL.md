@@ -160,7 +160,15 @@ Each service's ecw:impl-verify already ran inside child sessions. Coordinator pe
 
 **MQ**: field names match, field types match, nullable annotations consistent, topic names match.
 
-**Dubbo**: method signatures match (name, params, return type, exceptions). For each entry in Provider's `api-ready.json` `modules[]`, the Consumer pom's dependency on `<artifactId>{name}</artifactId>` MUST pin `<version>{version}</version>` (the SNAPSHOT version, not the original release version). Mismatch = HARD FAIL — surfaces the version-pollution bug where Consumer pom still references the release version while Provider has only published a SNAPSHOT.
+**Dubbo**: method signatures match (name, params, return type, exceptions). Run the deterministic version-consistency check (do NOT grep manually):
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/cross-service-verify.py" "{workspace_path}" "{wf-id}"
+```
+
+The script reads every Provider's `api-ready.json` `modules[]` and verifies each Consumer pom's dependency on a published artifactId pins the SNAPSHOT version. Exit code 0 = all PASS, 1 = at least one FAIL, 2 = invocation error. Output is a JSON report with per-check status (PASS/FAIL/SKIP) — SKIP means the version was an unresolved `${property}` and needs manual review.
+
+FAIL = HARD FAIL: typically a version-pollution bug where Consumer pom still references the original release version while Provider only published a SNAPSHOT.
 
 All pass → proceed. Issues → present findings, suggest which service to fix.
 

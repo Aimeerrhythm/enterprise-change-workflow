@@ -385,7 +385,7 @@ flowchart TD
     SPEC_OUT[spec-challenge] --> SCR
     DC_OUT[domain-collab] --> KS
     IV_OUT[impl-verify] --> IVF
-    KT_OUT[knowledge-track] --> DT
+    KT_OUT["knowledge-track<br/>(manual-only)"] -.-> DT
 
     style SS fill:#e74c3c,color:#fff
     style ARTIFACTS fill:#ffeaa7
