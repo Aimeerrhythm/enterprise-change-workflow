@@ -97,9 +97,13 @@ Step 6.5: Sync ignored ECW infrastructure into each worktree ★ CRITICAL
   # patterns travel with the cp). But the new wf-id from this workspace must be
   # writable — use `merge-settings.py` to union-merge instead of trusting the source
   # to already cover it.
-  if command -v python3 >/dev/null 2>&1 && [ -f "${PLUGIN_ROOT:-}/scripts/merge-settings.py" ]; then
-    python3 "${PLUGIN_ROOT}/scripts/merge-settings.py" "${dst}/.." || \
+  if command -v python3 >/dev/null 2>&1 \
+      && [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] \
+      && [ -f "${CLAUDE_PLUGIN_ROOT}/scripts/merge-settings.py" ]; then
+    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/merge-settings.py" "${dst}/.." || \
       echo "WARN: merge-settings.py failed for ${service_id}; child session may hit permission prompts when writing .claude/ecw/session-data/${wf_id}/*"
+  else
+    echo "WARN: CLAUDE_PLUGIN_ROOT unset or merge-settings.py not found for ${service_id}; child session may hit permission prompts when writing .claude/ecw/session-data/${wf_id}/*"
   fi
   ```
 
