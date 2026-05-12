@@ -101,7 +101,7 @@ Process:
 1. Read workspace.yml → requirement + service list (ONLY information source)
 2. Decompose from pure business perspective: per-service responsibilities, Provider/Consumer roles, interaction type (Dubbo / MQ / unclear)
 3. AskUserQuestion: present per-service business responsibilities for confirmation
-4. Write `session-data/{wf-id}/cross-service-plan.md`
+4. Write `.claude/ecw/session-data/{wf-id}/cross-service-plan.md`
 5. Write `{service}/.claude/ecw/session-data/{wf-id}/workspace-analysis-task.md` per service — see `./workspace-analysis-task-template.md` for template
 
 Gate-out: cross-service-plan.md + all workspace-analysis-task.md exist.
