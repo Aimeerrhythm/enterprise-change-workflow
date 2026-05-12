@@ -10,7 +10,6 @@
 
 risk-classifier:
   - "Initial risk assessment"
-  - "AskUserQuestion"
   - "session-state.json"
   - "P0"
   - "P1"

@@ -28,6 +28,10 @@ When user proposes a requirement, **do NOT** jump straight to implementation. In
 - User gives a precise, fully-specified technical task ("fix the null pointer on line 42")
 - User explicitly says "just do it, don't ask questions"
 
+## Upstream State
+
+When invoked via the routing chain (typically after ecw:risk-classifier), read `.claude/ecw/session-data/{workflow-id}/session-state.json` to pick up `risk_level` and `domains` written upstream. These determine elicitation depth — P0 multi-domain warrants more rigorous questioning than P1 single-domain. If session-state.json is absent (standalone `/ecw:requirements-elicitation` invocation), default to P1 single-domain depth and surface the missing-state condition to the user.
+
 ## Core Flow
 
 ```dot

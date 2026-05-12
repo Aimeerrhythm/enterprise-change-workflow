@@ -43,8 +43,20 @@ class TestRequirementsElicitationArchitecture:
         ), "Must reference termination limits (directly or via questioning-guide.md)"
 
     def test_has_phase2_handoff(self):
-        """Must describe handoff to risk-classifier Phase 2 after confirmation."""
-        assert "phase 2" in self.lower
+        """Must describe handoff to the next downstream skill after user confirmation.
+
+        "Phase 2" is workspace-specific terminology and does not apply to single-service
+        flows. requirements-elicitation hands off via the routing chain (writing-plans
+        next), not through any phase marker.
+        """
+        assert any(phrase in self.lower for phrase in [
+            "writing-plans",
+            "next downstream skill",
+            "next skill",
+            "handoff",
+            "hand off",
+            "routing chain",
+        ]), "requirements-elicitation must describe handoff to the next downstream skill"
 
     def test_has_standalone_fallback(self):
         """Must define behavior when session-state.md is absent (standalone invocation).

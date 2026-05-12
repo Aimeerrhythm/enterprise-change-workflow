@@ -47,6 +47,8 @@ Read `./session-state-format.md` to write session state — includes JSON schema
 - `ecw:writing-plans` — P2 entry (no requirement analysis needed)
 - (omit routing field entirely) — P3 direct implementation
 
+**Why session-state.json format is non-negotiable**: the auto-continue hook reads `routing` and `next` to inject the next skill in the chain. If markers are missing or the JSON is malformed, the hook silently no-ops — the model loses routing guidance and the workflow chain breaks. Conform to `./session-state-format.md` exactly; do not improvise field names or omit the marker block.
+
 
 ## Error Handling
 

@@ -133,11 +133,9 @@ class TestSpecChallengeSessionContinuity:
         assert not has_split_ask, \
             "Post-Review must not use AskUserQuestion for session split"
 
-    def test_mentions_precompact_protection(self):
-        """Must mention PreCompact hook as context protection mechanism."""
-        has_precompact = bool(
-            re.search(r'pre.?compact.{0,60}(protect|preserv|sav|checkpoint|recover)', self.lower)
-            or re.search(r'(protect|preserv|sav|checkpoint|recover).{0,60}pre.?compact', self.lower)
-        )
-        assert has_precompact, \
-            "Must mention PreCompact hook as context protection mechanism"
+    # test_mentions_precompact_protection removed: PreCompact is an ECW-wide hook
+    # mechanism, not specific to spec-challenge. Requiring every persistence-using
+    # skill to repeat the same protection blurb in its SKILL.md is documentation
+    # bloat. The hook itself (hooks/pre-compact.py) is the source of truth, and
+    # documenting it once at the ECW level is sufficient. Restore this test only
+    # if a regression appears where downstream skills lose data due to compaction.

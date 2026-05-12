@@ -389,9 +389,15 @@ def check_session_state_contract(result: LintResult):
 # ══════════════════════════════════════════════════════
 
 def check_ask_user_question(result: LintResult):
-    """Critical skills must contain AskUserQuestion invocation."""
+    """Critical skills must contain AskUserQuestion invocation.
+
+    Note: risk-classifier is intentionally auto-proceeding (see
+    risk-assessment-guide.md) — it does NOT use AskUserQuestion at the
+    initial-classification step. The user can interrupt at any time. Only
+    skills that genuinely require a blocking confirmation point are listed
+    here.
+    """
     required_skills = [
-        "risk-classifier",  # initial risk assessment confirmation
         "tdd",              # Skip confirmation
     ]
 
